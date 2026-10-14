@@ -187,6 +187,18 @@ This is a hard invariant, enforced by tier 1 tests.
 - Every password update keeps the old value in password history, and the notification has an Undo.
 - The corpus includes many one-time-code page variants. Any save prompt on them fails the build.
 
+## Script access (our Secrets Manager, later)
+
+Bitwarden's Secrets Manager is a separate DevOps product under its source-available license, so we can't use it. Ours starts from what MSPs need: RMM scripts that use credentials (domain admin, client API keys) without pasting them into the RMM in plain text.
+
+- **Scoped tokens:** a token can read only the items or collection it was granted. It can't list or browse the vault.
+- **Made for scripts:** `keykeeper get` in the CLI and a PowerShell module, so an RMM script fetches exactly one value at run time.
+- **Device-bound and short-lived:** tokens can be tied to an enrolled machine, expire, and are revoked instantly.
+- **End-to-end encrypted:** a token carries a key that decrypts only its granted items. The server still can't read anything.
+- **Audited:** every read is logged with token, item, and machine. Unusual access raises an alert in the MSP console.
+- **Later:** rotation helpers that change a credential and update the item together, plus CI integrations if developers ask.
+- **Clean room:** designed from public documentation only. Never read Bitwarden's Secrets Manager code or SDK.
+
 ## Browser extension management (later)
 
 - Version 1: an inventory of other installed extensions and their permissions, plus alerts for newly added extensions with broad permissions.
@@ -227,3 +239,4 @@ The maintainer gets a morning summary, with screenshots and video only for failu
 4. Autofill corpus and scoreboard.
 5. Admin and MSP console, written clean-room (see CLEAN_ROOM.md).
 6. Mobile apps with our own push delivery.
+7. Script access (our Secrets Manager).
