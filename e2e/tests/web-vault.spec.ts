@@ -44,6 +44,12 @@ test("landing page carries our brand and no Bitwarden branding", async ({ page }
   await page.goto("/#/login");
   await expect(page.getByLabel(/Email address/)).toBeVisible();
   await expect(page).toHaveTitle(new RegExp(brand.name));
+  // The wordmark uses its own color variable in light mode; it must be ours.
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(brand.color.slice(i, i + 2), 16));
+  const logoColor = await page.evaluate(() =>
+    getComputedStyle(document.documentElement).getPropertyValue("--color-marketing-logo").trim(),
+  );
+  expect(logoColor).toBe(`${r} ${g} ${b}`);
   // GPLv3 requires keeping Bitwarden's copyright notice, so that line is allowed.
   const text = (await page.locator("body").innerText()).replaceAll(
     `Bitwarden Inc. and ${brand.name} contributors`,

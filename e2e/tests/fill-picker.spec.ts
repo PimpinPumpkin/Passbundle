@@ -4,7 +4,15 @@
 import type { BrowserContext, Page } from "@playwright/test";
 
 import { addLogin, extensionFrame, waitForExtensionScan } from "./support/autofill";
-import { createAccount, expect, logInPopup, openPopup, test, userFor } from "./support/extension";
+import {
+  createAccount,
+  expect,
+  logInPopup,
+  openPopup,
+  serverUrl,
+  test,
+  userFor,
+} from "./support/extension";
 
 test.describe.configure({ timeout: 120_000 });
 
@@ -46,6 +54,35 @@ async function itemHasFillRule(context: BrowserContext, itemName: string) {
       await main.cipherService.getAllDecrypted(userId);
     return Boolean(ciphers.find((c) => c.name === itemName)?.fields?.some((f) => f.name === "keykeeper.fill"));
   }, itemName);
+}
+
+/** Opens the web vault in this browser, logging in or unlocking as needed. */
+async function openWebVault(context: BrowserContext, user: { email: string; password: string }): Promise<Page> {
+  const vault = await context.newPage();
+  await vault.goto(`${serverUrl}/#/vault`);
+  const email = vault.getByRole("textbox", { name: /Email address/ });
+  const unlock = vault.getByRole("button", { name: "Unlock" });
+  const vaultTitle = vault.getByRole("heading", { name: "All vaults" }).first();
+  await expect(email.or(unlock).or(vaultTitle)).toBeVisible({ timeout: 30_000 });
+  if (await email.isVisible()) {
+    await email.fill(user.email);
+    await vault.getByRole("button", { name: "Continue" }).click();
+    await vault.getByRole("textbox", { name: /Master password/ }).fill(user.password);
+    await vault.getByRole("button", { name: "Log in", exact: true }).click();
+  } else if (await unlock.isVisible()) {
+    await vault.getByRole("textbox", { name: /Master password/ }).fill(user.password);
+    await unlock.click();
+  }
+  await expect(vaultTitle).toBeVisible({ timeout: 30_000 });
+  return vault;
+}
+
+/** Makes the extension pull the latest vault from the server now. */
+async function syncExtension(context: BrowserContext) {
+  await context.serviceWorkers()[0].evaluate(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (self as any).bitwardenMain.syncService.fullSync(true);
+  });
 }
 
 /** A normal autofill: the menu inside a field, then the first match. */
@@ -130,4 +167,51 @@ test("never-fill keeps a field empty on every later autofill", async ({
   await autofillFrom(context, after, "Password");
   await expect(after.getByLabel("Password")).toHaveValue("not-a-real-password-1");
   await expect(after.getByLabel("Username")).toHaveValue("");
+});
+
+test("a fill rule stays out of sight in the web vault, and survives editing the item there", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const user = userFor("picker-edit", testInfo.repeatEachIndex);
+  const web = await createAccount(context, user);
+  await addLogin(web, {
+    name: "Example Bank",
+    username: "alice-bank",
+    password: "not-a-real-password-1",
+    uri: site,
+    customFields: { "Customer ID": "C-12345" },
+  });
+  await web.close();
+  await logInPopup(await openPopup(context, extensionId), user);
+
+  const page = await context.newPage();
+  await page.goto(`${site}/bank-login.html`);
+  await waitForExtensionScan(context, page, "custno");
+  await page.getByLabel("Customer number").click({ button: "right" });
+  await page.keyboard.press("Escape");
+  await pickFromMenu(context, page, "Example Bank", "f0");
+  await expect.poll(() => itemHasFillRule(context, "Example Bank")).toBe(true);
+
+  // The web vault shows only the person's own custom field.
+  const vault = await openWebVault(context, user);
+  await vault.getByText("Example Bank").first().click();
+  const view = vault.getByRole("dialog", { name: "View Login" });
+  await expect(view.getByRole("textbox", { name: "Customer ID" })).toBeVisible();
+  await expect(view.getByText("keykeeper.fill")).toHaveCount(0);
+
+  // Editing and saving the item there keeps the rule.
+  await view.getByRole("button", { name: "Edit" }).click();
+  const edit = vault.getByRole("dialog", { name: /Edit Login/ });
+  await expect(edit.getByText("keykeeper.fill")).toHaveCount(0);
+  await edit.getByRole("textbox", { name: "Notes" }).fill("Edited in the web vault.");
+  await edit.getByRole("button", { name: "Save" }).click();
+  await expect(edit).toBeHidden();
+  await syncExtension(context);
+  await expect.poll(() => itemHasFillRule(context, "Example Bank")).toBe(true);
+
+  const after = await context.newPage();
+  await after.goto(`${site}/bank-login.html`);
+  await autofillFrom(context, after, "Username");
+  await expect(after.getByLabel("Customer number")).toHaveValue("C-12345");
 });
