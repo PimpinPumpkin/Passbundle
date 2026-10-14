@@ -77,7 +77,7 @@ Personal profiles are never imported by default.
 | Members added by portal, RMM, or Entra | Auto-approved |
 | Members joining through an invite link | Approval required |
 | Two-step login | Required for admins, nudged for everyone else |
-| Master password | Minimum strength, plus a breached-password check |
+| Master password | Minimum strength, plus a breached-password check. If the breach service can't be reached (offline or firewalled), signup continues without it and Health re-checks later. Upstream silently failed the form instead. |
 | Vault lock | When the computer locks |
 | Browser password manager on managed devices | Saving and password autofill off. Card and address autofill: optional toggles, default unchanged. |
 | Private items when someone leaves | Stay with the org |

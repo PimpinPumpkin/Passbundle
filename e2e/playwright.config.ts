@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-import { port } from "./paths.mjs";
+import { hostResolverRules, port } from "./paths.mjs";
 
 // Tier 1 rules: no retries (a flaky test gets fixed, not rerun), one worker,
 // fixed timezone and locale, artifacts only for failures.
@@ -11,6 +11,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   use: {
+    // No live network: every host except the local test server fails to
+    // resolve, instantly and the same way every run.
+    launchOptions: { args: [hostResolverRules] },
     baseURL: `https://127.0.0.1:${port}`,
     ignoreHTTPSErrors: true,
     timezoneId: "UTC",

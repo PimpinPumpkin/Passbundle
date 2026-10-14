@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { chromium, expect, test as base, type BrowserContext, type Page } from "@playwright/test";
 
-import { brand, paths, port } from "../paths.mjs";
+import { brand, hostResolverRules, paths, port } from "../paths.mjs";
 
 const chromeUserAgent =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
@@ -26,6 +26,7 @@ const test = base.extend<{ context: BrowserContext; extensionId: string }>({
         // Headless Chromium says "HeadlessChrome/", which upstream's browser
         // detection misreads as Safari. Real users never send it.
         `--user-agent=${chromeUserAgent}`,
+        hostResolverRules,
       ],
     });
     await use(context);

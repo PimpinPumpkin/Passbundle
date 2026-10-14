@@ -15,3 +15,6 @@ export const paths = {
   brand: process.env.KK_BRAND ?? sibling("keykeeper-clients/brand/brand.json"),
 };
 export const brand = JSON.parse(fs.readFileSync(paths.brand, "utf8"));
+
+// Chromium flag that makes every hostname except the test server unresolvable.
+export const hostResolverRules = "--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1";
