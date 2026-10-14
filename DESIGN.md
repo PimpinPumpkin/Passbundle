@@ -176,7 +176,9 @@ Upstream fills a custom field only when its name exactly matches the page field'
 - **Durable field identity:** a rule identifies a field by a fingerprint (autocomplete, name, id, label text, type, and position in the form), so small page changes don't break it.
 - **Custom fields never fill on a guess.** They fill by rule, or by a confident label match ("Customer ID" against "Customer number") that the user confirms with one tap the first time.
 - **Readable rules:** the item editor lists its rules in plain language, for example "bank.com: 'Customer number' gets Customer ID". Users can change or delete them there.
-- **Open:** how `keykeeper-server` stores item data. Rules need either a new encrypted field or a reserved custom field to stay compatible.
+- **Storage (built):** a rule is a hidden custom field named `keykeeper.fill` whose value is a small JSON document (`apps/browser/src/autofill/keykeeper/fill-rules.ts`). It's encrypted and synced like any field, and the server and other clients need no changes.
+- **Built so far:** the right-click picker (`fill-field-menu.ts`). Value rules fill first, before upstream's matching. Never-fill fields are hidden from upstream's field selection, so a value meant elsewhere moves to the next fitting field. Unit tests cover the rules and the menu. Tier 1 covers a custom field into a differently named field, and never-fill.
+- **Next:** show rules in plain language in the item editor and hide the raw `keykeeper.fill` fields there (they currently show as hidden custom fields), one-tap label-match suggestions, site-wide never-fill, translated menu strings, and the same picker inside the inline menu.
 
 ### One-time codes never become passwords
 

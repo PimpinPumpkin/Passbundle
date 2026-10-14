@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8" /><title>Example Bank sign in</title></head>
+  <body>
+    <!-- A bank-style sign-in with an extra customer number, which upstream can't
+         connect to a custom field named differently ("Customer ID"). -->
+    <form action="/signed-in.html" method="post">
+      <label for="custno">Customer number</label>
+      <input id="custno" name="customer_number" type="text" />
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" autocomplete="username" />
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" />
+      <button type="submit">Sign in</button>
+    </form>
+  </body>
+</html>
