@@ -116,7 +116,27 @@ The goal is to be measurably better than upstream. 1Password currently does this
 - **Corpus:** reduced fixtures of real login patterns. Multi-step logins, iframes, shadow DOM, single-page apps, one-time-code fields, signup and change-password forms, card forms.
 - **Scoreboard:** every commit runs both the upstream extension and ours against the corpus. We publish the numbers.
 - **Reference material** (compatible licenses only): Chromium autofill heuristics (BSD-3-Clause), Firefox form detection (MPL-2.0), and `apple/password-manager-resources` quirks data (MIT).
-- **Per-site corrections:** when a user fixes a fill, store a rule for that domain locally. Sharing form structure (never values) is a later, opt-in idea.
+- **Per-site corrections:** handled by fill rules (next section). Sharing form structure (never values) is a later, opt-in idea.
+
+### Choosing what fills where
+
+Upstream fills a custom field only when its name exactly matches the page field's name, id, or label, so users end up reading HTML to make it work. Keeping the password from landing in the wrong field is just as hard. Ours:
+
+- **Fill picker:** from the extension popup, or by right-clicking any field, choose "Fill this field with...". The list shows every value on the item (username, password, one-time code, each custom field, card and identity fields) plus "Never fill this field". One click fills it now and remembers the choice.
+- **Rules travel with the item.** They are stored encrypted with the item, so they sync to every device. Site-wide "never fill" rules live in the user's encrypted settings.
+- **Durable field identity:** a rule identifies a field by a fingerprint (autocomplete, name, id, label text, type, and position in the form), so small page changes don't break it.
+- **Custom fields never fill on a guess.** They fill by rule, or by a confident label match ("Customer ID" against "Customer number") that the user confirms with one tap the first time.
+- **Readable rules:** the item editor lists its rules in plain language, for example "bank.com: 'Customer number' gets Customer ID". Users can change or delete them there.
+- **Open:** how `keykeeper-server` stores item data. Rules need either a new encrypted field or a reserved custom field to stay compatible.
+
+### One-time codes never become passwords
+
+This is a hard invariant, enforced by tier 1 tests.
+
+- Fields classified as one-time code inputs are never treated as password fields. Signals: `autocomplete="one-time-code"`, OTP, 2FA, MFA, or verification hints, and short numeric inputs that follow a login step.
+- The save or update prompt never offers a value that equals the item's current TOTP code. It also never offers a value that looks like a code (4 to 8 digits) when the saved password is not itself all digits.
+- Every password update keeps the old value in password history, and the notification has an Undo.
+- The corpus includes many one-time-code page variants. Any save prompt on them fails the build.
 
 ## Browser extension management (later)
 
