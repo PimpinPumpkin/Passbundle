@@ -40,6 +40,10 @@ const child = spawn(paths.serverBin, [], {
     SIGNUPS_ALLOWED: "true",
     SIGNUPS_VERIFY: "false",
     DISABLE_ICON_DOWNLOAD: "true",
+    // Every test logs in from 127.0.0.1. The default (a burst of 10, then one
+    // per minute per IP) would fail tests depending on how many ran before.
+    LOGIN_RATELIMIT_SECONDS: "1",
+    LOGIN_RATELIMIT_MAX_BURST: "1000",
     LOG_LEVEL: "warn",
   },
 });
