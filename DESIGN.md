@@ -105,6 +105,7 @@ Fixes for things that annoy users of Bitwarden and 1Password today.
 - **Survives profile migrations:** tools like ForensiT Profile Wizard change the Windows user's SID, so locally protected data (DPAPI, Windows Hello keys) stops decrypting. Upstream's extension then works once and needs a reinstall. Ours detects local state it can't decrypt, clears it, and asks the user to sign in again. Never a broken extension.
 - **Custom fields are one tap away** in every item editor (web, extension, desktop, mobile), not buried in a menu.
 - **Context-aware new items:** creating an item while viewing a folder or collection puts it there.
+- **No nags:** upstream's web vault interrupts every fresh login with an extension page, an "Are you sure?" dialog, and a welcome tour. All three go. Extension setup happens through onboarding instead.
 
 ## Importing from other password managers
 
@@ -208,6 +209,11 @@ Determinism rules:
 - Wait on state, never on sleeps.
 
 The maintainer gets a morning summary, with screenshots and video only for failures.
+
+## Known gaps
+
+- Help, Terms of Service, and Privacy Policy links point at placeholder pages on `brand.json`'s domain until we publish our own.
+- The installer's extension IDs are placeholders until the store listings exist.
 
 ## Milestones
 
