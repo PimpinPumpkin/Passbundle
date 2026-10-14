@@ -119,3 +119,19 @@ export async function addLogin(
   await expect(dialog).toBeHidden();
 }
 
+/**
+ * Picks the first item in the menu inside a field, with the keyboard. ArrowDown
+ * moves focus into the menu asynchronously, so Enter waits until focus has left
+ * the page's field; otherwise Enter would submit the page's form instead.
+ */
+export async function chooseFirstInlineMenuItem(context: BrowserContext, page: Page, itemName: string) {
+  await waitForInlineMenuItem(context, page, itemName);
+  const focusLeftThePage = () => page.evaluate(() => document.activeElement?.tagName !== "INPUT");
+  await expect(async () => {
+    if (!(await focusLeftThePage())) {
+      await page.keyboard.press("ArrowDown");
+    }
+    await expect.poll(focusLeftThePage, { timeout: 1000 }).toBe(true);
+  }).toPass({ timeout: 10_000 });
+  await page.keyboard.press("Enter");
+}

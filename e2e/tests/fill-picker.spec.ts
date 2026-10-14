@@ -3,7 +3,7 @@
 // the item for every later autofill.
 import type { BrowserContext, Page } from "@playwright/test";
 
-import { addLogin, waitForExtensionScan, waitForInlineMenuItem } from "./support/autofill";
+import { addLogin, chooseFirstInlineMenuItem, waitForExtensionScan } from "./support/autofill";
 import {
   createAccount,
   expect,
@@ -90,9 +90,7 @@ async function autofillFrom(context: BrowserContext, page: Page, fieldLabel: str
   const field = page.getByLabel(fieldLabel, { exact: true });
   await waitForExtensionScan(context, page, (await field.getAttribute("id"))!);
   await field.click();
-  await waitForInlineMenuItem(context, page, itemName);
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Enter");
+  await chooseFirstInlineMenuItem(context, page, itemName);
   await expect(field).not.toHaveValue("");
 }
 
