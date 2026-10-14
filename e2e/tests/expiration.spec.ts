@@ -128,3 +128,56 @@ test("an expired item and a card expiring this month are flagged", async ({ page
     daysToMonthEnd === 0 ? "Expires today" : daysToMonthEnd === 1 ? "Expires tomorrow" : `Expires in ${daysToMonthEnd} days`;
   await expect(view.getByTestId("keykeeper-expiration")).toContainText(expected);
 });
+
+test("the expiring items report lists what has expired or expires soon, soonest first", async ({
+  page,
+}, testInfo) => {
+  await signUp(page, webUserFor("expires-report", testInfo.repeatEachIndex));
+
+  const now = new Date();
+  const note = (name: string, expires?: string) => ({
+    type: 2,
+    name,
+    secureNote: { type: 0 },
+    fields: expires ? [{ name: "keykeeper.expires", value: expires, type: 0, linkedId: null }] : [],
+  });
+  const items = [
+    note("Old certificate", isoInDays(-5)),
+    note("Payments API", isoInDays(5)),
+    note("Domain renewal", isoInDays(90)),
+    note("Office door code"),
+    {
+      type: 3,
+      name: "Expiring card",
+      card: {
+        cardholderName: "Alice Example",
+        number: "4111111111111111",
+        expMonth: String(now.getUTCMonth() + 1),
+        expYear: String(now.getUTCFullYear()),
+        code: "123",
+      },
+    },
+  ];
+  await page.goto("/#/tools/import");
+  await page.getByRole("combobox", { name: /File format/ }).click();
+  await page.getByRole("option", { name: "Bitwarden (json)" }).click();
+  await page
+    .getByRole("textbox", { name: /copy\/paste the import file contents/ })
+    .fill(JSON.stringify({ encrypted: false, folders: [], items }));
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await page.getByRole("dialog", { name: "Data successfully imported" }).getByRole("button", { name: "Ok" }).click();
+
+  // The report has a card on the Reports page, with our strings.
+  await page.goto("/#/reports");
+  await page.getByText("Expiring items", { exact: true }).click();
+  await expect(page).toHaveURL(/expiring-items-report/);
+
+  // Expired first, then by date; nothing that expires later or never.
+  const lastDayOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
+  const daysToMonthEnd = lastDayOfMonth.getUTCDate() - now.getUTCDate();
+  const expected = ["Old certificate", ...(daysToMonthEnd < 5 ? ["Expiring card", "Payments API"] : ["Payments API", "Expiring card"])];
+  await expect(page.getByTestId("keykeeper-report-expires")).toHaveCount(3);
+  await expect(page.locator("bit-table-scroll tr td:nth-child(2) a")).toHaveText(expected);
+  await expect(page.getByText("Domain renewal")).toHaveCount(0);
+  await expect(page.getByText("Office door code")).toHaveCount(0);
+});
