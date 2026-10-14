@@ -44,7 +44,13 @@ const child = spawn(paths.serverBin, [], {
     // per minute per IP) would fail tests depending on how many ran before.
     LOGIN_RATELIMIT_SECONDS: "1",
     LOGIN_RATELIMIT_MAX_BURST: "1000",
+    // Same for signup, pre-login, and other unauthenticated endpoints (a shared
+    // burst of 50, then one per minute).
+    UNAUTHENTICATED_RATELIMIT_SECONDS: "1",
+    UNAUTHENTICATED_RATELIMIT_MAX_BURST: "1000",
     LOG_LEVEL: "warn",
+    // Set KK_SERVER_LOG to keep the server's log, for example as a CI artifact.
+    ...(process.env.KK_SERVER_LOG ? { LOG_FILE: process.env.KK_SERVER_LOG, LOG_LEVEL: "info" } : {}),
   },
 });
 

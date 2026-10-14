@@ -79,6 +79,14 @@ test("vault page carries our brand, including logos", async ({ page }) => {
     "background-color",
     `rgb(${r}, ${g}, ${b})`,
   );
+  // The icon font's shield glyphs draw our mark, not Bitwarden's shield.
+  for (const glyph of await page.locator(".bwi-bitwarden-shield, .bwi-shield").all()) {
+    const mask = await glyph.evaluate((el) => {
+      const style = getComputedStyle(el, "::before");
+      return style.maskImage || style.getPropertyValue("-webkit-mask-image");
+    });
+    expect(mask).toContain("data:image/svg+xml");
+  }
   // Secrets Manager is a Bitwarden-only product; we never advertise it.
   await expect(page.getByText("Secrets Manager")).toHaveCount(0);
   const html = (await page.content()).replaceAll(`Bitwarden Inc. and ${brand.name} contributors`, "");

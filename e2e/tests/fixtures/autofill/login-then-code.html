@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8" /><title>Sign in</title></head>
+  <body>
+    <!-- Step one of a two-step sign-in. The next step (the code page) comes
+         from ?next=, so one login page serves every code-field variant. -->
+    <form id="login" method="post">
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" autocomplete="username" />
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" />
+      <button type="submit">Sign in</button>
+    </form>
+    <script>
+      document.getElementById("login").action =
+        "/" + new URLSearchParams(location.search).get("next");
+    </script>
+  </body>
+</html>

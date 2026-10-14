@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8" /><title>Two-step verification</title></head>
+  <body>
+    <!-- A masked code field typed as a password: the classic trap. -->
+    <form action="/signed-in.html" method="post">
+      <label for="otp">Verification code</label>
+      <input id="otp" name="otp" type="password" maxlength="6" />
+      <button type="submit">Verify</button>
+    </form>
+  </body>
+</html>

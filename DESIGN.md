@@ -105,7 +105,7 @@ Fixes for things that annoy users of Bitwarden and 1Password today.
 - **Survives profile migrations:** tools like ForensiT Profile Wizard change the Windows user's SID, so locally protected data (DPAPI, Windows Hello keys) stops decrypting. Upstream's extension then works once and needs a reinstall. Ours detects local state it can't decrypt, clears it, and asks the user to sign in again. Never a broken extension.
 - **Custom fields are one tap away** in every item editor (web, extension, desktop, mobile), not buried in a menu.
 - **Context-aware new items:** creating an item while viewing a folder or collection puts it there.
-- **Onboarding day works:** upstream rate-limits logins per IP (a burst of 10, then one per minute). A whole office behind one NAT address would get stuck after the tenth person. Rate limits become per account, with allowances for an org's known addresses and enrolled devices. Tier 2 onboards 50 users from one IP.
+- **Onboarding day works:** upstream rate-limits logins per IP (a burst of 10, then one per minute) and signup, pre-login, and hint requests per IP (a shared burst of 50, then one per minute). A whole office behind one NAT address would get stuck after ten to twenty-five people. Rate limits become per account, with allowances for an org's known addresses and enrolled devices. Tier 2 onboards 50 users from one IP.
 - **No nags:** upstream's web vault interrupts every fresh login with an extension page, an "Are you sure?" dialog, and a welcome tour. All three go. Extension setup happens through onboarding instead.
 
 ## Importing from other password managers
@@ -186,6 +186,13 @@ This is a hard invariant, enforced by tier 1 tests.
 - The save or update prompt never offers a value that equals the item's current TOTP code. It also never offers a value that looks like a code (4 to 8 digits) when the saved password is not itself all digits.
 - Every password update keeps the old value in password history, and the notification has an Undo.
 - The corpus includes many one-time-code page variants. Any save prompt on them fails the build.
+- **Found in upstream:** the background keeps a sign-in's submitted form data for five seconds and fills a later username-less submission's gaps from it. A code pasted on the second step within that window becomes "alice-example changed her password to 123456". Fixed: a username-less submission whose only secret is 4 to 8 digits is never stored or merged. A username with a numeric PIN still saves.
+- **Next:** field-based detection in the content script, for passwordless sign-ins that show an email field next to the code field (the value check above can't tell those from a PIN login).
+- **Tier 1 coverage:** tagged, masked (`type="password"`), and bare code fields, each on its own page and as the second step of a sign-in submitted inside the five-second window, after a calibration that proves the prompt still works for a real password change. Unit tests cover the guard and fail without it.
+
+### Missed save prompts on fast sites (upstream race)
+
+After a sign-in form is submitted, upstream asks the page for the typed values over an async message while the request is in flight. When the site answers instantly (a fast intranet app, or a local server), the request completes first and the save or update prompt is silently dropped. Fix: capture the form values synchronously at submit time in the content script, and keep them until the response arrives. Until then, the test fixture server answers sign-ins after 300 ms, like a real site.
 
 ## Script access (our Secrets Manager, later)
 

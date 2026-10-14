@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-import { hostResolverRules, port } from "./paths.mjs";
+import { fixturePort, hostResolverRules, port } from "./paths.mjs";
 
 // Tier 1 rules: no retries (a flaky test gets fixed, not rerun), one worker,
 // fixed timezone and locale, artifacts only for failures.
@@ -22,12 +22,21 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
-  webServer: {
-    command: "node server.mjs",
-    url: `https://127.0.0.1:${port}/alive`,
-    ignoreHTTPSErrors: true,
-    reuseExistingServer: false,
-    timeout: 60_000,
-  },
+  webServer: [
+    {
+      command: "node server.mjs",
+      url: `https://127.0.0.1:${port}/alive`,
+      ignoreHTTPSErrors: true,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
+      command: "node fixture-server.mjs",
+      url: `https://127.0.0.1:${fixturePort}/alive`,
+      ignoreHTTPSErrors: true,
+      reuseExistingServer: false,
+      timeout: 30_000,
+    },
+  ],
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

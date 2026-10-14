@@ -72,6 +72,15 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
+      - name: Upstream unit tests for every file we changed
+        run: |
+          base=$(cat .keykeeper-base)
+          git fetch --no-tags --depth=1 origin "refs/tags/$base:refs/tags/$base"
+          git diff --name-only "$base" HEAD -- 'apps/*.ts' 'libs/*.ts' > "$RUNNER_TEMP/changed.txt"
+          cat "$RUNNER_TEMP/changed.txt"
+          if [ -s "$RUNNER_TEMP/changed.txt" ]; then
+            xargs npx jest --ci --findRelatedTests < "$RUNNER_TEMP/changed.txt"
+          fi
       - name: Apply branding
         run: node brand/apply.mjs
       - name: Build web vault
@@ -92,6 +101,45 @@ jobs:
           name: clients
           path: out
           retention-days: 3
+
+  other-browsers:
+    name: Edge and Firefox extensions
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/keykeeper-clients
+          ref: ${{ env.CLIENTS_REF }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Apply branding
+        run: node brand/apply.mjs
+      - name: Build Edge extension
+        working-directory: apps/browser
+        run: npm run build:prod:edge && mv build ../../edge-build
+      - name: Build Firefox extension
+        working-directory: apps/browser
+        run: npm run build:prod:firefox
+      - name: Lint the Firefox build with Mozilla's add-on checks
+        working-directory: apps/browser
+        run: npx --yes web-ext@10.7.0 lint --source-dir build --self-hosted
+      - name: Check both manifests carry our name
+        run: |
+          node -e '
+            const fs = require("fs");
+            const brand = JSON.parse(fs.readFileSync("brand/brand.json", "utf8"));
+            for (const dir of ["edge-build", "apps/browser/build"]) {
+              const msgs = JSON.parse(fs.readFileSync(dir + "/_locales/en/messages.json", "utf8"));
+              const name = msgs.extName.message;
+              if (name !== brand.nameFull) throw new Error(dir + ": extension name is " + name);
+              console.log(dir + ": " + name);
+            }'
 
   e2e:
     name: End-to-end
@@ -126,7 +174,8 @@ jobs:
           KK_WEB_VAULT: ${{ github.workspace }}/build/clients/web-vault
           KK_EXTENSION: ${{ github.workspace }}/build/clients/extension-chrome
           KK_BRAND: ${{ github.workspace }}/build/clients/brand.json
-        run: chmod +x "$KK_SERVER_BIN" && npx playwright test
+          KK_SERVER_LOG: ${{ github.workspace }}/e2e/server-log/server.log
+        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" && npx playwright test
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
@@ -134,4 +183,5 @@ jobs:
           path: |
             e2e/playwright-report
             e2e/test-results
+            e2e/server-log
           retention-days: 14
