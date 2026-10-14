@@ -96,6 +96,43 @@ Every setting explains itself in one sentence. Changing a setting needs no actio
 - Skip "never save" entries and entries with empty passwords.
 - Ends with a summary and a review queue that users clear whenever they like.
 
+## Importing from other password managers
+
+Upstream gives us about 70 importers. They include 1Password, LastPass (with direct import), Dashlane, Keeper, Proton Pass, Enpass, KeePass, and the browsers. Our job is making them painless.
+
+- **Detect and guide:** the desktop app detects installed password managers and walks the user through that product's export with exact steps. Then it imports and securely deletes the export file.
+- **Direct import** where the source allows it, as upstream already does for LastPass.
+- **Business:** the admin bulk-imports shared vaults into collections, mapping source folders and shared folders. Each member's private items go through the same guided import during their onboarding.
+- **Tests:** upstream importer specs, plus round-trip fixtures for the top formats in tier 1.
+
+## Health (better than Watchtower)
+
+Reports are only useful if they lead to a fix.
+
+- **Org password rules:** admins set minimum length, character sets, or passphrases. Every generator enforces them, on every device.
+- **Site-aware generation:** generated passwords also follow each site's own rules, using `apple/password-manager-resources` data, so they are never rejected.
+- **One-click fix:** open the site's change-password page (`/.well-known/change-password` where available), generate a compliant password, and save it with history.
+- **Privacy-preserving admin view:** org-owned items are checked by an admin's client. For private items, each member's client reports only counts (weak, reused, breached), never which items.
+
+## Legacy contacts
+
+Built on the inherited emergency access feature (web vault and server). Bitwarden puts it behind Premium. We include it in every plan.
+
+- Solo and Family onboarding suggests naming a legacy contact.
+- A request starts a waiting period (default 7 days). The owner gets email and push reminders and can deny the request at any time. With no response, access is granted.
+- The access level is either view or takeover.
+- A printable instructions sheet helps the family find the account.
+- **Open:** letting owners exclude items or folders. Upstream grants the whole vault.
+
+## Account keys (open)
+
+- **Upstream model:** the master password and email go through a KDF (PBKDF2 by default, or Argon2id) to make the master key, which unlocks the account key stored on the server. The server never sees the master password. If the database is stolen, each vault can be attacked offline, and only the master password's strength protects it.
+- **1Password model:** the master password is combined with a 128-bit Secret Key that never leaves the user's devices, so a stolen database is useless. The cost is the Secret Key step in onboarding, which is exactly the friction we want to remove.
+- **Proposal:**
+  1. Version 1 keeps the upstream model with stronger defaults: Argon2id, plus master-password strength and breach checks at signup. Changing the key hierarchy is the riskiest change possible.
+  2. Business orgs get trusted-device unlock, where a device key works like a Secret Key the user never sees.
+  3. After an external crypto review: an optional account key for Solo and Family, added to the KDF input and kept on devices and in the recovery kit. New devices get it from an existing device by QR code, never by typing or downloading.
+
 ## Browser password manager
 
 Disable it, don't purge it.
