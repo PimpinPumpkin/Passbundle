@@ -117,6 +117,8 @@ Like 1Password's item types (API key, server, Wi-Fi, software license, passport,
 - **Storage, with no server changes:** an item records its template in a hidden field `keykeeper.template` (template id and version). A custom template is itself an item: a secure note with a hidden `keykeeper.template-definition` field holding its JSON definition (name, icon, base type, and fields with label, type, hidden, required, and "is the expiration date"). Everything stays end-to-end encrypted and syncs like any item. Other clients show the fields as plain custom fields.
 - **Where custom templates live:** personal templates in the personal vault. Family and business templates in a "Templates" collection of the org, read-only to members. An MSP pushes a template to many client orgs at once from the MSP console, which writes the same template item into each client's Templates collection.
 - **Creating items:** "New item" lists built-in templates, then the org's and the person's own, grouped.
+- **Built:** ten built-in templates (API key, server, database, Wi-Fi network, router, software license, domain, certificate, email account, membership) behind "New > From template" in the web vault. The new item starts with the template's fields, records its template in a `keykeeper.template` text field, and shows the template in the item view. New items keep hidden fields editable (upstream locked them when there was no original item). Code is in `libs/vault/src/keykeeper/templates.ts`; tier 1 covers a note-based and a login-based template.
+- **Not built yet:** custom templates, family and org templates and MSP push, "From template" in the extension and desktop app, and typed fields beyond text, hidden, and yes/no.
 
 ## Expiration dates
 
