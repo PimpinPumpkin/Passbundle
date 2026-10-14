@@ -21,6 +21,7 @@ import {
   hasElementDeep,
   hasNotificationBar,
   waitForExtensionScan,
+  waitForInlineMenuItem,
 } from "./support/autofill";
 
 // Each test creates an account, logs the extension in, and calibrates the save
@@ -61,7 +62,7 @@ test("fills a simple login form from the icon inside the field", async ({
     .toBe(true);
 
   // Keyboard path: ArrowDown moves into the menu, Enter fills the first match.
-  await extensionFrame(page, "menu-list.html");
+  await waitForInlineMenuItem(context, page, "Example login");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
 

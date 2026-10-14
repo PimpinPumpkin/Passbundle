@@ -46,10 +46,17 @@ export const hasNotificationBar = (page: Page) =>
 
 // Finds elements anywhere in a frame, including inside closed shadow roots,
 // through the DevTools protocol. Page scripts can't do this; tests can.
+export type DeepNode = {
+  nodeName: string;
+  nodeType?: number;
+  nodeValue?: string;
+  attributes?: string[];
+};
+
 export async function hasElementDeep(
   context: BrowserContext,
   frame: Frame,
-  match: (node: { nodeName: string; attributes?: string[] }) => boolean,
+  match: (node: DeepNode) => boolean,
 ) {
   const cdp = await context.newCDPSession(frame);
   const { root } = await cdp.send("DOM.getDocument", { depth: -1, pierce: true });
@@ -61,6 +68,21 @@ export async function hasElementDeep(
     if (node.contentDocument) stack.push(node.contentDocument);
   }
   return false;
+}
+
+/**
+ * Waits until the menu inside a field shows the item. Keys pressed before the
+ * menu is ready go to the page instead, and Enter then submits the form.
+ */
+export async function waitForInlineMenuItem(context: BrowserContext, page: Page, itemName: string) {
+  const list = await extensionFrame(page, "menu-list.html");
+  await expect
+    .poll(
+      () =>
+        hasElementDeep(context, list, (n) => n.nodeType === 3 && (n.nodeValue ?? "").includes(itemName)),
+      { timeout: 15_000 },
+    )
+    .toBe(true);
 }
 
 export async function extensionFrame(page: Page, file: string) {

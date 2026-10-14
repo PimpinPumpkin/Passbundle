@@ -3,7 +3,7 @@
 // the item for every later autofill.
 import type { BrowserContext, Page } from "@playwright/test";
 
-import { addLogin, extensionFrame, waitForExtensionScan } from "./support/autofill";
+import { addLogin, waitForExtensionScan, waitForInlineMenuItem } from "./support/autofill";
 import {
   createAccount,
   expect,
@@ -86,11 +86,11 @@ async function syncExtension(context: BrowserContext) {
 }
 
 /** A normal autofill: the menu inside a field, then the first match. */
-async function autofillFrom(context: BrowserContext, page: Page, fieldLabel: string) {
+async function autofillFrom(context: BrowserContext, page: Page, fieldLabel: string, itemName: string) {
   const field = page.getByLabel(fieldLabel, { exact: true });
   await waitForExtensionScan(context, page, (await field.getAttribute("id"))!);
   await field.click();
-  await extensionFrame(page, "menu-list.html");
+  await waitForInlineMenuItem(context, page, itemName);
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(field).not.toHaveValue("");
@@ -115,7 +115,7 @@ test("fills a custom field into the right-clicked field, and remembers it", asyn
   // Before: upstream can't connect "Customer ID" to a field labeled "Customer number".
   const before = await context.newPage();
   await before.goto(`${site}/bank-login.html`);
-  await autofillFrom(context, before, "Username");
+  await autofillFrom(context, before, "Username", "Example Bank");
   await expect(before.getByLabel("Customer number")).toHaveValue("");
 
   // One pick from the menu fills it right away.
@@ -128,7 +128,7 @@ test("fills a custom field into the right-clicked field, and remembers it", asyn
   // After: a normal autofill fills all three fields.
   const after = await context.newPage();
   await after.goto(`${site}/bank-login.html`);
-  await autofillFrom(context, after, "Username");
+  await autofillFrom(context, after, "Username", "Example Bank");
   await expect(after.getByLabel("Username")).toHaveValue("alice-bank");
   await expect(after.getByLabel("Password")).toHaveValue("not-a-real-password-1");
   await expect(after.getByLabel("Customer number")).toHaveValue("C-12345");
@@ -153,7 +153,7 @@ test("never-fill keeps a field empty on every later autofill", async ({
   // Before: autofill fills the username, as it should by default.
   const before = await context.newPage();
   await before.goto(`${site}/simple-login.html`);
-  await autofillFrom(context, before, "Username");
+  await autofillFrom(context, before, "Username", "Shared desk login");
   await expect(before.getByLabel("Username")).toHaveValue("front-desk");
 
   await before.getByLabel("Username").click({ button: "right" });
@@ -164,7 +164,7 @@ test("never-fill keeps a field empty on every later autofill", async ({
   // After: the password still fills; the username stays empty.
   const after = await context.newPage();
   await after.goto(`${site}/simple-login.html`);
-  await autofillFrom(context, after, "Password");
+  await autofillFrom(context, after, "Password", "Shared desk login");
   await expect(after.getByLabel("Password")).toHaveValue("not-a-real-password-1");
   await expect(after.getByLabel("Username")).toHaveValue("");
 });
@@ -212,6 +212,6 @@ test("a fill rule stays out of sight in the web vault, and survives editing the 
 
   const after = await context.newPage();
   await after.goto(`${site}/bank-login.html`);
-  await autofillFrom(context, after, "Username");
+  await autofillFrom(context, after, "Username", "Example Bank");
   await expect(after.getByLabel("Customer number")).toHaveValue("C-12345");
 });
