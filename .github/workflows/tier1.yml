@@ -1,0 +1,135 @@
+# Tier 1: every commit, fully repeatable. Builds the server and the branded
+# clients from their keykeeper branches (or the commits passed in by a fork's
+# CI), then runs the end-to-end suite against them.
+name: Tier 1
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      clients-ref:
+        type: string
+        default: keykeeper
+      server-ref:
+        type: string
+        default: keykeeper
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tier1-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CLIENTS_REF: ${{ inputs.clients-ref || 'keykeeper' }}
+  SERVER_REF: ${{ inputs.server-ref || 'keykeeper' }}
+
+jobs:
+  server:
+    name: Server tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/keykeeper-server
+          ref: ${{ env.SERVER_REF }}
+          persist-credentials: false
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential libssl-dev pkg-config
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Unit tests
+        run: cargo test --features sqlite
+      - name: Build
+        run: cargo build --features sqlite
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: server
+          path: target/debug/vaultwarden
+          retention-days: 3
+
+  clients:
+    name: Branded web vault and extension
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/keykeeper-clients
+          ref: ${{ env.CLIENTS_REF }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Apply branding
+        run: node brand/apply.mjs
+      - name: Build web vault
+        working-directory: apps/web
+        run: npm run build:oss:selfhost:prod
+      - name: Build Chrome extension
+        working-directory: apps/browser
+        run: npm run build:prod:chrome
+      - name: Collect builds
+        run: |
+          mkdir -p out
+          cp -r apps/web/build out/web-vault
+          cp -r apps/browser/build out/extension-chrome
+          cp brand/brand.json out/brand.json
+          find out -name '*.map' -delete
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: clients
+          path: out
+          retention-days: 3
+
+  e2e:
+    name: End-to-end
+    needs: [server, clients]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/keykeeper
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: server
+          path: build/server
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: clients
+          path: build/clients
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Install test dependencies
+        working-directory: e2e
+        run: npm ci --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: Run end-to-end tests
+        working-directory: e2e
+        env:
+          KK_SERVER_BIN: ${{ github.workspace }}/build/server/vaultwarden
+          KK_WEB_VAULT: ${{ github.workspace }}/build/clients/web-vault
+          KK_EXTENSION: ${{ github.workspace }}/build/clients/extension-chrome
+          KK_BRAND: ${{ github.workspace }}/build/clients/brand.json
+        run: chmod +x "$KK_SERVER_BIN" && npx playwright test
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: e2e-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 14
