@@ -12,19 +12,14 @@ const user = {
 
 test.describe.configure({ mode: "serial" });
 
-// Upstream nags after signup and after every login in a fresh browser: an
-// extension page, an "Are you sure?" dialog, then a welcome tour. We will
-// remove all three; until then, step past them.
-async function skipNags(page: Page) {
+// Upstream interrupts every fresh login with an extension page, an "Are you
+// sure?" dialog, and a welcome tour. Our server turns them off by default.
+async function expectNoNags(page: Page) {
   await page.waitForURL(/#\/(vault|setup-extension)/);
-  if (page.url().includes("setup-extension")) {
-    await page.getByRole("button", { name: "Add it later" }).click();
-    await page.getByRole("link", { name: "Skip to web app" }).click();
-  }
+  expect(page.url()).not.toContain("setup-extension");
   await expect(page).toHaveTitle(/Vaults/);
   await page.waitForLoadState("networkidle");
-  const tour = page.getByRole("dialog").getByRole("button", { name: "Skip" });
-  if (await tour.count()) await tour.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 
 async function logIn(page: Page) {
@@ -33,9 +28,17 @@ async function logIn(page: Page) {
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("textbox", { name: /Master password/ }).fill(user.password);
   await page.getByRole("button", { name: "Log in", exact: true }).click();
-  await skipNags(page);
+  await expectNoNags(page);
   await expect(page).toHaveTitle(/Vaults/);
 }
+
+test("server identifies as Keykeeper, links its source, and suppresses nags", async ({ request }) => {
+  const config = await (await request.get("/api/config")).json();
+  expect(config.server.name).toBe(brand.name);
+  // AGPL-3.0 section 13: network users get a link to the server's source.
+  expect(config.server.url).toBe("https://github.com/PimpinPumpkin/keykeeper-server");
+  expect(config.settings.suppressOnboardingInterstitials).toBe(true);
+});
 
 test("landing page carries our brand and no Bitwarden branding", async ({ page }) => {
   await page.goto("/#/login");
@@ -58,7 +61,7 @@ test("create an account", async ({ page }) => {
   await page.getByRole("textbox", { name: /^Master password/, exact: false }).first().fill(user.password);
   await page.getByRole("textbox", { name: /Confirm master password/ }).fill(user.password);
   await page.getByRole("button", { name: "Create account" }).click();
-  await skipNags(page);
+  await expectNoNags(page);
   await expect(page).toHaveTitle(/Vaults/);
 });
 
@@ -66,6 +69,18 @@ test("vault page carries our brand, including logos", async ({ page }) => {
   await logIn(page);
   // Logos are SVG shapes, invisible to a text check. Ours carry data-brand.
   await expect(page.locator(`nav svg[data-brand="${brand.name}"]`).first()).toBeVisible();
+  // Our color replaces upstream's blue: the theme scale and a primary button.
+  const brand700 = await page.evaluate(() =>
+    getComputedStyle(document.documentElement).getPropertyValue("--color-brand-700").trim(),
+  );
+  expect(brand700.toLowerCase()).toBe(brand.color.toLowerCase());
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(brand.color.slice(i, i + 2), 16));
+  await expect(page.getByRole("button", { name: "New", exact: true })).toHaveCSS(
+    "background-color",
+    `rgb(${r}, ${g}, ${b})`,
+  );
+  // Secrets Manager is a Bitwarden-only product; we never advertise it.
+  await expect(page.getByText("Secrets Manager")).toHaveCount(0);
   const html = (await page.content()).replaceAll(`Bitwarden Inc. and ${brand.name} contributors`, "");
   const leftovers = html.match(/.{0,60}\bBitwarden\b.{0,60}/g) ?? [];
   expect(leftovers).toEqual([]);
