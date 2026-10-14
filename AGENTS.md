@@ -46,3 +46,4 @@ Each of these must have a test that fails if it breaks:
 - Never import from a browser profile the user or admin did not choose.
 - The server never receives a key that can decrypt a vault.
 - The installer can force-install only Keykeeper's own extension IDs.
+- Local state that can't be decrypted (for example after a Windows profile migration) leads to a clean sign-in, never a broken client.

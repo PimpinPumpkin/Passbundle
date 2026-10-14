@@ -96,6 +96,16 @@ Every setting explains itself in one sentence. Changing a setting needs no actio
 - Skip "never save" entries and entries with empty passwords.
 - Ends with a summary and a review queue that users clear whenever they like.
 
+## UX we commit to
+
+Fixes for things that annoy users of Bitwarden and 1Password today.
+
+- **One unlock:** unlocking the desktop app unlocks the browser extension, and the other way around, over the existing authenticated native-messaging channel. Locking either one locks both.
+- **Biometrics by default:** Touch ID on Mac and Windows Hello on Windows are offered at first unlock, with no separate "browser integration" setup. Admins control biometrics and password requirements in the portal.
+- **Survives profile migrations:** tools like ForensiT Profile Wizard change the Windows user's SID, so locally protected data (DPAPI, Windows Hello keys) stops decrypting. Upstream's extension then works once and needs a reinstall. Ours detects local state it can't decrypt, clears it, and asks the user to sign in again. Never a broken extension.
+- **Custom fields are one tap away** in every item editor (web, extension, desktop, mobile), not buried in a menu.
+- **Context-aware new items:** creating an item while viewing a folder or collection puts it there.
+
 ## Importing from other password managers
 
 Upstream gives us about 70 importers. They include 1Password, LastPass (with direct import), Dashlane, Keeper, Proton Pass, Enpass, KeePass, and the browsers. Our job is making them painless.
