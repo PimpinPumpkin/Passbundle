@@ -62,6 +62,15 @@ test("create an account", async ({ page }) => {
   await expect(page).toHaveTitle(/Vaults/);
 });
 
+test("vault page carries our brand, including logos", async ({ page }) => {
+  await logIn(page);
+  // Logos are SVG shapes, invisible to a text check. Ours carry data-brand.
+  await expect(page.locator(`nav svg[data-brand="${brand.name}"]`).first()).toBeVisible();
+  const html = (await page.content()).replaceAll(`Bitwarden Inc. and ${brand.name} contributors`, "");
+  const leftovers = html.match(/.{0,60}\bBitwarden\b.{0,60}/g) ?? [];
+  expect(leftovers).toEqual([]);
+});
+
 test("a saved login survives logging out and back in", async ({ page }) => {
   await logIn(page);
   await page.getByRole("button", { name: "New", exact: true }).click();

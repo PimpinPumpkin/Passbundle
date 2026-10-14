@@ -215,6 +215,8 @@ The maintainer gets a morning summary, with screenshots and video only for failu
 
 - Help, Terms of Service, and Privacy Policy links point at placeholder pages on `brand.json`'s domain until we publish our own.
 - The installer's extension IDs are placeholders until the store listings exist.
+- The UI still uses upstream's blue theme. Branding swaps names and logos only so far.
+- The web vault still promotes Secrets Manager, a Bitwarden-only product, in its sidebar. Those entry points need removing.
 
 ## Milestones
 

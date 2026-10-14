@@ -51,6 +51,16 @@ const child = spawn(paths.serverBin, [], {
 const stop = () => child.kill("SIGTERM");
 process.on("SIGINT", stop);
 process.on("SIGTERM", stop);
+// If whatever started us dies without stopping us, don't leave a server
+// running on the test port for the next run to talk to by mistake.
+const parent = process.ppid;
+setInterval(() => {
+  try {
+    process.kill(parent, 0);
+  } catch {
+    stop();
+  }
+}, 1000).unref();
 child.on("exit", (code) => {
   fs.rmSync(data, { recursive: true, force: true });
   process.exit(code ?? 0);
