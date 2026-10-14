@@ -123,7 +123,9 @@ Like 1Password's item types (API key, server, Wi-Fi, software license, passport,
 Any item can expire: API keys, certificates, licenses, domains, passports, cards.
 
 - **Set it anywhere:** an "Expires" date on every item, plus template date fields marked "is the expiration date" (an API key's expiry, a passport's). Cards use their existing expiry month and year automatically.
-- **Stored with the item:** a hidden field `keykeeper.expires` (ISO date), encrypted and synced, no server changes.
+- **Stored with the item:** a text field `keykeeper.expires` (ISO date), encrypted and synced, no server changes. A text field, not hidden: a date isn't secret, and list views only carry text fields' values, so lists can show badges without decrypting every item.
+- **Built:** the "Expires" date in the item editor (web, extension, desktop share it), an Expiration section in the item view, badges in the web vault list and the extension's item list for items expired or expiring within 30 days, and card expiry in the item view. All of Keykeeper's own fields stay hidden in views and editors and survive edits (`libs/vault/src/keykeeper/`). Tier 1 covers each.
+- **Not built yet:** card expiry badges in lists (list views don't carry card expiry), the "Expiring soon" filter, Health integration, on-device reminders, and the MSP view.
 - **See it:** "Expires in 12 days" and "Expired" badges in every list, an "Expiring soon" filter, and expiring items in Health.
 - **Reminders, on the device:** the extension and desktop app check daily and notify at 30 and 7 days before (adjustable per item). Nothing leaves the device.
 - **Reminders by email (open):** the server can't read items, so emailed reminders would mean storing an unencrypted reminder date with an opaque item id ("an item in your vault expires on Oct 30", no name). Opt-in per user or org, or skip it.
