@@ -108,6 +108,27 @@ Fixes for things that annoy users of Bitwarden and 1Password today.
 - **Onboarding day works:** upstream rate-limits logins per IP (a burst of 10, then one per minute) and signup, pre-login, and hint requests per IP (a shared burst of 50, then one per minute). A whole office behind one NAT address would get stuck after ten to twenty-five people. Rate limits become per account, with allowances for an org's known addresses and enrolled devices. Tier 2 onboards 50 users from one IP.
 - **No nags:** upstream's web vault interrupts every fresh login with an extension page, an "Are you sure?" dialog, and a welcome tour. All three go. Extension setup happens through onboarding instead.
 
+## Item templates
+
+Like 1Password's item types (API key, server, Wi-Fi, software license, passport, and so on), plus custom templates that people, families, and MSPs define.
+
+- **Built-in templates** beyond upstream's types (login, card, identity, secure note, SSH key): API key, server, database, Wi-Fi network, software license, bank account, email account, router, membership, passport, driver's license, crypto wallet. Each is an upstream base type (login or secure note) with predefined, typed fields.
+- **Typed fields:** text, hidden, date, URL, email, phone, number, yes/no, one-time code. Upstream only knows text, hidden, yes/no, and linked, so values are stored as ordinary custom fields and the template supplies each field's type, which drives the editor (date picker, URL check) and display.
+- **Storage, with no server changes:** an item records its template in a hidden field `keykeeper.template` (template id and version). A custom template is itself an item: a secure note with a hidden `keykeeper.template-definition` field holding its JSON definition (name, icon, base type, and fields with label, type, hidden, required, and "is the expiration date"). Everything stays end-to-end encrypted and syncs like any item. Other clients show the fields as plain custom fields.
+- **Where custom templates live:** personal templates in the personal vault. Family and business templates in a "Templates" collection of the org, read-only to members. An MSP pushes a template to many client orgs at once from the MSP console, which writes the same template item into each client's Templates collection.
+- **Creating items:** "New item" lists built-in templates, then the org's and the person's own, grouped.
+
+## Expiration dates
+
+Any item can expire: API keys, certificates, licenses, domains, passports, cards.
+
+- **Set it anywhere:** an "Expires" date on every item, plus template date fields marked "is the expiration date" (an API key's expiry, a passport's). Cards use their existing expiry month and year automatically.
+- **Stored with the item:** a hidden field `keykeeper.expires` (ISO date), encrypted and synced, no server changes.
+- **See it:** "Expires in 12 days" and "Expired" badges in every list, an "Expiring soon" filter, and expiring items in Health.
+- **Reminders, on the device:** the extension and desktop app check daily and notify at 30 and 7 days before (adjustable per item). Nothing leaves the device.
+- **Reminders by email (open):** the server can't read items, so emailed reminders would mean storing an unencrypted reminder date with an opaque item id ("an item in your vault expires on Oct 30", no name). Opt-in per user or org, or skip it.
+- **MSP view:** expiring credentials across all clients in one list, from the MSP's own client, which can decrypt org items.
+
 ## Importing from other password managers
 
 Upstream gives us about 70 importers. They include 1Password, LastPass (with direct import), Dashlane, Keeper, Proton Pass, Enpass, KeePass, and the browsers. Our job is making them painless.
@@ -115,6 +136,7 @@ Upstream gives us about 70 importers. They include 1Password, LastPass (with dir
 - **Detect and guide:** the desktop app detects installed password managers and walks the user through that product's export with exact steps. Then it imports and securely deletes the export file.
 - **Direct import** where the source allows it, as upstream already does for LastPass.
 - **Business:** the admin bulk-imports shared vaults into collections, mapping source folders and shared folders. Each member's private items go through the same guided import during their onboarding.
+- **Bitwarden (built and tested):** its JSON export imports with every item, folder, TOTP secret, custom field, note, and password history intact. A password-protected export moves to another account with no plaintext in the file. Both are tier 1 tests. Our own exports use the same format, so the importer's "Bitwarden (json)" label should become "Keykeeper or Bitwarden (json)".
 - **Tests:** upstream importer specs, plus round-trip fixtures for the top formats in tier 1.
 
 ## Health (better than Watchtower)

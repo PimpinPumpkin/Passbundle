@@ -1,0 +1,86 @@
+{
+  "encrypted": false,
+  "folders": [{ "id": "0d8bd3ca-1111-4c4e-9a0b-000000000001", "name": "Work" }],
+  "items": [
+    {
+      "id": "6f7e1e2a-2222-4c4e-9a0b-000000000001",
+      "folderId": "0d8bd3ca-1111-4c4e-9a0b-000000000001",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Example Git host",
+      "notes": "Recovery codes are in the safe.",
+      "favorite": true,
+      "fields": [
+        { "name": "Recovery email", "value": "alice.recovery@example.test", "type": 0, "linkedId": null },
+        { "name": "Backup code", "value": "4821-9930", "type": 1, "linkedId": null }
+      ],
+      "login": {
+        "uris": [{ "match": null, "uri": "https://git.example.test/login" }],
+        "username": "alice-git",
+        "password": "not-a-real-password-git",
+        "totp": "JBSWY3DPEHPK3PXP"
+      },
+      "passwordHistory": [{ "lastUsedDate": "2026-01-02T03:04:05.000Z", "password": "not-a-real-old-password" }],
+      "collectionIds": null
+    },
+    {
+      "id": "6f7e1e2a-2222-4c4e-9a0b-000000000002",
+      "folderId": null,
+      "type": 3,
+      "reprompt": 0,
+      "name": "Test Visa",
+      "notes": null,
+      "favorite": false,
+      "card": {
+        "cardholderName": "Alice Example",
+        "brand": "Visa",
+        "number": "4111111111111111",
+        "expMonth": "12",
+        "expYear": "2030",
+        "code": "123"
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "6f7e1e2a-2222-4c4e-9a0b-000000000003",
+      "folderId": null,
+      "type": 4,
+      "reprompt": 0,
+      "name": "Alice at home",
+      "notes": null,
+      "favorite": false,
+      "identity": {
+        "title": "Ms",
+        "firstName": "Alice",
+        "middleName": null,
+        "lastName": "Example",
+        "address1": "1 Test Street",
+        "address2": null,
+        "address3": null,
+        "city": "Testville",
+        "state": "TS",
+        "postalCode": "00000",
+        "country": "US",
+        "company": null,
+        "email": "alice@example.test",
+        "phone": "555-0100",
+        "ssn": null,
+        "username": null,
+        "passportNumber": null,
+        "licenseNumber": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "6f7e1e2a-2222-4c4e-9a0b-000000000004",
+      "folderId": "0d8bd3ca-1111-4c4e-9a0b-000000000001",
+      "type": 2,
+      "reprompt": 0,
+      "name": "Office door code",
+      "notes": "Door code is not-a-real-code.",
+      "favorite": false,
+      "secureNote": { "type": 0 },
+      "collectionIds": null
+    }
+  ]
+}
