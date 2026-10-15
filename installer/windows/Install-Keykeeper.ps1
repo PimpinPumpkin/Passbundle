@@ -6,11 +6,15 @@
   Run once with admin rights, typically from an RMM. For each targeted browser it:
     - force-installs the Keykeeper extension (IDs are fixed in this script, never passed in),
     - turns off the browser's own password saving and filling,
-    - optionally turns off card and address autofill.
+    - optionally turns off card and address autofill,
+    - optionally gives the extension its server address and the client's
+      enrollment token, so people join the client after they sign in.
   Existing policies from other vendors are left alone. Running it again changes nothing.
 
 .EXAMPLE
   .\Install-Keykeeper.ps1 -Browsers Edge,Chrome -DisableCardAutofill
+.EXAMPLE
+  .\Install-Keykeeper.ps1 -ServerUrl https://vault.example.com -EnrollmentToken <token from the MSP console>
 .EXAMPLE
   .\Install-Keykeeper.ps1 -Remove
 #>
@@ -21,6 +25,12 @@ param(
   [switch] $DisableCardAutofill,
   [switch] $DisableAddressAutofill,
   [switch] $KeepBrowserPasswordManager,
+  # The server the extension signs in to. HTTPS only.
+  [ValidatePattern('^https://[^\s/?#]+(/[^\s?#]*)?$')]
+  [string] $ServerUrl,
+  # The client's enrollment token, from the MSP console.
+  [ValidatePattern('^[A-Za-z0-9_-]{43}$')]
+  [string] $EnrollmentToken,
   [switch] $Remove
 )
 
@@ -63,6 +73,30 @@ function Add-ForcedExtension([string] $Browser) {
   New-ItemProperty -Path $path -Name "$next" -Value "$($ext.Id);$($ext.UpdateUrl)" -PropertyType String -Force | Out-Null
 }
 
+# Settings the browser hands our extension (chrome.storage.managed), under the
+# extension's own policy key, which no other vendor uses.
+function Get-ManagedPolicyPath([string] $Browser) {
+  Join-Path $PolicyRoots[$Browser] "3rdparty\extensions\$($Extensions[$Browser].Id)\policy"
+}
+
+function Set-ManagedSettings([string] $Browser) {
+  $path = Get-ManagedPolicyPath $Browser
+  if ($ServerUrl) {
+    $environment = Join-Path $path "environment"
+    if (-not (Test-Path $environment)) { New-Item -Path $environment -Force | Out-Null }
+    New-ItemProperty -Path $environment -Name "base" -Value $ServerUrl.TrimEnd("/") -PropertyType String -Force | Out-Null
+  }
+  if ($EnrollmentToken) {
+    if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
+    New-ItemProperty -Path $path -Name "enrollmentToken" -Value $EnrollmentToken -PropertyType String -Force | Out-Null
+  }
+}
+
+function Remove-ManagedSettings([string] $Browser) {
+  $extensionKey = Split-Path (Get-ManagedPolicyPath $Browser) -Parent
+  if (Test-Path $extensionKey) { Remove-Item -Path $extensionKey -Recurse -Force }
+}
+
 function Remove-ForcedExtension([string] $Browser) {
   $ext = $Extensions[$Browser]
   $path = Join-Path $PolicyRoots[$Browser] "ExtensionInstallForcelist"
@@ -77,6 +111,7 @@ foreach ($browser in $Browsers) {
   $root = $PolicyRoots[$browser]
   if ($Remove) {
     Remove-ForcedExtension $browser
+    Remove-ManagedSettings $browser
     foreach ($name in "PasswordManagerEnabled", "AutofillCreditCardEnabled", "AutofillAddressEnabled") {
       if ((Test-Path $root) -and ((Get-Item $root).GetValueNames() -contains $name)) {
         Remove-ItemProperty -Path $root -Name $name
@@ -87,6 +122,7 @@ foreach ($browser in $Browsers) {
   }
 
   Add-ForcedExtension $browser
+  Set-ManagedSettings $browser
   if (-not $KeepBrowserPasswordManager) { Set-Dword $root "PasswordManagerEnabled" 0 }
   if ($DisableCardAutofill) { Set-Dword $root "AutofillCreditCardEnabled" 0 }
   if ($DisableAddressAutofill) { Set-Dword $root "AutofillAddressEnabled" 0 }
