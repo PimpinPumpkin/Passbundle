@@ -1,6 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
-import { fixturePort, hostResolverRules, port } from "./paths.mjs";
+import {
+  fixturePort,
+  hostResolverRules,
+  mailHttpPort,
+  mailServerPort,
+  port,
+} from "./paths.mjs";
 
 // Tier 1 rules: no retries (a flaky test gets fixed, not rerun), one worker,
 // fixed timezone and locale, artifacts only for failures.
@@ -31,6 +37,20 @@ export default defineConfig({
       timeout: 60_000,
     },
     {
+      command: "node mail-server.mjs",
+      url: `http://127.0.0.1:${mailHttpPort}/alive`,
+      reuseExistingServer: false,
+      timeout: 30_000,
+    },
+    {
+      command: "node server.mjs",
+      env: { KK_MAIL: "1", KK_PORT: mailServerPort },
+      url: `https://127.0.0.1:${mailServerPort}/alive`,
+      ignoreHTTPSErrors: true,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
       command: "node fixture-server.mjs",
       url: `https://127.0.0.1:${fixturePort}/alive`,
       ignoreHTTPSErrors: true,
@@ -41,6 +61,16 @@ export default defineConfig({
   projects: [
     // Black-box tests of the server's HTTP API. No browser.
     { name: "api", testDir: "tests/api" },
-    { name: "chromium", testIgnore: "api/**", use: { ...devices["Desktop Chrome"] } },
+    // API tests against the server that sends email, read from the mail catcher.
+    {
+      name: "mail",
+      testDir: "tests/mail",
+      use: { baseURL: `https://127.0.0.1:${mailServerPort}` },
+    },
+    {
+      name: "chromium",
+      testIgnore: ["api/**", "mail/**"],
+      use: { ...devices["Desktop Chrome"] },
+    },
   ],
 });

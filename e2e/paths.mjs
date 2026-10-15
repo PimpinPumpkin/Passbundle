@@ -9,10 +9,18 @@ const sibling = (...p) => path.resolve(here, "../..", ...p);
 
 export const port = process.env.KK_PORT ?? "8091";
 export const fixturePort = process.env.KK_FIXTURE_PORT ?? "8093";
+// A second test server that sends email, to the mail catcher.
+export const mailServerPort = process.env.KK_MAIL_SERVER_PORT ?? "8094";
+export const smtpPort = process.env.KK_SMTP_PORT ?? "2525";
+export const mailHttpPort = process.env.KK_MAIL_HTTP_PORT ?? "8096";
 export const paths = {
-  serverBin: process.env.KK_SERVER_BIN ?? sibling("keykeeper-server/target/debug/vaultwarden"),
-  webVault: process.env.KK_WEB_VAULT ?? sibling("keykeeper-clients/apps/web/build"),
-  extension: process.env.KK_EXTENSION ?? sibling("keykeeper-clients/apps/browser/build"),
+  serverBin:
+    process.env.KK_SERVER_BIN ??
+    sibling("keykeeper-server/target/debug/vaultwarden"),
+  webVault:
+    process.env.KK_WEB_VAULT ?? sibling("keykeeper-clients/apps/web/build"),
+  extension:
+    process.env.KK_EXTENSION ?? sibling("keykeeper-clients/apps/browser/build"),
   brand: process.env.KK_BRAND ?? sibling("keykeeper-clients/brand/brand.json"),
 };
 export const brand = JSON.parse(fs.readFileSync(paths.brand, "utf8"));

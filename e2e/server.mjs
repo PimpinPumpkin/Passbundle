@@ -6,11 +6,20 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { paths, port } from "./paths.mjs";
+import { paths, port, smtpPort } from "./paths.mjs";
 
-for (const [name, p] of Object.entries({ server: paths.serverBin, webVault: paths.webVault })) {
+// KK_MAIL=1 starts the server that sends email to the mail catcher. It always
+// keeps its own SQLite file, so it never shares a database with the main one.
+const withMail = process.env.KK_MAIL === "1";
+
+for (const [name, p] of Object.entries({
+  server: paths.serverBin,
+  webVault: paths.webVault,
+})) {
   if (!fs.existsSync(p)) {
-    console.error(`e2e: ${name} not found at ${p}. Build it first (see e2e/README.md).`);
+    console.error(
+      `e2e: ${name} not found at ${p}. Build it first (see e2e/README.md).`,
+    );
     process.exit(1);
   }
 }
@@ -21,18 +30,45 @@ const data = fs.mkdtempSync(path.join(os.tmpdir(), "keykeeper-e2e-"));
 // throwaway certificate. Browsers in the tests are told to accept it.
 const cert = path.join(data, "cert.pem");
 const key = path.join(data, "key.pem");
-execFileSync("openssl", [
-  "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "2",
-  "-keyout", key, "-out", cert,
-  "-subj", "/CN=127.0.0.1", "-addext", "subjectAltName=IP:127.0.0.1",
-], { stdio: "ignore" });
+execFileSync(
+  "openssl",
+  [
+    "req",
+    "-x509",
+    "-newkey",
+    "rsa:2048",
+    "-nodes",
+    "-days",
+    "2",
+    "-keyout",
+    key,
+    "-out",
+    cert,
+    "-subj",
+    "/CN=127.0.0.1",
+    "-addext",
+    "subjectAltName=IP:127.0.0.1",
+  ],
+  { stdio: "ignore" },
+);
 const child = spawn(paths.serverBin, [], {
   stdio: "inherit",
   env: {
     PATH: process.env.PATH,
     DATA_FOLDER: data,
     // Set KK_DATABASE_URL to use PostgreSQL instead of a fresh SQLite file.
-    ...(process.env.KK_DATABASE_URL ? { DATABASE_URL: process.env.KK_DATABASE_URL } : {}),
+    ...(process.env.KK_DATABASE_URL && !withMail
+      ? { DATABASE_URL: process.env.KK_DATABASE_URL }
+      : {}),
+    ...(withMail
+      ? {
+          SMTP_HOST: "127.0.0.1",
+          SMTP_PORT: smtpPort,
+          SMTP_SECURITY: "off",
+          SMTP_FROM: "no-reply@example.test",
+          SMTP_TIMEOUT: "5",
+        }
+      : {}),
     WEB_VAULT_FOLDER: paths.webVault,
     WEB_VAULT_ENABLED: "true",
     ROCKET_ADDRESS: "127.0.0.1",
@@ -53,7 +89,15 @@ const child = spawn(paths.serverBin, [], {
     UNAUTHENTICATED_RATELIMIT_MAX_BURST: "1000",
     LOG_LEVEL: "warn",
     // Set KK_SERVER_LOG to keep the server's log, for example as a CI artifact.
-    ...(process.env.KK_SERVER_LOG ? { LOG_FILE: process.env.KK_SERVER_LOG, LOG_LEVEL: "info" } : {}),
+    ...(process.env.KK_SERVER_LOG
+      ? {
+          LOG_FILE: process.env.KK_SERVER_LOG.replace(
+            /(\.log)?$/,
+            withMail ? "-mail$1" : "$1",
+          ),
+          LOG_LEVEL: "info",
+        }
+      : {}),
   },
 });
 
