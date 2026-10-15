@@ -381,9 +381,11 @@ test("a client with Business defaults starts with account recovery, a strong mas
         .map((p: { type: number; data: unknown }) => [p.type, p.data]),
     );
   };
-  // Account recovery (8) with automatic enrollment, and the master password policy (1).
+  // Account recovery (8) with automatic enrollment, single organization (3),
+  // and the master password policy (1).
   expect(await policies(business)).toEqual({
     8: { autoEnrollEnabled: true },
+    3: null,
     1: {
       minComplexity: 3,
       minLength: 12,
@@ -442,4 +444,54 @@ test("presets are checked", async ({ request }) => {
   expect(
     (await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}`)).body.clients,
   ).toEqual([]);
+});
+
+test("in Business clients, MSP staff reach every client, but a member can't also belong to another organization", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const admin = await api.account("msp-admin");
+  const tech = await api.account("tech");
+  const mspId = await api.msp(admin, "Litware Business IT");
+  const first = await api.client(admin, mspId, "First Business", "business");
+  const second = await api.client(admin, mspId, "Second Business", "business");
+
+  // Staff are owners and admins, which the single organization policy exempts.
+  await api.addStaff(admin, mspId, tech, "technician");
+  expect((await api.confirmPending(admin, mspId)).sort()).toEqual([
+    tech.email,
+    tech.email,
+  ]);
+  expect(await api.orgsOf(tech)).toEqual([first, second].sort());
+
+  // A regular member of one client can't be confirmed into another.
+  const member = await api.account("member");
+  await api.addMember(admin, first, member, "user");
+  const invited = await api.call(
+    admin,
+    "POST",
+    `/api/organizations/${second}/users/invite`,
+    {
+      emails: [member.email],
+      type: USER,
+      collections: [],
+      groups: [],
+      permissions: {},
+    },
+  );
+  expect(invited.status, JSON.stringify(invited.body)).toBe(200);
+  const pending = (await api.members(admin, second)).find(
+    (m) => m.email === member.email,
+  )!;
+  const confirm = await api.call(
+    admin,
+    "POST",
+    `/api/organizations/${second}/users/${pending.id}/confirm`,
+    {
+      key: "2.aXY=|Y3Q=|bWFj",
+    },
+  );
+  expect(confirm.status).toBe(400);
+  expect(confirm.body.message).toMatch(/policy/);
+  expect(await api.orgsOf(member)).toEqual([first]);
 });

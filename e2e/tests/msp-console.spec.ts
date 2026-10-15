@@ -36,13 +36,15 @@ test("an MSP admin adds a client and a technician, and the technician gets in wi
   await expect(client.getByRole("link", { name: "Open" })).toBeVisible();
 
   // Business defaults, applied without building any policies. Account
-  // recovery is on too (the API tests check it), but the server only shows it
-  // when it can send email, and this test server sends none.
+  // recovery is on too (the API and mail tests check it), but the server only
+  // shows it when it can send email, and this test server sends none.
   await expect(client).toContainText("Business");
   await client.getByRole("link", { name: "Open" }).click();
   await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
   await admin.goto(admin.url().replace(/\/members.*$/, "/settings/policies"));
-  await expect(admin.getByRole("button", { name: /Master password requirements/ })).toContainText("On");
+  for (const policy of [/Master password requirements/, /^Single organization/]) {
+    await expect(admin.getByRole("button", { name: policy })).toContainText("On");
+  }
   await admin.goto("/#/msp");
 
   // A technician: added to every client and confirmed by the console.
