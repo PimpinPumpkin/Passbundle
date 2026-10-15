@@ -38,5 +38,9 @@ export default defineConfig({
       timeout: 30_000,
     },
   ],
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    // Black-box tests of the server's HTTP API. No browser.
+    { name: "api", testDir: "tests/api" },
+    { name: "chromium", testIgnore: "api/**", use: { ...devices["Desktop Chrome"] } },
+  ],
 });
