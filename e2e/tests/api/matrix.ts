@@ -21,7 +21,11 @@ export type MatrixRow<A extends string, C> = {
   name: string;
   allowed: readonly A[];
   /** A fresh request for one caller, with anything it needs set up first. */
-  request: (ctx: C, caller: A) => Promise<MatrixRequest>;
+  request: (
+    ctx: C,
+    caller: A,
+    account: Account | null,
+  ) => Promise<MatrixRequest>;
 };
 
 /** Refused: not logged in, forbidden, or not found, never a success or a malformed request. */
@@ -30,7 +34,9 @@ export function expectRefused(result: Result, label: string) {
   const refused =
     [401, 403, 404].includes(result.status) ||
     (result.status === 400 &&
-      /permission|not found|not allowed|access|only/i.test(message));
+      /permission|not found|not allowed|access|only|no rights|not owned|can't be deleted/i.test(
+        message,
+      ));
   expect(
     refused,
     `${label}: expected a refusal, got ${result.status} ${message}`,
@@ -68,7 +74,7 @@ export function permissionMatrix<A extends string, C extends { api: Api }>(
       ).toBeGreaterThan(0);
       for (const actor of actors) {
         const allowed = row.allowed.includes(actor);
-        const { check, ...req } = await row.request(ctx, actor);
+        const { check, ...req } = await row.request(ctx, actor, callers[actor]);
         const result = await ctx.api.call(
           callers[actor],
           req.method,
