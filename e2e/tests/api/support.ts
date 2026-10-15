@@ -184,14 +184,21 @@ export class Api {
   }
 
   /** A new client organization of an MSP, created by one of its admins. */
-  async client(admin: Account, mspId: string, name: string): Promise<string> {
+  async client(
+    admin: Account,
+    mspId: string,
+    name: string,
+    preset?: "business",
+  ): Promise<string> {
     const created = await this.call(
       admin,
       "POST",
       `/api/keykeeper/msp/${mspId}/clients`,
       {
         name,
+        preset,
         collectionName: encString(`collection-${name}`),
+        adminsCollectionName: preset ? encString(`admins-${name}`) : undefined,
         key: encString(`org-key-for-${admin.email}`),
         keys: {
           publicKey: publicKey(`org-${name}`),

@@ -145,6 +145,15 @@ Personal profiles are never imported by default.
 
 The Solo and Family presets have no admin recovery. They use emergency access instead.
 
+**Status:**
+
+- **Built:** an MSP's "Add client" applies the Business preset by default, in one server call so a closed browser tab can't leave a client half set up. It turns on account recovery with automatic enrollment and master password requirements (12 characters and a strength score of 3 out of 4; existing passwords aren't forced to change), and creates the "Everyone" and "Admins" collections. All of these are upstream policies and collections, which the client's owners can change in its admin console.
+- **Account recovery needs email.** The server only offers it when it can send email, since a member must be told when an admin resets their password. Our hosted service sends email. Self-hosters without SMTP don't get account recovery. The tests need a local mail catcher to cover it end to end, which also lets them test emailed invites; that comes with the enrollment work below.
+- **Enrolling members who didn't use an emailed invite (next):** upstream enrolls a member in account recovery only when they accept an emailed invite. Members added any other way (the MSP console, the RMM script, members added before the policy was on) would never be enrolled. Our clients will close that gap: on unlock, for each organization whose account recovery policy has automatic enrollment and where the member isn't enrolled, the client enrolls them with upstream's own enrollment code, which encrypts the member's user key to the organization's public key exactly as the invite flow does. The member sees a one-time notice naming the organization. The trust is the same as upstream's invite flow: the client takes the organization's public key from the server. Tests: a member added through the MSP console unlocks and is enrolled; an owner then sees them as enrolled; a member of an organization without automatic enrollment is never enrolled.
+- **Not possible with upstream policies, so not done yet:** two-step login required for admins only (upstream's policy exempts owners and admins, the opposite), and locking the vault when the computer locks (a per-device setting the desktop agent will set). Keeping private items with the organization needs upstream's newer data ownership policy, which Vaultwarden doesn't support yet.
+- **Not built:** new members getting the "Everyone" collection automatically, the Solo and Family presets, and presets for organizations created without an MSP.
+
+
 Every setting explains itself in one sentence. Changing a setting needs no action from users.
 
 ## Browser import

@@ -359,3 +359,87 @@ test("a client's single-organization and two-step login policies don't lock its 
   expect(confirm.status).toBe(400);
   expect(confirm.body.message).toMatch(/policy|2FA/);
 });
+
+test("a client with Business defaults starts with account recovery, a strong master password, and two collections", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const admin = await api.account("msp-admin");
+  const mspId = await api.msp(admin, "Proseware IT");
+  const business = await api.client(admin, mspId, "Business Co", "business");
+  const plain = await api.client(admin, mspId, "Plain Co");
+
+  const policies = async (orgId: string) => {
+    const listed = await api.call(
+      admin,
+      "GET",
+      `/api/organizations/${orgId}/policies`,
+    );
+    return Object.fromEntries(
+      listed.body.data
+        .filter((p: { enabled: boolean }) => p.enabled)
+        .map((p: { type: number; data: unknown }) => [p.type, p.data]),
+    );
+  };
+  // Account recovery (8) with automatic enrollment, and the master password policy (1).
+  expect(await policies(business)).toEqual({
+    8: { autoEnrollEnabled: true },
+    1: {
+      minComplexity: 3,
+      minLength: 12,
+      requireUpper: false,
+      requireLower: false,
+      requireNumbers: false,
+      requireSpecial: false,
+      enforceOnLogin: false,
+    },
+  });
+  expect(await policies(plain)).toEqual({});
+
+  const collections = async (orgId: string) =>
+    (await api.call(admin, "GET", `/api/organizations/${orgId}/collections`))
+      .body.data.length;
+  expect(await collections(business)).toBe(2);
+  expect(await collections(plain)).toBe(1);
+
+  // The policy is on, but nobody is enrolled yet: members enroll as they join.
+  const profile = await api.call(admin, "GET", "/api/accounts/profile");
+  const org = profile.body.organizations.find(
+    (o: { id: string }) => o.id === business,
+  );
+  expect(org.resetPasswordEnrolled).toBe(false);
+
+  const overview = await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}`);
+  expect(
+    overview.body.clients.map((c: { name: string; preset: string | null }) => [
+      c.name,
+      c.preset,
+    ]),
+  ).toEqual([
+    ["Business Co", "business"],
+    ["Plain Co", null],
+  ]);
+});
+
+test("presets are checked", async ({ request }) => {
+  const api = new Api(request);
+  const admin = await api.account("msp-admin");
+  const mspId = await api.msp(admin, "Wingtip IT");
+  const create = (data: Record<string, unknown>) =>
+    api.call(admin, "POST", `/api/keykeeper/msp/${mspId}/clients`, {
+      name: "Client",
+      collectionName: "2.aXY=|Y3Q=|bWFj",
+      key: "2.aXY=|Y3Q=|bWFj",
+      keys: { publicKey: "cHVibGlj", encryptedPrivateKey: "2.aXY=|Y3Q=|bWFj" },
+      ...data,
+    });
+  const unknown = await create({ preset: "enterprise" });
+  expect(unknown.status).toBe(400);
+  expect(unknown.body.message).toContain("Preset must be business or none");
+  const missing = await create({ preset: "business" });
+  expect(missing.status).toBe(400);
+  expect(missing.body.message).toContain("Admins collection");
+  expect(
+    (await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}`)).body.clients,
+  ).toEqual([]);
+});
