@@ -76,7 +76,11 @@ jobs:
         run: |
           base=$(cat .keykeeper-base)
           git fetch --no-tags --depth=1 origin "refs/tags/$base:refs/tags/$base"
-          git diff --name-only "$base" HEAD -- 'apps/*.ts' 'libs/*.ts' > "$RUNNER_TEMP/changed.txt"
+          # A changed component template counts as a change to its component,
+          # since jest only follows imports.
+          git diff --name-only "$base" HEAD -- 'apps/*.ts' 'libs/*.ts' 'apps/*.html' 'libs/*.html' |
+            sed 's/\.html$/.ts/' | sort -u |
+            while read -r file; do if [ -f "$file" ]; then echo "$file"; fi; done > "$RUNNER_TEMP/changed.txt"
           cat "$RUNNER_TEMP/changed.txt"
           if [ -s "$RUNNER_TEMP/changed.txt" ]; then
             xargs npx jest --ci --findRelatedTests < "$RUNNER_TEMP/changed.txt"

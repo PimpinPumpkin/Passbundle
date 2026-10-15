@@ -58,3 +58,82 @@ test("a login-based template keeps the login fields too", async ({ page }, testI
   await expect(view.getByRole("textbox", { name: "Username" })).toHaveValue("deploy");
   await expect(view.getByRole("textbox", { name: "Hostname" })).toHaveValue("build1.example.test");
 });
+
+test("a custom template is made in the ordinary editor, and new items start with its fields and defaults", async ({
+  page,
+}, testInfo) => {
+  await signUp(page, webUserFor("template-custom", testInfo.repeatEachIndex));
+
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.getByRole("menuitem", { name: "From template" }).click();
+  await page
+    .getByRole("dialog", { name: "New item from a template" })
+    .getByRole("button", { name: "Create template" })
+    .click();
+  await page.getByRole("dialog", { name: "New template" }).getByRole("button", { name: "Logins" }).click();
+
+  // A template is a note: its name is the template's, its custom fields are the template's.
+  const editor = page.getByRole("dialog", { name: /^New/ });
+  await expect(editor.getByTestId("keykeeper-template-hint")).toContainText("template for new logins");
+  await editor.getByRole("textbox", { name: /Item name/ }).fill("Client laptop");
+  for (const [label, type] of [
+    ["Asset tag", null],
+    ["BitLocker recovery key", "Hidden"],
+    ["Site", null],
+  ] as const) {
+    await editor.getByRole("button", { name: "Add field" }).click();
+    const addField = page.getByRole("dialog", { name: "Add field" });
+    if (type) {
+      await addField.getByRole("combobox", { name: /Field type/ }).click();
+      await page.getByRole("option", { name: type, exact: true }).click();
+    }
+    await addField.getByRole("textbox", { name: /Field label/ }).fill(label);
+    await addField.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(addField).toBeHidden();
+  }
+  // A value in the template is a default for new items.
+  await editor.getByRole("textbox", { name: "Site", exact: true }).fill("Main office");
+  await editor.getByRole("button", { name: "Save" }).click();
+  await expect(editor).toBeHidden();
+
+  const templateView = page.getByRole("dialog", { name: /^View/ });
+  await expect(templateView.getByTestId("keykeeper-template-definition")).toContainText(
+    "New logins from this template",
+  );
+  await expect(templateView.getByText("keykeeper.template-definition")).toHaveCount(0);
+  await templateView.getByRole("button", { name: "Close" }).first().click();
+  await expect(
+    page.getByRole("row").filter({ hasText: "Client laptop" }).getByTestId("keykeeper-template-badge"),
+  ).toHaveText("Template");
+
+  // The picker lists it under the person's own templates.
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.getByRole("menuitem", { name: "From template" }).click();
+  await page
+    .getByRole("dialog", { name: "New item from a template" })
+    .getByRole("region", { name: "My templates" })
+    .getByRole("button", { name: "Client laptop", exact: true })
+    .click();
+
+  const item = page.getByRole("dialog", { name: "New Login" });
+  await expect(item.getByTestId("keykeeper-template-hint")).toHaveCount(0);
+  await expect(item.getByRole("textbox", { name: "Site", exact: true })).toHaveValue("Main office");
+  await expect(item.getByLabel("BitLocker recovery key", { exact: true })).toHaveValue("");
+  await item.getByRole("textbox", { name: /Item name/ }).fill("Front desk PC");
+  await item.getByRole("textbox", { name: "Username", exact: true }).fill("frontdesk");
+  await item.getByRole("textbox", { name: "Asset tag", exact: true }).fill("A-1001");
+  await item.getByRole("button", { name: "Save" }).click();
+  await expect(item).toBeHidden();
+
+  const view = page.getByRole("dialog", { name: "View Login" });
+  await expect(view.getByTestId("keykeeper-template")).toHaveText("Client laptop");
+  await expect(view.getByTestId("keykeeper-template-definition")).toHaveCount(0);
+  await expect(view.getByRole("textbox", { name: "Asset tag" })).toHaveValue("A-1001");
+  await expect(view.getByRole("textbox", { name: "Site" })).toHaveValue("Main office");
+  await expect(view.getByRole("textbox", { name: "Username" })).toHaveValue("frontdesk");
+  await view.getByRole("button", { name: "Close" }).first().click();
+  // Only the template is marked as one.
+  await expect(
+    page.getByRole("row").filter({ hasText: "Front desk PC" }).getByTestId("keykeeper-template-badge"),
+  ).toHaveCount(0);
+});
