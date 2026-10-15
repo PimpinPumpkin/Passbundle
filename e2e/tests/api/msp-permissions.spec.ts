@@ -151,6 +151,30 @@ const rows: Row[] = [
     }),
   },
   {
+    name: "see a client's enrollment token for its install command",
+    allowed: ["mspAdmin", "technician"],
+    request: async ({ mspId, orgId }) => ({
+      method: "GET",
+      path: `/api/keykeeper/msp/${mspId}/clients/${orgId}/enrollment`,
+    }),
+  },
+  {
+    name: "replace a client's enrollment token",
+    allowed: ["mspAdmin"],
+    request: async (ctx) => {
+      const path = `/api/keykeeper/msp/${ctx.mspId}/clients/${ctx.orgId}/enrollment`;
+      const before = (await ctx.api.call(ctx.admin, "GET", path)).body.token;
+      return {
+        method: "POST",
+        path,
+        check: async (allowed) => {
+          const after = (await ctx.api.call(ctx.admin, "GET", path)).body.token;
+          expect(after !== before).toBe(allowed);
+        },
+      };
+    },
+  },
+  {
     name: "remove a client's MSP",
     allowed: ["clientOwner"],
     request: async (ctx) => {
