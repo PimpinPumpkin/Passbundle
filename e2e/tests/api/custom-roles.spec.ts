@@ -201,6 +201,25 @@ const rows: Row[] = [
     }),
   },
   {
+    // The admin console's Vault tab loads its items and groups. No custom
+    // permission covers them, so custom roles never show as managing
+    // collections, which would open that tab and sign them out.
+    name: "load the organization's items for the admin console",
+    allowed: ADMINS,
+    request: async ({ orgId }) => ({
+      method: "GET",
+      path: `/api/ciphers/organization-details?organizationId=${orgId}`,
+    }),
+  },
+  {
+    name: "list groups",
+    allowed: ADMINS,
+    request: async ({ orgId }) => ({
+      method: "GET",
+      path: `/api/organizations/${orgId}/groups`,
+    }),
+  },
+  {
     // Not covered by any custom permission: still admins only.
     name: "create a collection",
     allowed: ADMINS,
@@ -472,6 +491,115 @@ test("a custom member who manages members can't reach beyond regular members or 
   // A regular member is fair game.
   const ok = await edit(regularId, { type: 2 });
   expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+});
+
+test("a custom role can't also manage all collections, while upstream's Custom with only those still can", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const owner = await api.account("owner");
+  const orgId = await api.organization(owner, "All Collections Org");
+  const admin = await api.account("admin");
+  await api.addMember(owner, orgId, admin, "admin");
+  const allCollections = {
+    createNewCollections: true,
+    editAnyCollection: true,
+    deleteAnyCollection: true,
+  };
+  const refused = (result: { status: number; body: { message?: string } }) => {
+    expect(result.status, JSON.stringify(result.body)).toBe(400);
+    expect(result.body.message).toMatch(/can't also manage all collections/);
+  };
+
+  // Owners and admins can't invite someone with both, and any one of the
+  // collection permissions is enough to refuse it.
+  const invite = (by: Account, permissions: Record<string, boolean>) => {
+    const email = `both-${randomUUID().slice(0, 8)}@api.example.test`;
+    return api.call(by, "POST", `/api/organizations/${orgId}/users/invite`, {
+      emails: [email],
+      type: 4,
+      collections: [],
+      groups: [],
+      permissions,
+    });
+  };
+  refused(await invite(owner, { manageUsers: true, ...allCollections }));
+  refused(await invite(admin, { manageUsers: true, ...allCollections }));
+  refused(
+    await invite(owner, { managePolicies: true, editAnyCollection: true }),
+  );
+  refused(
+    await invite(owner, { accessEventLogs: true, createNewCollections: true }),
+  );
+
+  // Nor edit a custom member or a regular member into both.
+  const poc = await api.account("poc");
+  const pocId = await api.addCustomMember(owner, orgId, poc, {
+    manageUsers: true,
+  });
+  const regular = await api.account("regular");
+  const regularId = await api.addMember(owner, orgId, regular, "user");
+  for (const id of [pocId, regularId]) {
+    refused(
+      await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${id}`, {
+        type: 4,
+        collections: [],
+        groups: [],
+        permissions: { manageUsers: true, ...allCollections },
+      }),
+    );
+  }
+
+  // Nobody new joined, and nothing changed for anyone.
+  const after = await api.members(owner, orgId);
+  expect(after.filter((m) => m.email.startsWith("both-"))).toEqual([]);
+  const pocListed = after.find((m) => m.id === pocId) as unknown as {
+    type: number;
+    permissions: Record<string, boolean>;
+  };
+  expect(pocListed.type).toBe(4);
+  expect(pocListed.permissions).toMatchObject({
+    manageUsers: true,
+    editAnyCollection: false,
+  });
+  expect(after.find((m) => m.id === regularId)!.type).toBe(2);
+
+  // A custom member's own view never shows collection management, so the
+  // apps don't offer them the admin console's collection tools.
+  const org = (
+    await api.call(poc, "GET", "/api/accounts/profile")
+  ).body.organizations.find((o: { id: string }) => o.id === orgId);
+  expect(org.permissions).toMatchObject({
+    manageUsers: true,
+    createNewCollections: false,
+    editAnyCollection: false,
+    deleteAnyCollection: false,
+  });
+
+  // Upstream's Custom with only the collection permissions is still a
+  // manager of every collection, and can load the admin console's Vault tab.
+  const manager = await api.account("manager");
+  const managerId = await api.addCustomMember(
+    owner,
+    orgId,
+    manager,
+    allCollections,
+  );
+  const managerListed = (
+    await api.call(owner, "GET", `/api/organizations/${orgId}/users`)
+  ).body.data.find((m: { id: string }) => m.id === managerId);
+  expect(managerListed.type).toBe(4);
+  expect(managerListed.permissions).toMatchObject({
+    ...allCollections,
+    manageUsers: false,
+  });
+  for (const path of [
+    `/api/ciphers/organization-details?organizationId=${orgId}`,
+    `/api/organizations/${orgId}/groups`,
+  ]) {
+    const loaded = await api.call(manager, "GET", path);
+    expect(loaded.status, `${path}: ${JSON.stringify(loaded.body)}`).toBe(200);
+  }
 });
 
 test("owners and admins assign custom roles, and clients see them as Custom with their permissions", async ({
