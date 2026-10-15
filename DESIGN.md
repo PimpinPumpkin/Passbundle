@@ -92,6 +92,13 @@ The MSP side is where we win, so it gets the most care: one place to run every c
 - **Databases:** PostgreSQL in production and SQLite for self-hosting and tests. We drop MySQL and CockroachDB: fewer code paths, and our own migrations only need writing twice. CI runs the API tests on both.
 - Creating MSPs is off by default on self-hosted servers (`MSP_SIGNUPS_ALLOWED`).
 
+### Status
+
+- **Built, server:** MSPs, staff roles, clients, staff kept in step with every client, the list of memberships waiting for a key, and a client's view and removal of its MSP (`src/api/core/keykeeper_msp.rs`, migrations for SQLite and PostgreSQL). MSP tables cascade, so upstream deletes of users, orgs, and members always work. A client's single-organization and two-step login policies don't apply to MSP staff, because upstream exempts owners and admins.
+- **Built, console:** "MSP console" in the web vault, shown to MSP staff: set up an MSP, clients with member counts and a link into each client's admin console, add a client (its keys made in the browser with upstream's own code), and add, re-role, or remove staff. Opening it confirms everyone waiting whom the person can confirm.
+- **Built, tests:** behavior tests, the MSP and organization permission matrices, and a console e2e test where a technician gets into a client with no manual confirm. CI also runs `cargo fmt`, clippy, and the API tests on PostgreSQL.
+- **Not built yet:** health and expiring columns; pushing templates; the RMM script per client; presets when adding a client (Business defaults and policies); the client's "Your MSP" list and remove button in its admin console (the API exists); adding staff who don't have an account yet; key fingerprints; an audit log of MSP actions; choosing between several MSPs; MSP signup on our hosted service.
+
 ### Tests
 
 - **API tests (tier 1):** a black-box suite that drives the real server binary over HTTP, with a fresh database per run. It's the backend's safety net, for upstream's endpoints and ours.

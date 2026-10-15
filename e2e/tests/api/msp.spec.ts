@@ -296,3 +296,45 @@ test("MSP names are checked", async ({ request }) => {
     (await api.call(admin, "GET", "/api/keykeeper/msp")).body.data,
   ).toEqual([]);
 });
+
+test("a client's single-organization and two-step login policies don't lock its MSP out", async ({ request }) => {
+  const api = new Api(request);
+  const admin = await api.account("msp-admin");
+  const tech = await api.account("tech");
+  const mspId = await api.msp(admin, "Adatum IT");
+  const strict = await api.client(admin, mspId, "Strict Co");
+  const other = await api.client(admin, mspId, "Other Co");
+  await api.addStaff(admin, mspId, tech, "technician");
+  await api.confirmPending(admin, mspId);
+
+  // Single organization (3) and two-step login (0): the technician belongs to
+  // two clients and has no two-step login, which would remove a regular member.
+  for (const type of [3, 0]) {
+    const turnedOn = await api.call(admin, "PUT", `/api/organizations/${strict}/policies/${type}`, {
+      policy: { enabled: true, data: null },
+    });
+    expect(turnedOn.status, JSON.stringify(turnedOn.body)).toBe(200);
+  }
+
+  const techIn = (await api.members(admin, strict)).find((m) => m.email === tech.email);
+  expect(techIn).toMatchObject({ status: CONFIRMED, type: ADMIN });
+  expect(await api.orgsOf(tech)).toEqual([strict, other].sort());
+
+  // A regular member in the same position is refused, as upstream intends.
+  const member = await api.account("member");
+  await api.addMember(admin, other, member, "user");
+  const blocked = await api.call(admin, "POST", `/api/organizations/${strict}/users/invite`, {
+    emails: [member.email],
+    type: USER,
+    collections: [],
+    groups: [],
+    permissions: {},
+  });
+  expect(blocked.status, JSON.stringify(blocked.body)).toBe(200);
+  const memberIn = (await api.members(admin, strict)).find((m) => m.email === member.email)!;
+  const confirm = await api.call(admin, "POST", `/api/organizations/${strict}/users/${memberIn.id}/confirm`, {
+    key: "2.aXY=|Y3Q=|bWFj",
+  });
+  expect(confirm.status).toBe(400);
+  expect(confirm.body.message).toMatch(/policy|2FA/);
+});
