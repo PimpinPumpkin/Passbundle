@@ -49,7 +49,8 @@ test("an MSP admin adds a client and a technician, and the technician gets in wi
   await expect(client).toContainText("Business");
   await client.getByRole("link", { name: "Open" }).click();
   await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
-  await admin.goto(admin.url().replace(/\/members.*$/, "/settings/policies"));
+  const clientUrl = admin.url().replace(/\/members.*$/, "");
+  await admin.goto(`${clientUrl}/settings/policies`);
   for (const policy of [
     /Master password requirements/,
     /^Single organization/,
@@ -85,6 +86,29 @@ test("an MSP admin adds a client and a technician, and the technician gets in wi
   await expect(command).toHaveText(shape);
   await expect(command).not.toHaveText(firstCommand!);
 
+  // Health per client: a weak password that expires in 5 days, added in the
+  // client's own vault, shows up in the console.
+  await admin.goto(`${clientUrl}/vault`);
+  await admin.getByRole("button", { name: "Everyone", exact: true }).first().click();
+  await admin.getByRole("button", { name: "New", exact: true }).click();
+  await admin.getByRole("menuitem", { name: "Login" }).click();
+  const item = admin.getByRole("dialog", { name: "New Login" });
+  await item.getByRole("textbox", { name: /Item name/ }).fill("Front desk PC");
+  await item.getByRole("textbox", { name: "Username", exact: true }).fill("frontdesk@acme.test");
+  await item.getByRole("textbox", { name: "Password", exact: true }).fill("password1");
+  const inFiveDays = new Date();
+  inFiveDays.setUTCDate(inFiveDays.getUTCDate() + 5);
+  await item.getByTestId("keykeeper-expires").fill(inFiveDays.toISOString().slice(0, 10));
+  await item.getByRole("button", { name: "Save" }).click();
+  await expect(item).toBeHidden();
+  // Saving opens the item's view; close it.
+  await admin.getByRole("dialog", { name: "View Login" }).getByRole("button", { name: "Close" }).first().click();
+  await admin.goto("/#/msp");
+  const row = admin.getByTestId("msp-client-Acme Dental");
+  await expect(row.getByTestId("msp-client-weak")).toHaveText("1");
+  await expect(row.getByTestId("msp-client-expiring")).toHaveText("1");
+  await expect(row.getByTestId("msp-client-reused")).toHaveText("0");
+
   // A technician: added to every client and confirmed by the console.
   await admin
     .getByRole("textbox", { name: "Email of someone to add" })
@@ -116,5 +140,60 @@ test("an MSP admin adds a client and a technician, and the technician gets in wi
   await expect(tech.getByRole("button", { name: "Add staff" })).toHaveCount(0);
 
   await techContext.close();
+  await adminContext.close();
+});
+
+test("a client's own owner sees its MSP on the Members page and removes it; the MSP's staff can't", async ({
+  browser,
+}, testInfo) => {
+  const ownerContext = await browser.newContext();
+  const owner = await ownerContext.newPage();
+  const ownerUser = webUserFor("client-owner", testInfo.repeatEachIndex);
+  await signUp(owner, ownerUser);
+
+  const adminContext = await browser.newContext();
+  const admin = await adminContext.newPage();
+  const adminUser = webUserFor("msp-admin-2", testInfo.repeatEachIndex);
+  await signUp(admin, adminUser);
+  await admin.goto("/#/msp");
+  await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Contoso IT");
+  await admin.getByRole("button", { name: "Create MSP" }).click();
+  await admin.getByRole("textbox", { name: "New client's name" }).fill("Fabrikam Law");
+  await admin.getByRole("button", { name: "Add client" }).click();
+  await admin.getByTestId("msp-client-Fabrikam Law").getByRole("link", { name: "Open" }).click();
+  await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
+  const membersUrl = admin.url();
+
+  // The MSP's own staff see the banner, without a way to remove the MSP.
+  const banner = admin.getByTestId("client-msp");
+  await expect(banner).toContainText("Contoso IT manages this organization");
+  await expect(banner.getByRole("button")).toHaveCount(0);
+
+  // The MSP adds the client's owner, and the console confirms them.
+  await admin.getByRole("button", { name: "Invite member" }).click();
+  const invite = admin.getByRole("dialog", { name: /Invite member/ });
+  await invite.getByRole("textbox", { name: /Email/ }).fill(ownerUser.email);
+  await invite.getByRole("radio", { name: /^Owner/ }).check();
+  await invite.getByRole("button", { name: "Save" }).click();
+  await expect(invite).toBeHidden();
+  await admin.goto("/#/msp");
+  await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
+
+  // The client's owner removes the MSP from their own Members page.
+  await owner.reload();
+  await owner.getByRole("textbox", { name: /^Master password/ }).fill(ownerUser.password);
+  await owner.getByRole("button", { name: "Unlock", exact: true }).click();
+  await owner.waitForURL(/#\/vault/);
+  await owner.goto(membersUrl);
+  const ownerBanner = owner.getByTestId("client-msp");
+  await expect(ownerBanner).toContainText("Contoso IT manages this organization");
+  await ownerBanner.getByRole("button", { name: "Remove Contoso IT" }).click();
+  await owner.getByRole("dialog").getByRole("button", { name: "Remove Contoso IT" }).click();
+  await expect(toast(owner, "Removed Contoso IT")).toBeVisible();
+  await expect(ownerBanner).toHaveCount(0);
+  await expect(owner.getByText(adminUser.email)).toHaveCount(0);
+  await expect(owner.getByText(ownerUser.email).first()).toBeVisible();
+
+  await ownerContext.close();
   await adminContext.close();
 });
