@@ -1,7 +1,8 @@
 // Who may do what with an MSP. The MSP's admins run it; technicians can see it
 // and the memberships waiting for the org key; another MSP's staff, the
 // client's own people, and strangers get nothing, except that a client's own
-// owners can see their MSP and remove it.
+// owners can see their MSP and remove it. The limited technician has a custom
+// role in the client and no install commands.
 import { expect, test } from "@playwright/test";
 
 import { type MatrixRow, permissionMatrix } from "./matrix";
@@ -10,6 +11,7 @@ import type { Account, Api } from "./support";
 const ACTORS = [
   "mspAdmin",
   "technician",
+  "limitedTech",
   "otherMspAdmin",
   "clientOwner",
   "clientUser",
@@ -51,7 +53,7 @@ const rows: Row[] = [
   },
   {
     name: "see an MSP, its staff, and its clients",
-    allowed: ["mspAdmin", "technician"],
+    allowed: ["mspAdmin", "technician", "limitedTech"],
     request: async ({ mspId }) => ({
       method: "GET",
       path: `/api/keykeeper/msp/${mspId}`,
@@ -118,6 +120,30 @@ const rows: Row[] = [
     },
   },
   {
+    name: "change a technician's access",
+    allowed: ["mspAdmin"],
+    request: async (ctx) => {
+      const tech = await freshTechnician(ctx);
+      return {
+        method: "PUT",
+        path: `/api/keykeeper/msp/${ctx.mspId}/staff/${tech.userId}/access`,
+        data: {
+          allClients: false,
+          clients: [ctx.orgId],
+          custom: null,
+          installCommands: false,
+        },
+        check: async (allowed) => {
+          const access = (await overview(ctx)).staff.find(
+            (s: { email: string }) => s.email === tech.email,
+          ).access;
+          expect(access.allClients).toBe(!allowed);
+          expect(access.installCommands).toBe(!allowed);
+        },
+      };
+    },
+  },
+  {
     name: "remove a staff member",
     allowed: ["mspAdmin"],
     request: async (ctx) => {
@@ -136,7 +162,7 @@ const rows: Row[] = [
   },
   {
     name: "list memberships waiting for the org key",
-    allowed: ["mspAdmin", "technician"],
+    allowed: ["mspAdmin", "technician", "limitedTech"],
     request: async ({ mspId }) => ({
       method: "GET",
       path: `/api/keykeeper/msp/${mspId}/pending`,
@@ -176,7 +202,7 @@ const rows: Row[] = [
   },
   {
     name: "read the MSP's audit log",
-    allowed: ["mspAdmin", "technician"],
+    allowed: ["mspAdmin", "technician", "limitedTech"],
     request: async ({ mspId }) => ({
       method: "GET",
       path: `/api/keykeeper/msp/${mspId}/events`,
@@ -249,12 +275,30 @@ test.describe("MSP permissions", () => {
       await api.msp(other, "Other MSP");
       const orgId = await api.client(admin, mspId, "Matrix Client");
       await api.addStaff(admin, mspId, tech, "technician");
+      const limited = await api.account("limited-tech");
+      const addedLimited = await api.call(
+        admin,
+        "POST",
+        `/api/keykeeper/msp/${mspId}/staff`,
+        {
+          email: limited.email,
+          role: "technician",
+          access: {
+            allClients: false,
+            clients: [orgId],
+            custom: { permissions: { manageUsers: true }, vaultItems: false },
+            installCommands: false,
+          },
+        },
+      );
+      expect(addedLimited.status, JSON.stringify(addedLimited.body)).toBe(200);
       await api.confirmPending(admin, mspId);
       await api.addMember(admin, orgId, owner, "owner");
       await api.addMember(admin, orgId, user, "user");
       const callers: Record<Actor, Account | null> = {
         mspAdmin: admin,
         technician: tech,
+        limitedTech: limited,
         otherMspAdmin: other,
         clientOwner: owner,
         clientUser: user,

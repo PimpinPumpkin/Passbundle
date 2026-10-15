@@ -60,6 +60,16 @@ const rows: Row[] = [
     }),
   },
   {
+    // The member dialogs and the import page load it. It lists only the
+    // collections a member without access to all items is assigned to.
+    name: "list the collections a member can use",
+    allowed: [...ADMINS, "manageUsers", "accessImportExport"],
+    request: async ({ orgId }) => ({
+      method: "GET",
+      path: `/api/organizations/${orgId}/collections/details`,
+    }),
+  },
+  {
     name: "invite a regular member",
     allowed: [...ADMINS, "manageUsers"],
     request: async (ctx) => {
