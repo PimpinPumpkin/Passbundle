@@ -31,6 +31,8 @@ const child = spawn(paths.serverBin, [], {
   env: {
     PATH: process.env.PATH,
     DATA_FOLDER: data,
+    // Set KK_DATABASE_URL to use PostgreSQL instead of a fresh SQLite file.
+    ...(process.env.KK_DATABASE_URL ? { DATABASE_URL: process.env.KK_DATABASE_URL } : {}),
     WEB_VAULT_FOLDER: paths.webVault,
     WEB_VAULT_ENABLED: "true",
     ROCKET_ADDRESS: "127.0.0.1",
@@ -39,6 +41,7 @@ const child = spawn(paths.serverBin, [], {
     DOMAIN: `https://127.0.0.1:${port}`,
     SIGNUPS_ALLOWED: "true",
     SIGNUPS_VERIFY: "false",
+    MSP_SIGNUPS_ALLOWED: "true",
     DISABLE_ICON_DOWNLOAD: "true",
     // Every test logs in from 127.0.0.1. The default (a burst of 10, then one
     // per minute per IP) would fail tests depending on how many ran before.

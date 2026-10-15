@@ -42,14 +42,20 @@ jobs:
           ref: ${{ env.SERVER_REF }}
           persist-credentials: false
       - name: Install build dependencies
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential libssl-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential libssl-dev pkg-config libpq-dev
       - name: Install the pinned Rust toolchain
         run: rustup toolchain install
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      # One binary for both supported databases (SQLite and PostgreSQL); the
+      # database URL picks which one at startup.
+      - name: Formatting
+        run: cargo fmt --check
+      - name: Lints
+        run: cargo clippy --features sqlite,postgresql
       - name: Unit tests
-        run: cargo test --features sqlite
+        run: cargo test --features sqlite,postgresql
       - name: Build
-        run: cargo build --features sqlite
+        run: cargo build --features sqlite,postgresql
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: server
@@ -170,7 +176,7 @@ jobs:
           cache-dependency-path: e2e/package-lock.json
       - name: Install test dependencies
         working-directory: e2e
-        run: npm ci --no-audit --no-fund && npx playwright install --with-deps chromium
+        run: sudo apt-get install -y --no-install-recommends libpq5 && npm ci --no-audit --no-fund && npx playwright install --with-deps chromium
       - name: Run end-to-end tests
         working-directory: e2e
         env:
@@ -184,6 +190,65 @@ jobs:
         if: failure()
         with:
           name: e2e-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            e2e/server-log
+          retention-days: 14
+
+  api-postgres:
+    name: API tests on PostgreSQL
+    needs: [server, clients]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: keykeeper
+          POSTGRES_PASSWORD: keykeeper
+          POSTGRES_DB: keykeeper
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U keykeeper"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/keykeeper
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: server
+          path: build/server
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: clients
+          path: build/clients
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Install test dependencies
+        working-directory: e2e
+        run: sudo apt-get install -y --no-install-recommends libpq5 && npm ci --no-audit --no-fund
+      - name: Run API tests
+        working-directory: e2e
+        env:
+          KK_SERVER_BIN: ${{ github.workspace }}/build/server/vaultwarden
+          KK_WEB_VAULT: ${{ github.workspace }}/build/clients/web-vault
+          KK_BRAND: ${{ github.workspace }}/build/clients/brand.json
+          KK_DATABASE_URL: postgresql://keykeeper:keykeeper@localhost:5432/keykeeper
+          KK_SERVER_LOG: ${{ github.workspace }}/e2e/server-log/server.log
+        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" && npx playwright test --project=api
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: api-postgres-report
           path: |
             e2e/playwright-report
             e2e/test-results
