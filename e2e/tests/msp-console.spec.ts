@@ -197,3 +197,53 @@ test("a client's own owner sees its MSP on the Members page and removes it; the 
   await ownerContext.close();
   await adminContext.close();
 });
+
+test("an MSP admin invites someone without an account, who signs up and joins from the link; Activity shows it", async ({
+  browser,
+}, testInfo) => {
+  const adminContext = await browser.newContext();
+  const admin = await adminContext.newPage();
+  const adminUser = webUserFor("invite-admin", testInfo.repeatEachIndex);
+  await signUp(admin, adminUser);
+  await admin.goto("/#/msp");
+  await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Tailspin IT");
+  await admin.getByRole("button", { name: "Create MSP" }).click();
+  await admin.getByRole("textbox", { name: "New client's name" }).fill("Tailspin Client");
+  await admin.getByRole("button", { name: "Add client" }).click();
+  await expect(admin.getByTestId("msp-client-Tailspin Client")).toBeVisible();
+
+  // No account uses this address yet, so adding them invites them.
+  const hireUser = webUserFor("invited-tech", testInfo.repeatEachIndex);
+  await admin.getByRole("textbox", { name: "Email of someone to add" }).fill(hireUser.email);
+  await admin.getByRole("button", { name: "Add staff" }).click();
+  await expect(toast(admin, `Invited ${hireUser.email}`)).toBeVisible();
+  await expect(admin.getByTestId(`msp-invite-${hireUser.email}`)).toContainText("Invited");
+  const link = await admin.getByTestId("msp-invite-link").locator("pre").textContent();
+  expect(link).toMatch(/#\/msp\?invite=[A-Za-z0-9_-]{43}$/);
+
+  // They create an account with that address and open the link.
+  const hireContext = await browser.newContext();
+  const hire = await hireContext.newPage();
+  await signUp(hire, hireUser);
+  await hire.goto(link!.slice(link!.indexOf("/#/")));
+  const invitation = hire.getByTestId("msp-invitation");
+  await expect(invitation).toContainText(`${adminUser.email} invited you to join Tailspin IT as a technician`);
+  await invitation.getByRole("button", { name: "Join Tailspin IT" }).click();
+  await expect(toast(hire, "You joined Tailspin IT")).toBeVisible();
+  await expect(hire.getByTestId("msp-name")).toContainText("Technician");
+  await expect(invitation).toHaveCount(0);
+
+  // The admin's console confirms them, and Activity tells the story.
+  await admin.goto("/#/vault");
+  await admin.goto("/#/msp");
+  await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
+  const activity = admin.getByTestId("msp-activity");
+  await expect(activity).toContainText(`${adminUser.email} confirmed ${hireUser.email} in Tailspin Client`);
+  await expect(activity).toContainText(`${hireUser.email} accepted the invitation and joined as a technician`);
+  await expect(activity).toContainText(`${adminUser.email} invited ${hireUser.email} to join as a technician`);
+  await expect(activity).toContainText(`${adminUser.email} added the client Tailspin Client with Business defaults`);
+  await expect(admin.getByTestId(`msp-invite-${hireUser.email}`)).toHaveCount(0);
+
+  await hireContext.close();
+  await adminContext.close();
+});

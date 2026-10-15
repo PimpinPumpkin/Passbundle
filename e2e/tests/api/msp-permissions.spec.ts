@@ -175,6 +175,41 @@ const rows: Row[] = [
     },
   },
   {
+    name: "read the MSP's audit log",
+    allowed: ["mspAdmin", "technician"],
+    request: async ({ mspId }) => ({
+      method: "GET",
+      path: `/api/keykeeper/msp/${mspId}/events`,
+    }),
+  },
+  {
+    name: "cancel an invitation to the staff",
+    allowed: ["mspAdmin"],
+    request: async (ctx) => {
+      const email = `invitee-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@api.example.test`;
+      const invited = await ctx.api.call(
+        ctx.admin,
+        "POST",
+        `/api/keykeeper/msp/${ctx.mspId}/staff`,
+        {
+          email,
+          role: "technician",
+        },
+      );
+      expect(invited.status).toBe(200);
+      return {
+        method: "DELETE",
+        path: `/api/keykeeper/msp/${ctx.mspId}/invites/${invited.body.inviteId}`,
+        check: async (allowed) => {
+          const invites = (await overview(ctx)).invites.map(
+            (i: { email: string }) => i.email,
+          );
+          expect(invites.includes(email)).toBe(!allowed);
+        },
+      };
+    },
+  },
+  {
     name: "remove a client's MSP",
     allowed: ["clientOwner"],
     request: async (ctx) => {

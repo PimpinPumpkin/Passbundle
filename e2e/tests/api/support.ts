@@ -42,8 +42,10 @@ export class Api {
   constructor(private readonly request: APIRequestContext) {}
 
   /** A new account, logged in. */
-  async account(prefix: string): Promise<Account> {
-    const email = `${prefix}-${randomUUID().slice(0, 8)}@api.example.test`;
+  async account(
+    prefix: string,
+    email = `${prefix}-${randomUUID().slice(0, 8)}@api.example.test`,
+  ): Promise<Account> {
     const password = b64(`hash-${email}`);
     const verify = await this.request.post(
       "/identity/accounts/register/send-verification-email",
