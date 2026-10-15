@@ -12,6 +12,7 @@ const ACTORS = [
   "owner",
   "admin",
   "manageUsers",
+  "manageResetPassword",
   "managePolicies",
   "accessEventLogs",
   "accessImportExport",
@@ -42,10 +43,20 @@ async function regularMember(ctx: Context) {
 const rows: Row[] = [
   {
     name: "list members",
-    allowed: [...ADMINS, "manageUsers"],
+    allowed: [...ADMINS, "manageUsers", "manageResetPassword"],
     request: async ({ orgId }) => ({
       method: "GET",
       path: `/api/organizations/${orgId}/users`,
+    }),
+  },
+  {
+    // The Members page loads it for its Collections column, so whoever can
+    // open that page can read it.
+    name: "list collections",
+    allowed: [...ADMINS, "manageUsers", "manageResetPassword"],
+    request: async ({ orgId }) => ({
+      method: "GET",
+      path: `/api/organizations/${orgId}/collections`,
     }),
   },
   {
@@ -217,6 +228,7 @@ test.describe("Custom role permissions", () => {
       await api.addMember(owner, orgId, callers.user!, "user");
       for (const permission of [
         "manageUsers",
+        "manageResetPassword",
         "managePolicies",
         "accessEventLogs",
         "accessImportExport",
@@ -230,6 +242,114 @@ test.describe("Custom role permissions", () => {
     },
     rows,
   );
+});
+
+test("a manage-users member can read the collection lists the Members page and member dialog load, and no more", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const owner = await api.account("owner");
+  const orgId = await api.organization(owner, "Collections Org");
+  const created = await api.call(
+    owner,
+    "POST",
+    `/api/organizations/${orgId}/collections`,
+    { name: encString("Front desk"), groups: [], users: [] },
+  );
+  expect(created.status, JSON.stringify(created.body)).toBe(200);
+  const poc = await api.account("poc");
+  await api.addCustomMember(owner, orgId, poc, { manageUsers: true });
+
+  const listed = await api.call(
+    poc,
+    "GET",
+    `/api/organizations/${orgId}/collections`,
+  );
+  expect(listed.status, JSON.stringify(listed.body)).toBe(200);
+  expect(listed.body.data.map((c: { id: string }) => c.id)).toContain(
+    created.body.id,
+  );
+
+  // The dialog's list, with who has access, covers only their own collections.
+  const details = await api.call(
+    poc,
+    "GET",
+    `/api/organizations/${orgId}/collections/details`,
+  );
+  expect(details.status, JSON.stringify(details.body)).toBe(200);
+  expect(details.body.data).toEqual([]);
+  const ownerDetails = await api.call(
+    owner,
+    "GET",
+    `/api/organizations/${orgId}/collections/details`,
+  );
+  expect(
+    ownerDetails.body.data.map((c: { id: string }) => c.id),
+  ).toContain(created.body.id);
+});
+
+test("a custom member is refused with 403 where their role doesn't reach, and a logged-out caller still gets 401", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const owner = await api.account("owner");
+  const orgId = await api.organization(owner, "Forbidden Org");
+  const collection = await api.call(
+    owner,
+    "POST",
+    `/api/organizations/${orgId}/collections`,
+    { name: encString("Admins"), groups: [], users: [] },
+  );
+  expect(collection.status, JSON.stringify(collection.body)).toBe(200);
+  const poc = await api.account("poc");
+  await api.addCustomMember(owner, orgId, poc, { manageUsers: true });
+
+  // One endpoint behind each guard a custom member can be turned away by.
+  const uncovered: [string, "GET" | "POST" | "PUT", string, unknown?][] = [
+    ["admin", "GET", `/api/organizations/${orgId}/policies`],
+    [
+      "manager",
+      "GET",
+      `/api/organizations/${orgId}/collections/${collection.body.id}/details`,
+    ],
+    [
+      "manager, no collection",
+      "POST",
+      `/api/organizations/${orgId}/collections`,
+      { name: encString("Not yours"), groups: [], users: [] },
+    ],
+    [
+      "owner",
+      "PUT",
+      `/api/organizations/${orgId}`,
+      { name: "Renamed", billingEmail: owner.email },
+    ],
+  ];
+  for (const [guard, method, path, data] of uncovered) {
+    const forbidden = await api.call(poc, method, path, data);
+    expect(forbidden.status, `${guard}: ${JSON.stringify(forbidden.body)}`).toBe(
+      403,
+    );
+    const anonymous = await api.call(null, method, path, data);
+    expect(anonymous.status, `${guard}, logged out`).toBe(401);
+  }
+
+  // Nothing changed.
+  const collections = await api.call(
+    owner,
+    "GET",
+    `/api/organizations/${orgId}/collections`,
+  );
+  expect(
+    collections.body.data.filter(
+      (c: { name: string }) => c.name === encString("Not yours"),
+    ),
+  ).toEqual([]);
+  const profile = await api.call(owner, "GET", "/api/accounts/profile");
+  expect(
+    profile.body.organizations.find((o: { id: string }) => o.id === orgId)
+      .name,
+  ).toBe("Forbidden Org");
 });
 
 test("a custom member who manages members can't reach beyond regular members or grant more", async ({
