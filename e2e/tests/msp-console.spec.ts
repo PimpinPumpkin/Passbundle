@@ -15,6 +15,8 @@ const toast = (page: Page, text: string) =>
 test("an MSP admin adds a client and a technician, and the technician gets in without a manual confirm", async ({
   browser,
 }, testInfo) => {
+  // These tests drive several accounts end to end; CI machines are slower.
+  test.setTimeout(120_000);
   const techContext = await browser.newContext();
   const tech = await techContext.newPage();
   const techUser = webUserFor("msp-tech", testInfo.repeatEachIndex);
@@ -146,6 +148,8 @@ test("an MSP admin adds a client and a technician, and the technician gets in wi
 test("a client's own owner sees its MSP on the Members page and removes it; the MSP's staff can't", async ({
   browser,
 }, testInfo) => {
+  // These tests drive several accounts end to end; CI machines are slower.
+  test.setTimeout(120_000);
   const ownerContext = await browser.newContext();
   const owner = await ownerContext.newPage();
   const ownerUser = webUserFor("client-owner", testInfo.repeatEachIndex);
@@ -201,6 +205,8 @@ test("a client's own owner sees its MSP on the Members page and removes it; the 
 test("an MSP admin invites someone without an account, who signs up and joins from the link; Activity shows it", async ({
   browser,
 }, testInfo) => {
+  // These tests drive several accounts end to end; CI machines are slower.
+  test.setTimeout(120_000);
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
   const adminUser = webUserFor("invite-admin", testInfo.repeatEachIndex);

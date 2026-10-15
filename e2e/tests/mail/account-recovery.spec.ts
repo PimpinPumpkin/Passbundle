@@ -6,7 +6,7 @@ import { expect, test } from "@playwright/test";
 
 import { Api, encString } from "../api/support";
 
-import { inviteParams, waitForMessage } from "./mailbox";
+import { inviteParams, joinByEmail, waitForMessage } from "./mailbox";
 
 test("MSP staff can't join a client's account recovery or be recovered by it; invited members can", async ({
   request,
@@ -100,4 +100,77 @@ test("MSP staff can't join a client's account recovery or be recovered by it; in
   expect(memberDetails.body.resetPasswordKey).toBe(
     encString("member-recovery-key"),
   );
+});
+
+test("a custom role with account recovery recovers regular members only", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const owner = await api.account("owner");
+  const orgName = `Recovery Roles ${Date.now()}`;
+  const orgId = await api.organization(owner, orgName);
+  const policy = await api.call(
+    owner,
+    "PUT",
+    `/api/organizations/${orgId}/policies/8`,
+    {
+      policy: { enabled: true, data: { autoEnrollEnabled: true } },
+    },
+  );
+  expect(policy.status, JSON.stringify(policy.body)).toBe(200);
+
+  const recoverer = await api.account("recoverer");
+  const recovererId = await joinByEmail(api, owner, orgId, orgName, recoverer, {
+    type: 4,
+    permissions: { manageResetPassword: true },
+  });
+  const regularId = await joinByEmail(
+    api,
+    owner,
+    orgId,
+    orgName,
+    await api.account("regular"),
+    { type: 2 },
+  );
+  const adminId = await joinByEmail(
+    api,
+    owner,
+    orgId,
+    orgName,
+    await api.account("admin"),
+    { type: 1 },
+  );
+  const otherId = await joinByEmail(
+    api,
+    owner,
+    orgId,
+    orgName,
+    await api.account("other"),
+    {
+      type: 4,
+      permissions: { manageUsers: true },
+    },
+  );
+
+  const details = (id: string) =>
+    api.call(
+      recoverer,
+      "GET",
+      `/api/organizations/${orgId}/users/${id}/reset-password-details`,
+    );
+  const regular = await details(regularId);
+  expect(regular.status, JSON.stringify(regular.body)).toBe(200);
+  expect(regular.body.resetPasswordKey).toBeTruthy();
+  for (const id of [adminId, otherId, recovererId]) {
+    const refused = await details(id);
+    expect(refused.status, id).toBe(400);
+    expect(refused.body.message).toMatch(
+      /only manage regular members|own membership/,
+    );
+  }
+  // And nothing beyond account recovery.
+  expect(
+    (await api.call(recoverer, "GET", `/api/organizations/${orgId}/policies`))
+      .status,
+  ).toBe(401);
 });

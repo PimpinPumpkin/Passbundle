@@ -33,3 +33,56 @@ export function inviteParams(message: Message): URLSearchParams {
   expect(link, `a join link in: ${message.text}`).toBeTruthy();
   return new URLSearchParams(link!.slice(link!.indexOf("?") + 1));
 }
+
+/**
+ * Invites an existing account by email and has them join through the emailed
+ * link, enrolling in account recovery when the organization asks for it, then
+ * confirms them. Returns their membership id.
+ */
+export async function joinByEmail(
+  api: import("../api/support").Api,
+  owner: import("../api/support").Account,
+  orgId: string,
+  orgName: string,
+  member: import("../api/support").Account,
+  role: { type: number; permissions?: Record<string, boolean> },
+): Promise<string> {
+  const { encString } = await import("../api/support");
+  const invited = await api.call(
+    owner,
+    "POST",
+    `/api/organizations/${orgId}/users/invite`,
+    {
+      emails: [member.email],
+      type: role.type,
+      collections: [],
+      groups: [],
+      permissions: role.permissions ?? {},
+    },
+  );
+  expect(invited.status, JSON.stringify(invited.body)).toBe(200);
+  const link = inviteParams(
+    await waitForMessage(member.email, new RegExp(`Join ${orgName}`)),
+  );
+  const memberId = link.get("organizationUserId")!;
+  const accepted = await api.call(
+    member,
+    "POST",
+    `/api/organizations/${orgId}/users/${memberId}/accept`,
+    {
+      token: link.get("token"),
+      resetPasswordKey: encString(`recovery-key-${member.email}`),
+    },
+  );
+  expect(accepted.status, JSON.stringify(accepted.body)).toBe(200);
+  const confirmed = await api.call(
+    owner,
+    "POST",
+    `/api/organizations/${orgId}/users/${memberId}/confirm`,
+    {
+      key: encString(`org-key-for-${member.email}`),
+    },
+  );
+  expect(confirmed.status, JSON.stringify(confirmed.body)).toBe(200);
+  return memberId;
+}

@@ -44,7 +44,7 @@ export class Api {
   /** A new account, logged in. */
   async account(
     prefix: string,
-    email = `${prefix}-${randomUUID().slice(0, 8)}@api.example.test`,
+    email = `${prefix.toLowerCase()}-${randomUUID().slice(0, 8)}@api.example.test`,
   ): Promise<Account> {
     const password = b64(`hash-${email}`);
     const verify = await this.request.post(
@@ -269,5 +269,43 @@ export class Api {
   async orgsOf(account: Account): Promise<string[]> {
     const profile = await this.call(account, "GET", "/api/accounts/profile");
     return profile.body.organizations.map((o: { id: string }) => o.id).sort();
+  }
+
+  /**
+   * Adds an existing account with a custom role: upstream's Custom type (4)
+   * with these permissions, confirmed like any member.
+   */
+  async addCustomMember(
+    owner: Account,
+    orgId: string,
+    member: Account,
+    permissions: Record<string, boolean>,
+  ) {
+    const invited = await this.call(
+      owner,
+      "POST",
+      `/api/organizations/${orgId}/users/invite`,
+      {
+        emails: [member.email],
+        type: 4,
+        collections: [],
+        groups: [],
+        permissions,
+      },
+    );
+    expect(invited.status, JSON.stringify(invited.body)).toBe(200);
+    const membership = (await this.members(owner, orgId)).find(
+      (m) => m.email === member.email,
+    )!;
+    const confirmed = await this.call(
+      owner,
+      "POST",
+      `/api/organizations/${orgId}/users/${membership.id}/confirm`,
+      {
+        key: encString(`org-key-for-${member.email}`),
+      },
+    );
+    expect(confirmed.status, JSON.stringify(confirmed.body)).toBe(200);
+    return membership.id;
   }
 }

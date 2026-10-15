@@ -86,6 +86,28 @@ The MSP side is where we win, so it gets the most care: one place to run every c
 - **Across clients:** expiring credentials, pushing a template to many clients, and the RMM install script for each client.
 - **Staff:** add by email, change role, remove.
 
+### Roles and permissions
+
+Two layers: what a client's own people can manage, and what each MSP technician can do.
+
+**Per client: custom roles.** Upstream's member dialog already offers a "Custom" role with permissions, but Vaultwarden ignores them and treats Custom as the old Manager role. We store and enforce them, so a client's point of contact can manage their own people without being an admin.
+
+- **Version 1 permissions:** manage members (invite, confirm, remove, revoke, restore, and edit regular members), account recovery (recover regular members), manage policies, view event logs, and import and export. Later: collections, groups, and reports.
+- **Storage:** our own table, keyed by membership. Upstream's membership stays a regular member, so other clients just see a member.
+- **Enforcement:** one map in the server from each admin endpoint (route template and method) to the permission it needs. The admin guard admits a custom member only to endpoints their permissions cover. Everything else still needs an owner or admin.
+- **No escalation:** a custom member acts with an admin's rules but only on regular members. They can't grant roles or permissions, can't give access to all items, can't act on themselves, and can't touch admins, owners, or other custom members. Account recovery reaches only regular members.
+- **Who assigns them:** owners and admins, including MSP staff. Not custom members.
+- **Tests:** the permission matrix gains a custom member per permission, across every mapped endpoint, plus escalation tests for each limit above.
+
+**Status:** built on the server and tested: storage, the endpoint map, the limits, and Custom showing in the apps with its permissions. The member dialog offers only the permissions we enforce. **Known gap:** in the web vault, a custom member is signed out when they open the Members page, because the page also loads the collection list, which their role can't read yet, and the server's refusal looks like an expired session to the web vault. Fix: let "manage members" read the collection list, and refuse custom members with 403 rather than 401. The end-to-end test for this is marked as an expected failure until then.
+
+**Per MSP: technician access.**
+
+- **Which clients:** each technician gets every client (today's behavior) or chosen ones. New clients reach only technicians with every client.
+- **Role in those clients:** admin (today's behavior) or a custom role with chosen permissions, such as a helpdesk role that manages members and account recovery. Separately, whether they can see vault items (access to all collections).
+- **Changes apply everywhere at once,** like adding or removing a technician, and go in the audit log.
+- MSP admins stay owners of every client.
+
 ### Server
 
 - New endpoints live under `/api/keykeeper/msp`, so they never collide with upstream routes. Every one checks the caller's MSP role and that the org belongs to that MSP.
