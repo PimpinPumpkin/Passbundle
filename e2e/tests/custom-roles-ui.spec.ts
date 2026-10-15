@@ -11,11 +11,6 @@ test("an MSP admin gives a client's point of contact a custom role that manages 
   browser,
 }, testInfo) => {
   test.setTimeout(150_000);
-  // Known gap (DESIGN.md, "Roles and permissions"): the Members page also loads
-  // the collection list, which a custom role can't read yet, and the refusal
-  // signs the person out. Expected to fail until that's fixed; it turns red
-  // when it passes, so remove this line then.
-  test.fail();
   const pocContext = await browser.newContext();
   const poc = await pocContext.newPage();
   const pocUser = webUserFor("poc", testInfo.repeatEachIndex);
@@ -62,7 +57,8 @@ test("an MSP admin gives a client's point of contact a custom role that manages 
   await pocInvite.getByRole("textbox", { name: /Email/ }).fill(newHire);
   await pocInvite.getByRole("button", { name: "Save" }).click();
   await expect(pocInvite).toBeHidden();
-  await expect(poc.getByText(newHire).first()).toBeVisible();
+  // A row, since the first text match is the avatar's hidden title.
+  await expect(poc.getByRole("row").filter({ hasText: newHire })).toBeVisible();
 
   // The server refuses anything beyond a regular member, whatever the dialog offers.
   await poc.getByRole("button", { name: "Invite member" }).click();
