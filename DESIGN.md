@@ -22,31 +22,81 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
 
 ### Clients
 
-- Open-source build of the Bitwarden clients (`keykeeper-clients`), rebranded: web vault, browser extension, desktop app, CLI.
+- Open-source build of the Bitwarden clients (`keykeeper-clients`), rebranded: web vault, browser extension, CLI. The vault UI people use every day is the extension and the web vault.
+- **No Electron.** We don't ship upstream's Electron desktop app (about 150 MB on disk and hundreds of MB of RAM for what is mostly a tray icon). See "Desktop agent" below.
 - Mobile comes later, from `bitwarden/android` and `bitwarden/ios`, with our own push delivery (APNs, FCM, and UnifiedPush on Android).
 - The SDK comes from the upstream open-source `sdk-internal` build. Fork it only when we need to change it.
+
+### Desktop agent (no Electron)
+
+One small app per computer, built with Tauri: a Rust core and the operating system's own web view (WebView2 on Windows, WKWebView on macOS, WebKitGTK on Linux), no bundled Chromium.
+
+- **Tray first.** It runs as a tray icon with no window. It opens a window only when it needs one: onboarding, status, and later a full vault window that reuses the Angular desktop UI.
+- **What it does:**
+  - Unlocks the extension with Windows Hello or Touch ID, and unlocking one unlocks the other (the 1Password behavior). It speaks the same native-messaging protocol the extension already uses with upstream's desktop app, so the extension needs no changes.
+  - Reports what's set up on the machine: which browsers and profiles have the extension, and whether the browser's password manager is off.
+  - Runs onboarding for managed users.
+- **Reuses upstream's Rust:** the `desktop_native` crates (biometrics, secure memory, IPC) are GPL Rust already. Today they're wrapped for Electron through napi; we call them directly.
+- **Targets:** installer under 15 MB, under 30 MB of RAM when idle.
+- **Updates:** Tauri's updater, with releases signed by our offline update key and checked before install.
+- **Order:** Windows first, then macOS. The tray agent comes before the vault window.
 
 ### Installer and agent (Windows first)
 
 - A signed MSI plus a bootstrap script per client org, copied from the admin portal with the org's enrollment token included.
 - The MSP runs the script from its RMM. The script downloads the current MSI from a fixed URL, checks the Authenticode signer against a fingerprint written into the script, and installs silently.
-- The install runs once with admin rights. It installs the desktop app, writes browser policies, installs the import helper, and enrolls the machine to the org.
+- The install runs once with admin rights. It installs the desktop agent, writes browser policies, installs the import helper, and enrolls the machine to the org.
 - **No resident service that accepts remote commands.** A hacked server must not become remote code execution on every client machine.
 - Our extension IDs are compiled into the installer. It can force-install only our extension, never one named by the server.
 - To change targeting, the MSP reruns the script, which applies the org's current settings.
 
 ### Import helper
 
-- A small component, installed with admin rights, that only decrypts the browser's password key (Chrome app-bound encryption) when our signed desktop app asks for it.
+- A small component, installed with admin rights, that only decrypts the browser's password key (Chrome app-bound encryption) when our signed desktop agent asks for it.
 - Standard users get no UAC prompt.
 - EDR products will flag it, because reading browser passwords looks like credential theft. We publish signed hashes and exclusion steps for Defender, SentinelOne, and Huntress.
 
 ### Updates
 
-- The desktop app updates itself.
+- The desktop agent updates itself (see "Desktop agent").
 - Releases are signed with a separate update-signing key kept offline.
 - Release rings: internal org, then early-access MSPs, then everyone.
 - Every store publisher account (Chrome Web Store, Microsoft Edge Add-ons, Firefox Add-ons, Apple, Google Play) uses hardware security keys.
+
+## MSP console
+
+The MSP side is where we win, so it gets the most care: one place to run every client, and a backend that's small and tested end to end. Upstream's version of this ("Providers") is under the Bitwarden License, so ours is written from scratch (see CLEAN_ROOM.md).
+
+### How an MSP reaches its clients
+
+- **An MSP** is a server-side group: a name, its staff, and its client orgs. Each client org belongs to at most one MSP.
+- **Staff roles:** MSP admins manage the MSP, its staff, and its clients. Technicians work in client orgs.
+- **Staff are ordinary members of each client org,** marked as coming from the MSP: MSP admins as owners, technicians as admins. Adding someone to the MSP adds them to every client; adding a client adds every staff member. Removing someone from the MSP removes them everywhere at once.
+- **No new crypto.** Staff get each org's key the normal way: an org member who already holds it confirms them, which encrypts the org key to the new member's public key. The MSP console does this automatically whenever any MSP admin has it open. The server never holds a key that can decrypt a vault. The trade-off is the same as upstream's automatic confirmation: we trust the server to hand out the right public key. Showing key fingerprints when staff are added comes later.
+- **The client stays in control.** A client org's owner sees the MSP's staff listed separately ("Your MSP"), and can remove the MSP, which removes all of its staff from the org in one step.
+- MSP staff don't count as the client's seats.
+
+### What the console shows
+
+- **Clients:** one row per client org with members (confirmed, waiting, invited), the preset, items expiring soon, password health (weak, reused, exposed), and last activity. Expiring and health figures are computed in the browser, which can decrypt org items because MSP staff are members. The server only sees counts of members.
+- **Add a client:** name it, pick a preset (Business by default). The org, its default collections, and its policies are created in one step, and every staff member is added.
+- **Waiting for approval:** members added by the portal, RMM, or Entra are confirmed automatically by the console. Invite-link joins wait for one click.
+- **Per client:** opens the org's admin console (members, groups, collections, policies), which upstream already provides as open source.
+- **Across clients:** expiring credentials, pushing a template to many clients, and the RMM install script for each client.
+- **Staff:** add by email, change role, remove.
+
+### Server
+
+- New endpoints live under `/api/keykeeper/msp`, so they never collide with upstream routes. Every one checks the caller's MSP role and that the org belongs to that MSP.
+- New tables: `msps`, `msp_staff`, `msp_clients`, plus an `msp_id` on memberships that came from an MSP.
+- **Databases:** PostgreSQL in production and SQLite for self-hosting and tests. We drop MySQL and CockroachDB: fewer code paths, and our own migrations only need writing twice. CI runs the API tests on both.
+- Creating MSPs is off by default on self-hosted servers (`MSP_SIGNUPS_ALLOWED`).
+
+### Tests
+
+- **API tests (tier 1):** a black-box suite that drives the real server binary over HTTP, with a fresh database per run. It's the backend's safety net, for upstream's endpoints and ours.
+- **Permission matrix:** every MSP endpoint and the org endpoints it relies on, times every caller: MSP admin, technician, another MSP's staff, the client org's owner and members, a stranger, and no login. Each cell is an expected status code, and the table is the test.
+- **Console e2e:** add a client, add a technician, see the member confirmed automatically, open the client's admin console, remove the MSP from the client's side.
 
 ## Onboarding
 
@@ -100,7 +150,7 @@ Every setting explains itself in one sentence. Changing a setting needs no actio
 
 Fixes for things that annoy users of Bitwarden and 1Password today.
 
-- **One unlock:** unlocking the desktop app unlocks the browser extension, and the other way around, over the existing authenticated native-messaging channel. Locking either one locks both.
+- **One unlock:** unlocking the desktop agent unlocks the browser extension, and the other way around, over the existing authenticated native-messaging channel. Locking either one locks both.
 - **Biometrics by default:** Touch ID on Mac and Windows Hello on Windows are offered at first unlock, with no separate "browser integration" setup. Admins control biometrics and password requirements in the portal.
 - **Survives profile migrations:** tools like ForensiT Profile Wizard change the Windows user's SID, so locally protected data (DPAPI, Windows Hello keys) stops decrypting. Upstream's extension then works once and needs a reinstall. Ours detects local state it can't decrypt, clears it, and asks the user to sign in again. Never a broken extension.
 - **Custom fields are one tap away** in every item editor (web, extension, desktop, mobile), not buried in a menu.
@@ -118,7 +168,7 @@ Like 1Password's item types (API key, server, Wi-Fi, software license, passport,
 - **Where custom templates live:** personal templates in the personal vault. Family and business templates in an organization collection, which reaches everyone who can see that collection. An MSP pushes a template to many client orgs at once from the MSP console, which writes the same template item, same id, into each client's templates collection.
 - **Creating items:** "New item from a template" lists each organization's templates, then the person's own, then built-in. An item from an organization's template still goes where the person is adding it (the open folder, organization, or collection), never into that organization by default, so a personal item can't land in a shared collection by surprise.
 - **Built:** ten built-in templates (API key, server, database, Wi-Fi network, router, software license, domain, certificate, email account, membership); upstream already has passport, driver's license, and bank account types. Custom templates for logins or notes, made from "Create template" in the same picker, with defaults, a hint in the editor, a description in the item view, and a "Template" badge in lists. "From template" in the web vault's New menu and the browser extension's (`libs/vault/src/keykeeper/templates.ts`, `template-chooser.component.ts`). New items keep hidden fields editable (upstream locked them when there was no original item). Tier 1 covers built-in and custom templates in the web vault and the extension.
-- **Not built yet:** MSP push to many orgs; giving every org member access to the templates collection automatically; "Save as template" from an existing item; typed fields beyond text, hidden, and yes/no (date, URL, email, phone, number, one-time code) and a date field that sets the expiration; hiding templates from "All items"; "From template" in the desktop app; and an organization template test (needs org creation in the test rig).
+- **Not built yet:** MSP push to many orgs; giving every org member access to the templates collection automatically; "Save as template" from an existing item; typed fields beyond text, hidden, and yes/no (date, URL, email, phone, number, one-time code) and a date field that sets the expiration; hiding templates from "All items"; "From template" in the desktop agent's vault window; and an organization template test (needs org creation in the test rig).
 
 ## Expiration dates
 
@@ -127,9 +177,9 @@ Any item can expire: API keys, certificates, licenses, domains, passports, cards
 - **Set it anywhere:** an "Expires" date on every item, plus template date fields marked "is the expiration date" (an API key's expiry, a passport's). Cards use their existing expiry month and year automatically.
 - **Stored with the item:** a text field `keykeeper.expires` (ISO date), encrypted and synced, no server changes. A text field, not hidden: a date isn't secret, and list views only carry text fields' values, so lists can show badges without decrypting every item.
 - **Built:** the "Expires" date in the item editor (web, extension, desktop share it), an Expiration section in the item view, badges in the web vault list and the extension's item list for items expired or expiring within 30 days, and card expiry in the item view. All of Keykeeper's own fields stay hidden in views and editors and survive edits (`libs/vault/src/keykeeper/`). An "Expiring items" report on the web vault's Reports page lists everything expired or expiring within 30 days, cards included, expired first, then soonest. The extension checks every six hours while unlocked and shows a system notification at 30, 7, and 1 day before and once expired, never twice for the same step; a new date starts over (`apps/browser/src/keykeeper/expiration-reminders.ts`). Tier 1 covers each.
-- **Not built yet:** card expiry badges in lists (list views don't carry card expiry), the "Expiring soon" filter, Health integration, per-item reminder days, desktop app reminders, and the MSP view.
+- **Not built yet:** card expiry badges in lists (list views don't carry card expiry), the "Expiring soon" filter, Health integration, per-item reminder days, desktop agent reminders, and the MSP view.
 - **See it:** "Expires in 12 days" and "Expired" badges in every list, an "Expiring soon" filter, and expiring items in Health.
-- **Reminders, on the device:** the extension (built) and desktop app check while unlocked and notify at 30, 7, and 1 day before, and once expired. Steps adjustable per item later. Nothing leaves the device.
+- **Reminders, on the device:** the extension (built) and desktop agent check while unlocked and notify at 30, 7, and 1 day before, and once expired. Steps adjustable per item later. Nothing leaves the device.
 - **Reminders by email (open):** the server can't read items, so emailed reminders would mean storing an unencrypted reminder date with an opaque item id ("an item in your vault expires on Oct 30", no name). Opt-in per user or org, or skip it.
 - **MSP view:** expiring credentials across all clients in one list, from the MSP's own client, which can decrypt org items.
 
@@ -137,7 +187,7 @@ Any item can expire: API keys, certificates, licenses, domains, passports, cards
 
 Upstream gives us about 70 importers. They include 1Password, LastPass (with direct import), Dashlane, Keeper, Proton Pass, Enpass, KeePass, and the browsers. Our job is making them painless.
 
-- **Detect and guide:** the desktop app detects installed password managers and walks the user through that product's export with exact steps. Then it imports and securely deletes the export file.
+- **Detect and guide:** the desktop agent detects installed password managers and walks the user through that product's export with exact steps. Then it imports and securely deletes the export file.
 - **Direct import** where the source allows it, as upstream already does for LastPass.
 - **Business:** the admin bulk-imports shared vaults into collections, mapping source folders and shared folders. Each member's private items go through the same guided import during their onboarding.
 - **Bitwarden (built and tested):** its JSON export imports with every item, folder, TOTP secret, custom field, note, and password history intact. A password-protected export moves to another account with no plaintext in the file. Both are tier 1 tests. Our own exports use the same format, so the importer's "Bitwarden (json)" label should become "Keykeeper or Bitwarden (json)".
@@ -245,7 +295,7 @@ Bitwarden's Secrets Manager is a separate DevOps product under its source-availa
 | Tier | When | Contents |
 |---|---|---|
 | 1 | Every commit, minutes, fully repeatable | Unit tests. Encryption test vectors. Server API tests. A permission matrix (every endpoint times every role, plus another org's member and an unauthenticated caller). Import dedupe on fixed fixtures. Stand-in OIDC, Graph, and SCIM servers. The autofill corpus in Chromium and Edge. |
-| 2 | Nightly, slow, still repeatable | A fresh Windows VM with pinned browser versions: RMM-style install as admin, policies verified, browser profiles seeded with known saved passwords, onboarding driven through the desktop app, import counts verified, the extension present only in targeted profiles, the password manager off where targeted, the user auto-approved. Also: upgrade from N to N+1, and database migrations on SQLite and Postgres. |
+| 2 | Nightly, slow, still repeatable | A fresh Windows VM with pinned browser versions: RMM-style install as admin, policies verified, browser profiles seeded with known saved passwords, onboarding driven through the desktop agent, import counts verified, the extension present only in targeted profiles, the password manager off where targeted, the user auto-approved. Also: upgrade from N to N+1, and database migrations on SQLite and Postgres. |
 | 3 | Nightly canary, not repeatable by design | Latest Chrome, Edge, and Firefox. A real Entra dev tenant. A weekly test merge of upstream `bitwarden/clients` and Vaultwarden. Red here means the world changed, not that we broke something. |
 
 Determinism rules:
@@ -272,6 +322,6 @@ The maintainer gets a morning summary, with screenshots and video only for failu
 2. Spike: seed real browser profiles with known saved passwords, including Chrome app-bound encryption. Tier 2 depends on it.
 3. Onboarding wizard, autonomous import, presets, and defaults.
 4. Autofill corpus and scoreboard.
-5. Admin and MSP console, written clean-room (see CLEAN_ROOM.md).
+5. Admin and MSP console, written clean-room (see CLEAN_ROOM.md). Moved ahead of 2 to 4: it's where most of the effort goes. Backend API tests come first.
 6. Mobile apps with our own push delivery.
 7. Script access (our Secrets Manager).
