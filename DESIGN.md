@@ -23,23 +23,24 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
 ### Clients
 
 - Open-source build of the Bitwarden clients (`keykeeper-clients`), rebranded: web vault, browser extension, CLI. The vault UI people use every day is the extension and the web vault.
-- **No Electron.** We don't ship upstream's Electron desktop app (about 150 MB on disk and hundreds of MB of RAM for what is mostly a tray icon). See "Desktop agent" below.
+- **No Electron.** We don't ship upstream's Electron desktop app (about 150 MB on disk and hundreds of MB of RAM for what is mostly a tray icon). The desktop side is a small native agent. See "Desktop agent" below.
 - Mobile comes later, from `bitwarden/android` and `bitwarden/ios`, with our own push delivery (APNs, FCM, and UnifiedPush on Android).
 - The SDK comes from the upstream open-source `sdk-internal` build. Fork it only when we need to change it.
 
-### Desktop agent (no Electron)
+### Desktop agent (no Electron, no web view)
 
-One small app per computer, built with Tauri: a Rust core and the operating system's own web view (WebView2 on Windows, WKWebView on macOS, WebKitGTK on Linux), no bundled Chromium.
+One small native app per computer, written in Rust. No bundled browser engine and no web view.
 
-- **Tray first.** It runs as a tray icon with no window. It opens a window only when it needs one: onboarding, status, and later a full vault window that reuses the Angular desktop UI.
+- **No windows in version 1.** It lives in the tray (menu bar on macOS) with a native menu, and talks through native notifications. Anything visual, like onboarding steps, the vault, or settings, opens in the browser extension or the web vault, which people already have.
 - **What it does:**
   - Unlocks the extension with Windows Hello or Touch ID, and unlocking one unlocks the other (the 1Password behavior). It speaks the same native-messaging protocol the extension already uses with upstream's desktop app, so the extension needs no changes.
   - Reports what's set up on the machine: which browsers and profiles have the extension, and whether the browser's password manager is off.
-  - Runs onboarding for managed users.
+  - Drives onboarding for managed users by opening the right page at the right time.
 - **Reuses upstream's Rust:** the `desktop_native` crates (biometrics, secure memory, IPC) are GPL Rust already. Today they're wrapped for Electron through napi; we call them directly.
-- **Targets:** installer under 15 MB, under 30 MB of RAM when idle.
-- **Updates:** Tauri's updater, with releases signed by our offline update key and checked before install.
-- **Order:** Windows first, then macOS. The tray agent comes before the vault window.
+- **Targets:** installer under 10 MB, under 20 MB of RAM when idle, no extra processes.
+- **Updates:** a small self-updater, with releases signed by our offline update key and checked before install.
+- **A desktop vault window is a later decision**, made only if customers ask for one. The options then: native UI per OS (SwiftUI on macOS, WinUI on Windows), the lightest and most native but two UIs to build; or Tauri, which reuses the Angular UI through the OS's own web view, much lighter than Electron but still a few browser processes on Windows.
+- **Order:** Windows first, then macOS.
 
 ### Installer and agent (Windows first)
 
@@ -176,7 +177,7 @@ Like 1Password's item types (API key, server, Wi-Fi, software license, passport,
 - **Where custom templates live:** personal templates in the personal vault. Family and business templates in an organization collection, which reaches everyone who can see that collection. An MSP pushes a template to many client orgs at once from the MSP console, which writes the same template item, same id, into each client's templates collection.
 - **Creating items:** "New item from a template" lists each organization's templates, then the person's own, then built-in. An item from an organization's template still goes where the person is adding it (the open folder, organization, or collection), never into that organization by default, so a personal item can't land in a shared collection by surprise.
 - **Built:** ten built-in templates (API key, server, database, Wi-Fi network, router, software license, domain, certificate, email account, membership); upstream already has passport, driver's license, and bank account types. Custom templates for logins or notes, made from "Create template" in the same picker, with defaults, a hint in the editor, a description in the item view, and a "Template" badge in lists. "From template" in the web vault's New menu and the browser extension's (`libs/vault/src/keykeeper/templates.ts`, `template-chooser.component.ts`). New items keep hidden fields editable (upstream locked them when there was no original item). Tier 1 covers built-in and custom templates in the web vault and the extension.
-- **Not built yet:** MSP push to many orgs; giving every org member access to the templates collection automatically; "Save as template" from an existing item; typed fields beyond text, hidden, and yes/no (date, URL, email, phone, number, one-time code) and a date field that sets the expiration; hiding templates from "All items"; "From template" in the desktop agent's vault window; and an organization template test (needs org creation in the test rig).
+- **Not built yet:** MSP push to many orgs; giving every org member access to the templates collection automatically; "Save as template" from an existing item; typed fields beyond text, hidden, and yes/no (date, URL, email, phone, number, one-time code) and a date field that sets the expiration; hiding templates from "All items"; "From template" in a desktop vault window, if we build one; and an organization template test (needs org creation in the test rig).
 
 ## Expiration dates
 
