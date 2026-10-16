@@ -67,13 +67,7 @@ test("the audit log records each MSP action and who did it, newest first", async
   expect(summary).toEqual(
     [
       ["msp_created", admin.email, null, null, "Audit IT"],
-      [
-        "client_created",
-        admin.email,
-        "Audit Dental",
-        null,
-        "Business defaults",
-      ],
+      ["client_created", admin.email, "Audit Dental", null, "Default policies"],
       ["staff_added", admin.email, null, tech.email, "technician"],
       ["member_confirmed", admin.email, "Audit Dental", tech.email, null],
       ["staff_role_changed", admin.email, null, tech.email, "admin"],

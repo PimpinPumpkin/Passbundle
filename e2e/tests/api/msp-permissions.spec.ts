@@ -209,6 +209,55 @@ const rows: Row[] = [
     }),
   },
   {
+    name: "see the default policies and which clients have their own",
+    allowed: ["mspAdmin", "technician", "limitedTech"],
+    request: async ({ mspId }) => ({
+      method: "GET",
+      path: `/api/keykeeper/msp/${mspId}/policies`,
+    }),
+  },
+  {
+    name: "change a default policy",
+    allowed: ["mspAdmin"],
+    request: async (ctx) => {
+      // Flips the password generator default; the client follows it.
+      const path = `/api/organizations/${ctx.orgId}/policies/2`;
+      const before = (await ctx.api.call(ctx.admin, "GET", path)).body.enabled;
+      return {
+        method: "PUT",
+        path: `/api/keykeeper/msp/${ctx.mspId}/policies/2`,
+        data: { enabled: !before, data: null },
+        check: async (allowed) => {
+          const after = (await ctx.api.call(ctx.admin, "GET", path)).body
+            .enabled;
+          expect(after !== before).toBe(allowed);
+        },
+      };
+    },
+  },
+  {
+    name: "use a default policy in a client with its own setting",
+    allowed: ["mspAdmin"],
+    request: async (ctx) => {
+      // The client turns on Remove Send, which is off by default.
+      const path = `/api/organizations/${ctx.orgId}/policies/6`;
+      const own = await ctx.api.call(ctx.admin, "PUT", path, {
+        policy: { enabled: true, data: null },
+      });
+      expect(own.status).toBe(200);
+      return {
+        method: "POST",
+        path: `/api/keykeeper/msp/${ctx.mspId}/policies/6/apply`,
+        data: { clients: [ctx.orgId] },
+        check: async (allowed) => {
+          const enabled = (await ctx.api.call(ctx.admin, "GET", path)).body
+            .enabled;
+          expect(enabled).toBe(!allowed);
+        },
+      };
+    },
+  },
+  {
     name: "cancel an invitation to the staff",
     allowed: ["mspAdmin"],
     request: async (ctx) => {

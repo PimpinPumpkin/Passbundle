@@ -45,10 +45,11 @@ test("an MSP admin adds a client and a technician, and the technician gets in wi
   const client = admin.getByTestId("msp-client-Acme Dental");
   await expect(client.getByRole("link", { name: "Open" })).toBeVisible();
 
-  // Business defaults, applied without building any policies. Account
-  // recovery is on too (the API and mail tests check it), but the server only
-  // shows it when it can send email, and this test server sends none.
-  await expect(client).toContainText("Business");
+  // The default policies (the Business preset), applied without building
+  // any. Account recovery is on too (the API and mail tests check it), but the
+  // server only shows it when it can send email, and this test server sends
+  // none.
+  await expect(client.getByTestId("msp-client-policies")).toHaveText("Defaults");
   await client.getByRole("link", { name: "Open" }).click();
   await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
   const clientUrl = admin.url().replace(/\/members.*$/, "");
@@ -247,7 +248,7 @@ test("an MSP admin invites someone without an account, who signs up and joins fr
   await expect(activity).toContainText(`${adminUser.email} confirmed ${hireUser.email} in Tailspin Client`);
   await expect(activity).toContainText(`${hireUser.email} accepted the invitation and joined as a technician`);
   await expect(activity).toContainText(`${adminUser.email} invited ${hireUser.email} to join as a technician`);
-  await expect(activity).toContainText(`${adminUser.email} added the client Tailspin Client with Business defaults`);
+  await expect(activity).toContainText(`${adminUser.email} added the client Tailspin Client with the default policies`);
   await expect(admin.getByTestId(`msp-invite-${hireUser.email}`)).toHaveCount(0);
 
   await hireContext.close();
