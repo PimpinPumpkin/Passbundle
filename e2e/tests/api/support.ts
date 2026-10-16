@@ -265,6 +265,59 @@ export class Api {
     return listed.body.data;
   }
 
+  /** A stand-in secure note, in someone's own vault or an organization. */
+  private note(owner: Account, organizationId: string | null) {
+    return {
+      type: 2,
+      name: encString(`note-${randomUUID()}`),
+      notes: null,
+      secureNote: { type: 0 },
+      organizationId,
+      encryptedFor: owner.userId,
+      favorite: false,
+      reprompt: 0,
+      fields: [],
+    };
+  }
+
+  /** An item in someone's own vault, such as a template an MSP sends. */
+  async personalItem(owner: Account): Promise<string> {
+    const created = await this.call(
+      owner,
+      "POST",
+      "/api/ciphers",
+      this.note(owner, null),
+    );
+    expect(created.status, JSON.stringify(created.body)).toBe(200);
+    return created.body.id;
+  }
+
+  /** A new collection in an organization, as its owner. */
+  async collection(owner: Account, orgId: string): Promise<string> {
+    const created = await this.call(
+      owner,
+      "POST",
+      `/api/organizations/${orgId}/collections`,
+      { name: encString(`collection-${randomUUID()}`), groups: [], users: [] },
+    );
+    expect(created.status, JSON.stringify(created.body)).toBe(200);
+    return created.body.id;
+  }
+
+  /** An item in an organization's collection, as its owner. */
+  async orgItem(
+    owner: Account,
+    orgId: string,
+    collectionId: string,
+  ): Promise<string> {
+    const created = await this.call(owner, "POST", "/api/ciphers/create", {
+      cipher: this.note(owner, orgId),
+      collectionIds: [collectionId],
+    });
+    expect(created.status, JSON.stringify(created.body)).toBe(200);
+    return created.body.id;
+  }
+
   /** The organization ids someone belongs to, from their profile. */
   async orgsOf(account: Account): Promise<string[]> {
     const profile = await this.call(account, "GET", "/api/accounts/profile");

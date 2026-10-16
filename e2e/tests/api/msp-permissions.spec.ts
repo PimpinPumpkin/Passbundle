@@ -3,6 +3,8 @@
 // client's own people, and strangers get nothing, except that a client's own
 // owners can see their MSP and remove it. The limited technician has a custom
 // role in the client and no install commands.
+import { randomUUID } from "node:crypto";
+
 import { expect, test } from "@playwright/test";
 
 import { type MatrixRow, permissionMatrix } from "./matrix";
@@ -43,6 +45,31 @@ async function freshTechnician(ctx: Context) {
   const tech = await ctx.api.account("extra-tech");
   await ctx.api.addStaff(ctx.admin, ctx.mspId, tech, "technician");
   return tech;
+}
+
+/** The MSP's template ids, as its admin sees them. */
+async function templateIds(ctx: Context): Promise<string[]> {
+  return (
+    await ctx.api.call(
+      ctx.admin,
+      "GET",
+      `/api/keykeeper/msp/${ctx.mspId}/templates`,
+    )
+  ).body.templates.map((t: { templateId: string }) => t.templateId);
+}
+
+/** A template for every client, added by the MSP's admin. */
+async function newTemplate(ctx: Context): Promise<string> {
+  const id = randomUUID();
+  const source = await ctx.api.personalItem(ctx.admin);
+  const added = await ctx.api.call(
+    ctx.admin,
+    "PUT",
+    `/api/keykeeper/msp/${ctx.mspId}/templates/${id}`,
+    { sourceCipherId: source, allClients: true },
+  );
+  expect(added.status, JSON.stringify(added.body)).toBe(200);
+  return id;
 }
 
 const rows: Row[] = [
@@ -253,6 +280,94 @@ const rows: Row[] = [
           const enabled = (await ctx.api.call(ctx.admin, "GET", path)).body
             .enabled;
           expect(enabled).toBe(!allowed);
+        },
+      };
+    },
+  },
+  {
+    name: "see the templates sent to clients",
+    allowed: ["mspAdmin", "technician", "limitedTech"],
+    request: async ({ mspId }) => ({
+      method: "GET",
+      path: `/api/keykeeper/msp/${mspId}/templates`,
+    }),
+  },
+  {
+    name: "add a template for every client",
+    allowed: ["mspAdmin"],
+    request: async (ctx) => {
+      const id = randomUUID();
+      const source = await ctx.api.personalItem(ctx.admin);
+      return {
+        method: "PUT",
+        path: `/api/keykeeper/msp/${ctx.mspId}/templates/${id}`,
+        data: { sourceCipherId: source, allClients: true },
+        check: async (allowed) =>
+          expect((await templateIds(ctx)).includes(id)).toBe(allowed),
+      };
+    },
+  },
+  {
+    name: "stop sending a template",
+    allowed: ["mspAdmin"],
+    request: async (ctx) => {
+      const id = await newTemplate(ctx);
+      return {
+        method: "DELETE",
+        path: `/api/keykeeper/msp/${ctx.mspId}/templates/${id}`,
+        check: async (allowed) =>
+          expect((await templateIds(ctx)).includes(id)).toBe(!allowed),
+      };
+    },
+  },
+  {
+    name: "record a client's copy of a template",
+    allowed: ["mspAdmin"],
+    request: async (ctx) => {
+      const id = await newTemplate(ctx);
+      const collection = await ctx.api.collection(ctx.admin, ctx.orgId);
+      const copy = await ctx.api.orgItem(ctx.admin, ctx.orgId, collection);
+      return {
+        method: "POST",
+        path: `/api/keykeeper/msp/${ctx.mspId}/templates/${id}/copies`,
+        data: {
+          copies: [
+            { organizationId: ctx.orgId, cipherId: copy, sourceRevision: "r1" },
+          ],
+        },
+        check: async (allowed) => {
+          const copies = (
+            await ctx.api.call(
+              ctx.admin,
+              "GET",
+              `/api/keykeeper/msp/${ctx.mspId}/templates`,
+            )
+          ).body.copies.filter(
+            (c: { templateId: string }) => c.templateId === id,
+          );
+          expect(copies.length).toBe(allowed ? 1 : 0);
+        },
+      };
+    },
+  },
+  {
+    name: "record a client's Templates collection",
+    allowed: ["mspAdmin"],
+    request: async (ctx) => {
+      const collection = await ctx.api.collection(ctx.admin, ctx.orgId);
+      return {
+        method: "PUT",
+        path: `/api/keykeeper/msp/${ctx.mspId}/clients/${ctx.orgId}/templates-collection`,
+        data: { collectionId: collection },
+        check: async (allowed) => {
+          const recorded = (
+            await ctx.api.call(
+              ctx.admin,
+              "GET",
+              `/api/keykeeper/msp/${ctx.mspId}/templates`,
+            )
+          ).body.collections[ctx.orgId];
+          expect(recorded === collection).toBe(allowed);
         },
       };
     },

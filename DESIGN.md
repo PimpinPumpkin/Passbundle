@@ -83,7 +83,7 @@ The MSP side is where we win, so it gets the most care: one place to run every c
 - **Add a client:** name it, pick a preset (Business by default). The org, its default collections, and its policies are created in one step, and every staff member is added.
 - **Waiting for approval:** members added by the portal, RMM, or Entra are confirmed automatically by the console. Invite-link joins wait for one click.
 - **Per client:** opens the org's admin console (members, groups, collections, policies), which upstream already provides as open source.
-- **Across clients:** expiring credentials, default policies every client follows (see "Default policies"), pushing a template to many clients, and the RMM install script for each client.
+- **Across clients:** expiring credentials, default policies every client follows (see "Default policies"), item templates sent to every client or chosen ones (see "MSP templates"), and the RMM install script for each client.
 - **Staff:** add by email, change role, remove.
 
 ### Roles and permissions
@@ -127,6 +127,22 @@ An MSP sets its policies once, and every client follows them. A client that need
 - **Tests:** API tests for following and own settings (a changed default reaches followers and skips others; changing a client's policy makes it its own; using the default brings it back), side effects through a default (two-step login revoking a member), the legacy MSP defaults, and the permission matrix. A console e2e test changes a default, sees which clients took it, and uses the default for a client with its own setting.
 - **Status:** built (`keykeeper_msp_policies.rs`, a migration for SQLite and PostgreSQL, the console's Default policies section, and a note on each client's Policies page that names its own settings). The server compares what each policy does: an off policy's options don't count, and missing, empty, and null options are the same. A changed default goes only to clients whose policy matched the old default, so a client's own setting is never overwritten by accident. Not yet: choosing which clients a changed default reaches, and policies Vaultwarden doesn't support (such as requiring single sign-on).
 
+### MSP templates
+
+An MSP makes an item template once (a firewall, a Microsoft 365 tenant, a line-of-business app) and every client gets it, so technicians and the client's own people document things the same way everywhere. See "Item templates" for what a template is.
+
+- **The source** is an ordinary custom template the MSP admin can see: in their own vault, or better in an organization all of the MSP's admins share, so any of them can change it. It's never one of the MSP's clients. The server records which item it is, never what's in it.
+- **Copies:** sending a template writes a copy, with the same template id, into each client's "Templates" collection, encrypted with that client's key in the browser. The console creates the collection the first time. The server records each copy's item and which version of the source it was made from (the source's revision date), so the console can tell which clients are behind. It never sees a template's name or fields.
+- **Every client, or chosen clients.** A template for every client also goes to clients added later: the console sends it right after creating the client. A template for chosen clients goes only to those.
+- **Updating:** edit the source with the ordinary item editor. The console then shows which clients have an older copy, and one click updates them all. A copy is the MSP's: an update replaces whatever the client changed in it. A client that wants something different makes its own template, which is just a template in its organization.
+- **Stopping:** MSP admins can stop sending a template, and choose whether its copies stay in the clients or go.
+- **Who sees copies:** everyone with access to the client's Templates collection: MSP admins and technicians who see vault items, and the client's owners and admins. The client's admins can give it to their members like any collection.
+- **Templates from an MSP** show once, under "From <MSP>", in "New item from a template", even for MSP staff who see the same template in many clients.
+- **Who:** MSP admins choose and send templates. Technicians see which templates their clients get.
+- **Audit log:** templates added, changed (which clients), sent, and stopped. Entries name the template only by id; the console shows the name to people who can see it.
+- **Tests:** API tests for recording templates and copies (only the MSP's own clients, only items in that client, never a client's copy as a source), what a limited technician sees, and the permission matrix. A console e2e test creates a template, sends it to every client, sees a new client get it, edits the source and updates the copies, and finds it under "From <MSP>" in a client's vault.
+- **Status:** built (`keykeeper_msp_templates.rs`, a migration for SQLite and PostgreSQL, the console's Templates section, and `msp-template-sender.service.ts`, which writes the copies with upstream's own item and collection code). A copy's definition names the MSP, so "New item from a template" groups it under "From <MSP>" and the item view and editor say the MSP keeps it up to date. Not yet: changing a sent template's clients without sending it again, and giving a client's members the Templates collection automatically.
+
 ### Server
 
 - New endpoints live under `/api/keykeeper/msp`, so they never collide with upstream routes. Every one checks the caller's MSP role and that the org belongs to that MSP.
@@ -145,7 +161,8 @@ An MSP sets its policies once, and every client follows them. A client that need
 - **Built, tests:** behavior tests, the MSP and organization permission matrices, and a console e2e test where a technician gets into a client with no manual confirm. CI also runs `cargo fmt`, clippy, and the API tests on PostgreSQL.
 - **Open question:** MSP admins are owners in every client, so today they can delete a client's whole organization, as any owner can. Deleting a client might instead need the client's own owner, or a waiting period. Decide before launch.
 - **Built, default policies:** see "Default policies".
-- **Not built yet:** exposed (breached) passwords in the health columns, which needs a lookup per password; pushing templates; key fingerprints; showing the MSP's actions to the client's own owners; choosing between several MSPs; MSP signup on our hosted service.
+- **Built, templates:** see "MSP templates".
+- **Not built yet:** exposed (breached) passwords in the health columns, which needs a lookup per password; key fingerprints; showing the MSP's actions to the client's own owners; choosing between several MSPs; MSP signup on our hosted service.
 
 ### Tests
 
@@ -251,7 +268,8 @@ Like 1Password's item types (API key, server, Wi-Fi, software license, passport,
 - **Where custom templates live:** personal templates in the personal vault. Family and business templates in an organization collection, which reaches everyone who can see that collection. An MSP pushes a template to many client orgs at once from the MSP console, which writes the same template item, same id, into each client's templates collection.
 - **Creating items:** "New item from a template" lists each organization's templates, then the person's own, then built-in. An item from an organization's template still goes where the person is adding it (the open folder, organization, or collection), never into that organization by default, so a personal item can't land in a shared collection by surprise.
 - **Built:** ten built-in templates (API key, server, database, Wi-Fi network, router, software license, domain, certificate, email account, membership); upstream already has passport, driver's license, and bank account types. Custom templates for logins or notes, made from "Create template" in the same picker, with defaults, a hint in the editor, a description in the item view, and a "Template" badge in lists. "From template" in the web vault's New menu and the browser extension's (`libs/vault/src/keykeeper/templates.ts`, `template-chooser.component.ts`). New items keep hidden fields editable (upstream locked them when there was no original item). Tier 1 covers built-in and custom templates in the web vault and the extension.
-- **Not built yet:** MSP push to many orgs; giving every org member access to the templates collection automatically; "Save as template" from an existing item; typed fields beyond text, hidden, and yes/no (date, URL, email, phone, number, one-time code) and a date field that sets the expiration; hiding templates from "All items"; "From template" in a desktop vault window, if we build one; and an organization template test (needs org creation in the test rig).
+- **MSP push to many orgs:** built; see "MSP templates".
+- **Not built yet:** giving every org member access to the templates collection automatically; "Save as template" from an existing item; typed fields beyond text, hidden, and yes/no (date, URL, email, phone, number, one-time code) and a date field that sets the expiration; hiding templates from "All items"; "From template" in a desktop vault window, if we build one; and an organization template test (needs org creation in the test rig).
 
 ## Expiration dates
 
