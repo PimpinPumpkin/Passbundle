@@ -1,6 +1,6 @@
 # Clean-room rules
 
-Keykeeper ships only code we are allowed to ship under the GPL and AGPL. Some upstream code is source-available but not open source, and some competitors forbid using their service to build a competing product. These rules keep us clear of both.
+PassBundle ships only code we are allowed to ship under the GPL and AGPL. Some upstream code is source-available but not open source, and some competitors forbid using their service to build a competing product. These rules keep us clear of both.
 
 ## Never read or copy
 
@@ -8,11 +8,11 @@ Keykeeper ships only code we are allowed to ship under the GPL and AGPL. Some up
 - Any other file whose header names the Bitwarden License or the Bitwarden SDK License.
 - Code from any closed-source password manager.
 
-Do not open these files to "just check how they did it". If you already have, do not work on the matching Keykeeper feature.
+Do not open these files to "just check how they did it". If you already have, do not work on the matching PassBundle feature.
 
 ## Do not use competitor services for research
 
-- 1Password's business terms forbid accessing the service "to build a competitive product or service" and copying its "features, functions or graphics". Do not use a 1Password Business account or trial to study features for Keykeeper.
+- 1Password's business terms forbid accessing the service "to build a competitive product or service" and copying its "features, functions or graphics". Do not use a 1Password Business account or trial to study features for PassBundle.
 - Do not run a Bitwarden enterprise trial for research either. Their terms are vaguer, but there is no need.
 
 ## What we may use

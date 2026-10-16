@@ -1,9 +1,9 @@
-# Tier 2 checks for Install-Keykeeper.ps1. Run as admin on a disposable
+# Tier 2 checks for Install-PassBundle.ps1. Run as admin on a disposable
 # Windows machine (CI runner or VM): it writes and removes machine policies.
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$script = Join-Path $PSScriptRoot "..\Install-Keykeeper.ps1"
+$script = Join-Path $PSScriptRoot "..\Install-PassBundle.ps1"
 $chromeRoot = "HKLM:\SOFTWARE\Policies\Google\Chrome"
 $edgeRoot = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
 $failures = 0

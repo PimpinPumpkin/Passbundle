@@ -1,6 +1,6 @@
 # Agent instructions
 
-These rules apply to every coding agent working on Keykeeper: in this repo, in `keykeeper-clients`, and in `keykeeper-server`.
+These rules apply to every coding agent working on PassBundle: in this repo, in `passbundle-clients`, and in `passbundle-server`. Keykeeper is the code name: it stays in identifiers, branches, local folder names, and `// Keykeeper:` markers, never in what people see.
 
 ## Read first
 
@@ -16,15 +16,15 @@ These rules apply to every coding agent working on Keykeeper: in this repo, in `
 5. Never weaken or delete a test to make it pass. A red test is information.
 6. Before merging upstream changes, read the diff. Passing tests are not enough.
 7. Never put "Bitwarden" in product UI, names, IDs, or domains. Attribution ("based on the open-source Bitwarden clients") is allowed where the Bitwarden trademark guidelines permit it.
-8. In the fork repos, run `gh repo set-default` to the PimpinPumpkin fork so PRs never target upstream.
+8. In the fork repos, run `gh repo set-default` to the PimpinPumpkin repo (`passbundle-clients`, `passbundle-server`) so PRs never target upstream.
 
 ## Layout
 
-All three repos are checked out side by side:
+All three repos are checked out side by side. The local folders keep the code name; the test rig also finds `passbundle-*` folders.
 
-- `~/Documents/keykeeper`: this repo (design, test rig, installer, infrastructure).
-- `~/Documents/keykeeper-clients`: fork of `bitwarden/clients`.
-- `~/Documents/keykeeper-server`: fork of `dani-garcia/vaultwarden`.
+- `~/Documents/keykeeper`: this repo, [PimpinPumpkin/Passbundle](https://github.com/PimpinPumpkin/Passbundle) (design, test rig, installer, infrastructure).
+- `~/Documents/keykeeper-clients`: [PimpinPumpkin/passbundle-clients](https://github.com/PimpinPumpkin/passbundle-clients), from `bitwarden/clients`.
+- `~/Documents/keykeeper-server`: [PimpinPumpkin/passbundle-server](https://github.com/PimpinPumpkin/passbundle-server), from `dani-garcia/vaultwarden`.
 
 ## Branding
 
@@ -45,5 +45,5 @@ Each of these must have a test that fails if it breaks:
 - Never fill a field the user marked "never fill".
 - Never import from a browser profile the user or admin did not choose.
 - The server never receives a key that can decrypt a vault.
-- The installer can force-install only Keykeeper's own extension IDs.
+- The installer can force-install only PassBundle's own extension IDs.
 - Local state that can't be decrypted (for example after a Windows profile migration) leads to a clean sign-in, never a broken client.

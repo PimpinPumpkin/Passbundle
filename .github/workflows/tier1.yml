@@ -56,20 +56,22 @@ jobs:
               echo "$2"
             fi
           }
-          if [ "$CALLER" = PimpinPumpkin/keykeeper-server ]; then
+          # Repository names compare without case (the meta repo is "Passbundle").
+          caller=$(echo "$CALLER" | tr '[:upper:]' '[:lower:]')
+          if [ "$caller" = pimpinpumpkin/passbundle-server ]; then
             server=${SERVER_IN:-keykeeper}
           else
-            server=$(linked keykeeper-server keykeeper)
+            server=$(linked passbundle-server keykeeper)
           fi
-          if [ "$CALLER" = PimpinPumpkin/keykeeper-clients ]; then
+          if [ "$caller" = pimpinpumpkin/passbundle-clients ]; then
             clients=${CLIENTS_IN:-keykeeper}
           else
-            clients=$(linked keykeeper-clients keykeeper)
+            clients=$(linked passbundle-clients keykeeper)
           fi
           # The meta repo's own runs test their own commit (checkout's default).
           meta=
-          if [ "$CALLER" != PimpinPumpkin/keykeeper ]; then
-            meta=$(linked keykeeper main)
+          if [ "$caller" != pimpinpumpkin/passbundle ]; then
+            meta=$(linked Passbundle main)
           fi
           {
             echo "server=$server"
@@ -86,7 +88,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: PimpinPumpkin/keykeeper-server
+          repository: PimpinPumpkin/passbundle-server
           ref: ${{ needs.refs.outputs.server }}
           persist-credentials: false
       - name: Install build dependencies
@@ -118,7 +120,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: PimpinPumpkin/keykeeper-clients
+          repository: PimpinPumpkin/passbundle-clients
           ref: ${{ needs.refs.outputs.clients }}
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -163,7 +165,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: PimpinPumpkin/keykeeper-clients
+          repository: PimpinPumpkin/passbundle-clients
           ref: ${{ needs.refs.outputs.clients }}
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -194,7 +196,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: PimpinPumpkin/keykeeper-clients
+          repository: PimpinPumpkin/passbundle-clients
           ref: ${{ needs.refs.outputs.clients }}
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -250,7 +252,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: PimpinPumpkin/keykeeper
+          repository: PimpinPumpkin/Passbundle
           ref: ${{ needs.refs.outputs.meta }}
           persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -314,7 +316,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: PimpinPumpkin/keykeeper
+          repository: PimpinPumpkin/Passbundle
           ref: ${{ needs.refs.outputs.meta }}
           persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2

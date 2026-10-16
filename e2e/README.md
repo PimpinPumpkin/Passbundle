@@ -1,10 +1,10 @@
 # End-to-end tests
 
-Tier 1 runs on every commit (see [DESIGN.md](../DESIGN.md#testing)). The harness starts `keykeeper-server` itself, over HTTPS with a throwaway certificate and an empty data folder, then drives the branded web vault and browser extension with Playwright.
+Tier 1 runs on every commit (see [DESIGN.md](../DESIGN.md#testing)). The harness starts the server (`passbundle-server`) itself, over HTTPS with a throwaway certificate and an empty data folder, then drives the branded web vault and browser extension with Playwright.
 
 ## Run locally
 
-The three repos sit side by side (`keykeeper`, `keykeeper-clients`, `keykeeper-server`). Use Node 24.
+The three repos sit side by side, in folders named `keykeeper`, `keykeeper-clients`, and `keykeeper-server` (or `passbundle-*`). Use Node 24.
 
 ```bash
 cd ../keykeeper-server && cargo build --features sqlite
