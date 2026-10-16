@@ -33,14 +33,15 @@ One small native app per computer, written in Rust. No bundled browser engine an
 
 - **No windows in version 1.** It lives in the tray (menu bar on macOS) with a native menu, and talks through native notifications. Anything visual, like onboarding steps, the vault, or settings, opens in the browser extension or the web vault, which people already have.
 - **What it does:**
-  - Unlocks the extension with Windows Hello or Touch ID, and unlocking one unlocks the other (the 1Password behavior). It speaks the same native-messaging protocol the extension already uses with upstream's desktop app, so the extension needs no changes.
+  - Unlocks the extension with Windows Hello or Touch ID, and unlocking one unlocks the other (the 1Password behavior). It speaks the native-messaging protocol the extension already uses with upstream's desktop app. That app has its own login and holds the user key; the agent has neither, so the extension hands it the user key when someone turns biometric unlock on. That's a change to key handling, so it gets its own design and test vectors before it's built.
   - Reports what's set up on the machine: which browsers and profiles have the extension, and whether the browser's password manager is off.
   - Drives onboarding for managed users by opening the right page at the right time.
-- **Reuses upstream's Rust:** the `desktop_native` crates (biometrics, secure memory, IPC) are GPL Rust already. Today they're wrapped for Electron through napi; we call them directly.
+- **Upstream's Rust, with care:** the `desktop_native` crates are GPL-3.0, but `biometric` links Bitwarden's SDK crates, which declare a license file instead of a standard open-source license, and `desktop_core` links `bitwarden-russh`, which declares none. So the agent is its own Cargo workspace (`apps/agent` in `passbundle-clients`) and links neither. GPL code it takes from upstream is copied in with a note saying where from.
 - **Targets:** installer under 10 MB, under 20 MB of RAM when idle, no extra processes.
-- **Updates:** a small self-updater, with releases signed by our offline update key and checked before install.
+- **Updates:** a small self-updater. A release is a manifest signed with our offline update key (minisign), and the agent installs it only if the signature verifies with the key compiled in, it's for this platform, it's newer, it's served over HTTPS, and the download has the stated size and SHA-256. Installed agents update from a scheduled task (Windows) or a launch daemon (macOS), never because the network told them to. Organizations that push updates through their RMM turn self-updates off by policy.
 - **A desktop vault window is a later decision**, made only if customers ask for one. The options then: native UI per OS (SwiftUI on macOS, WinUI on Windows), the lightest and most native but two UIs to build; or Tauri, which reuses the Angular UI through the OS's own web view, much lighter than Electron but still a few browser processes on Windows.
 - **Order:** Windows first, then macOS.
+- **Status:** the foundation is built (`apps/agent`, version 0.1): the tray icon and menu (the version, Open web vault, Quit), one agent per signed-in user, settings by policy (web vault URL, self-updates off), and the signed self-updater. Tier 1 runs its tests on Windows and macOS, checks the release build is under 10 MB (0.9 MB on macOS), and runs it in the tray. Idle, it uses 8.5 MB of memory on macOS. Not yet: the update key (made offline; until then builds don't update themselves), installing it from the RMM script (waits on code signing), biometric unlock, and the MSP work.
 
 ### Installer and agent (Windows first)
 
