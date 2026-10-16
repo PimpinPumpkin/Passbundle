@@ -27,6 +27,11 @@ type Agent = {
   prompts: () => string[];
 };
 
+// Tier 1 builds the agent in its clients job. A clients pull request runs
+// main's Tier 1 against this repo's tests until the workflow that builds it
+// is merged; only then is there no agent to test.
+const agentBuilt = fs.existsSync(exe("passbundle-agent")) && fs.existsSync(exe("passbundle-agent-host"));
+
 // A short folder: Unix socket paths are limited to about 100 bytes.
 const shortTemp = () => fs.mkdtempSync(path.join(process.platform === "win32" ? os.tmpdir() : "/tmp", "pb-"));
 
@@ -132,6 +137,8 @@ async function openLockedPopup(context: BrowserContext, extensionId: string): Pr
   }).toPass({ timeout: 45_000, intervals: [1_000] });
   return popup!;
 }
+
+test.skip(!agentBuilt, `No test build of the desktop agent in ${paths.agent} (KK_AGENT).`);
 
 async function accountSecurity(popup: Page, extensionId: string) {
   await popup.goto(`chrome-extension://${extensionId}/popup/index.html#/account-security`);
