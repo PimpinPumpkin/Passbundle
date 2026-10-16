@@ -41,10 +41,14 @@ async function result(response: APIResponse): Promise<Result> {
 export class Api {
   constructor(private readonly request: APIRequestContext) {}
 
-  /** A new account, logged in. */
+  /**
+   * A new account, logged in. Pass a real public key (base64 SPKI) when a
+   * client will encrypt to it, as confirming a member does.
+   */
   async account(
     prefix: string,
     email = `${prefix.toLowerCase()}-${randomUUID().slice(0, 8)}@api.example.test`,
+    accountPublicKey = publicKey(email),
   ): Promise<Account> {
     const password = b64(`hash-${email}`);
     const verify = await this.request.post(
@@ -65,7 +69,7 @@ export class Api {
           masterPasswordHint: null,
           userSymmetricKey: encString(`user-key-${email}`),
           userAsymmetricKeys: {
-            publicKey: publicKey(email),
+            publicKey: accountPublicKey,
             encryptedPrivateKey: encString(`private-key-${email}`),
           },
           kdf: 0,
