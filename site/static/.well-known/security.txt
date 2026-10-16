@@ -1,0 +1,7 @@
+Contact: mailto:security@passbundle.com
+Contact: https://github.com/PimpinPumpkin/passbundle-server/security/advisories/new
+Contact: https://github.com/PimpinPumpkin/passbundle-clients/security/advisories/new
+Expires: 2027-10-16T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://passbundle.com/.well-known/security.txt
+Policy: https://passbundle.com/security/

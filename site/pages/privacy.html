@@ -1,0 +1,70 @@
+<!--
+title: Privacy policy
+description: What PassBundle collects, what it can't see, and what we do with the little we have.
+-->
+<h1>Privacy policy</h1>
+<p class="meta">Last updated October 16, 2026</p>
+
+<div class="note">
+  <p><strong>The short version.</strong> Your vault is encrypted on your own devices, and we never have a key that can open it. We collect only what's needed to run your account. We don't sell data, show ads, or use trackers.</p>
+</div>
+
+<p>This policy covers passbundle.com, the PassBundle apps (the web vault, the browser extension, and the desktop and command-line apps when they're released), and the hosted PassBundle service. "PassBundle", "we", and "us" mean the people who make and run PassBundle.</p>
+
+<p>PassBundle is in development, and the hosted service isn't open yet. This policy describes how it will work when it is, and we'll update it before then if anything changes.</p>
+
+<h2>What we can't see</h2>
+<p>Your vault items (passwords, notes, cards, identities, files, and their names, usernames, and website addresses) are encrypted in the app before they're sent anywhere. The key that decrypts them comes from your master password, which never leaves your device. The server stores the encrypted data and a hash of a value derived from your master password, which it uses to check that it's you but can't use to decrypt anything. We can't read your vault, and we can't recover it if you forget your master password.</p>
+
+<h2>The website</h2>
+<p>passbundle.com has no cookies, no analytics, and no third-party scripts, fonts, or images. Our hosting provider, Cloudflare, handles requests to the site and keeps standard logs (such as IP address, browser, and the page requested) for security and to keep the site running.</p>
+
+<h2>The apps</h2>
+<p>The apps store your encrypted vault on your device and talk to the server you sign in to: PassBundle's hosted service, or a server your organization runs itself. Apart from that server, they contact other services only when you use a feature that needs them:</p>
+<ul>
+  <li><strong>Checking passwords against known breaches</strong> uses Have I Been Pwned's Pwned Passwords service. The app sends only the first five characters of the password's SHA-1 hash, never the password, and compares the results on your device.</li>
+  <li><strong>Email alias services</strong> you connect yourself in the username generator receive what that service needs to create an alias.</li>
+</ul>
+<p><strong>Website icons.</strong> To show a website's icon next to a login, the app asks the server for that site's icon, so the server learns which websites you have logins for, and fetches the icon from the website itself. You can turn icons off in the app's settings.</p>
+<p><strong>The browser extension</strong> reads the pages you visit only to find sign-in forms, fill them when you ask, and offer to save new logins. It doesn't send your browsing anywhere.</p>
+
+<h2>The hosted service</h2>
+<p>When you use PassBundle's hosted service, we store:</p>
+<ul>
+  <li><strong>Your account:</strong> email address, name (if you give one), the hash described above, your encrypted keys, an optional master password hint (stored as you typed it, not encrypted, and emailed to you if you ask for it), and your two-step login settings.</li>
+  <li><strong>Your encrypted vault</strong>, plus what the service needs to sync it: item types, when items changed, and which folders, organizations, and collections they belong to.</li>
+  <li><strong>Devices</strong> you sign in on: their type, name, and when they were last active.</li>
+  <li><strong>Records of activity:</strong> sign-ins and security events with IP addresses and times. If your organization turns on event logs, they record actions such as who viewed or changed shared items. MSPs' audit logs record what their staff do in client organizations, with names, emails, and IP addresses.</li>
+  <li><strong>Email</strong> we send you, such as invitations, verification codes, and security notices.</li>
+</ul>
+<p>When we offer paid plans, a payment processor will handle payment details, and we'll name it here.</p>
+
+<h2>Organizations and MSPs</h2>
+<p>If you belong to an organization, its owners and admins can see your membership, the shared items you can see, and its event logs. If a managed service provider (MSP) runs your organization, the MSP's staff are members of it and can see what its admins can see. If your organization turns on account recovery, its admins can reset your master password, which gives them access to your whole account. You'll be told when you join an organization that does this.</p>
+
+<h2>Who we share data with</h2>
+<p>We don't sell or rent personal data, and we don't use it for advertising. We share it only with:</p>
+<ul>
+  <li><strong>Service providers</strong> that run parts of PassBundle for us, such as hosting (Cloudflare) and email delivery, only for that purpose.</li>
+  <li><strong>Authorities</strong>, when the law requires it. We'll push back on requests that are overbroad, and tell you when we're allowed to. Your vault stays encrypted: we can only hand over what we have.</li>
+</ul>
+
+<h2>How long we keep it</h2>
+<p>We keep your account data while your account exists. When you delete your account, we delete it from the service within 30 days and from backups within 90 days. Records of security events may be kept up to a year to protect accounts and the service.</p>
+
+<h2>Your choices and rights</h2>
+<ul>
+  <li><strong>See and export your data:</strong> export your vault from the app at any time. To get the rest of what we hold about you, email us.</li>
+  <li><strong>Correct it:</strong> change your name, email, and settings in the app.</li>
+  <li><strong>Delete it:</strong> delete your account in the app's settings, or email us.</li>
+</ul>
+<p>Depending on where you live, you may have further rights under laws such as the GDPR or CCPA. Email us to use them; we'll answer within 30 days.</p>
+
+<h2>Children</h2>
+<p>PassBundle isn't meant for children under 13, and we don't knowingly collect their data. Families can use it with a parent or guardian managing the account.</p>
+
+<h2>Changes</h2>
+<p>We'll post changes here and update the date above. If a change matters to how we use your data, we'll tell you by email or in the app before it takes effect.</p>
+
+<h2>Contact</h2>
+<p>Questions or requests: <a href="mailto:privacy@passbundle.com">privacy@passbundle.com</a>.</p>

@@ -1,0 +1,43 @@
+<!--
+title: Help
+description: Getting started with PassBundle, for MSPs, their clients, and everyone else.
+-->
+<h1>Help</h1>
+<p class="lead">PassBundle is in development, so these answers are short for now. If yours isn't here, email <a href="mailto:hello@passbundle.com">hello@passbundle.com</a>.</p>
+
+<h2>Getting started</h2>
+<h3>Can I use PassBundle yet?</h3>
+<p>Not as a hosted service. The apps and server are being built in the open on <a href="https://github.com/PimpinPumpkin/Passbundle">GitHub</a>, and you can build and run them yourself to try them.</p>
+
+<h3>Where do I get the browser extension?</h3>
+<p>It isn't in the browser stores yet. See <a href="/download/">Download</a>.</p>
+
+<h2>Your account</h2>
+<h3>I forgot my master password</h3>
+<p>Your vault is encrypted with a key only your master password can unlock, so we can't reset it or recover your vault. If you belong to an organization that turned on account recovery, ask its admins to reset your master password. Otherwise, try your password hint, if you set one.</p>
+
+<h3>Is two-step login supported?</h3>
+<p>Yes: authenticator apps, security keys, and email codes. Turn it on in your account's security settings. Some organizations require it.</p>
+
+<h3>How do I move my passwords in?</h3>
+<p>Export them from your browser or your current password manager, then import the file under Tools, Import data. PassBundle reads exports from most password managers and every major browser.</p>
+
+<h2>For MSPs</h2>
+<h3>How do I add a client?</h3>
+<p>In the MSP console, give the client a name and choose Add client. Its organization, default policies, and collections are created in one step, and your staff are added to it.</p>
+
+<h3>How do the client's people join?</h3>
+<p>Invite them by email from the client's admin console, or run the client's install command from your RMM on their computers. The command installs the extension and turns off the browser's own password manager; anyone who then signs in joins that client, and the MSP console approves them.</p>
+
+<h3>What can my technicians do?</h3>
+<p>By default, a technician is an admin in every client. You can limit each one to chosen clients, give them a custom role (such as managing members and account recovery but not policies), choose whether they see vault items, and hide install commands.</p>
+
+<h3>How do default policies and templates work?</h3>
+<p>Default policies apply to every client, including new ones. Change a policy in a client's own admin console and that client keeps its own setting. Templates you add in the console go into every client's Templates collection, and when you edit one, every copy is updated.</p>
+
+<h2>Security</h2>
+<h3>Can PassBundle see my passwords?</h3>
+<p>No. Your vault is encrypted on your device, and the server never has a key that can decrypt it. See our <a href="/privacy/">privacy policy</a> for what the server does store.</p>
+
+<h3>How do I report a security issue?</h3>
+<p>See <a href="/security/">Security</a>.</p>

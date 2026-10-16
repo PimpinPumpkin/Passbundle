@@ -8,9 +8,9 @@ name: Tier 1
 on:
   push:
     branches: [main]
-    paths-ignore: ["**.md"]
+    paths-ignore: ["**.md", "site/**"]
   pull_request:
-    paths-ignore: ["**.md"]
+    paths-ignore: ["**.md", "site/**"]
   workflow_dispatch:
   workflow_call:
     inputs:

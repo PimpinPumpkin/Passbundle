@@ -1,0 +1,3 @@
+dist/
+# wrangler writes its account cache here when deploy.sh runs.
+.wrangler/
