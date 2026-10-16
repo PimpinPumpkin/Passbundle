@@ -174,6 +174,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
+      - name: The agent's native-messaging test vectors, checked with upstream's own crypto
+        run: node apps/agent/tests/vectors/check-upstream.mjs apps/agent/tests/vectors/native-messaging.json .
       - name: Upstream unit tests for every file we changed
         run: |
           base=$(cat .keykeeper-base)
