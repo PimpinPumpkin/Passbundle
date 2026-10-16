@@ -11,6 +11,7 @@ const ADMIN = 1;
 const CUSTOM = 4;
 const ACCEPTED = 1;
 const CONFIRMED = 2;
+const REVOKED = -1;
 
 type Access = {
   allClients: boolean;
@@ -42,12 +43,7 @@ async function setAccess(
 }
 
 /** Someone's membership in a client, as the MSP admin (an owner there) sees it. */
-async function memberIn(
-  api: Api,
-  admin: Account,
-  orgId: string,
-  who: Account,
-) {
+async function memberIn(api: Api, admin: Account, orgId: string, who: Account) {
   return (await api.members(admin, orgId)).find((m) => m.email === who.email);
 }
 
@@ -94,11 +90,13 @@ test("a technician limited to chosen clients is taken out of the others at once,
   expect(await api.orgsOf(tech)).toEqual([dental]);
 
   // Their console shows only that client, and its install command.
-  const overview = (
-    await api.call(tech, "GET", `/api/keykeeper/msp/${mspId}`)
-  ).body;
+  const overview = (await api.call(tech, "GET", `/api/keykeeper/msp/${mspId}`))
+    .body;
   expect(overview.clients.map((c: { id: string }) => c.id)).toEqual([dental]);
-  expect(overview.access).toMatchObject({ allClients: false, clients: [dental] });
+  expect(overview.access).toMatchObject({
+    allClients: false,
+    clients: [dental],
+  });
   // Only MSP admins see each technician's access.
   expect(
     overview.staff.every((s: { access: unknown }) => s.access === null),
@@ -183,11 +181,16 @@ test("a technician with a custom role acts only within it, sees vault items only
   };
 
   // Access chosen when adding them applies from the start.
-  const added = await api.call(admin, "POST", `/api/keykeeper/msp/${mspId}/staff`, {
-    email: tech.email,
-    role: "technician",
-    access: helpdesk,
-  });
+  const added = await api.call(
+    admin,
+    "POST",
+    `/api/keykeeper/msp/${mspId}/staff`,
+    {
+      email: tech.email,
+      role: "technician",
+      access: helpdesk,
+    },
+  );
   expect(added.status, JSON.stringify(added.body)).toBe(200);
   expect(await memberIn(api, admin, dental, tech)).toMatchObject({
     status: ACCEPTED,
@@ -281,17 +284,25 @@ test("an invitation carries a technician's access, and access is checked", async
     clients: [law],
     installCommands: false,
   };
-  const invited = await api.call(admin, "POST", `/api/keykeeper/msp/${mspId}/staff`, {
-    email,
-    role: "technician",
-    access: onlyLaw,
-  });
+  const invited = await api.call(
+    admin,
+    "POST",
+    `/api/keykeeper/msp/${mspId}/staff`,
+    {
+      email,
+      role: "technician",
+      access: onlyLaw,
+    },
+  );
   expect(invited.status, JSON.stringify(invited.body)).toBe(200);
   expect(invited.body.invited).toBe(true);
   const listedInvite = (
     await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}`)
   ).body.invites.find((i: { email: string }) => i.email === email);
-  expect(listedInvite.access).toMatchObject({ allClients: false, clients: [law] });
+  expect(listedInvite.access).toMatchObject({
+    allClients: false,
+    clients: [law],
+  });
 
   const newcomer = await api.account("new-tech", email);
   const token = new URL(invited.body.inviteUrl).hash.split("invite=")[1];
@@ -334,4 +345,80 @@ test("an invitation carries a technician's access, and access is checked", async
   expect(result.body.message).toMatch(/owners of every client/);
   expect(await memberIn(api, admin, law, newcomer)).toBeDefined();
   expect(await memberIn(api, other, theirClient, newcomer)).toBeUndefined();
+});
+
+test("a technician with a custom role works in every Business client, and a client's two-step login and single organization policies leave MSP staff alone", async ({
+  request,
+}) => {
+  test.setTimeout(120_000);
+  const api = new Api(request);
+  const admin = await api.account("msp-admin");
+  const tech = await api.account("helpdesk");
+  const member = await api.account("dental-member");
+  const mspId = await api.msp(admin, "Northwind IT");
+  const dental = await api.client(admin, mspId, "Acme Dental", "business");
+  const law = await api.client(admin, mspId, "Baker Law", "business");
+
+  // A custom role makes them a regular member in each client, and both
+  // clients have single organization on. Staff are exempt, as admins are.
+  const added = await api.call(
+    admin,
+    "POST",
+    `/api/keykeeper/msp/${mspId}/staff`,
+    {
+      email: tech.email,
+      role: "technician",
+      access: {
+        allClients: true,
+        clients: [],
+        custom: { permissions: { manageUsers: true }, vaultItems: false },
+        installCommands: true,
+      },
+    },
+  );
+  expect(added.status, JSON.stringify(added.body)).toBe(200);
+  // One membership waiting in each client, both confirmed.
+  expect(await api.confirmPending(admin, mspId)).toEqual([
+    tech.email,
+    tech.email,
+  ]);
+  for (const org of [dental, law]) {
+    expect(await memberIn(api, admin, org, tech)).toMatchObject({
+      status: CONFIRMED,
+      type: CUSTOM,
+    });
+  }
+
+  // Turning on two-step login revokes the client's own members without it,
+  // and turning on single organization again revokes members of other
+  // organizations, but neither touches the technician.
+  await api.addMember(admin, dental, member, "user");
+  const policy = async (orgId: string, type: number) => {
+    const result = await api.call(
+      admin,
+      "PUT",
+      `/api/organizations/${orgId}/policies/${type}`,
+      {
+        policy: { enabled: true, data: null },
+      },
+    );
+    expect(result.status, JSON.stringify(result.body)).toBe(200);
+  };
+  await policy(dental, 0);
+  await policy(law, 3);
+  expect(await memberIn(api, admin, dental, member)).toMatchObject({
+    status: REVOKED,
+  });
+  for (const org of [dental, law]) {
+    expect(await memberIn(api, admin, org, tech)).toMatchObject({
+      status: CONFIRMED,
+    });
+  }
+
+  // They still work in both clients.
+  for (const org of [dental, law]) {
+    expect(
+      (await api.call(tech, "GET", `/api/organizations/${org}/users`)).status,
+    ).toBe(200);
+  }
 });
