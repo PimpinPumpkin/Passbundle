@@ -1,9 +1,10 @@
 // MSP templates in the console: an MSP admin makes a template in their own
-// vault and sends it to every client; a client added later gets it too; after
-// the source changes the console shows who needs it and updates them; the
-// copies show once, under "From <MSP>", when making a new item; and stopping
-// can take the copies away. Real keys throughout: each copy is encrypted for
-// its client in the browser. See DESIGN.md, "MSP templates".
+// vault and adds it for every client, and it applies to all of them, a client
+// added later included; editing it changes every client's copy without
+// anything else to click; the copies show once, under "From <MSP>", when
+// making a new item; and removing it can take the copies away. Real keys
+// throughout: each copy is encrypted for its client in the browser. See
+// DESIGN.md, "MSP templates".
 import { expect, test, type Page } from "@playwright/test";
 
 import { signUp, webUserFor } from "./support/web";
@@ -33,7 +34,7 @@ async function templateChooser(page: Page) {
   return page.getByRole("dialog", { name: "New item from a template" });
 }
 
-test("an MSP admin sends a template to every client, a new client gets it, changes reach every client, and stopping can remove the copies", async ({
+test("a template added for every client applies to all of them, a new client included, edits reach every client on their own, and removing it can take the copies away", async ({
   browser,
 }, testInfo) => {
   test.setTimeout(240_000);
@@ -51,7 +52,7 @@ test("an MSP admin sends a template to every client, a new client gets it, chang
 
   // Nothing to send yet: the console says how to make a template.
   const templates = admin.getByTestId("msp-templates");
-  await expect(templates).toContainText("No templates sent yet.");
+  await expect(templates).toContainText("No templates yet.");
   await expect(templates).toContainText("Make a template first");
 
   // A template in the admin's own vault.
@@ -74,16 +75,16 @@ test("an MSP admin sends a template to every client, a new client gets it, chang
   await expect(editor).toBeHidden();
   await closeView(admin);
 
-  // Sent to every client.
+  // Added for every client: it applies to both.
   await admin.goto("/#/msp");
-  const send = admin.getByRole("form", { name: "Send a template" });
-  await expect(send.getByRole("combobox", { name: "Template" })).toHaveValue(
+  const add = admin.getByRole("form", { name: "Add a template" });
+  await expect(add.getByRole("combobox", { name: "Template" })).toHaveValue(
     /.+/,
   );
-  await expect(send.getByRole("radio", { name: /Every client/ })).toBeChecked();
-  await send.getByRole("button", { name: "Send" }).click();
+  await expect(add.getByRole("radio", { name: /Every client/ })).toBeChecked();
+  await add.getByRole("button", { name: "Add template" }).click();
   await expect(
-    toast(admin, "Sent Firewall to Acme Dental and Baker Law."),
+    toast(admin, "Firewall now applies to every client."),
   ).toBeVisible();
   const row = templates.getByTestId("msp-template-Firewall");
   await expect(row).toContainText("Every client");
@@ -91,20 +92,11 @@ test("an MSP admin sends a template to every client, a new client gets it, chang
 
   // A client added later gets it right away.
   await addClient(admin, "Corner Bakery");
-  await expect(toast(admin, "Sent 1 template to Corner Bakery")).toBeVisible();
   await expect(row.getByTestId("msp-template-status")).toHaveText("Up to date");
 
-  // The admin changes the source in their vault; every client needs it.
-  await admin.goto("/#/vault");
-  // The admin's own, not the clients' copies the list also shows.
-  await admin
-    .getByRole("row")
-    .filter({ hasText: "Firewall" })
-    .filter({ hasText: /\bMe\b/ })
-    .getByText("Firewall", { exact: true })
-    .click();
-  const view = admin.getByRole("dialog", { name: /^View/ });
-  await view.getByRole("button", { name: "Edit", exact: true }).click();
+  // The admin edits it from the console. Saving is all: the vault updates
+  // every client's copy in the background.
+  await row.getByRole("link", { name: "Edit Firewall" }).click();
   const edit = admin.getByRole("dialog", { name: /^Edit/ });
   await edit.getByRole("button", { name: "Add field" }).click();
   await addField
@@ -115,26 +107,40 @@ test("an MSP admin sends a template to every client, a new client gets it, chang
   await edit.getByRole("button", { name: "Save" }).click();
   await expect(edit).toBeHidden();
   await closeView(admin);
+  await expect(async () => {
+    const picker = await templateChooser(admin);
+    await picker
+      .getByRole("region", { name: "From Northwind IT" })
+      .getByRole("button", { name: "Firewall", exact: true })
+      .click();
+    const item = admin.getByRole("dialog", { name: /^New/ });
+    try {
+      await expect(
+        item.getByRole("textbox", { name: "Firmware version", exact: true }),
+      ).toBeVisible({ timeout: 1000 });
+    } finally {
+      await item.getByRole("button", { name: "Cancel" }).click();
+    }
+  }).toPass({ timeout: 60_000, intervals: [2_000] });
 
   await admin.goto("/#/msp");
-  await expect(row.getByTestId("msp-template-status")).toHaveText(
-    "3 of 3 clients need it",
-  );
-  await row.getByRole("button", { name: "Update 3 clients" }).click();
-  await expect(
-    toast(admin, "Sent Firewall to Acme Dental, Baker Law, and Corner Bakery."),
-  ).toBeVisible();
   await expect(row.getByTestId("msp-template-status")).toHaveText("Up to date");
+  await expect(
+    row.getByRole("button", { name: "Update Firewall" }),
+  ).toHaveCount(0);
   const activity = admin.getByTestId("msp-activity");
   await expect(activity).toContainText(
-    `${adminUser.email} started sending Firewall to every client`,
+    `${adminUser.email} added the template Firewall for every client`,
   );
   await expect(activity).toContainText(
-    `${adminUser.email} sent Firewall to Corner Bakery`,
+    `Firewall was applied to Corner Bakery (by ${adminUser.email})`,
+  );
+  await expect(activity).toContainText(
+    `Firewall was applied to 3 clients (by ${adminUser.email})`,
   );
 
-  // Making an item: the three clients' copies show once, from the MSP, with
-  // the new field; the admin's own source shows under their own templates.
+  // Making an item: the three clients' copies show once, from the MSP; the
+  // admin's own shows under their own templates.
   chooser = await templateChooser(admin);
   const fromMsp = chooser.getByRole("region", { name: "From Northwind IT" });
   await expect(fromMsp.getByRole("button")).toHaveCount(1);
@@ -143,12 +149,7 @@ test("an MSP admin sends a template to every client, a new client gets it, chang
       .getByRole("region", { name: "My templates" })
       .getByRole("button", { name: "Firewall", exact: true }),
   ).toBeVisible();
-  await fromMsp.getByRole("button", { name: "Firewall", exact: true }).click();
-  const item = admin.getByRole("dialog", { name: /^New/ });
-  await expect(
-    item.getByRole("textbox", { name: "Firmware version", exact: true }),
-  ).toBeVisible();
-  await item.getByRole("button", { name: "Cancel" }).click();
+  await admin.keyboard.press("Escape");
 
   // A client's copy says where it comes from.
   await admin.goto("/#/vault");
@@ -165,15 +166,13 @@ test("an MSP admin sends a template to every client, a new client gets it, chang
   ).toContainText("It comes from Northwind IT, which keeps it up to date.");
   await closeView(admin);
 
-  // Stopping, with the copies removed.
+  // Removing it, from the clients too.
   await admin.goto("/#/msp");
-  await row.getByRole("button", { name: "Stop sending Firewall" }).click();
-  await admin
-    .getByRole("button", { name: "Stop sending", exact: true })
-    .click();
-  await admin.getByRole("button", { name: "Remove copies" }).click();
-  await expect(toast(admin, "Stopped sending Firewall")).toBeVisible();
-  await expect(templates).toContainText("No templates sent yet.");
+  await row.getByRole("button", { name: "Remove Firewall" }).click();
+  await admin.getByRole("button", { name: "Remove", exact: true }).click();
+  await admin.getByRole("button", { name: "Remove from clients" }).click();
+  await expect(toast(admin, "Removed Firewall")).toBeVisible();
+  await expect(templates).toContainText("No templates yet.");
   chooser = await templateChooser(admin);
   await expect(
     chooser.getByRole("region", { name: "My templates" }),
