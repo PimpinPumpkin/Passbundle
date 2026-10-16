@@ -228,6 +228,75 @@ jobs:
               console.log(dir + ": " + name);
             }'
 
+  agent:
+    name: Desktop agent (${{ matrix.os }})
+    needs: refs
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: apps/agent
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-clients
+          ref: ${{ needs.refs.outputs.clients }}
+          persist-credentials: false
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: apps/agent
+      - name: No Bitwarden SDK or desktop_native crates
+        # They aren't all under standard open-source licenses (see apps/agent/README.md).
+        run: |
+          if grep -nE '^name = "(bitwarden|desktop_|biometric|secure_memory)' Cargo.lock; then
+            echo "The agent must not depend on these crates." >&2
+            exit 1
+          fi
+      - name: Formatting
+        run: cargo fmt --check
+      - name: Lints
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Unit tests
+        run: cargo test --locked
+      - name: Release build
+        run: cargo build --locked --release
+      - name: Size, version, and a run in the tray
+        run: |
+          exe=target/release/passbundle-agent
+          if [ -f "$exe.exe" ]; then exe="$exe.exe"; fi
+          size=$(wc -c < "$exe")
+          echo "Size: $size bytes"
+          # DESIGN.md: under 10 MB.
+          test "$size" -lt 10485760
+          name=$(node -p 'require("../../brand/brand.json").name')
+          "$exe" --version | tee version.txt
+          grep -qx "$name agent [0-9]*\.[0-9]*\.[0-9]*" version.txt
+          # CI builds have no update key, so they never update themselves.
+          "$exe" --update | grep -qx "This build doesn't update itself."
+          # The tray app starts and stays up; a second one for the same user exits.
+          "$exe" &
+          pid=$!
+          sleep 5
+          kill -0 "$pid"
+          "$exe"
+          kill -0 "$pid"
+          kill "$pid"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: agent-${{ matrix.os }}
+          path: |
+            apps/agent/target/release/passbundle-agent
+            apps/agent/target/release/passbundle-agent.exe
+          if-no-files-found: error
+          retention-days: 3
+
   e2e:
     name: End-to-end (${{ matrix.part }})
     needs: [refs, server, clients]
