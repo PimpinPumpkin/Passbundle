@@ -374,6 +374,8 @@ Determinism rules:
 
 The maintainer gets a morning summary, with screenshots and video only for failures.
 
+**Changes that span repos** use the same branch name in each repo. Tier 1 tests a pull request together with the same-named branches of the other repos, so linked pull requests pass before any of them merges, and none of them goes red only because another hasn't merged yet. Branches are deleted when their pull request merges, so a stale one is never picked up.
+
 ## Known gaps
 
 - Help, Terms of Service, and Privacy Policy links point at placeholder pages on `brand.json`'s domain until we publish our own.

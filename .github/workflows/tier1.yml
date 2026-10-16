@@ -1,6 +1,8 @@
 # Tier 1: every commit, fully repeatable. Builds the server and the branded
 # clients from their keykeeper branches (or the commits passed in by a fork's
-# CI), then runs the end-to-end suite against them.
+# CI), then runs the end-to-end suite against them. A pull request whose
+# branch name also exists in another of the three repos is tested with that
+# branch there, so a change that spans repos passes before any part merges.
 name: Tier 1
 
 on:
@@ -26,20 +28,66 @@ concurrency:
   group: tier1-${{ github.repository }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  CLIENTS_REF: ${{ inputs.clients-ref || 'keykeeper' }}
-  SERVER_REF: ${{ inputs.server-ref || 'keykeeper' }}
-
 jobs:
+  refs:
+    name: Linked branches
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      server: ${{ steps.pick.outputs.server }}
+      clients: ${{ steps.pick.outputs.clients }}
+      meta: ${{ steps.pick.outputs.meta }}
+    steps:
+      - name: Pick each repo's branch
+        id: pick
+        env:
+          BRANCH: ${{ github.head_ref }}
+          CALLER: ${{ github.repository }}
+          SERVER_IN: ${{ inputs.server-ref }}
+          CLIENTS_IN: ${{ inputs.clients-ref }}
+        run: |
+          # The pull request's branch name, where that repo has such a branch;
+          # otherwise the repo's main branch.
+          linked() {
+            if [ -n "$BRANCH" ] &&
+              git ls-remote --exit-code --heads "https://github.com/PimpinPumpkin/$1.git" "refs/heads/$BRANCH" > /dev/null; then
+              echo "$BRANCH"
+            else
+              echo "$2"
+            fi
+          }
+          if [ "$CALLER" = PimpinPumpkin/keykeeper-server ]; then
+            server=${SERVER_IN:-keykeeper}
+          else
+            server=$(linked keykeeper-server keykeeper)
+          fi
+          if [ "$CALLER" = PimpinPumpkin/keykeeper-clients ]; then
+            clients=${CLIENTS_IN:-keykeeper}
+          else
+            clients=$(linked keykeeper-clients keykeeper)
+          fi
+          # The meta repo's own runs test their own commit (checkout's default).
+          meta=
+          if [ "$CALLER" != PimpinPumpkin/keykeeper ]; then
+            meta=$(linked keykeeper main)
+          fi
+          {
+            echo "server=$server"
+            echo "clients=$clients"
+            echo "meta=$meta"
+          } >> "$GITHUB_OUTPUT"
+          echo "Server: $server. Clients: $clients. Tests: ${meta:-this commit}."
+
   server:
     name: Server tests and build
+    needs: refs
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: PimpinPumpkin/keykeeper-server
-          ref: ${{ env.SERVER_REF }}
+          ref: ${{ needs.refs.outputs.server }}
           persist-credentials: false
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential libssl-dev pkg-config libpq-dev
@@ -64,13 +112,14 @@ jobs:
 
   clients:
     name: Branded web vault and extension
+    needs: refs
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: PimpinPumpkin/keykeeper-clients
-          ref: ${{ env.CLIENTS_REF }}
+          ref: ${{ needs.refs.outputs.clients }}
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -114,13 +163,14 @@ jobs:
 
   other-browsers:
     name: Edge and Firefox extensions
+    needs: refs
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: PimpinPumpkin/keykeeper-clients
-          ref: ${{ env.CLIENTS_REF }}
+          ref: ${{ needs.refs.outputs.clients }}
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -153,13 +203,14 @@ jobs:
 
   e2e:
     name: End-to-end
-    needs: [server, clients]
+    needs: [refs, server, clients]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: PimpinPumpkin/keykeeper
+          ref: ${{ needs.refs.outputs.meta }}
           persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -198,7 +249,7 @@ jobs:
 
   api-postgres:
     name: API tests on PostgreSQL
-    needs: [server, clients]
+    needs: [refs, server, clients]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -219,6 +270,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: PimpinPumpkin/keykeeper
+          ref: ${{ needs.refs.outputs.meta }}
           persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
