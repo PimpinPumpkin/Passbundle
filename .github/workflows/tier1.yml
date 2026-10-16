@@ -129,26 +129,38 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
+      - name: Install the desktop agent's Rust toolchain
+        working-directory: apps/agent
+        run: rustup toolchain install && sudo apt-get install -y --no-install-recommends libssl-dev pkg-config
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: apps/agent
       - name: Apply branding
         run: node brand/apply.mjs
-      - name: Build the web vault and Chrome extension
-        # At the same time; each mostly uses one core.
+      - name: Build the web vault, Chrome extension, and desktop agent
+        # At the same time; each mostly uses one core. The agent is a test
+        # build, with the stand-in for Windows Hello the end-to-end tests use.
         run: |
           (cd apps/web && npm run build:oss:selfhost:prod) > "$RUNNER_TEMP/web.log" 2>&1 &
           web=$!
           (cd apps/browser && npm run build:prod:chrome) > "$RUNNER_TEMP/chrome.log" 2>&1 &
           chrome=$!
+          (cd apps/agent && cargo build --locked --features test-authenticator) > "$RUNNER_TEMP/agent.log" 2>&1 &
+          agent=$!
           status=0
           wait "$web" || { echo "::error::The web vault build failed"; status=1; }
           wait "$chrome" || { echo "::error::The Chrome extension build failed"; status=1; }
+          wait "$agent" || { echo "::error::The desktop agent build failed"; status=1; }
           echo "::group::Web vault build" && cat "$RUNNER_TEMP/web.log" && echo "::endgroup::"
           echo "::group::Chrome extension build" && cat "$RUNNER_TEMP/chrome.log" && echo "::endgroup::"
+          echo "::group::Desktop agent build" && cat "$RUNNER_TEMP/agent.log" && echo "::endgroup::"
           exit "$status"
       - name: Collect builds
         run: |
-          mkdir -p out
+          mkdir -p out/agent
           cp -r apps/web/build out/web-vault
           cp -r apps/browser/build out/extension-chrome
+          cp apps/agent/target/debug/passbundle-agent apps/agent/target/debug/passbundle-agent-host out/agent/
           cp brand/brand.json out/brand.json
           find out -name '*.map' -delete
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -363,8 +375,9 @@ jobs:
           KK_WEB_VAULT: ${{ github.workspace }}/build/clients/web-vault
           KK_EXTENSION: ${{ github.workspace }}/build/clients/extension-chrome
           KK_BRAND: ${{ github.workspace }}/build/clients/brand.json
+          KK_AGENT: ${{ github.workspace }}/build/clients/agent
           KK_SERVER_LOG: ${{ github.workspace }}/e2e/server-log/server.log
-        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" && npx playwright test ${{ matrix.args }}
+        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" "$KK_AGENT"/* && npx playwright test ${{ matrix.args }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
