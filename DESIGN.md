@@ -413,11 +413,9 @@ The maintainer gets a morning summary, with screenshots and video only for failu
 
 ## Known gaps
 
-- Help, Terms of Service, and Privacy Policy links point at placeholder pages on `brand.json`'s domain until we publish our own.
+- Help, Terms of Service, and Privacy Policy links go to pages on passbundle.com that don't exist until we publish the site.
+- The apps' default server is `vault.passbundle.com` (one host, the way our server is deployed), which serves nothing until the hosted service exists. Self-hosted servers are unaffected.
 - The installer's extension IDs are placeholders until the store listings exist.
-- The UI still uses upstream's blue theme. Branding swaps names and logos only so far.
-- The shield glyph in upstream's icon font (`bwi-bitwarden`, `bwi-shield`) still appears in about five places, such as the vault's "Get started" card. It needs a CSS override in the branding step.
-- The web vault still promotes Secrets Manager, a Bitwarden-only product, in its sidebar. Those entry points need removing.
 
 ## Milestones
 
