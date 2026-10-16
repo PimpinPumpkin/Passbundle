@@ -8,7 +8,7 @@ const browsers = [
 ];
 
 for (const b of browsers) {
-  test(`${b.channel} reports Keykeeper's policies`, async () => {
+  test(`${b.channel} reports PassBundle's policies`, async () => {
     const browser = await chromium.launch({ channel: b.channel });
     const page = await browser.newPage();
     await page.goto(b.page);

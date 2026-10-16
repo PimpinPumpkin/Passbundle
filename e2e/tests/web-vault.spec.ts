@@ -32,11 +32,11 @@ async function logIn(page: Page) {
   await expect(page).toHaveTitle(/Vaults/);
 }
 
-test("server identifies as Keykeeper, links its source, and suppresses nags", async ({ request }) => {
+test("server identifies as PassBundle, links its source, and suppresses nags", async ({ request }) => {
   const config = await (await request.get("/api/config")).json();
   expect(config.server.name).toBe(brand.name);
   // AGPL-3.0 section 13: network users get a link to the server's source.
-  expect(config.server.url).toBe("https://github.com/PimpinPumpkin/keykeeper-server");
+  expect(config.server.url).toBe("https://github.com/PimpinPumpkin/passbundle-server");
   expect(config.settings.suppressOnboardingInterstitials).toBe(true);
 });
 

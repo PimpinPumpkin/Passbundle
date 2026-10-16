@@ -1,4 +1,4 @@
-# Keykeeper design
+# PassBundle design
 
 Status: draft, 2026-10-14. Decisions here are made unless marked "open".
 
@@ -14,7 +14,7 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
 
 ### Server
 
-- Fork of Vaultwarden (`keykeeper-server`), AGPL-3.0.
+- Fork of Vaultwarden (`passbundle-server`), AGPL-3.0.
 - Postgres in production. SQLite stays supported for self-hosters.
 - Individuals and families share pooled instances. Each business org gets its own instance.
 - Cloudflare in front: WAF, and rate limits on the login and identity endpoints.
@@ -22,7 +22,7 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
 
 ### Clients
 
-- Open-source build of the Bitwarden clients (`keykeeper-clients`), rebranded: web vault, browser extension, CLI. The vault UI people use every day is the extension and the web vault.
+- Open-source build of the Bitwarden clients (`passbundle-clients`), rebranded: web vault, browser extension, CLI. The vault UI people use every day is the extension and the web vault.
 - **No Electron.** We don't ship upstream's Electron desktop app (about 150 MB on disk and hundreds of MB of RAM for what is mostly a tray icon). The desktop side is a small native agent. See "Desktop agent" below.
 - Mobile comes later, from `bitwarden/android` and `bitwarden/ios`, with our own push delivery (APNs, FCM, and UnifiedPush on Android).
 - The SDK comes from the upstream open-source `sdk-internal` build. Fork it only when we need to change it.
@@ -277,7 +277,7 @@ Any item can expire: API keys, certificates, licenses, domains, passports, cards
 
 - **Set it anywhere:** an "Expires" date on every item, plus template date fields marked "is the expiration date" (an API key's expiry, a passport's). Cards use their existing expiry month and year automatically.
 - **Stored with the item:** a text field `keykeeper.expires` (ISO date), encrypted and synced, no server changes. A text field, not hidden: a date isn't secret, and list views only carry text fields' values, so lists can show badges without decrypting every item.
-- **Built:** the "Expires" date in the item editor (web, extension, desktop share it), an Expiration section in the item view, badges in the web vault list and the extension's item list for items expired or expiring within 30 days, and card expiry in the item view. All of Keykeeper's own fields stay hidden in views and editors and survive edits (`libs/vault/src/keykeeper/`). An "Expiring items" report on the web vault's Reports page lists everything expired or expiring within 30 days, cards included, expired first, then soonest. The extension checks every six hours while unlocked and shows a system notification at 30, 7, and 1 day before and once expired, never twice for the same step; a new date starts over (`apps/browser/src/keykeeper/expiration-reminders.ts`). Tier 1 covers each.
+- **Built:** the "Expires" date in the item editor (web, extension, desktop share it), an Expiration section in the item view, badges in the web vault list and the extension's item list for items expired or expiring within 30 days, and card expiry in the item view. All of PassBundle's own fields stay hidden in views and editors and survive edits (`libs/vault/src/keykeeper/`). An "Expiring items" report on the web vault's Reports page lists everything expired or expiring within 30 days, cards included, expired first, then soonest. The extension checks every six hours while unlocked and shows a system notification at 30, 7, and 1 day before and once expired, never twice for the same step; a new date starts over (`apps/browser/src/keykeeper/expiration-reminders.ts`). Tier 1 covers each.
 - **Not built yet:** card expiry badges in lists (list views don't carry card expiry), the "Expiring soon" filter, Health integration, per-item reminder days, desktop agent reminders, and the MSP view.
 - **See it:** "Expires in 12 days" and "Expired" badges in every list, an "Expiring soon" filter, and expiring items in Health.
 - **Reminders, on the device:** the extension (built) and desktop agent check while unlocked and notify at 30, 7, and 1 day before, and once expired. Steps adjustable per item later. Nothing leaves the device.
@@ -291,7 +291,7 @@ Upstream gives us about 70 importers. They include 1Password, LastPass (with dir
 - **Detect and guide:** the desktop agent detects installed password managers and walks the user through that product's export with exact steps. Then it imports and securely deletes the export file.
 - **Direct import** where the source allows it, as upstream already does for LastPass.
 - **Business:** the admin bulk-imports shared vaults into collections, mapping source folders and shared folders. Each member's private items go through the same guided import during their onboarding.
-- **Bitwarden (built and tested):** its JSON export imports with every item, folder, TOTP secret, custom field, note, and password history intact. A password-protected export moves to another account with no plaintext in the file. Both are tier 1 tests. Our own exports use the same format, so the importer's "Bitwarden (json)" label should become "Keykeeper or Bitwarden (json)".
+- **Bitwarden (built and tested):** its JSON export imports with every item, folder, TOTP secret, custom field, note, and password history intact. A password-protected export moves to another account with no plaintext in the file. Both are tier 1 tests. Our own exports use the same format, so the importer's "Bitwarden (json)" label should become "PassBundle or Bitwarden (json)".
 - **Tests:** upstream importer specs, plus round-trip fixtures for the top formats in tier 1.
 
 ## Health (better than Watchtower)
@@ -333,7 +333,7 @@ Disable it, don't purge it.
 ## Passkeys
 
 - Inherited from upstream GPL code: passkeys in the browser extension, the Windows 11 plugin authenticator and macOS AutoFill provider on desktop, and Android Credential Manager and the iOS credential provider on mobile.
-- Our job: make sure `keykeeper-server` stores and syncs passkey items correctly (verify against Vaultwarden), then cover registration and sign-in in tiers 1 and 2.
+- Our job: make sure the server stores and syncs passkey items correctly (verify against Vaultwarden), then cover registration and sign-in in tiers 1 and 2.
 
 ## Autofill
 
@@ -421,7 +421,7 @@ The maintainer gets a morning summary, with screenshots and video only for failu
 
 ## Milestones
 
-1. Fork and rebrand `keykeeper-clients` and `keykeeper-server`. Tier 1 CI. A tier 2 Windows job that does an RMM-style install and verifies the policies.
+1. Fork and rebrand the clients and the server. Tier 1 CI. A tier 2 Windows job that does an RMM-style install and verifies the policies.
 2. Spike: seed real browser profiles with known saved passwords, including Chrome app-bound encryption. Tier 2 depends on it.
 3. Onboarding wizard, autonomous import, presets, and defaults.
 4. Autofill corpus and scoreboard.

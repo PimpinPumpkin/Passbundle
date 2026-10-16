@@ -1,4 +1,4 @@
-// Starts keykeeper-server for one test run with a throwaway data folder,
+// Starts the server for one test run with a throwaway data folder,
 // no outbound network features, and our built web vault.
 import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";

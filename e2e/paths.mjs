@@ -6,6 +6,11 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const sibling = (...p) => path.resolve(here, "../..", ...p);
+// A sibling repo, under its PassBundle folder name or the code name.
+const repo = (name, ...p) =>
+  fs.existsSync(sibling(`passbundle-${name}`))
+    ? sibling(`passbundle-${name}`, ...p)
+    : sibling(`keykeeper-${name}`, ...p);
 
 export const port = process.env.KK_PORT ?? "8091";
 export const fixturePort = process.env.KK_FIXTURE_PORT ?? "8093";
@@ -16,12 +21,12 @@ export const mailHttpPort = process.env.KK_MAIL_HTTP_PORT ?? "8096";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??
-    sibling("keykeeper-server/target/debug/vaultwarden"),
+    repo("server", "target/debug/vaultwarden"),
   webVault:
-    process.env.KK_WEB_VAULT ?? sibling("keykeeper-clients/apps/web/build"),
+    process.env.KK_WEB_VAULT ?? repo("clients", "apps/web/build"),
   extension:
-    process.env.KK_EXTENSION ?? sibling("keykeeper-clients/apps/browser/build"),
-  brand: process.env.KK_BRAND ?? sibling("keykeeper-clients/brand/brand.json"),
+    process.env.KK_EXTENSION ?? repo("clients", "apps/browser/build"),
+  brand: process.env.KK_BRAND ?? repo("clients", "brand/brand.json"),
 };
 export const brand = JSON.parse(fs.readFileSync(paths.brand, "utf8"));
 

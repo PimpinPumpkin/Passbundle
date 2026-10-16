@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-  Applies Keykeeper's browser policies on a Windows machine. Version 0: policies only, no MSI yet.
+  Applies PassBundle's browser policies on a Windows machine. Version 0: policies only, no MSI yet.
 
 .DESCRIPTION
   Run once with admin rights, typically from an RMM. For each targeted browser it:
-    - force-installs the Keykeeper extension (IDs are fixed in this script, never passed in),
+    - force-installs the PassBundle extension (IDs are fixed in this script, never passed in),
     - turns off the browser's own password saving and filling,
     - optionally turns off card and address autofill,
     - optionally gives the extension its server address and the client's
@@ -12,11 +12,11 @@
   Existing policies from other vendors are left alone. Running it again changes nothing.
 
 .EXAMPLE
-  .\Install-Keykeeper.ps1 -Browsers Edge,Chrome -DisableCardAutofill
+  .\Install-PassBundle.ps1 -Browsers Edge,Chrome -DisableCardAutofill
 .EXAMPLE
-  .\Install-Keykeeper.ps1 -ServerUrl https://vault.example.com -EnrollmentToken <token from the MSP console>
+  .\Install-PassBundle.ps1 -ServerUrl https://vault.example.com -EnrollmentToken <token from the MSP console>
 .EXAMPLE
-  .\Install-Keykeeper.ps1 -Remove
+  .\Install-PassBundle.ps1 -Remove
 #>
 [CmdletBinding()]
 param(
@@ -117,7 +117,7 @@ foreach ($browser in $Browsers) {
         Remove-ItemProperty -Path $root -Name $name
       }
     }
-    Write-Output "Removed Keykeeper policies for $browser"
+    Write-Output "Removed PassBundle policies for $browser"
     continue
   }
 
@@ -126,5 +126,5 @@ foreach ($browser in $Browsers) {
   if (-not $KeepBrowserPasswordManager) { Set-Dword $root "PasswordManagerEnabled" 0 }
   if ($DisableCardAutofill) { Set-Dword $root "AutofillCreditCardEnabled" 0 }
   if ($DisableAddressAutofill) { Set-Dword $root "AutofillAddressEnabled" 0 }
-  Write-Output "Applied Keykeeper policies for $browser"
+  Write-Output "Applied PassBundle policies for $browser"
 }
