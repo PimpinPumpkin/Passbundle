@@ -1,0 +1,11 @@
+# The apps link to help articles and product pages by their upstream paths
+# (bitwarden.com/help/<article>/ became passbundle.com/help/<article>/).
+# Until those articles exist, they land on the help page. Placeholders match
+# one non-empty path segment, so /help/ itself never redirects.
+/help/:article /help/ 302
+/help/:article/ /help/ 302
+/help/:section/:article /help/ 302
+/help/:section/:article/ /help/ 302
+/products /  302
+/products/:page / 302
+/products/:page/ / 302

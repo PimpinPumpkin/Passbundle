@@ -1,0 +1,30 @@
+<!--
+title: Security
+description: How PassBundle protects your vault, and how to report a security issue.
+-->
+<h1>Security</h1>
+<p class="lead">A password manager has to earn trust. Here's how PassBundle is built, and how to tell us if you find a problem.</p>
+
+<h2>How your vault is protected</h2>
+<ul>
+  <li><strong>End-to-end encryption.</strong> Items are encrypted with AES-256 on your device before they're stored or synced. The key comes from your master password, which never leaves your device.</li>
+  <li><strong>The server can't decrypt.</strong> It stores encrypted data and never holds a key that can open a vault. Organization keys are shared between members' devices, encrypted to each member.</li>
+  <li><strong>Proven code.</strong> PassBundle is built on the open-source Bitwarden clients and Vaultwarden, and follows their releases and security fixes. Changes to encryption or sign-in code need a written design and tests.</li>
+  <li><strong>Open source.</strong> Everything is public on <a href="https://github.com/PimpinPumpkin/Passbundle">GitHub</a>, so anyone can check it.</li>
+</ul>
+
+<h2>Reporting a vulnerability</h2>
+<p>Please report security issues privately, never in a public issue:</p>
+<ul>
+  <li>On GitHub: open the repository's <strong>Security</strong> tab and choose <strong>Report a vulnerability</strong>, in <a href="https://github.com/PimpinPumpkin/passbundle-clients/security">the apps</a> or <a href="https://github.com/PimpinPumpkin/passbundle-server/security">the server</a>.</li>
+  <li>By email: <a href="mailto:security@passbundle.com">security@passbundle.com</a>.</li>
+</ul>
+<p>Tell us what you found, how to reproduce it, and what an attacker could do with it. We'll reply as soon as we can and keep you updated until it's fixed.</p>
+
+<h3>While you research</h3>
+<ul>
+  <li>Give us reasonable time to fix an issue before you disclose it.</li>
+  <li>Only test against accounts and servers you own, or have explicit permission to test.</li>
+  <li>Don't access, change, or delete other people's data, and don't degrade the service for others.</li>
+</ul>
+<p>We won't pursue legal action against research done in good faith under these rules.</p>
