@@ -160,6 +160,19 @@ An MSP sets its policies once, and every client follows them. A client that need
 - **Tests:** API tests for following and own settings (a changed default reaches followers and skips others; changing a client's policy makes it its own; using the default brings it back), side effects through a default (two-step login revoking a member), the legacy MSP defaults, and the permission matrix. A console e2e test changes a default, sees which clients took it, and uses the default for a client with its own setting.
 - **Status:** built (`keykeeper_msp_policies.rs`, a migration for SQLite and PostgreSQL, the console's Default policies section, and a note on each client's Policies page that names its own settings). The server compares what each policy does: an off policy's options don't count, and missing, empty, and null options are the same. A changed default goes only to clients whose policy matched the old default, so a client's own setting is never overwritten by accident. Not yet: choosing which clients a changed default reaches, and policies Vaultwarden doesn't support (such as requiring single sign-on).
 
+### Joining
+
+Someone invited to an organization gets in without anyone clicking Confirm: no "the person you invited signed up, now go approve them" step, which 1Password and Bitwarden both have.
+
+- **Why there's a step at all:** joining means giving the person the organization's key, encrypted to their public key, and the server never holds that key. So a device that has it must do the handoff. Upstream makes a person click Confirm for it; we do it in the background.
+- **Who does it:** the web vault or browser extension of any owner or admin of the organization (for an MSP's clients, anyone on the MSP's staff who can confirm there), while it's unlocked: when it unlocks, when its items change, and every five minutes. Usually within a few minutes; if every owner's and admin's apps are closed, the person waits until one opens. Upstream's rule stands: admins confirm regular members, owners anyone.
+- **Settings, per organization** (its Settings page, owners and admins): let people in automatically (on by default) or have an owner or admin approve each one on the Members page, and how long invitations last (2 hours, 1 day, or 5 days; the server allows 1 hour to 30 days). The invitation email says how long it works, and the link stops working after that.
+- **MSPs** set a default for their clients in the console; a client with its own setting keeps it, and an MSP admin can put it back on the default. Changes go in the MSP's activity log.
+- **Outside an MSP** the default is the server's: automatically, and `INVITATION_EXPIRATION_HOURS` (5 days).
+- **The trust this assumes:** the server says which public key belongs to the person who accepted. A compromised server could swap in its own and receive the organization's key, which a person clicking Confirm without comparing fingerprints wouldn't catch either. Organizations that want a person to check can require approval.
+- **Tests:** API tests for the settings, how they resolve (own, MSP default, server), the list of who's waiting, and permission matrices; a mail test that invitations last as long as the setting and say so; an end-to-end test where someone invited gets in with no click while another organization's invitee waits for approval.
+- **Status:** built (`keykeeper_joining.rs` and its migration on the server; the background work in `libs/admin-console/src/common/keykeeper/msp-work.ts`, which the web vault and the extension share; the Settings page card and the console section).
+
 ### MSP templates
 
 An MSP makes an item template once (a firewall, a Microsoft 365 tenant, a line-of-business app) and every client gets it, so technicians and the client's own people document things the same way everywhere. See "Item templates" for what a template is.
