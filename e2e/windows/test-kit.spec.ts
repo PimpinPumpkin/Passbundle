@@ -30,13 +30,22 @@ test("the test kit's extension reaches the agent and the test server", async () 
     const worker = context.serviceWorkers()[0];
     expect(new URL(worker.url()).host).toBe(id);
 
-    // The server from policy, applied at install.
+    // The server from policy: first that the browser handed it over at all,
+    // then that the extension uses it, on the login screen past the intro.
+    const managed = await worker.evaluate(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      () => (globalThis as any).chrome.storage.managed.get("environment") as Promise<{ environment?: { base?: string } }>,
+    );
+    expect(managed.environment?.base, "the browser didn't pass on the kit's policy").toBe("http://localhost:8817");
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${id}/popup/index.html`);
+    // The carousel renders its buttons before Angular wires them up, and an
+    // early click is dropped. Click until the app actually navigates.
     await expect(async () => {
-      await popup.reload();
-      await expect(popup.getByText(/localhost:8817/).first()).toBeVisible({ timeout: 3_000 });
-    }).toPass({ timeout: 45_000 });
+      await popup.getByRole("button", { name: "Log in" }).click();
+      await expect(popup).toHaveURL(/#\/login/, { timeout: 1000 });
+    }).toPass({ timeout: 30_000 });
+    await expect(popup.getByText(/localhost:8817/).first()).toBeVisible({ timeout: 15_000 });
 
     // The agent, through Chromium's native messaging and the kit's host.
     await expect

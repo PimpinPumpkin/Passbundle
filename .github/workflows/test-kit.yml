@@ -187,6 +187,27 @@ jobs:
       - name: Install test dependencies
         working-directory: e2e
         run: npm ci --no-audit --no-fund && npx playwright install chromium
+      - name: Give the check's browser the kit's policy too
+        shell: pwsh
+        run: |
+          # Playwright's Chromium is Chrome for Testing, which reads policies
+          # from its own registry key, not Chrome's or Chromium's. Read the
+          # key out of the browser rather than guess it, and copy the policy
+          # the kit wrote for Chrome there. People use Chrome or Edge.
+          $dll = Get-ChildItem "$env:LOCALAPPDATA\ms-playwright\chromium-*\chrome-win64\chrome.dll" | Select-Object -First 1
+          $text = [Text.Encoding]::Unicode.GetString([IO.File]::ReadAllBytes($dll.FullName))
+          $keys = [regex]::Matches($text, '(?i)SOFTWARE\\Policies\\[\x20-\x5B\x5D-\x7E]+(\\[\x20-\x5B\x5D-\x7E]+)?') |
+            ForEach-Object { $_.Value } | Sort-Object -Unique
+          Write-Output "Policy keys in the browser: $($keys -join '; ')"
+          $id = (Get-Content ./kit/extension-key.json -Raw | ConvertFrom-Json).id
+          $from = "HKLM:\SOFTWARE\Policies\Google\Chrome\3rdparty"
+          foreach ($key in $keys | Where-Object { $_ -match 'Chrom' -and $_ -notmatch '\\Chrome$|\\Chromium$' }) {
+            $to = "HKLM:\$key"
+            if (-not (Test-Path $to)) { New-Item -Path $to -Force | Out-Null }
+            Copy-Item -Path $from -Destination $to -Recurse -Force
+            Write-Output "Copied the extension's policy to $to"
+          }
+          if (-not (Test-Path "$from\extensions\$id\policy\environment")) { throw "The kit wrote no policy for Chrome" }
       - name: The extension reaches the agent and the test server
         working-directory: e2e
         env:
