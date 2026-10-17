@@ -100,7 +100,14 @@ test("an MSP's clients follow its default until one has its own setting, and go 
   expect(overview.default).toEqual({ autoConfirm: true, inviteHours: 120 });
   expect(overview.ownSettings.map((c) => c.name)).toEqual(["Baker Law"]);
   expect(settingOf(await joining(api, admin, dental))).toEqual({ autoConfirm: true, inviteHours: 120 });
-  expect(await joining(api, admin, law)).toMatchObject({ autoConfirm: true, inviteHours: 2, source: "own" });
+  // Its own setting, with the MSP and its default to go back to.
+  expect(await joining(api, admin, law)).toMatchObject({
+    autoConfirm: true,
+    inviteHours: 2,
+    source: "own",
+    mspName: "Northwind IT",
+    default: { autoConfirm: true, inviteHours: 120 },
+  });
 
   const reset = await api.call(admin, "DELETE", `/api/keykeeper/organizations/${law}/joining`);
   expect(reset.body).toMatchObject({ autoConfirm: true, inviteHours: 120, source: "msp" });
