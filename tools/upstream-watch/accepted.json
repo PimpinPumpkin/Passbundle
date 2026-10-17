@@ -1,5 +1,5 @@
 {
-  "about": "npm advisories the weekly watch doesn't raise, by package, with why. Everything here is outside the web vault and the extension people run. Review the reasons whenever what we ship changes.",
+  "about": "Advisories the weekly watch doesn't raise, each with why. npm entries are by package and cover only packages outside the web vault and the extension; cargo entries are by advisory and package version. Review the reasons whenever what we ship changes.",
   "npm": {
     "node-forge": "Only the command-line client (apps/cli) uses it, and we don't ship the CLI yet. Revisit before we do.",
     "multer": "Only the command-line client's local server (bw serve) uses it, and we don't ship the CLI yet. Revisit before we do.",
@@ -13,5 +13,13 @@
     "picomatch": "Comes with vite, build tooling only.",
     "postcss": "Comes with vite, build tooling only: it reads only our own CSS.",
     "source-map-js": "Comes with postcss, build tooling only."
+  },
+  "cargo": {
+    "RUSTSEC-2023-0071 rsa 0.9.10": "No fixed version exists. The server signs its login tokens with it (jsonwebtoken, also openidconnect), as upstream Vaultwarden does; the timing leak needs very many precisely timed private-key operations. The desktop agent only encrypts with a public key, which the attack doesn't affect. Revisit when rsa has a fix, or move jsonwebtoken to its aws-lc-rs backend.",
+    "RUSTSEC-2026-0349 rustls 0.21.12": "From Rocket 0.5.1, for serving TLS itself; this advisory is about TLS clients or features Rocket doesn't use, and our deployments terminate TLS at a reverse proxy. Revisit when Rocket moves to a newer rustls.",
+    "RUSTSEC-2026-0346 rustls 0.21.12": "From Rocket 0.5.1, for serving TLS itself; this advisory is about TLS clients or features Rocket doesn't use, and our deployments terminate TLS at a reverse proxy. Revisit when Rocket moves to a newer rustls.",
+    "RUSTSEC-2026-0098 rustls-webpki 0.101.7": "From Rocket 0.5.1's rustls 0.21, which verifies certificates only for client-certificate logins, which we don't use. Revisit when Rocket moves to a newer rustls.",
+    "RUSTSEC-2026-0104 rustls-webpki 0.101.7": "From Rocket 0.5.1's rustls 0.21, which verifies certificates only for client-certificate logins, which we don't use. Revisit when Rocket moves to a newer rustls.",
+    "RUSTSEC-2026-0099 rustls-webpki 0.101.7": "From Rocket 0.5.1's rustls 0.21, which verifies certificates only for client-certificate logins, which we don't use. Revisit when Rocket moves to a newer rustls."
   }
 }

@@ -80,7 +80,7 @@ export function npmFindings(report) {
  *   webVaultOnMain?: string | null,
  *   bitwardenLatest: { web?: string, browser?: string },
  *   audits: { name: string, npm?: boolean, findings: { id: string, package: string, title: string, fix: string }[] }[],
- *   accepted?: Record<string, string>,
+ *   accepted?: { npm?: Record<string, string>, cargo?: Record<string, string> },
  * }} input
  */
 export function plan(input) {
@@ -102,12 +102,14 @@ export function plan(input) {
       `Vaultwarden now ships web vault ${input.webVaultForLatest}: move the clients from ${input.clientsBase} with the server.`,
     );
   }
-  const accepted = input.accepted ?? {};
+  const accepted = input.accepted ?? { npm: {}, cargo: {} };
   const skipped = new Map();
   for (const audit of input.audits) {
     for (const f of audit.findings) {
-      if (audit.npm && accepted[f.package]) {
-        skipped.set(f.package, (skipped.get(f.package) ?? 0) + 1);
+      // npm: by package (packages outside what we ship). cargo: by advisory and package version.
+      const key = audit.npm ? f.package : `${f.id} ${f.package}`;
+      if ((audit.npm ? accepted.npm : accepted.cargo)?.[key]) {
+        skipped.set(key, (skipped.get(key) ?? 0) + 1);
         continue;
       }
       actions.push(`${audit.name}: ${f.package}, ${f.title} (${f.id}; ${f.fix}).`);
@@ -116,7 +118,7 @@ export function plan(input) {
   if (skipped.size) {
     const count = [...skipped.values()].reduce((a, b) => a + b, 0);
     notes.push(
-      `Accepted (outside what we ship; reasons in tools/upstream-watch/accepted.json): ${count} npm advisories in ${[...skipped.keys()].sort().join(", ")}.`,
+      `Accepted, with reasons in tools/upstream-watch/accepted.json: ${count} findings (${[...skipped.keys()].sort().join("; ")}).`,
     );
   }
   const { web, browser } = input.bitwardenLatest;
@@ -197,7 +199,7 @@ async function main() {
     { name: "Desktop agent (cargo audit)", findings: cargoFindings(readJson(args["cargo-agent"])) },
     { name: "Clients (npm audit, production)", npm: true, findings: npmFindings(readJson(args["npm-clients"])) },
   ];
-  const accepted = JSON.parse(fs.readFileSync(new URL("./accepted.json", import.meta.url), "utf8")).npm;
+  const accepted = JSON.parse(fs.readFileSync(new URL("./accepted.json", import.meta.url), "utf8"));
   const result = plan({
     serverBase,
     clientsBase,

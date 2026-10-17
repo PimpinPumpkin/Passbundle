@@ -28,10 +28,24 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Pick each fork's branch
+        # A pull request's branch where the fork has one, as in Tier 1; otherwise main.
+        id: refs
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          for repo in passbundle-server passbundle-clients; do
+            ref=keykeeper
+            if [ -n "$BRANCH" ] && git ls-remote --exit-code --heads "https://github.com/PimpinPumpkin/$repo.git" "refs/heads/$BRANCH" > /dev/null; then
+              ref=$BRANCH
+            fi
+            echo "${repo#passbundle-}=$ref" >> "$GITHUB_OUTPUT"
+            echo "$repo: $ref"
+          done
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: PimpinPumpkin/passbundle-server
-          ref: keykeeper
+          ref: ${{ steps.refs.outputs.server }}
           path: server
           sparse-checkout: Cargo.lock
           sparse-checkout-cone-mode: false
@@ -39,7 +53,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: PimpinPumpkin/passbundle-clients
-          ref: keykeeper
+          ref: ${{ steps.refs.outputs.clients }}
           path: clients
           sparse-checkout: |
             package.json
@@ -64,11 +78,12 @@ jobs:
         id: report
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          BRANCH: ${{ github.head_ref }}
+          SERVER_REF: ${{ steps.refs.outputs.server }}
+          CLIENTS_REF: ${{ steps.refs.outputs.clients }}
         run: |
           node tools/upstream-watch/watch.mjs \
             --cargo-server=server-audit.json --cargo-agent=agent-audit.json --npm-clients=npm-audit.json \
-            --server-ref="${BRANCH:-keykeeper}" --clients-ref="${BRANCH:-keykeeper}" --out=report.md
+            --server-ref="$SERVER_REF" --clients-ref="$CLIENTS_REF" --out=report.md
           cat report.md >> "$GITHUB_STEP_SUMMARY"
       - name: Keep the issue current
         if: github.event_name != 'pull_request'

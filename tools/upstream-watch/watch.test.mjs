@@ -105,24 +105,35 @@ test("audit findings become to-dos: every cargo advisory, npm's high and critica
   assert.deepEqual(cargoFindings(null), []);
 });
 
-test("accepted npm packages are noted, not raised; cargo findings never are", () => {
+test("accepted findings are noted, not raised: npm by package, cargo by advisory and version", () => {
   const finding = { id: "GHSA-bbbb", package: "vite", title: "Dev server bypass", fix: "a fix is available" };
+  const rustls = { id: "RUSTSEC-2026-0349", title: "Downgrade", fix: ">=0.23.46" };
   const result = plan({
     ...quiet,
     audits: [
       { name: "Clients (npm audit, production)", npm: true, findings: [finding, { ...finding, id: "GHSA-cccc" }] },
-      { name: "Desktop agent (cargo audit)", findings: [{ ...finding, package: "vite 1.0.0" }] },
+      {
+        name: "Server (cargo audit)",
+        findings: [
+          { ...rustls, package: "rustls 0.21.12" },
+          // The same advisory on the line it does apply to is still raised.
+          { ...rustls, package: "rustls 0.23.45" },
+        ],
+      },
     ],
-    accepted: { vite: "Build tooling only." },
+    accepted: { npm: { vite: "Build tooling only." }, cargo: { "RUSTSEC-2026-0349 rustls 0.21.12": "Server-side use only." } },
   });
-  assert.deepEqual(result.actions, ["Desktop agent (cargo audit): vite 1.0.0, Dev server bypass (GHSA-bbbb; a fix is available)."]);
-  assert.ok(result.notes.some((n) => n.includes("2 npm advisories in vite")));
+  assert.deepEqual(result.actions, ["Server (cargo audit): rustls 0.23.45, Downgrade (RUSTSEC-2026-0349; >=0.23.46)."]);
+  assert.ok(result.notes.some((n) => n.includes("3 findings")));
 });
 
-test("the accepted list gives a reason for every package", async () => {
+test("the accepted list gives a reason for everything in it", async () => {
   const fs = await import("node:fs");
-  const { npm } = JSON.parse(fs.readFileSync(new URL("./accepted.json", import.meta.url), "utf8"));
-  for (const [name, reason] of Object.entries(npm)) {
+  const { npm, cargo } = JSON.parse(fs.readFileSync(new URL("./accepted.json", import.meta.url), "utf8"));
+  for (const [name, reason] of [...Object.entries(npm), ...Object.entries(cargo)]) {
     assert.ok(reason.length > 20, `${name} needs a real reason`);
+  }
+  for (const key of Object.keys(cargo)) {
+    assert.match(key, /^RUSTSEC-\d{4}-\d{4} \S+ \d+\.\d+\.\d+$/, `${key}: "<advisory> <crate> <version>"`);
   }
 });
