@@ -176,10 +176,21 @@ jobs:
         with:
           name: PassBundle-Windows-Hello-test-kit
           path: kit
+      - name: Mark the kit as downloaded from the internet, as a browser does
+        shell: pwsh
+        run: |
+          Get-ChildItem kit -Recurse -File | ForEach-Object {
+            Set-Content -Path $_.FullName -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3`r`nHostUrl=https://github.com/"
+          }
       # Windows PowerShell 5.1, what a person gets from the Start menu.
       - name: Set the kit up, as a person would
         shell: powershell
-        run: ./kit/Try-WindowsHello.ps1 -Quiet
+        run: |
+          # As README.txt says: a downloaded script needs this to run.
+          Set-ExecutionPolicy -Scope Process Bypass -Force
+          ./kit/Try-WindowsHello.ps1 -Quiet
+          $marked = @(Get-ChildItem kit -Recurse -File | Where-Object { Get-Item $_.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue })
+          if ($marked) { throw "Still marked as from the internet: $($marked.Name -join ', ')" }
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
