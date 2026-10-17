@@ -36,7 +36,12 @@ test("the test kit's extension reaches the agent and the test server", async () 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       () => (globalThis as any).chrome.storage.managed.get("environment") as Promise<{ environment?: { base?: string } }>,
     );
-    expect(managed.environment?.base, "the browser didn't pass on the kit's policy").toBe("http://localhost:8817");
+    expect(managed.environment?.base, "the browser didn't pass on the kit's policy").toBe("https://localhost:8817");
+    // Answers from the test server: its certificate is trusted, too.
+    const fromServer: string[] = [];
+    context.on("response", (r) => {
+      if (r.url().startsWith("https://localhost:8817/") && r.ok()) fromServer.push(r.url());
+    });
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${id}/popup/index.html`);
     // The carousel renders its buttons before Angular wires them up, and an
@@ -45,7 +50,10 @@ test("the test kit's extension reaches the agent and the test server", async () 
       await popup.getByRole("button", { name: "Log in" }).click();
       await expect(popup).toHaveURL(/#\/login/, { timeout: 1000 });
     }).toPass({ timeout: 30_000 });
-    await expect(popup.getByText(/localhost:8817/).first()).toBeVisible({ timeout: 15_000 });
+    // A server from policy shows as "Accessing: self-hosted", and the popup
+    // gets its settings from it.
+    await expect(popup.getByRole("button", { name: "self-hosted" })).toBeVisible({ timeout: 15_000 });
+    await expect.poll(() => fromServer.length, { timeout: 30_000 }).toBeGreaterThan(0);
 
     // The agent, through Chromium's native messaging and the kit's host.
     await expect

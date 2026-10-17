@@ -176,8 +176,9 @@ jobs:
         with:
           name: PassBundle-Windows-Hello-test-kit
           path: kit
+      # Windows PowerShell 5.1, what a person gets from the Start menu.
       - name: Set the kit up, as a person would
-        shell: pwsh
+        shell: powershell
         run: ./kit/Try-WindowsHello.ps1 -Quiet
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -218,12 +219,14 @@ jobs:
         run: |
           ./kit/Try-WindowsHello.ps1 -Remove
           $id = (Get-Content ./kit/extension-key.json -Raw | ConvertFrom-Json).id
-          $left = @(
+          $left = @(@(
             "HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.passbundle.agent",
             "HKCU:\Software\Chromium\NativeMessagingHosts\com.passbundle.agent",
             "HKLM:\SOFTWARE\Policies\Chromium\3rdparty\extensions\$id",
             (Join-Path $env:LOCALAPPDATA "PassBundle\test-kit")
-          ) | Where-Object { Test-Path $_ }
+          ) | Where-Object { Test-Path $_ })
+          $root = Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -eq "CN=PassBundle test kit, localhost only" }
+          if ($root) { $left += "the kit's certificate authority" }
           if ($left) { throw "Left behind: $($left -join ', ')" }
           if (Get-Process -Name passbundle-agent, vaultwarden -ErrorAction SilentlyContinue) { throw "Processes left running" }
           Write-Output "Nothing left behind."
