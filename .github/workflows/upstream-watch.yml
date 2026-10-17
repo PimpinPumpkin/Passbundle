@@ -1,0 +1,90 @@
+# Weekly: is the server behind Vaultwarden, does Vaultwarden support a newer
+# web vault than our clients, and does anything we ship have a known
+# vulnerability? Keeps one issue open while there's something to do and
+# closes it when there isn't. See DESIGN.md, "Keeping up with upstream".
+name: Upstream watch
+
+on:
+  schedule:
+    - cron: "17 13 * * 1"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "tools/upstream-watch/**"
+      - ".github/workflows/upstream-watch.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    name: Upstream and dependency watch
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-server
+          ref: keykeeper
+          path: server
+          sparse-checkout: Cargo.lock
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-clients
+          ref: keykeeper
+          path: clients
+          sparse-checkout: |
+            package.json
+            package-lock.json
+            apps/agent/Cargo.lock
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: The watch's own tests
+        run: node --test tools/upstream-watch/watch.test.mjs
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --version 0.22.2 --locked
+      - name: Audit what we ship
+        # The audits exit non-zero when they find something; the report says what.
+        run: |
+          cargo audit --json --file server/Cargo.lock > server-audit.json || true
+          cargo audit --json --file clients/apps/agent/Cargo.lock > agent-audit.json || true
+          (cd clients && npm audit --omit=dev --package-lock-only --json > ../npm-audit.json) || true
+      - name: Report
+        id: report
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          node tools/upstream-watch/watch.mjs \
+            --cargo-server=server-audit.json --cargo-agent=agent-audit.json --npm-clients=npm-audit.json \
+            --server-ref="${BRANCH:-keykeeper}" --clients-ref="${BRANCH:-keykeeper}" --out=report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the issue current
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTIONABLE: ${{ steps.report.outputs.actionable }}
+        run: |
+          title="Upstream and dependency watch"
+          number=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" \
+            --json number,title --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+          if [ "$ACTIONABLE" = true ]; then
+            if [ -n "$number" ]; then
+              gh issue comment "$number" -R "$GITHUB_REPOSITORY" --body-file report.md
+            else
+              gh issue create -R "$GITHUB_REPOSITORY" --title "$title" --body-file report.md
+            fi
+          elif [ -n "$number" ]; then
+            gh issue close "$number" -R "$GITHUB_REPOSITORY" --comment "All clear. $(head -1 report.md)"
+          fi

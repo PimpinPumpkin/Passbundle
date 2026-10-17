@@ -1,0 +1,17 @@
+{
+  "about": "npm advisories the weekly watch doesn't raise, by package, with why. Everything here is outside the web vault and the extension people run. Review the reasons whenever what we ship changes.",
+  "npm": {
+    "node-forge": "Only the command-line client (apps/cli) uses it, and we don't ship the CLI yet. Revisit before we do.",
+    "multer": "Only the command-line client's local server (bw serve) uses it, and we don't ship the CLI yet. Revisit before we do.",
+    "inquirer": "Only the command-line client's prompts use it, and we don't ship the CLI yet. Revisit before we do.",
+    "external-editor": "Comes with inquirer, in the command-line client only.",
+    "tmp": "Comes with inquirer, in the command-line client only.",
+    "ws": "Node's WebSocket, under SignalR. The browser apps use the browser's own WebSocket; only the command-line client would load it.",
+    "vite": "Build tooling (through vite-tsconfig-paths); none of it runs in the web vault or the extension.",
+    "immutable": "Comes with vite, build tooling only.",
+    "nanoid": "Comes with vite and postcss, build tooling only.",
+    "picomatch": "Comes with vite, build tooling only.",
+    "postcss": "Comes with vite, build tooling only: it reads only our own CSS.",
+    "source-map-js": "Comes with postcss, build tooling only."
+  }
+}
