@@ -230,6 +230,12 @@ jobs:
           if ($left) { throw "Left behind: $($left -join ', ')" }
           if (Get-Process -Name passbundle-agent, vaultwarden -ErrorAction SilentlyContinue) { throw "Processes left running" }
           Write-Output "Nothing left behind."
+      - name: What the test server says, if something failed
+        if: failure()
+        shell: pwsh
+        run: |
+          curl.exe -sv --max-time 10 https://localhost:8817/alive 2>&1 | Select-Object -First 40
+          Get-Content "$env:LOCALAPPDATA\PassBundle\test-kit\server\server.log" -Tail 40 -ErrorAction SilentlyContinue
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:

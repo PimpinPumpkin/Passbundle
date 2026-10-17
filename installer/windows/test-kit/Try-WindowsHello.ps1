@@ -29,8 +29,11 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-# Windows PowerShell 5.1 offers only old TLS versions unless asked.
+# Windows PowerShell 5.1 offers only old TLS versions unless asked, and looks
+# for a proxy before every connection, even to this PC. The kit only talks to
+# localhost, so it goes direct.
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+[Net.WebRequest]::DefaultWebProxy = $null
 
 $Kit = $PSScriptRoot
 $Data = Join-Path $env:LOCALAPPDATA "PassBundle\test-kit"
@@ -226,9 +229,12 @@ $up = $false
 $why = "no answer"
 for ($try = 0; $try -lt 60 -and -not $up; $try++) {
   Start-Sleep -Milliseconds 500
-  try { $up = (Invoke-WebRequest -Uri "$ServerUrl/alive" -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200 } catch { $why = $_.Exception.Message }
+  try { $up = (Invoke-WebRequest -Uri "$ServerUrl/alive" -UseBasicParsing -TimeoutSec 5).StatusCode -eq 200 } catch { $why = $_.Exception.Message }
 }
-if (-not $up) { throw "The test server didn't start ($why); see $env:LOG_FILE" }
+if (-not $up) {
+  $log = if (Test-Path $env:LOG_FILE) { (Get-Content $env:LOG_FILE -Tail 15) -join "`n" } else { "(no log)" }
+  throw "The test server didn't answer at $ServerUrl ($why). The end of its log, $($env:LOG_FILE):`n$log"
+}
 
 # The agent, as you: it shows in the tray.
 Start-Process -FilePath (Join-Path $agentDir "passbundle-agent.exe")
