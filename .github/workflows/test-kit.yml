@@ -225,7 +225,7 @@ jobs:
             "HKLM:\SOFTWARE\Policies\Chromium\3rdparty\extensions\$id",
             (Join-Path $env:LOCALAPPDATA "PassBundle\test-kit")
           ) | Where-Object { Test-Path $_ })
-          $root = Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -eq "CN=PassBundle test kit, localhost only" }
+          $root = Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -eq "CN=PassBundle test kit (localhost only)" }
           if ($root) { $left += "the kit's certificate authority" }
           if ($left) { throw "Left behind: $($left -join ', ')" }
           if (Get-Process -Name passbundle-agent, vaultwarden -ErrorAction SilentlyContinue) { throw "Processes left running" }

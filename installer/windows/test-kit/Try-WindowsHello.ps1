@@ -39,7 +39,7 @@ $ServerUrl = "https://localhost:$Port"
 # The extension only talks to HTTPS servers. The kit's certificate authority
 # is trusted only while the kit is installed, and its key is thrown away the
 # moment it has signed the server's certificate (New-KitCertificate).
-$CertSubject = "CN=PassBundle test kit, localhost only"
+$CertSubject = "CN=PassBundle test kit (localhost only)"
 $HostName = "com.passbundle.agent"
 $ExtensionId = (Get-Content (Join-Path $Kit "extension-key.json") -Raw | ConvertFrom-Json).id
 # Chrome, Edge, and Chromium (the kit's automated check uses Chromium).
