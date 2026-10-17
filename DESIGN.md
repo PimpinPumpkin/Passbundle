@@ -229,6 +229,17 @@ A domain is never required. Each org picks a preset: Solo, Family, or Business.
 
 The target is a working vault, with imported passwords, after zero decisions beyond the org name. Tier 2 tests this for every preset.
 
+### Login limits
+
+Upstream limits logins per address: a burst of 10, then one a minute, and 50 requests shared by signup, pre-login, and the password hint. On rollout day a whole office comes from one address, so it stopped after ten to twenty-five people. What stops someone guessing a password is a limit on the account, wherever the guesses come from, so that's where the strict one is now.
+
+- **Each account:** 10 login attempts, then one a minute (`LOGIN_RATELIMIT_ACCOUNT_*`), counting the 2FA step. Keyed by the email as typed (trimmed, lowercase), whether or not an account has it, so being refused says nothing about which emails have accounts. The server forgets keys whose limit has filled back up.
+- **Each address:** 100 logins, then one every 6 seconds (`LOGIN_RATELIMIT_*`, upstream's settings with new defaults). Pre-login, which every login starts with, gets the same allowance, counted on its own; it only says how to derive the key, the same way for an email without an account.
+- **Signup and the rest:** the shared allowance for signup, the password hint, recovery emails, and Send access is 150 at once (was 50), still refilling at one a minute, so 50 people can sign up together.
+- **What it costs:** one address can now try 10 accounts' passwords a minute instead of one. Every guess also needs the client's KDF (600,000 PBKDF2 rounds by default), each account still allows only 10, and the hosted service has Cloudflare's rate limits in front.
+- **Self-hosters** who set these settings keep their values.
+- **Tests:** unit tests for the account key (case, spacing, emails without accounts); API tests on a third test server that keeps the real limits (the other two relax them), where 30 people at one address sign up, pre-login, and log in, and guessing one account stops at its 11th attempt, the right password included, while a colleague logs in and an email without an account is refused the same way. Both fail on upstream's limits.
+
 ### Onboarding through the RMM (Business, version 1)
 
 No desktop agent needed: browsers already let policy hand an extension its settings, and our installer already writes browser policy.
@@ -313,7 +324,7 @@ Fixes for things that annoy users of Bitwarden and 1Password today.
 - **Survives profile migrations:** tools like ForensiT Profile Wizard change the Windows user's SID, so locally protected data (DPAPI, Windows Hello keys) stops decrypting. Upstream's extension then works once and needs a reinstall. Ours detects local state it can't decrypt, clears it, and asks the user to sign in again. Never a broken extension.
 - **Custom fields are one tap away** in every item editor (web, extension, desktop, mobile), not buried in a menu.
 - **Context-aware new items:** creating an item while viewing a folder or collection puts it there.
-- **Onboarding day works:** upstream rate-limits logins per IP (a burst of 10, then one per minute) and signup, pre-login, and hint requests per IP (a shared burst of 50, then one per minute). A whole office behind one NAT address would get stuck after ten to twenty-five people. Rate limits become per account, with allowances for an org's known addresses and enrolled devices. Tier 2 onboards 50 users from one IP.
+- **Onboarding day works:** upstream rate-limits logins per IP (a burst of 10, then one per minute) and signup, pre-login, and hint requests per IP (a shared burst of 50, then one per minute). A whole office behind one NAT address would get stuck after ten to twenty-five people. Built: the strict limit is per account now, and an address's limits fit an office (see "Login limits"). Later: allowances for an org's known addresses and enrolled devices.
 - **No nags:** upstream's web vault interrupts every fresh login with an extension page, an "Are you sure?" dialog, and a welcome tour. All three go. Extension setup happens through onboarding instead.
 
 ## Item templates

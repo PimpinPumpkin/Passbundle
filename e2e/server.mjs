@@ -8,9 +8,11 @@ import { fileURLToPath } from "node:url";
 
 import { paths, port, smtpPort } from "./paths.mjs";
 
-// KK_MAIL=1 starts the server that sends email to the mail catcher. It always
-// keeps its own SQLite file, so it never shares a database with the main one.
+// KK_MAIL=1 starts the server that sends email to the mail catcher. KK_LIMITS=1
+// starts one with the real login limits, which the others relax. Both always
+// keep their own SQLite file, so they never share a database with the main one.
 const withMail = process.env.KK_MAIL === "1";
+const withLimits = process.env.KK_LIMITS === "1";
 
 for (const [name, p] of Object.entries({
   server: paths.serverBin,
@@ -57,7 +59,7 @@ const child = spawn(paths.serverBin, [], {
     PATH: process.env.PATH,
     DATA_FOLDER: data,
     // Set KK_DATABASE_URL to use PostgreSQL instead of a fresh SQLite file.
-    ...(process.env.KK_DATABASE_URL && !withMail
+    ...(process.env.KK_DATABASE_URL && !withMail && !withLimits
       ? { DATABASE_URL: process.env.KK_DATABASE_URL }
       : {}),
     ...(withMail
@@ -79,21 +81,27 @@ const child = spawn(paths.serverBin, [], {
     SIGNUPS_VERIFY: "false",
     MSP_SIGNUPS_ALLOWED: "true",
     DISABLE_ICON_DOWNLOAD: "true",
-    // Every test logs in from 127.0.0.1. The default (a burst of 10, then one
-    // per minute per IP) would fail tests depending on how many ran before.
-    LOGIN_RATELIMIT_SECONDS: "1",
-    LOGIN_RATELIMIT_MAX_BURST: "1000",
-    // Same for signup, pre-login, and other unauthenticated endpoints (a shared
-    // burst of 50, then one per minute).
-    UNAUTHENTICATED_RATELIMIT_SECONDS: "1",
-    UNAUTHENTICATED_RATELIMIT_MAX_BURST: "1000",
+    // Every test logs in from 127.0.0.1, and some accounts many times. The
+    // real limits (tests/api/login-limits.spec.ts) would fail tests depending
+    // on how many ran before.
+    // The same goes for signup and the other unauthenticated endpoints.
+    ...(withLimits
+      ? {}
+      : {
+          LOGIN_RATELIMIT_SECONDS: "1",
+          LOGIN_RATELIMIT_MAX_BURST: "1000",
+          LOGIN_RATELIMIT_ACCOUNT_SECONDS: "1",
+          LOGIN_RATELIMIT_ACCOUNT_MAX_BURST: "1000",
+          UNAUTHENTICATED_RATELIMIT_SECONDS: "1",
+          UNAUTHENTICATED_RATELIMIT_MAX_BURST: "1000",
+        }),
     LOG_LEVEL: "warn",
     // Set KK_SERVER_LOG to keep the server's log, for example as a CI artifact.
     ...(process.env.KK_SERVER_LOG
       ? {
           LOG_FILE: process.env.KK_SERVER_LOG.replace(
             /(\.log)?$/,
-            withMail ? "-mail$1" : "$1",
+            withMail ? "-mail$1" : withLimits ? "-limits$1" : "$1",
           ),
           LOG_LEVEL: "info",
         }

@@ -18,6 +18,8 @@ export const fixturePort = process.env.KK_FIXTURE_PORT ?? "8093";
 export const mailServerPort = process.env.KK_MAIL_SERVER_PORT ?? "8094";
 export const smtpPort = process.env.KK_SMTP_PORT ?? "2525";
 export const mailHttpPort = process.env.KK_MAIL_HTTP_PORT ?? "8096";
+// A third test server with the real login limits (the others relax them).
+export const limitsServerPort = process.env.KK_LIMITS_SERVER_PORT ?? "8097";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??
