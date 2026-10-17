@@ -73,7 +73,7 @@ Unlock the browser extension with Windows Hello or Touch ID, through the desktop
 - **Tests:**
   - Rust protocol tests: the key exchange, a wrong user, the 10-second window, unknown commands, oversized messages, and the prompt limits.
   - End to end in Tier 1 on Linux Chromium: a test build of the agent with a stand-in authenticator (only with a test feature, and release builds refuse to build it) and no tray, registered as the test profile's native-messaging host. The real extension turns biometric unlock on, locks, and unlocks with it; a canceled prompt leaves it locked; another user gets nothing.
-  - Real Windows Hello and Touch ID prompts can't run in CI. Each release gets one check on real hardware.
+  - Real Windows Hello and Touch ID prompts can't run in CI. Each release gets one check on real hardware, with the Windows Hello test kit (`.github/workflows/test-kit.yml`, `installer/windows/test-kit/`): one zip with a Windows build of the server, the web vault, the agent, and an extension with a fixed ID, and `Try-WindowsHello.ps1`, which runs the server on localhost, installs the agent for the person, registers it for the kit's extension, and points that extension at the server by policy. CI tries the kit on a fresh Windows machine: the extension gets the server from policy and reaches the agent, which reports no Windows Hello there; `-Remove` leaves nothing behind.
 
 ### Installer and agent (Windows first)
 
