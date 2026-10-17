@@ -73,7 +73,7 @@ Unlock the browser extension with Windows Hello or Touch ID, through the desktop
 - **Tests:**
   - Rust protocol tests: the key exchange, a wrong user, the 10-second window, unknown commands, oversized messages, and the prompt limits.
   - End to end in Tier 1 on Linux Chromium: a test build of the agent with a stand-in authenticator (only with a test feature, and release builds refuse to build it) and no tray, registered as the test profile's native-messaging host. The real extension turns biometric unlock on, locks, and unlocks with it; a canceled prompt leaves it locked; another user gets nothing.
-  - Real Windows Hello and Touch ID prompts can't run in CI. Each release gets one check on real hardware.
+  - Real Windows Hello and Touch ID prompts can't run in CI. Each release gets one check on real hardware, with the Windows Hello test kit (`.github/workflows/test-kit.yml`, `installer/windows/test-kit/`): one zip with a Windows build of the server, the web vault, the agent, and an extension with a fixed ID, and `Try-WindowsHello.ps1`, which runs the server on localhost, installs the agent for the person, registers it for the kit's extension, and points that extension at the server by policy. CI tries the kit on a fresh Windows machine: the extension gets the server from policy and reaches the agent, which reports no Windows Hello there; `-Remove` leaves nothing behind.
 
 ### Installer and agent (Windows first)
 
@@ -83,6 +83,7 @@ Unlock the browser extension with Windows Hello or Touch ID, through the desktop
 - **No resident service that accepts remote commands.** A hacked server must not become remote code execution on every client machine.
 - Our extension IDs are compiled into the installer. It can force-install only our extension, never one named by the server.
 - To change targeting, the MSP reruns the script, which applies the org's current settings.
+- **Status:** `installer/windows/Install-PassBundle.ps1` applies the browser policies and, with the agent's two programs in an `agent` folder next to it, installs the desktop agent: to Program Files, started at every sign-in (the machine's Run key), registered for Chrome and Edge as our native-messaging host for our extension IDs only, with the server address in its policy, and a SYSTEM task that runs its signed updater daily and at startup (`-DisableAgentUpdates` for MSPs who update through their RMM). `-Remove` undoes all of it. Tier 2 builds the agent on a Windows machine, installs as an RMM would, checks every piece, and has the installed host reach the running agent. Not yet: the signed MSI and the download with a pinned signer (waits on code signing), the import helper, Firefox, and updating the host program along with the agent (the updater replaces only the agent).
 
 ### Import helper
 

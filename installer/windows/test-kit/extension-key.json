@@ -1,0 +1,5 @@
+{
+  "about": "The test kit extension's manifest key: only the public half, which fixes the extension's ID so the kit can register the agent for it. The private half was never kept: the kit is never packed or published.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwg3nFQXpJAfUhqS8O+iz8FOBcdROlP73k3iqgkoA1FgKp3Vsr3R/gGXc9G9OBOK7OgjXtNNjsv5dcPg/ygf1EJ40ehs1YkAp5fRIzarts7rMzh4+M+y5ugQiXHNYqzOwQAgnElkfYzfpd4YERvnEsHc4Ng4wfuc0Ie0aFD+MXXYVXE8Hoa/cxFerqoiO5OsZ1YhAd6XhTQFuRkBkSULaVSPcZOrwFdWjfBJx3FLHxVsYIisbDeWDhcnQ5leKRIc1gc+io+Rk7G62fetdVAUFJSX9wz004viq0xHyfcxpAWTLg6kjMTqET8XY9OnAx3bFGwjgqiqYWSoBcsbwkJCSawIDAQAB",
+  "id": "hpbkhejfgiomoecogabmlfjkagpmacba"
+}

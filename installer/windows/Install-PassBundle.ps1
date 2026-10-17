@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Applies PassBundle's browser policies on a Windows machine. Version 0: policies only, no MSI yet.
+  Sets PassBundle up on a Windows machine: browser policies and the desktop agent.
 
 .DESCRIPTION
   Run once with admin rights, typically from an RMM. For each targeted browser it:
@@ -9,12 +9,18 @@
     - optionally turns off card and address autofill,
     - optionally gives the extension its server address and the client's
       enrollment token, so people join the client after they sign in.
+  With the agent's files in an "agent" folder next to this script, it also
+  installs the desktop agent to Program Files: it starts at every sign-in,
+  the browsers can reach it for Windows Hello unlock (our extension only), and
+  a SYSTEM task installs its signed updates. Without them, policies only.
   Existing policies from other vendors are left alone. Running it again changes nothing.
 
 .EXAMPLE
   .\Install-PassBundle.ps1 -Browsers Edge,Chrome -DisableCardAutofill
 .EXAMPLE
   .\Install-PassBundle.ps1 -ServerUrl https://vault.example.com -EnrollmentToken <token from the MSP console>
+.EXAMPLE
+  .\Install-PassBundle.ps1 -DisableAgentUpdates   # the RMM updates the agent instead
 .EXAMPLE
   .\Install-PassBundle.ps1 -Remove
 #>
@@ -31,6 +37,8 @@ param(
   # The client's enrollment token, from the MSP console.
   [ValidatePattern('^[A-Za-z0-9_-]{43}$')]
   [string] $EnrollmentToken,
+  # The agent doesn't update itself; the RMM pushes new versions instead.
+  [switch] $DisableAgentUpdates,
   [switch] $Remove
 )
 
@@ -47,6 +55,21 @@ $PolicyRoots = @{
   Chrome = "HKLM:\SOFTWARE\Policies\Google\Chrome"
   Edge   = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
 }
+
+# The desktop agent. See DESIGN.md, "Desktop agent" and "Biometric unlock".
+$AgentSource = Join-Path $PSScriptRoot "agent"
+$InstallDir = Join-Path $env:ProgramFiles "PassBundle"
+$AgentFiles = @("passbundle-agent.exe", "passbundle-agent-host.exe")
+# The native-messaging host's name: brand.json's nativeMessagingHost.
+$HostName = "com.passbundle.agent"
+$HostRoots = @{
+  Chrome = "HKLM:\SOFTWARE\Google\Chrome\NativeMessagingHosts"
+  Edge   = "HKLM:\SOFTWARE\Microsoft\Edge\NativeMessagingHosts"
+}
+$RunKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+$RunName = "PassBundle"
+$AgentPolicy = "HKLM:\SOFTWARE\Policies\PassBundle\Agent"
+$UpdateTask = "PassBundle agent update"
 
 function Set-Dword([string] $Path, [string] $Name, [int] $Value) {
   if (-not (Test-Path $Path)) { New-Item -Path $Path -Force | Out-Null }
@@ -105,6 +128,91 @@ function Remove-ForcedExtension([string] $Browser) {
       Remove-ItemProperty -Path $path -Name $entry.Name
     }
   }
+}
+
+function Test-AgentSource {
+  -not ($AgentFiles | Where-Object { -not (Test-Path (Join-Path $AgentSource $_)) })
+}
+
+# Copies a file into place unless it's already there. A running agent can't be
+# overwritten, but it can be moved aside; it deletes the old copy when it next starts.
+function Copy-AgentFile([string] $Name) {
+  $from = Join-Path $AgentSource $Name
+  $to = Join-Path $InstallDir $Name
+  if ((Test-Path $to) -and (Get-FileHash $to).Hash -eq (Get-FileHash $from).Hash) { return }
+  if (Test-Path $to) { Move-Item -Path $to -Destination "$to.old" -Force }
+  Copy-Item -Path $from -Destination $to
+}
+
+function Install-Agent {
+  if (-not (Test-Path $InstallDir)) { New-Item -Path $InstallDir -ItemType Directory | Out-Null }
+  foreach ($name in $AgentFiles) { Copy-AgentFile $name }
+
+  # The native-messaging host, for our extensions only.
+  $manifest = Join-Path $InstallDir "$HostName.json"
+  $json = [ordered]@{
+    name            = $HostName
+    description     = "PassBundle desktop agent"
+    path            = Join-Path $InstallDir "passbundle-agent-host.exe"
+    type            = "stdio"
+    allowed_origins = @($Extensions.Values | ForEach-Object { "chrome-extension://$($_.Id)/" } | Sort-Object)
+  } | ConvertTo-Json
+  # UTF-8 without a byte-order mark, which browsers' JSON parsers expect.
+  [System.IO.File]::WriteAllText($manifest, $json, (New-Object System.Text.UTF8Encoding $false))
+  foreach ($browser in $Browsers) {
+    $key = Join-Path $HostRoots[$browser] $HostName
+    if (-not (Test-Path $key)) { New-Item -Path $key -Force | Out-Null }
+    Set-Item -Path $key -Value $manifest
+  }
+
+  # Every person who signs in gets their own agent.
+  New-ItemProperty -Path $RunKey -Name $RunName -Value "`"$(Join-Path $InstallDir 'passbundle-agent.exe')`"" -PropertyType String -Force | Out-Null
+
+  # The agent's own settings.
+  if (-not (Test-Path $AgentPolicy)) { New-Item -Path $AgentPolicy -Force | Out-Null }
+  if ($ServerUrl) {
+    New-ItemProperty -Path $AgentPolicy -Name "ServerUrl" -Value $ServerUrl.TrimEnd("/") -PropertyType String -Force | Out-Null
+  }
+  if ($DisableAgentUpdates) {
+    Set-Dword $AgentPolicy "Updates" 0
+    if (Get-ScheduledTask -TaskName $UpdateTask -ErrorAction SilentlyContinue) {
+      Unregister-ScheduledTask -TaskName $UpdateTask -Confirm:$false
+    }
+  } else {
+    if ((Get-Item $AgentPolicy).GetValueNames() -contains "Updates") { Remove-ItemProperty -Path $AgentPolicy -Name "Updates" }
+    # Signed updates, daily and at startup, with the rights to replace the agent.
+    # The agent checks each release's signature itself (see apps/agent/README.md).
+    $action = New-ScheduledTaskAction -Execute (Join-Path $InstallDir "passbundle-agent.exe") -Argument "--update"
+    $triggers = @((New-ScheduledTaskTrigger -Daily -At "3:17am"), (New-ScheduledTaskTrigger -AtStartup))
+    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+    $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 30)
+    Register-ScheduledTask -TaskName $UpdateTask -Action $action -Trigger $triggers -Principal $principal -Settings $settings -Force | Out-Null
+  }
+  Write-Output "Installed the PassBundle desktop agent to $InstallDir; it starts when people next sign in"
+}
+
+function Remove-Agent {
+  Get-Process -Name "passbundle-agent", "passbundle-agent-host" -ErrorAction SilentlyContinue | Stop-Process -Force
+  if (Get-ScheduledTask -TaskName $UpdateTask -ErrorAction SilentlyContinue) {
+    Unregister-ScheduledTask -TaskName $UpdateTask -Confirm:$false
+  }
+  if ((Get-Item $RunKey).GetValueNames() -contains $RunName) { Remove-ItemProperty -Path $RunKey -Name $RunName }
+  foreach ($root in $HostRoots.Values) {
+    $key = Join-Path $root $HostName
+    if (Test-Path $key) { Remove-Item -Path $key -Recurse -Force }
+  }
+  $policyRoot = Split-Path $AgentPolicy -Parent
+  if (Test-Path $policyRoot) { Remove-Item -Path $policyRoot -Recurse -Force }
+  if (Test-Path $InstallDir) { Remove-Item -Path $InstallDir -Recurse -Force }
+  Write-Output "Removed the PassBundle desktop agent"
+}
+
+if ($Remove) {
+  Remove-Agent
+} elseif (Test-AgentSource) {
+  Install-Agent
+} else {
+  Write-Warning "No desktop agent next to this script ($AgentSource): browser policies only."
 }
 
 foreach ($browser in $Browsers) {

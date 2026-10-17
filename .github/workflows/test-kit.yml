@@ -1,0 +1,246 @@
+# The Windows Hello test kit: everything needed to try biometric unlock on a
+# real Windows PC, as one zip (Try-WindowsHello.ps1 sets it up). Built on
+# demand and when the kit changes, then checked on a fresh Windows machine the
+# way a person uses it. CI machines have no Windows Hello; the prompts need a
+# real PC. Download the zip from the run's artifacts (signed in to GitHub).
+name: Windows Hello test kit
+
+on:
+  workflow_dispatch:
+    inputs:
+      clients-ref:
+        description: The passbundle-clients branch
+        default: keykeeper
+      server-ref:
+        description: The passbundle-server branch
+        default: keykeeper
+  push:
+    branches: [main]
+    paths:
+      - "installer/windows/test-kit/**"
+      - "e2e/windows/test-kit.spec.ts"
+      - ".github/workflows/test-kit.yml"
+  pull_request:
+    paths:
+      - "installer/windows/test-kit/**"
+      - "e2e/windows/test-kit.spec.ts"
+      - ".github/workflows/test-kit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  windows-builds:
+    name: Server and desktop agent for Windows
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-server
+          ref: ${{ inputs.server-ref || 'keykeeper' }}
+          path: server
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-clients
+          ref: ${{ inputs.clients-ref || 'keykeeper' }}
+          path: clients
+          sparse-checkout: |
+            apps/agent
+            brand
+          persist-credentials: false
+      - name: Install the pinned Rust toolchains
+        shell: bash
+        run: (cd server && rustup toolchain install) && (cd clients/apps/agent && rustup toolchain install)
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: |
+            server
+            clients/apps/agent
+      - name: Build the server (SQLite, OpenSSL linked in)
+        working-directory: server
+        run: cargo build --locked --release --features sqlite,vendored_openssl
+      - name: Build the desktop agent
+        working-directory: clients/apps/agent
+        run: cargo build --locked --release
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kit-windows-builds
+          path: |
+            server/target/release/vaultwarden.exe
+            clients/apps/agent/target/release/passbundle-agent.exe
+            clients/apps/agent/target/release/passbundle-agent-host.exe
+          if-no-files-found: error
+          retention-days: 3
+
+  clients:
+    name: Branded web vault and the kit's extension
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-clients
+          ref: ${{ inputs.clients-ref || 'keykeeper' }}
+          path: clients
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: clients/.nvmrc
+          cache: npm
+          cache-dependency-path: clients/package-lock.json
+      - name: Install dependencies
+        working-directory: clients
+        run: npm ci --no-audit --no-fund
+      - name: Apply branding
+        working-directory: clients
+        run: node brand/apply.mjs
+      - name: Build the web vault and Chrome extension
+        working-directory: clients
+        run: |
+          (cd apps/web && npm run build:oss:selfhost:prod) > "$RUNNER_TEMP/web.log" 2>&1 &
+          web=$!
+          (cd apps/browser && npm run build:prod:chrome) > "$RUNNER_TEMP/chrome.log" 2>&1 &
+          chrome=$!
+          status=0
+          wait "$web" || { echo "::error::The web vault build failed"; cat "$RUNNER_TEMP/web.log"; status=1; }
+          wait "$chrome" || { echo "::error::The Chrome extension build failed"; cat "$RUNNER_TEMP/chrome.log"; status=1; }
+          exit "$status"
+      - name: Give the kit's extension its fixed ID
+        # Chrome derives an unpacked extension's ID from its manifest key.
+        run: |
+          node -e '
+            const fs = require("fs");
+            const { key } = JSON.parse(fs.readFileSync("installer/windows/test-kit/extension-key.json", "utf8"));
+            const file = "clients/apps/browser/build/manifest.json";
+            const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
+            manifest.key = key;
+            fs.writeFileSync(file, JSON.stringify(manifest, null, 2));'
+          find clients/apps/web/build clients/apps/browser/build -name '*.map' -delete
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kit-clients
+          path: |
+            clients/apps/web/build
+            clients/apps/browser/build
+          if-no-files-found: error
+          retention-days: 3
+
+  package:
+    name: Package the kit
+    needs: [windows-builds, clients]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kit-windows-builds
+          path: builds
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kit-clients
+          path: clients
+      - name: Lay out the kit
+        run: |
+          mkdir -p kit/server kit/agent
+          cp builds/server/target/release/vaultwarden.exe kit/server/
+          cp builds/clients/apps/agent/target/release/passbundle-agent.exe builds/clients/apps/agent/target/release/passbundle-agent-host.exe kit/agent/
+          cp -r clients/web/build kit/web-vault
+          cp -r clients/browser/build kit/extension
+          cp installer/windows/test-kit/Try-WindowsHello.ps1 installer/windows/test-kit/extension-key.json installer/windows/test-kit/README.txt kit/
+          find kit -maxdepth 2 | sort | head -40
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: PassBundle-Windows-Hello-test-kit
+          path: kit
+          if-no-files-found: error
+          retention-days: 30
+
+  check:
+    name: Try the kit on a fresh Windows machine
+    needs: package
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: PassBundle-Windows-Hello-test-kit
+          path: kit
+      # Windows PowerShell 5.1, what a person gets from the Start menu.
+      - name: Set the kit up, as a person would
+        shell: powershell
+        run: ./kit/Try-WindowsHello.ps1 -Quiet
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Install test dependencies
+        working-directory: e2e
+        run: npm ci --no-audit --no-fund && npx playwright install chromium
+      - name: Give the check's browser the kit's policy too
+        shell: pwsh
+        run: |
+          # Playwright's Chromium is Chrome for Testing, which reads policies
+          # from its own registry key, not Chrome's or Chromium's. Read the
+          # key out of the browser rather than guess it, and copy the policy
+          # the kit wrote for Chrome there. People use Chrome or Edge.
+          $dll = Get-ChildItem "$env:LOCALAPPDATA\ms-playwright\chromium-*\chrome-win64\chrome.dll" | Select-Object -First 1
+          $text = [Text.Encoding]::Unicode.GetString([IO.File]::ReadAllBytes($dll.FullName))
+          $keys = [regex]::Matches($text, '(?i)SOFTWARE\\Policies\\[\x20-\x5B\x5D-\x7E]+(\\[\x20-\x5B\x5D-\x7E]+)?') |
+            ForEach-Object { $_.Value } | Sort-Object -Unique
+          Write-Output "Policy keys in the browser: $($keys -join '; ')"
+          $id = (Get-Content ./kit/extension-key.json -Raw | ConvertFrom-Json).id
+          $from = "HKLM:\SOFTWARE\Policies\Google\Chrome\3rdparty"
+          foreach ($key in $keys | Where-Object { $_ -match 'Chrom' -and $_ -notmatch '\\Chrome$|\\Chromium$' }) {
+            $to = "HKLM:\$key"
+            if (-not (Test-Path $to)) { New-Item -Path $to -Force | Out-Null }
+            Copy-Item -Path $from -Destination $to -Recurse -Force
+            Write-Output "Copied the extension's policy to $to"
+          }
+          if (-not (Test-Path "$from\extensions\$id\policy\environment")) { throw "The kit wrote no policy for Chrome" }
+      - name: The extension reaches the agent and the test server
+        working-directory: e2e
+        env:
+          KK_TEST_KIT: ${{ github.workspace }}/kit
+        run: npx playwright test -c playwright.windows.config.ts test-kit.spec.ts
+      - name: Remove the kit, and check nothing is left
+        shell: pwsh
+        run: |
+          ./kit/Try-WindowsHello.ps1 -Remove
+          $id = (Get-Content ./kit/extension-key.json -Raw | ConvertFrom-Json).id
+          $left = @(@(
+            "HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.passbundle.agent",
+            "HKCU:\Software\Chromium\NativeMessagingHosts\com.passbundle.agent",
+            "HKLM:\SOFTWARE\Policies\Chromium\3rdparty\extensions\$id",
+            (Join-Path $env:LOCALAPPDATA "PassBundle\test-kit")
+          ) | Where-Object { Test-Path $_ })
+          $root = Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -eq "CN=PassBundle test kit (localhost only)" }
+          if ($root) { $left += "the kit's certificate authority" }
+          if ($left) { throw "Left behind: $($left -join ', ')" }
+          if (Get-Process -Name passbundle-agent, vaultwarden -ErrorAction SilentlyContinue) { throw "Processes left running" }
+          Write-Output "Nothing left behind."
+      - name: What the test server says, if something failed
+        if: failure()
+        shell: pwsh
+        run: |
+          curl.exe -sv --max-time 10 https://localhost:8817/alive 2>&1 | Select-Object -First 40
+          Get-Content "$env:LOCALAPPDATA\PassBundle\test-kit\server\server.log" -Tail 40 -ErrorAction SilentlyContinue
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: test-kit-check-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 14
