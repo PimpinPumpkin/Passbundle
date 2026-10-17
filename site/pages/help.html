@@ -27,7 +27,13 @@ description: Getting started with PassBundle, for MSPs, their clients, and every
 <p>In the MSP console, give the client a name and choose Add client. Its organization, default policies, and collections are created in one step, and your staff are added to it.</p>
 
 <h3>How do the client's people join?</h3>
-<p>Invite them by email from the client's admin console, or run the client's install command from your RMM on their computers. The command installs the extension and turns off the browser's own password manager; anyone who then signs in joins that client, and the MSP console approves them.</p>
+<p>Invite them by email from the client's admin console, or run the client's install command from your RMM on their computers. The command installs the extension and turns off the browser's own password manager; anyone who then signs in joins that client. Either way they get in without anyone clicking Confirm, and whoever invited them, or for the install command the client's own owners, gets an email saying who joined.</p>
+
+<h3>Can I make sure only the client's staff join?</h3>
+<p>Yes. Next to a client's install command, list its email domains, and only accounts at those domains, with a verified email, can join with the command. People you invite by email can join from any address. A client that wants to approve each person can turn that on in its settings.</p>
+
+<h3>We're rolling out to a whole office at once. Will logins get blocked?</h3>
+<p>No. Login limits are per account, so a whole office behind one internet connection can sign up and log in together, while someone guessing one person's password is still stopped after 10 tries.</p>
 
 <h3>What can my technicians do?</h3>
 <p>By default, a technician is an admin in every client. You can limit each one to chosen clients, give them a custom role (such as managing members and account recovery but not policies), choose whether they see vault items, and hide install commands.</p>
