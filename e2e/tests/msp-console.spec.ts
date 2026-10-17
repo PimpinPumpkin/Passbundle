@@ -89,6 +89,17 @@ test("an MSP admin adds a client and a technician, and the technician gets in wi
   await expect(command).toHaveText(shape);
   await expect(command).not.toHaveText(firstCommand!);
 
+  // Limiting the command to email domains trusts verified emails only, and
+  // this test server sends no email, so the console says why it can't. The
+  // mail tests set it.
+  await admin
+    .getByRole("textbox", { name: "Only these email domains can join" })
+    .fill("acme.test");
+  await admin.getByRole("button", { name: "Save domains" }).click();
+  await expect(
+    admin.getByText(/needs verified emails, and this server can't send email/),
+  ).toBeVisible();
+
   // Health per client: a weak password that expires in 5 days, added in the
   // client's own vault, shows up in the console.
   await admin.goto(`${clientUrl}/vault`);
