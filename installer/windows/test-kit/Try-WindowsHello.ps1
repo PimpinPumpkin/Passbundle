@@ -183,6 +183,12 @@ if ($Remove) {
 Stop-KitProcesses
 Remove-KitCertificate
 
+# A zip downloaded with a browser marks every file in it as from the
+# internet, and Windows then asks before starting each of its programs,
+# sometimes where no one can see the question. You chose to run this kit, so
+# its own files are unmarked.
+Get-ChildItem -Path $Kit -Recurse -File | Unblock-File
+
 # The agent and the native-messaging host, for the kit's extension only.
 $agentDir = Join-Path $Data "agent"
 New-Item -ItemType Directory -Force $agentDir | Out-Null
