@@ -15,6 +15,11 @@ const kit = process.env.KK_TEST_KIT;
 test.skip(!kit, "Set KK_TEST_KIT to an unzipped test kit that Try-WindowsHello.ps1 has set up.");
 
 const HARDWARE_UNAVAILABLE = 2;
+// Headless Chromium calls itself "HeadlessChrome", which the extension takes
+// for Safari, and Safari talks to its native app differently. Real Chrome
+// and Edge say "Chrome".
+const chromeUserAgent =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
 
 test("the test kit's extension reaches the agent and the test server", async () => {
   test.setTimeout(120_000);
@@ -23,7 +28,11 @@ test("the test kit's extension reaches the agent and the test server", async () 
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), "pb-kit-"));
   const context = await chromium.launchPersistentContext(profile, {
     channel: "chromium",
-    args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
+    args: [
+      `--disable-extensions-except=${extension}`,
+      `--load-extension=${extension}`,
+      `--user-agent=${chromeUserAgent}`,
+    ],
   });
   try {
     await expect.poll(() => context.serviceWorkers().length, { timeout: 30_000 }).toBeGreaterThan(0);
