@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 import {
   fixturePort,
   hostResolverRules,
+  limitsServerPort,
   mailHttpPort,
   mailServerPort,
   port,
@@ -46,6 +47,14 @@ export default defineConfig({
       command: "node server.mjs",
       env: { KK_MAIL: "1", KK_PORT: mailServerPort },
       url: `https://127.0.0.1:${mailServerPort}/alive`,
+      ignoreHTTPSErrors: true,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
+      command: "node server.mjs",
+      env: { KK_LIMITS: "1", KK_PORT: limitsServerPort },
+      url: `https://127.0.0.1:${limitsServerPort}/alive`,
       ignoreHTTPSErrors: true,
       reuseExistingServer: false,
       timeout: 60_000,
