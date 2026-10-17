@@ -188,7 +188,7 @@ jobs:
       - name: Install test dependencies
         working-directory: e2e
         run: npm ci --no-audit --no-fund && npx playwright install chromium
-      - name: Give the check's browser the kit's policy and host too
+      - name: Give the check's browser the kit's policy too
         shell: pwsh
         run: |
           # Playwright's Chromium is Chrome for Testing, which reads policies
@@ -209,17 +209,6 @@ jobs:
             Write-Output "Copied the extension's policy to $to"
           }
           if (-not (Test-Path "$from\extensions\$id\policy\environment")) { throw "The kit wrote no policy for Chrome" }
-          # Its native-messaging hosts live under its own key too.
-          $hosts = [regex]::Matches($text, '(?i)SOFTWARE(\\[\x20-\x5B\x5D-\x7E]+){1,3}\\NativeMessagingHosts') |
-            ForEach-Object { $_.Value } | Sort-Object -Unique
-          Write-Output "Native-messaging keys in the browser: $($hosts -join '; ')"
-          $manifest = (Get-Item "HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.passbundle.agent").GetValue("")
-          foreach ($key in $hosts | Where-Object { $_ -notmatch '\\Google\\Chrome\\|\\Chromium\\' }) {
-            $to = "HKCU:\$key\com.passbundle.agent"
-            New-Item -Path $to -Force | Out-Null
-            Set-Item -Path $to -Value $manifest
-            Write-Output "Registered the kit's host at $to"
-          }
       - name: The extension reaches the agent and the test server
         working-directory: e2e
         env:
