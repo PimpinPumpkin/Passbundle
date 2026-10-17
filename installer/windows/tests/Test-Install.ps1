@@ -102,8 +102,9 @@ function Read-Frame([System.IO.Stream] $Stream) {
 }
 
 if ($haveAgent) {
-  foreach ($name in "passbundle-agent.exe", "passbundle-agent-host.exe") {
-    Check "The agent's $name is installed" { Test-Path (Join-Path $installDir $name) }
+  # Not $name: PowerShell names ignore case, and Check's parameter is $Name.
+  foreach ($file in "passbundle-agent.exe", "passbundle-agent-host.exe") {
+    Check "The agent's $file is installed" { Test-Path (Join-Path $installDir $file) }
   }
   $manifestPath = Join-Path $installDir "$hostName.json"
   $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
