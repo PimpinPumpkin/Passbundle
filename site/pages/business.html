@@ -1,0 +1,161 @@
+<!--
+title: PassBundle for business
+description: A password manager your whole company will use. Sensible policies from day one, rollout from Intune, group policy, or your RMM, no confirm step, and account recovery for forgotten master passwords.
+layout: wide
+-->
+<section class="hero">
+  <div>
+    <span class="eyebrow">PassBundle for business</span>
+    <h1>A password manager your whole company will actually use.</h1>
+    <p class="lead">
+      PassBundle comes set up the way a business needs it. Roll it out with the tools you already
+      use, people join without anyone clicking Confirm, and you can get someone back in when they
+      forget their master password.
+    </p>
+    <div class="actions">
+      <a class="button primary" href="{{links.signup}}">Start a {{prices.trialDays}}-day trial</a>
+      <a class="button" href="mailto:hello@passbundle.com?subject=PassBundle%20for%20business">Talk to us</a>
+    </div>
+    <p class="fine">{{prices.business}} per person per month. No card for the trial.</p>
+  </div>
+  <x-shot name="business-members" class="framed" alt="The PassBundle admin console, listing a company's members" eager></x-shot>
+</section>
+
+<section class="tight">
+  <div class="cards">
+    <div class="card">
+      <x-art name="GearIcon"></x-art>
+      <h3>Set up from the start</h3>
+      <p>Account recovery, strong master passwords, one work account per person, and shared collections for everyone and for admins are on before anyone joins. Change any of them in one place.</p>
+    </div>
+    <div class="card">
+      <x-art name="AutoConfirmSvg"></x-art>
+      <h3>No confirm step</h3>
+      <p>Invite someone, or let them join from the extension your rollout installed, and they're in. Your admins' apps finish the job in the background, and the owners get an email saying who joined.</p>
+    </div>
+    <div class="card">
+      <x-art name="UserLockIcon"></x-art>
+      <h3>Forgotten master passwords</h3>
+      <p>With account recovery, an admin can reset a member's master password and the vault comes back intact. Everyone is told about it when they join.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="split">
+    <div>
+      <span class="eyebrow">Rollout</span>
+      <h2>Every computer, in an afternoon</h2>
+      <p class="lead">
+        One PowerShell command sets up a Windows computer. Run it from Intune, group policy, or any
+        RMM.
+      </p>
+      <ul>
+        <li>Installs the extension in Chrome and Edge, with your server already filled in</li>
+        <li>Turns off the browsers' own password managers, without deleting what's in them</li>
+        <li>Anyone who then signs in joins your organization</li>
+        <li>Limit it to your email domains, so only your own people can use it</li>
+        <li>Built for rollout day: a whole office behind one internet connection can sign up at once</li>
+      </ul>
+    </div>
+    <x-shot name="msp-install" class="framed" alt="An install command in PassBundle, with the email domains allowed to join"></x-shot>
+  </div>
+</section>
+
+<section>
+  <div class="split flip">
+    <div>
+      <span class="eyebrow">Policies</span>
+      <h2>Rules that explain themselves</h2>
+      <p class="lead">
+        Require two-step login, set master password strength, keep work accounts separate from
+        personal ones, and decide whether people can export vaults. Every policy says in a sentence
+        what it does.
+      </p>
+      <ul>
+        <li>Account recovery with automatic enrollment, on by default</li>
+        <li>Master passwords of at least 12 characters, checked for strength</li>
+        <li>Custom roles, for a manager who handles people but not policies</li>
+      </ul>
+    </div>
+    <x-shot name="business-policies" class="framed" alt="The policies page of the PassBundle admin console"></x-shot>
+  </div>
+</section>
+
+<section>
+  <div class="center">
+    <h2>Everything else you'd expect</h2>
+  </div>
+  <div class="cards">
+    <div class="card">
+      <x-art name="ItemTypes"></x-art>
+      <h3>Templates for your team</h3>
+      <p>Share item templates for the things your company keeps: vendor portals, servers, licenses. Everyone starts from the same fields.</p>
+    </div>
+    <div class="card">
+      <x-art name="SpotReport"></x-art>
+      <h3>Reports and event logs</h3>
+      <p>See weak, reused, and exposed passwords in shared collections, and who viewed or changed what.</p>
+    </div>
+    <div class="card">
+      <x-art name="TwoFactorTimeoutIcon"></x-art>
+      <h3>Expiring credentials</h3>
+      <p>Certificates, API keys, and domains carry their expiration date, and the people who use them are reminded before it passes.</p>
+    </div>
+    <div class="card">
+      <x-art name="LockIcon"></x-art>
+      <h3>End-to-end encrypted</h3>
+      <p>Shared items are encrypted with your organization's key, which only your members' devices hold. We never have a key that can open your company's vault.</p>
+    </div>
+    <div class="card">
+      <x-art name="DevicesIcon"></x-art>
+      <h3>Work and personal stay apart</h3>
+      <p>A work account belongs to one organization, so people keep their own passwords in a separate personal account. When someone leaves, shared passwords stay with the company.</p>
+    </div>
+    <div class="card">
+      <x-art name="Security"></x-art>
+      <h3>Run it yourself if you like</h3>
+      <p>PassBundle is open source. Use our hosted service, or run the server on your own hardware.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="panel cta">
+    <div>
+      <h2>Running IT for more than one company?</h2>
+      <p>If you look after several companies or locations, the MSP console runs all of them from one place, with one pool of seats.</p>
+    </div>
+    <div class="actions">
+      <a class="button" href="/msp/">PassBundle for MSPs</a>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="center">
+    <h2>Questions</h2>
+  </div>
+  <div class="faq">
+    <details>
+      <summary>What does it cost?</summary>
+      <p>{{prices.business}} per person per month, or {{prices.businessLarge}} from {{prices.businessLargeFrom}} people. Every feature is included. See <a href="/pricing/#business">pricing</a>.</p>
+    </details>
+    <details>
+      <summary>Does it work on Macs?</summary>
+      <p>Yes. The extension and the web vault work on Mac, Windows, and Linux. The rollout command and Windows Hello unlock are for Windows today; Mac rollout and Touch ID are next.</p>
+    </details>
+    <details>
+      <summary>Is there an app for phones?</summary>
+      <p>Not yet. iPhone and Android apps are coming. Until then, people can open the web vault in their phone's browser.</p>
+    </details>
+    <details>
+      <summary>Do you support single sign-on or directory sync?</summary>
+      <p>Not yet. People sign in with their own master password, and you add them by email, with the rollout command, or from the admin console.</p>
+    </details>
+    <details>
+      <summary>Can we move from another password manager?</summary>
+      <p>Yes. Import a shared export into your organization's collections, and each person brings their own passwords. See <a href="/switch/">Switch to PassBundle</a>.</p>
+    </details>
+  </div>
+</section>

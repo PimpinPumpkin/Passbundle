@@ -1,0 +1,183 @@
+<!--
+title: PassBundle for MSPs and IT providers
+description: Run every client's password manager from one console. Default policies and templates for all of them, rollout from your RMM, no confirm step, free staff seats, and one pool of seats across every client.
+layout: wide
+-->
+<section class="hero">
+  <div>
+    <span class="eyebrow">For MSPs and IT providers</span>
+    <h1>Every client's passwords, run from one console.</h1>
+    <p class="lead">
+      Add a client in one step, set your policies and templates once for all of them, and roll out
+      from your RMM. Your staff are free, and every user in every client shares one pool of seats.
+    </p>
+    <div class="actions">
+      <a class="button primary" href="mailto:hello@passbundle.com?subject=PassBundle%20demo">Book a demo</a>
+      <a class="button" href="/pricing/#msp">MSP pricing</a>
+    </div>
+    <p class="fine">Running IT for several companies or locations in one group? The console works for you too.</p>
+  </div>
+  <x-shot name="msp-console" class="framed" alt="The PassBundle MSP console: five clients with their members, expiring items, and weak and reused passwords" eager></x-shot>
+</section>
+
+<section class="tight">
+  <div class="cards">
+    <div class="card">
+      <x-art name="SpotReport"></x-art>
+      <h3>Every client at a glance</h3>
+      <p>Members, people waiting to join, expiring credentials, and weak or reused passwords for every client, side by side. Open any client's admin console in one click, with the same sign-in.</p>
+    </div>
+    <div class="card">
+      <x-art name="AutoConfirmSvg"></x-art>
+      <h3>No confirm step</h3>
+      <p>People join a client the moment they accept or sign in from a managed computer. Your staff's apps hand them the keys in the background, so nobody chases a Confirm button.</p>
+    </div>
+    <div class="card">
+      <x-art name="LockIcon"></x-art>
+      <h3>Private, even from you</h3>
+      <p>Each client's vault is end-to-end encrypted, and your staff are never part of a client's account recovery, so a technician can't take over a client's accounts.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="split">
+    <div>
+      <span class="eyebrow">Default policies</span>
+      <h2>Set your policies once</h2>
+      <p class="lead">
+        Every client follows your default policies, including clients you add next year. When one
+        client needs something different, change it in that client's console, and it keeps its own
+        setting.
+      </p>
+      <ul>
+        <li>New clients start with account recovery, strong master passwords, and one work account per person</li>
+        <li>Change a default, and every client that follows it changes too</li>
+        <li>See at a glance which clients have their own settings</li>
+      </ul>
+    </div>
+    <x-shot name="msp-policies" class="framed" alt="Default policies in the MSP console, with the clients that have their own setting"></x-shot>
+  </div>
+</section>
+
+<section>
+  <div class="split flip">
+    <div>
+      <span class="eyebrow">Rollout</span>
+      <h2>Onboard an office from your RMM</h2>
+      <p class="lead">
+        Each client has its own install command. Run it on the client's Windows computers from your
+        RMM, and people land in the right client when they sign in.
+      </p>
+      <ul>
+        <li>Installs the extension in Chrome and Edge, with the server filled in</li>
+        <li>Turns off the browsers' own password managers</li>
+        <li>Limit it to the client's email domains</li>
+        <li>The client's owners get an email for each person who joins</li>
+        <li>A whole office can sign up at once without tripping login limits</li>
+      </ul>
+    </div>
+    <x-shot name="msp-install" class="framed" alt="A client's install command in the MSP console"></x-shot>
+  </div>
+</section>
+
+<section>
+  <div class="center">
+    <h2>Built for how your team works</h2>
+  </div>
+  <div class="cards">
+    <div class="card">
+      <x-art name="ItemTypes"></x-art>
+      <h3>Templates for every client</h3>
+      <p>Make an item template once, for a firewall or a Microsoft 365 tenant, and every client has it. Edit it, and every copy updates. Clients' people can use it without changing it.</p>
+    </div>
+    <div class="card">
+      <x-art name="UserLockIcon"></x-art>
+      <h3>Access that fits each technician</h3>
+      <p>Limit a technician to chosen clients or to a helpdesk role, choose whether they see vault items, and hide install commands from anyone who doesn't need them.</p>
+    </div>
+    <div class="card">
+      <x-art name="RegistrationUserAddIcon"></x-art>
+      <h3>Your client's point of contact</h3>
+      <p>Give someone at the client just enough to manage their own people with a custom role, and keep the rest with your team.</p>
+    </div>
+    <div class="card">
+      <x-art name="RegistrationCheckEmailIcon"></x-art>
+      <h3>A record of everything</h3>
+      <p>Every MSP action is logged with who did it, from where, and in which client. Each client sees which of your staff can reach it.</p>
+    </div>
+    <div class="card">
+      <x-art name="TwoFactorTimeoutIcon"></x-art>
+      <h3>Expiring credentials, everywhere</h3>
+      <p>Certificates, domains, and API keys carry their expiration date, and the console counts what's expiring in each client.</p>
+    </div>
+    <div class="card">
+      <x-art name="Security"></x-art>
+      <h3>Open source</h3>
+      <p>Every line of PassBundle is public, so you and your clients' auditors can read exactly what it does.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="center">
+    <h2>One pool of seats</h2>
+    <p class="lead">
+      Every user in every client counts toward one pool, billed monthly on the seats in use. The
+      price drops as the pool grows. No per-client minimums, and your own staff are free.
+    </p>
+  </div>
+  <div class="table-box">
+    <table>
+      <thead>
+        <tr><th>Seats in your pool</th><th>Per seat, monthly</th><th>Per seat, with a one-year commitment</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1 to 499</td><td class="num">{{prices.msp1}}</td><td class="num">{{prices.msp1Year}}</td></tr>
+        <tr><td>{{prices.mspTier2From}} to 2,499</td><td class="num">{{prices.msp2}}</td><td class="num">{{prices.msp2Year}}</td></tr>
+        <tr><td>{{prices.mspTier3From}} and up</td><td class="num">{{prices.msp3}}</td><td class="num">{{prices.msp3Year}}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="fine center">Resell it at your own price. A new client's first five people cost the same as your five hundredth.</p>
+</section>
+
+<section>
+  <div class="panel cta">
+    <div>
+      <h2>Be one of our first MSPs</h2>
+      <p>We're working closely with a handful of MSPs as we launch. You get six months free and a direct line to us; we get to hear what your clients need.</p>
+    </div>
+    <div class="actions">
+      <a class="button primary" href="mailto:hello@passbundle.com?subject=PassBundle%20design%20partner">Talk to us</a>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="center">
+    <h2>Questions</h2>
+  </div>
+  <div class="faq">
+    <details>
+      <summary>We're an internal IT team, not an MSP. Is this for us?</summary>
+      <p>If you run IT for several companies, locations, or brands in one group, yes: each one is a client in the console, and they share one pool of seats. For a single company, see <a href="/business/">PassBundle for business</a>.</p>
+    </details>
+    <details>
+      <summary>What counts as a seat?</summary>
+      <p>Each person in a client's organization, counted once a month. People who've been invited but haven't joined don't count, and neither do your own staff.</p>
+    </details>
+    <details>
+      <summary>Which RMMs does the install command work with?</summary>
+      <p>Any RMM that can run a PowerShell command as an administrator on Windows, such as NinjaOne, ConnectWise Automate, Datto RMM, and N-able. Intune and group policy work too.</p>
+    </details>
+    <details>
+      <summary>Can a client take its data with it?</summary>
+      <p>Yes. A client's admins can export the organization's vault at any time, in a format other password managers import.</p>
+    </details>
+    <details>
+      <summary>Is there an API or PSA integration?</summary>
+      <p>Not yet. Billing sync with ConnectWise, HaloPSA, and Autotask is planned, so seat counts flow into your invoices.</p>
+    </details>
+  </div>
+</section>

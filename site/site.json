@@ -1,0 +1,28 @@
+{
+  "_": "Prices and links the pages use as {{name}}. An empty link isn't live yet: pages fall back to /download/, and `check.mjs --launch` refuses to pass until it's filled in.",
+  "prices": {
+    "premium": "$15",
+    "families": "$36",
+    "familiesPeople": "6",
+    "business": "$2",
+    "businessLarge": "$1.75",
+    "businessLargeFrom": "250",
+    "msp1": "$1.50",
+    "msp2": "$1.25",
+    "msp3": "$1.00",
+    "msp1Year": "$1.25",
+    "msp2Year": "$1.05",
+    "msp3Year": "$0.85",
+    "mspTier2From": "500",
+    "mspTier3From": "2,500",
+    "trialDays": "30"
+  },
+  "links": {
+    "vault": "https://vault.passbundle.com",
+    "signup": "https://vault.passbundle.com/#/signup",
+    "chrome": "",
+    "edge": "",
+    "firefox": "",
+    "windows": ""
+  }
+}

@@ -1,0 +1,144 @@
+<!--
+title: Pricing
+description: PassBundle is free for every password and every device. Premium and Families add extras for a few dollars a year, and businesses and MSPs pay per person, with every feature included.
+layout: wide
+-->
+<section class="hero solo">
+  <div>
+    <h1>Simple prices. A free plan that stays free.</h1>
+    <p class="lead">
+      Everything that keeps you safe is free. The paid plans add storage, convenience, and other
+      people.
+    </p>
+    <nav class="tabs" aria-label="Plans">
+      <a href="#personal">Personal</a>
+      <a href="#business">Business</a>
+      <a href="#msp">MSPs</a>
+    </nav>
+  </div>
+</section>
+
+<section id="personal" class="tight">
+  <h2>For you and your family</h2>
+  <div class="plans">
+    <div class="plan">
+      <h3>Free</h3>
+      <p class="price">$0</p>
+      <p class="for">For everyone, forever</p>
+      <ul>
+        <li>Unlimited passwords, devices, and sync</li>
+        <li>Autofill, the password generator, and passkeys</li>
+        <li>Every two-step login method, hardware keys included</li>
+        <li>Windows Hello unlock</li>
+        <li>Weak, reused, and exposed password reports</li>
+        <li>Item templates and expiration reminders</li>
+        <li>Legacy contacts</li>
+        <li>Send text with an expiring link</li>
+        <li>Import from other password managers</li>
+      </ul>
+      <a class="button" href="/download/">Get PassBundle</a>
+    </div>
+    <div class="plan featured">
+      <h3>Premium</h3>
+      <p class="price">{{prices.premium}}<small> a year</small></p>
+      <p class="for">For one person</p>
+      <ul>
+        <li>Everything in Free</li>
+        <li>Two-step login codes for your other accounts, built in</li>
+        <li>Encrypted file attachments, 5 GB</li>
+        <li>Send files, not just text</li>
+        <li>Data breach report for your email address</li>
+        <li>Email support within one business day</li>
+      </ul>
+      <a class="button primary" href="{{links.signup}}">Get Premium</a>
+    </div>
+    <div class="plan">
+      <h3>Families</h3>
+      <p class="price">{{prices.families}}<small> a year</small></p>
+      <p class="for">For up to {{prices.familiesPeople}} people</p>
+      <ul>
+        <li>Premium for everyone in the family</li>
+        <li>Shared vaults, as many as you like</li>
+        <li>An organizer who adds and removes people</li>
+        <li>Everyone keeps a private vault</li>
+      </ul>
+      <a class="button" href="{{links.signup}}">Get Families</a>
+    </div>
+  </div>
+</section>
+
+<section id="business">
+  <h2>For a business with its own IT</h2>
+  <div class="plans two">
+    <div class="plan featured">
+      <h3>Business</h3>
+      <p class="price">{{prices.business}}<small> per person, monthly</small></p>
+      <p class="for">{{prices.businessLarge}} from {{prices.businessLargeFrom}} people. Every feature included.</p>
+      <ul>
+        <li>Sensible policies from day one</li>
+        <li>Rollout from Intune, group policy, or your RMM</li>
+        <li>No confirm step for new people</li>
+        <li>Account recovery for forgotten master passwords</li>
+        <li>Shared collections, custom roles, and event logs</li>
+        <li>Item templates for your team</li>
+        <li>Premium for every member</li>
+      </ul>
+      <a class="button primary" href="{{links.signup}}">Start a {{prices.trialDays}}-day trial</a>
+    </div>
+    <div class="plan">
+      <h3>Several companies?</h3>
+      <p class="for">If your IT team runs several companies, locations, or brands, use the MSP console and one pool of seats across all of them.</p>
+      <a class="button" href="#msp">See MSP pricing</a>
+    </div>
+  </div>
+</section>
+
+<section id="msp">
+  <h2>For MSPs and IT providers</h2>
+  <p class="lead">
+    Every user in every client counts toward one pool, billed monthly on the seats in use. The more
+    seats, the lower the price, for every client. Your staff are free.
+  </p>
+  <div class="table-box">
+    <table>
+      <thead>
+        <tr><th>Seats in your pool</th><th>Per seat, monthly</th><th>Per seat, with a one-year commitment</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1 to 499</td><td class="num">{{prices.msp1}}</td><td class="num">{{prices.msp1Year}}</td></tr>
+        <tr><td>{{prices.mspTier2From}} to 2,499</td><td class="num">{{prices.msp2}}</td><td class="num">{{prices.msp2Year}}</td></tr>
+        <tr><td>{{prices.mspTier3From}} and up</td><td class="num">{{prices.msp3}}</td><td class="num">{{prices.msp3Year}}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="actions">
+    <a class="button primary" href="mailto:hello@passbundle.com?subject=PassBundle%20demo">Book a demo</a>
+    <a class="button" href="/msp/">What MSPs get</a>
+  </div>
+</section>
+
+<section>
+  <h2>Questions</h2>
+  <div class="faq">
+    <details>
+      <summary>Is the free plan really free forever?</summary>
+      <p>Yes. It has no time limit, no limit on passwords or devices, and no ads. Businesses and paid plans pay for it, and storing a vault costs us very little.</p>
+    </details>
+    <details>
+      <summary>Can I run PassBundle on my own server instead?</summary>
+      <p>Yes. PassBundle is open source, and the server runs on your own hardware at no cost. What you pay us for is the hosted service: we run it, back it up, keep it updated, and answer when you need help.</p>
+    </details>
+    <details>
+      <summary>Do I need a card for the trial?</summary>
+      <p>No. Business trials last {{prices.trialDays}} days without a card. Add one before the trial ends to keep going.</p>
+    </details>
+    <details>
+      <summary>What happens if I stop paying?</summary>
+      <p>Your vault stays yours. A Premium or Families account goes back to the free plan, with every password intact. You can export everything at any time.</p>
+    </details>
+    <details>
+      <summary>Are prices in US dollars?</summary>
+      <p>Yes, before any sales tax where it applies.</p>
+    </details>
+  </div>
+</section>

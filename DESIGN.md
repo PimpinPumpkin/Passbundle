@@ -493,7 +493,7 @@ The maintainer gets a morning summary, with screenshots and video only for failu
 
 ## Known gaps
 
-- Help, Terms of Service, and Privacy Policy links go to pages on passbundle.com that don't exist until we publish the site.
+- The launch site (`site/`) goes to a preview address until launch; passbundle.com still shows the earlier "in development" page. `site/README.md` lists what has to be true before it goes live.
 - The apps' default server is `vault.passbundle.com` (one host, the way our server is deployed), which serves nothing until the hosted service exists. Self-hosted servers are unaffected.
 - The installer's extension IDs are placeholders until the store listings exist.
 - passbundle.com still points at Namecheap, and the site is on a temporary Cloudflare account (https://passbundle.pages.dev). Next: move it to PassBundle's own Cloudflare account, point passbundle.com, .io, and .app at it, and set up hello@, privacy@, and security@ (steps in `site/README.md`).

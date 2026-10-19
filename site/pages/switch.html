@@ -1,0 +1,52 @@
+<!--
+title: Switch to PassBundle
+description: Move your passwords to PassBundle from 1Password, Bitwarden, LastPass, Chrome, Edge, Firefox, Safari, and about 70 other apps.
+-->
+<h1>Switch to PassBundle</h1>
+<p class="lead">Moving takes a few minutes: export from where your passwords are now, then import the file into PassBundle. PassBundle reads exports from about 70 apps.</p>
+
+<h2>Import into PassBundle</h2>
+<ol class="steps">
+  <li>Sign in to the <a href="{{links.vault}}">web vault</a>.</li>
+  <li>Open <strong>Tools</strong>, then <strong>Import</strong>.</li>
+  <li>Choose the app you're coming from under <strong>File format</strong>, choose the export file, and select <strong>Import</strong>.</li>
+  <li>Delete the export file. It has your passwords in plain text.</li>
+</ol>
+<p>To import into a business's shared collections, open the organization in the Admin Console, then <strong>Settings</strong>, <strong>Import</strong>.</p>
+
+<h2>From 1Password</h2>
+<ol class="steps">
+  <li>Open the 1Password app on your computer. Exports need the app, not the browser extension.</li>
+  <li>Choose <strong>File</strong>, then <strong>Export</strong>, pick the account, and save it in the <strong>1PUX</strong> format.</li>
+  <li>In PassBundle, import it as <strong>1Password (1pux/json)</strong>.</li>
+</ol>
+<p>Logins, notes, cards, identities, and their two-step login secrets come along. File attachments don't; save them from 1Password and add them again.</p>
+
+<h2>From Bitwarden</h2>
+<p>PassBundle is built on the same open-source apps, so everything in a Bitwarden export arrives exactly as it was, folders, custom fields, and two-step login secrets included.</p>
+<ol class="steps">
+  <li>In Bitwarden's web vault, choose <strong>Tools</strong>, then <strong>Export vault</strong>, and pick <strong>.json</strong>. An encrypted export with a file password works too.</li>
+  <li>In PassBundle, import it as <strong>Bitwarden (json)</strong>.</li>
+</ol>
+<p>Bitwarden's export doesn't include file attachments. Download them first and add them to the items again.</p>
+
+<h2>From LastPass</h2>
+<ol class="steps">
+  <li>In LastPass, open <strong>Advanced options</strong> and choose <strong>Export</strong>. LastPass asks for your master password and saves a CSV file.</li>
+  <li>In PassBundle, import it as <strong>LastPass</strong>.</li>
+</ol>
+
+<h2>From your browser</h2>
+<ul>
+  <li><strong>Chrome:</strong> open Google Password Manager from the menu, then <strong>Settings</strong>, and choose <strong>Export passwords</strong>. Import as <strong>Chrome</strong>.</li>
+  <li><strong>Edge:</strong> open <strong>Settings</strong>, then <strong>Passwords</strong>, and choose <strong>Export passwords</strong> from the menu beside your saved passwords. Import as <strong>Edge</strong>.</li>
+  <li><strong>Firefox:</strong> open <strong>Passwords</strong> from the menu, then choose <strong>Export passwords</strong> from the menu at the top. Import as <strong>Firefox (csv)</strong>.</li>
+  <li><strong>Safari:</strong> on a Mac, open the <strong>Passwords</strong> app, then choose <strong>File</strong>, <strong>Export All Passwords</strong>. Import as <strong>Safari and macOS (csv)</strong>.</li>
+</ul>
+<p>Once your passwords are in PassBundle, turn off your browser's own password manager so the two don't both offer to save. Computers your organization set up with PassBundle have it turned off already.</p>
+
+<h2>From anything else</h2>
+<p>Look for an export option in your current app, then find it under <strong>File format</strong> in PassBundle: Dashlane, Keeper, Proton Pass, NordPass, Enpass, KeePass, and many more are there. If yours isn't, a CSV with a name, website, username, and password per line imports as <strong>Bitwarden (csv)</strong>.</p>
+
+<h2>Need a hand?</h2>
+<p>Email <a href="mailto:hello@passbundle.com">hello@passbundle.com</a>. MSPs moving clients from Passportal, IT Glue, or another password manager can ask us for help planning it.</p>
