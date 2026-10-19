@@ -10,9 +10,9 @@ import { fileURLToPath } from "node:url";
 
 import { chromium, expect, test, type Browser, type Locator, type Page } from "@playwright/test";
 
-import { hostResolverRules, paths } from "../paths.mjs";
+import { paths, siteHost, siteHostRules } from "../paths.mjs";
 import { Api } from "../tests/api/support";
-import { logInPopup, serverUrl } from "../tests/support/extension";
+import { logInPopup } from "../tests/support/extension";
 import { signUp, type WebUser } from "../tests/support/web";
 
 import { clientVault, clients, emailOf, personalVault } from "./data";
@@ -23,6 +23,8 @@ const sam: WebUser = { email: "sam@example.com", name: "Sam Rivera", password };
 const jordan: WebUser = { email: "jordan@harborit.example", name: "Jordan Lee", password };
 const schemes = ["light", "dark"] as const;
 const desktop = { width: 1440, height: 900 };
+/** The test server, under the hosted service's name (see siteHostRules). */
+const server = `https://${siteHost}`;
 
 let encoder: Page;
 
@@ -70,7 +72,7 @@ async function importJson(page: Page, contents: string, orgUrl?: string) {
 
 async function webPage(browser: Browser) {
   const context = await browser.newContext({
-    baseURL: serverUrl,
+    baseURL: server,
     ignoreHTTPSErrors: true,
     viewport: desktop,
     deviceScaleFactor: 2,
@@ -109,7 +111,7 @@ test("a person's vault, in the web vault and the extension, in every theme", asy
       `--load-extension=${paths.extension}`,
       "--ignore-certificate-errors",
       "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
-      hostResolverRules,
+      siteHostRules,
     ],
   });
   try {
@@ -118,7 +120,7 @@ test("a person's vault, in the web vault and the extension, in every theme", asy
     const popup = await context.newPage();
     const go = (route: string) => popup.goto(`chrome-extension://${id}/popup/index.html#${route}`);
     await go("/");
-    await logInPopup(popup, sam);
+    await logInPopup(popup, sam, server);
     // The first-run welcome card, once.
     await popup
       .getByRole("button", { name: /^(Close|Dismiss)/ })
@@ -255,7 +257,7 @@ test("an MSP's console with five clients, and a client's admin console", async (
   }
 });
 
-test("a company with its own IT: its members and policies", async ({ browser, request }) => {
+test("a company with its own IT: its members, policies, and install command", async ({ browser, request }) => {
   test.setTimeout(600_000);
   const company = {
     name: "Northpoint Logistics",
@@ -264,8 +266,21 @@ test("a company with its own IT: its members and policies", async ({ browser, re
   };
   const pat: WebUser = { email: "pat.morgan@northpoint.example", name: "Pat Morgan", password };
 
-  // The people sign up first, so their invitations are accepted at once (this
-  // server sends no email). Their public key is real for the confirm.
+  // New organization, for a business: the Business preset and an install command.
+  const web = await webPage(browser);
+  await signUp(web, pat);
+  await web.goto("/#/create-organization");
+  await web.getByRole("textbox", { name: /Organization name/ }).fill(company.name);
+  await web.getByRole("radio", { name: /A business/ }).check();
+  await web.getByRole("button", { name: "Create organization" }).click();
+  await web.waitForURL(/#\/organizations\/[0-9a-f-]{36}\/members/);
+  const org = web.url().replace(/\/members.*$/, "");
+  await web.goto("/#/vault");
+  await web.goto(`${org}/settings`);
+  const command = await web.getByTestId("org-install-command").textContent();
+  const token = /-EnrollmentToken (\S+)/.exec(command!)![1];
+
+  // The people join with it, as after a rollout. Their public key is real for the confirm.
   const api = new Api(request);
   const { publicKey } = generateKeyPairSync("rsa", {
     modulusLength: 2048,
@@ -275,38 +290,13 @@ test("a company with its own IT: its members and policies", async ({ browser, re
   const emails: string[] = [];
   for (const person of company.people) {
     const email = emailOf(person, { ...company, weak: 0, reused: 0, expiring: 0 });
-    await api.account(person, email, publicKey.toString("base64"));
+    const account = await api.account(person, email, publicKey.toString("base64"));
+    const joined = await api.call(account, "POST", "/api/keykeeper/enrollment/join", { token });
+    expect(joined.status, JSON.stringify(joined.body)).toBe(200);
     emails.push(email);
   }
 
-  const web = await webPage(browser);
-  await signUp(web, pat);
-  await web.goto("/#/create-organization");
-  await web.getByRole("textbox", { name: /Organization name/ }).fill(company.name);
-  await web.getByRole("button", { name: "Create organization" }).click();
-  await web.waitForURL(/#\/organizations\/[0-9a-f-]{36}\/members/);
-  const org = web.url().replace(/\/members.*$/, "");
-
-  await web.getByRole("button", { name: "Invite member" }).click();
-  const dialog = web.getByRole("dialog", { name: /Invite member/ });
-  await dialog.getByRole("textbox", { name: /Email/ }).fill(emails.join(", "));
-  await dialog.getByRole("button", { name: "Save" }).click();
-  await expect(dialog).toBeHidden();
-
-  // Policies a company turns on. (Not two-step login: the server won't
-  // confirm a member until they've set it up, and these people never sign in.)
-  await web.goto(`${org}/settings/policies`);
-  for (const policy of [/^Single organization/, /^Master password requirements/]) {
-    await web.getByRole("button", { name: policy }).first().click();
-    const edit = web.getByRole("dialog");
-    await edit.getByRole("checkbox", { name: "Turn on" }).check();
-    const length = edit.getByRole("spinbutton", { name: /Minimum length/ });
-    if (await length.count()) await length.fill("12");
-    await edit.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(edit).toBeHidden();
-  }
-
-  // Opening Members confirms everyone who accepted.
+  // Opening Members confirms everyone who joined.
   await expect(async () => {
     await web.goto("/#/vault");
     await web.goto(`${org}/members`);
@@ -323,5 +313,9 @@ test("a company with its own IT: its members and policies", async ({ browser, re
     await web.goto(`${org}/settings/policies`);
     await expect(web.getByText(/Master password requirements/).first()).toBeVisible();
     await shoot(web, `business-policies-${scheme}`);
+    await web.goto("/#/vault");
+    await web.goto(`${org}/settings`);
+    await expect(web.getByTestId("org-install-joins")).toContainText("8 people have joined");
+    await shoot(web.getByTestId("org-install"), `business-install-${scheme}`);
   }
 });

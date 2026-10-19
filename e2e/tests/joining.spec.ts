@@ -18,6 +18,8 @@ async function createOrganization(owner: Page, name: string): Promise<string> {
   // No license file and no plans: our own server.
   await expect(owner.getByText(/license file/i)).toHaveCount(0);
   await owner.getByRole("textbox", { name: /Organization name/ }).fill(name);
+  // Upstream's kind of organization, with no preset.
+  await owner.getByRole("radio", { name: /A family or a group/ }).check();
   await owner.getByRole("button", { name: "Create organization" }).click();
   await expect(toast(owner, `Created ${name}`)).toBeVisible();
   await owner.waitForURL(/#\/organizations\/[0-9a-f-]{36}\/members/);
