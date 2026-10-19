@@ -315,6 +315,17 @@ Every setting explains itself in one sentence. Changing a setting needs no actio
 - **Accepted advisories:** npm packages that never reach the web vault or the extension (the command-line client's, and build tooling) are listed with a reason in `tools/upstream-watch/accepted.json`; the watch notes them instead of raising them. The command-line client's need another look before we ship it.
 - **Security fixes ahead of upstream:** when a fix is in a patch release of a dependency we ship and upstream hasn't taken it yet, we take it ourselves, as with Angular 21.2.25 in the clients (two cross-site scripting advisories) and rustls 0.23.46 for the server's outgoing connections (four advisories), and drop our change at the next base move. Advisories that don't apply to how we use a crate (Rocket's old rustls, which only serves TLS, or `rsa`, which has no fix yet) are accepted in the same file, by advisory and version, with a reason.
 
+## The look
+
+PassBundle has its own look, not Bitwarden's with a new color: translucent glass over a soft color field, the way 1Password looks on a Mac, with type and artwork of our own.
+
+- **One look, three settings.** Settings, Appearance, Theme offers Glass (the default), Light, and Dark. Glass is upstream's System setting: light or dark like the device, with translucent bars, groups, cards, tables, and dialogs. Light and Dark are solid surfaces, for anyone who reads better without the translucency. The extension and the web vault share it.
+- **Identity in every theme:** Figtree (SIL Open Font License, bundled; its license is in `brand/assets/fonts`), the brand palette, a gray scale tinted toward the brand's green instead of upstream's slate blue (so dark mode is green-black, not navy), and the illustrations' colors. Inter, upstream's font, still draws scripts Figtree doesn't cover.
+- **Artwork:** every illustration and tab icon upstream draws in Bitwarden's style (55 of them) is redrawn from the logo's shapes, the rounded bands and the shackle, by `brand/artwork/draw.mjs`. The brand step puts each in place of upstream's drawing by its name, and fails if upstream renames one. Drawings use the theme's color classes, so they follow light, dark, and glass. Duo's and Yubico's logos stay theirs; the product logos are swapped by the brand step as before.
+- **How:** `brand/look.css` is added to the component library's theme at build time. It targets upstream's components (`bit-*`, `popup-*`) rather than its utility classes, so changes inside them don't break it. The theming service sets `pb-glass` on the page for the System setting (a `// Keykeeper:` block), and the web vault's pre-start theme script does the same, so there's no flash of the solid look.
+- **Not glass:** what the extension draws inside websites (the autofill menu, the save bar) follows light or dark only. A desktop window, when there is one, can use the operating system's own translucency (macOS vibrancy, Windows Mica).
+- **Tests:** a unit test for the setting (Glass only for System, light or dark like the device), and an end-to-end test that the web vault starts in Glass, follows the device, switches to solid Light and Dark and keeps the choice across a reload, uses Figtree, and shows none of upstream's drawings on the sign-up page and the vault.
+
 ## UX we commit to
 
 Fixes for things that annoy users of Bitwarden and 1Password today.
