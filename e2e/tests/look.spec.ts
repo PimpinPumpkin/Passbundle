@@ -3,6 +3,8 @@
 // artwork in every theme.
 import { expect, test, type Page } from "@playwright/test";
 
+import { brand } from "../paths.mjs";
+
 import { signUp, webUserFor } from "./support/web";
 
 /** The page's theme classes: pb-glass turns the translucent look on. */
@@ -16,6 +18,15 @@ const look = (page: Page) =>
 /** Illustrations that aren't ours: every drawing upstream draws is replaced. */
 const upstreamArt = (page: Page) =>
   page.locator("bit-svg svg:not([data-art]):not([data-brand])").count();
+
+test("the web vault's page, before the app starts, has the brand's color and our drawings", async ({
+  request,
+}) => {
+  const html = await (await request.get("/")).text();
+  expect(html).toContain(`<meta name="theme-color" content="${brand.color}"`);
+  expect(html.match(/data-art="passbundle"/g)).toHaveLength(2);
+  expect(html).not.toContain("#175DDC");
+});
 
 test("the look is Glass by default, Light and Dark are solid, and the type and artwork are ours", async ({
   page,
