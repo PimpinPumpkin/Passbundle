@@ -52,8 +52,9 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: release
+      # S3-compatible storage for attachments and Send files (deploy/README.md).
       - name: Build
-        run: cargo build --locked --release --features sqlite,postgresql
+        run: cargo build --locked --release --features sqlite,postgresql,s3
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: server-release

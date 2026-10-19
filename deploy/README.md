@@ -2,7 +2,7 @@
 
 PassBundle's server and branded web vault in one container image, for the hosted service and for anyone who runs their own.
 
-- **What's in it:** the server built for production (`cargo build --release`, SQLite and PostgreSQL in one binary) and the branded web vault, on Debian 13 slim. It runs as an unprivileged user (uid 10001) on port 8080, keeps its data in `/data`, and has a health check on `/alive`.
+- **What's in it:** the server built for production (`cargo build --release`, SQLite and PostgreSQL in one binary, and S3-compatible storage for files) and the branded web vault, on Debian 13 slim. It runs as an unprivileged user (uid 10001) on port 8080, keeps its data in `/data`, and has a health check on `/alive`.
 - **How it's made:** the Release workflow (`.github/workflows/release.yml`) builds both from the `keykeeper` branches, or from the branches, tags, or commits you give it when you run it by hand. It builds the image from `deploy/Dockerfile` and runs `deploy/smoke.sh`, then keeps the image as the `image` artifact for 14 days. It runs for every push to main and for pull requests that change this folder. The smoke test starts the image on SQLite and on PostgreSQL, checks it serves PassBundle's web vault, makes an account, signs in, and signs in again after a restart.
 - **Labels** record the commit of each repo it was built from (`com.passbundle.server-commit`, `com.passbundle.clients-commit`).
 
@@ -26,6 +26,7 @@ The settings are the server's environment variables, as in Vaultwarden. The ones
 | `SIGNUPS_ALLOWED` | Whether anyone can make an account. |
 | `MSP_SIGNUPS_ALLOWED` | Whether anyone can set up an MSP. |
 | `ADMIN_TOKEN` | Turns on the server's admin page. Leave it unset unless you need it. |
+| `ATTACHMENTS_FOLDER`, `SENDS_FOLDER` | Where file attachments and Send files go. A folder in `/data` by default, or object storage: `s3://bucket/attachments?endpoint=https://...&region=auto&default_storage_class=STANDARD`, with `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. They're encrypted by the apps before upload, like everything else. |
 
 ## Not yet
 
