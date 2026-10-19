@@ -2,7 +2,7 @@
 # builds the Release workflow makes (.github/workflows/release.yml). Runs as
 # an unprivileged user on port 8080, with SQLite in /data unless DATABASE_URL
 # points at PostgreSQL. See deploy/README.md.
-FROM debian:trixie-slim
+FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl libpq5 tzdata \

@@ -83,7 +83,8 @@ check() {
 check SQLite
 
 docker run -d --name passbundle-smoke-db --network "$net" -e POSTGRES_USER=passbundle \
-  -e POSTGRES_PASSWORD=smoke -e POSTGRES_DB=passbundle postgres:17-alpine > /dev/null
+  -e POSTGRES_PASSWORD=smoke -e POSTGRES_DB=passbundle \
+  postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24 > /dev/null
 for _ in $(seq 1 30); do
   docker exec passbundle-smoke-db pg_isready -U passbundle > /dev/null 2>&1 && break
   sleep 1
