@@ -34,7 +34,6 @@ The site describes the product as it will be at launch. What has to be true firs
 
 - The hosted service at vault.passbundle.com, and paid plans with their limits (Free, Premium, Families, Business, pooled MSP seats).
 - The browser store listings, and a signed Windows installer for Windows Hello unlock.
-- A company with its own IT gets what an MSP's client gets: an install command, the Business defaults, and the Everyone collection, without setting up the MSP console. Today those come only through the MSP console.
 - Prices and offers on the site are proposals until decided: Premium, Families, Business, the MSP seat pool, the 30-day trial, and six months free for the first MSPs.
 
 ## Hosting

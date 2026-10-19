@@ -4,7 +4,7 @@
 // run on the server that sends email.
 import { expect, test } from "@playwright/test";
 
-import { type Account, Api } from "../api/support";
+import { type Account, Api, encString, publicKey } from "../api/support";
 
 import { joinByEmail, type Message, waitForMessage } from "./mailbox";
 
@@ -136,6 +136,38 @@ test("a client's own owners hear when someone joins with the install command, an
   expect(waiting.text).toContain("They get access once an admin approves them");
   expect(waiting.html).toContain("Approve them");
   void mspId;
+});
+
+test("a company's owners hear when someone joins with their own install command, and can limit it to their domains", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const owner = await api.account("company-owner");
+  const created = await api.call(owner, "POST", "/api/keykeeper/organizations", {
+    name: "Own IT Co",
+    collectionName: encString("everyone"),
+    preset: "none",
+    key: encString(`org-key-for-${owner.email}`),
+    keys: { publicKey: publicKey("own-it-co"), encryptedPrivateKey: encString("own-it-co-private") },
+  });
+  expect(created.status, JSON.stringify(created.body)).toBe(200);
+  const orgId = created.body.id;
+  const command = `/api/keykeeper/organizations/${orgId}/enrollment`;
+  const { token } = (await api.call(owner, "POST", command)).body;
+
+  const person = await api.account("person");
+  expect((await join(api, person, token)).status).toBe(200);
+  const joined = await waitForMessage(owner.email, new RegExp(`^${person.email} joined Own IT Co$`));
+  expect(joined.text).toContain(`${person.email} joined Own IT Co with your install command.`);
+
+  // This server sends email, so the command can be limited to the company's domains.
+  const limited = await api.call(owner, "PUT", `${command}/domains`, { domains: ["own-it.example.test"] });
+  expect(limited.status, JSON.stringify(limited.body)).toBe(200);
+  expect(limited.body.domains).toEqual(["own-it.example.test"]);
+  const stranger = await api.account("stranger");
+  const refused = await join(api, stranger, token);
+  expect(refused.status).toBe(400);
+  expect(refused.body.message).toContain("install link is for own-it.example.test accounts");
 });
 
 test("whoever sent an invitation hears the person joined, worded for whether an admin still has to approve them", async ({

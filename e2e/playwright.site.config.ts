@@ -4,6 +4,7 @@
 //   npx playwright test -c playwright.site.config.ts
 import { defineConfig, devices } from "@playwright/test";
 
+import { siteHostRules } from "./paths.mjs";
 import base from "./playwright.config";
 
 const servers = Array.isArray(base.webServer) ? base.webServer : [base.webServer!];
@@ -14,5 +15,10 @@ export default defineConfig({
   reporter: "list",
   // Only the main test server.
   webServer: servers.slice(0, 1),
-  projects: [{ name: "site-shots", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "site-shots",
+      use: { ...devices["Desktop Chrome"], launchOptions: { args: [siteHostRules] } },
+    },
+  ],
 });

@@ -38,3 +38,9 @@ export const brand = JSON.parse(fs.readFileSync(paths.brand, "utf8"));
 // Chromium flag: *.example.test goes to the local fixture server, and every
 // other hostname except the test server fails to resolve. No live network.
 export const hostResolverRules = `--host-resolver-rules=MAP *.example.test 127.0.0.1:${fixturePort}, MAP * ~NOTFOUND, EXCLUDE 127.0.0.1`;
+
+// Chromium flag for the website's screenshots (site-shots/): the hosted
+// service's name goes to the local test server, so screens and install
+// commands show vault.passbundle.com, and everything else fails to resolve.
+export const siteHost = new URL(brand.urls.webVault).host;
+export const siteHostRules = `--host-resolver-rules=MAP ${siteHost} 127.0.0.1:${port}, MAP * ~NOTFOUND, EXCLUDE 127.0.0.1`;
