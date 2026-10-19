@@ -1,17 +1,41 @@
 # passbundle.com
 
-The PassBundle website: a home page, help, security, the privacy policy and terms, and the pages the apps link to (`/download/`, `/contact/`, and `/browser-start/`, which the extension opens after it's installed). Plain HTML and one stylesheet: no scripts, no cookies, nothing loaded from anyone else, which the privacy policy promises.
+The PassBundle website: the home page (for people and families), Business, For MSPs, Pricing, Switch to PassBundle, Security, Help, Download, the privacy policy and terms, and the pages the apps link to (`/download/`, `/contact/`, and `/browser-start/`, which the extension opens after it's installed). Plain HTML, one stylesheet, and the Figtree font: no scripts, no cookies, nothing loaded from anyone else, which the privacy policy promises. It has the apps' look: Glass, light or dark like the visitor's device.
 
-- `pages/`: one file per page, with a title and description at the top. `index.html` is `/`, `help.html` is `/help/`.
-- `static/`: copied as is: the stylesheet, favicon, `security.txt`, and Cloudflare Pages' `_headers` (security headers) and `_redirects` (the apps' old help-article and product links).
-- `build.mjs` wraps each page in the shared header and footer into `dist/`. `check.mjs` fails on a broken internal link, a missing page the apps link to, a script, or an em dash.
+- `pages/`: one file per page, with a title and description at the top. `index.html` is `/`, `help.html` is `/help/`. `layout: wide` is for marketing pages built from sections; the rest are reading pages on a solid panel.
+- `site.json`: prices and links, used in pages as `{{prices.premium}}` or `{{links.vault}}`, so a price changes in one place. An empty link isn't live yet: pages fall back to `/download/` until it's filled in.
+- `<x-shot name="msp-console" alt="...">`: a screenshot from `static/shots`, with its dark version in dark mode. `<x-art name="LockIcon">`: one of the apps' drawings from `art/`, inline so it takes the page's colors.
+- `static/`: copied as is: the stylesheet, fonts (with their license), screenshots, favicon, `security.txt`, and Cloudflare Pages' `_headers` (security headers) and `_redirects` (the apps' old help-article and product links).
+- `art/`: drawings copied from passbundle-clients `brand/artwork/` (made by `draw.mjs` there). Copy again when they change.
+- `build.mjs` wraps each page in the shared header and footer into `dist/`. `check.mjs` fails on a broken link or image, a missing page, a script, an inline style (the CSP blocks them), an em dash, or a placeholder the build didn't fill in.
 
 ```sh
 node site/build.mjs && node site/check.mjs   # build and check
-site/deploy.sh                                 # build, check, and deploy to Cloudflare Pages
+site/deploy.sh                                 # build, check, and deploy the preview
 ```
 
 CI runs the build and check on every change to `site/`.
+
+## Screenshots
+
+Every screenshot is made from the real apps by `e2e/site-shots/`, on the same test server the tests use, with made-up people and data (`e2e/site-shots/data.ts`): a person's vault in the web vault and the extension, the three themes, an MSP with five clients, and a company with its own IT. Run it after the look or a screen the site shows changes, then commit the images:
+
+```sh
+cd e2e && npx playwright test -c playwright.site.config.ts
+```
+
+It writes 2x WebP images, light and dark, to `site/static/shots/`. It takes about three minutes.
+
+## Before launch
+
+Until launch, `site/deploy.sh` deploys to the preview address, https://preview.passbundle.pages.dev, never the live site. `site/deploy.sh --production` deploys passbundle.com, and refuses until `node site/check.mjs --launch` passes: no highlighted placeholders left (`<mark class="todo">`, such as the company's legal name and the payment processor in the privacy policy and terms) and every link in `site.json` filled in (the store listings and the Windows download). `node site/check.mjs` lists what's left.
+
+The site describes the product as it will be at launch. What has to be true first:
+
+- The hosted service at vault.passbundle.com, and paid plans with their limits (Free, Premium, Families, Business, pooled MSP seats).
+- The browser store listings, and a signed Windows installer for Windows Hello unlock.
+- A company with its own IT gets what an MSP's client gets: an install command, the Business defaults, and the Everyone collection, without setting up the MSP console. Today those come only through the MSP console.
+- Prices and offers on the site are proposals until decided: Premium, Families, Business, the MSP seat pool, the 30-day trial, and six months free for the first MSPs.
 
 ## Hosting
 

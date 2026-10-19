@@ -1,16 +1,44 @@
 <!--
 title: Security
-description: How PassBundle protects your vault, and how to report a security issue.
+description: How PassBundle protects your vault: end-to-end encryption, a server that can't decrypt, open-source code, safeguards for businesses and MSPs, and how to report a security issue.
 -->
 <h1>Security</h1>
-<p class="lead">A password manager has to earn trust. Here's how PassBundle is built, and how to tell us if you find a problem.</p>
+<p class="lead">A password manager has to earn trust. Here's how PassBundle is built, what we can and can't see, and how to tell us if you find a problem.</p>
 
-<h2>How your vault is protected</h2>
+<h2>Your vault is encrypted on your device</h2>
 <ul>
-  <li><strong>End-to-end encryption.</strong> Items are encrypted with AES-256 on your device before they're stored or synced. The key comes from your master password, which never leaves your device.</li>
-  <li><strong>The server can't decrypt.</strong> It stores encrypted data and never holds a key that can open a vault. Organization keys are shared between members' devices, encrypted to each member.</li>
-  <li><strong>Proven code.</strong> PassBundle is built on the open-source Bitwarden clients and Vaultwarden, and follows their releases and security fixes. Changes to encryption or sign-in code need a written design and tests.</li>
-  <li><strong>Open source.</strong> Everything is public on <a href="https://github.com/PimpinPumpkin/Passbundle">GitHub</a>, so anyone can check it.</li>
+  <li><strong>Your master password never leaves your device.</strong> PassBundle turns it into a key with PBKDF2-SHA256 at 600,000 rounds, or Argon2id if you choose it, salted with your email address.</li>
+  <li><strong>Everything in your vault is encrypted with AES-256</strong>, with an HMAC-SHA256 check on every item, before it's saved or synced. That includes names, usernames, website addresses, notes, and files, not just passwords.</li>
+  <li><strong>Sharing keeps the encryption.</strong> A shared vault has its own key, which travels to each member encrypted to that member's own RSA key. The server passes it along but can't open it.</li>
+  <li><strong>Sends</strong> are encrypted with a key that's only in the link you share, never on our servers.</li>
+</ul>
+
+<h2>The server can't decrypt</h2>
+<p>Our servers store your encrypted vault and a hash that proves it's you when you sign in. That hash is hashed again on the server before it's stored, and it can't be used to decrypt anything. PassBundle's server never holds a key that can open a vault. Any feature that would need one gets redesigned or dropped.</p>
+<p>That also means we can't recover your vault if you forget your master password. Businesses can turn on account recovery, which lets their own admins reset a member's master password; see <a href="/privacy/">our privacy policy</a> for exactly who can see what.</p>
+
+<h2>Built in the open</h2>
+<ul>
+  <li><strong>Open source.</strong> Every line of PassBundle is public on <a href="https://github.com/PimpinPumpkin/Passbundle">GitHub</a>, under the GPL and AGPL, so anyone can check it.</li>
+  <li><strong>Proven foundations.</strong> PassBundle is built on the open-source Bitwarden clients and Vaultwarden, two widely used projects. We follow their security fixes every week and ship them quickly.</li>
+  <li><strong>Encryption changes are slow on purpose.</strong> Any change to encryption, keys, or sign-in needs a written design and test vectors before it's merged.</li>
+  <li><strong>Tested by machines.</strong> Every change runs through more than a hundred automated tests, from the server's API to real browsers with the real extension, on Windows, Mac, and Linux.</li>
+  <li><strong>An independent audit</strong> of PassBundle's own changes is planned. We'll publish the report here.</li>
+</ul>
+
+<h2>Protecting your account</h2>
+<ul>
+  <li><strong>Two-step login</strong> with an authenticator app, a security key such as a YubiKey, or email codes, in every plan.</li>
+  <li><strong>Password guessing is stopped per account.</strong> After 10 wrong tries, an account allows one attempt a minute, no matter where the guesses come from.</li>
+  <li><strong>New devices are announced.</strong> When your account signs in on a new device, you get an email with when and from where.</li>
+</ul>
+
+<h2>For businesses and MSPs</h2>
+<ul>
+  <li><strong>MSP staff can't take over client accounts.</strong> Your provider's staff are never part of your account recovery, so they can't reset your people's master passwords.</li>
+  <li><strong>Install commands are credentials.</strong> Each one is random and can be limited to your email domains or replaced at any time. Joins through it are recorded.</li>
+  <li><strong>Everything an MSP does is logged</strong>, with who, when, from where, and in which client.</li>
+  <li><strong>No remote control.</strong> PassBundle's Windows app takes no commands from the server, so a compromised server can't run anything on your computers. It installs only updates signed with our offline key.</li>
 </ul>
 
 <h2>Reporting a vulnerability</h2>

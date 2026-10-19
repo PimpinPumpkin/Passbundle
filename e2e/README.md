@@ -32,6 +32,10 @@ npm ci && npx playwright install chromium && npx playwright test
 
 Override any build location with `KK_SERVER_BIN`, `KK_WEB_VAULT`, `KK_EXTENSION`, or `KK_BRAND`, and the port with `KK_PORT` (default 8091).
 
+## Website screenshots
+
+`site-shots/` makes the website's screenshots from the real apps (`npx playwright test -c playwright.site.config.ts`). It isn't a test and CI doesn't run it. See `site/README.md`.
+
 ## Rules
 
 - No retries. A flaky test gets fixed, not rerun.
