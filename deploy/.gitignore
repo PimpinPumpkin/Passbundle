@@ -1,0 +1,2 @@
+# The Release workflow puts the builds here before making the image.
+context/
