@@ -1,0 +1,134 @@
+# Release: PassBundle's server and web vault as one container image, built for
+# production (the optimized server, for SQLite and PostgreSQL, and the branded
+# web vault), then started and checked like a fresh install by
+# deploy/smoke.sh. Runs for every push to main, for pull requests that change
+# the image, and by hand. The image is kept as a build artifact; pushing it to
+# a registry comes with the hosted service. See deploy/README.md.
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "site/**"]
+  pull_request:
+    paths: ["deploy/**", ".github/workflows/release.yml"]
+  workflow_dispatch:
+    inputs:
+      server-ref:
+        description: passbundle-server branch, tag, or commit
+        type: string
+        default: keykeeper
+      clients-ref:
+        description: passbundle-clients branch, tag, or commit
+        type: string
+        default: keykeeper
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    name: Optimized server
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      commit: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-server
+          ref: ${{ inputs.server-ref || 'keykeeper' }}
+          persist-credentials: false
+      - id: commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential libssl-dev pkg-config libpq-dev
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: release
+      - name: Build
+        run: cargo build --locked --release --features sqlite,postgresql
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: server-release
+          path: target/release/vaultwarden
+          retention-days: 3
+
+  web:
+    name: Branded web vault
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    outputs:
+      commit: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-clients
+          ref: ${{ inputs.clients-ref || 'keykeeper' }}
+          persist-credentials: false
+      - id: commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Apply branding
+        run: node brand/apply.mjs
+      - name: Build the web vault
+        working-directory: apps/web
+        run: npm run build:oss:selfhost:prod
+      - name: Drop source maps
+        run: find apps/web/build -name '*.map' -delete
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: web-vault-release
+          path: apps/web/build
+          retention-days: 3
+
+  image:
+    name: Image, built and smoke-tested
+    needs: [server, web]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: server-release
+          path: deploy/context
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web-vault-release
+          path: deploy/context/web-vault
+      - name: Build the image
+        env:
+          SERVER: ${{ needs.server.outputs.commit }}
+          CLIENTS: ${{ needs.web.outputs.commit }}
+        run: |
+          mv deploy/context/vaultwarden deploy/context/passbundle-server
+          docker build -f deploy/Dockerfile -t passbundle:release \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --label "com.passbundle.server-commit=${SERVER}" \
+            --label "com.passbundle.clients-commit=${CLIENTS}" \
+            deploy/context
+          docker image inspect passbundle:release --format 'Image size: {{.Size}} bytes'
+      - name: Smoke test, on SQLite and PostgreSQL
+        run: deploy/smoke.sh passbundle:release
+      - name: Save the image
+        run: docker save passbundle:release | gzip > passbundle-image.tar.gz
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: image
+          path: passbundle-image.tar.gz
+          retention-days: 14
