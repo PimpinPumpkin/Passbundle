@@ -371,7 +371,19 @@ Every setting explains itself in one sentence. Changing a setting needs no actio
 
 ## Browser import
 
-- Runs automatically after first sign-in.
+Two ways in: guided import now, in the web vault and the extension, and automatic import later, through the desktop agent once it's signed. Both are optional.
+
+**Guided import (built).** The person exports their passwords with the browser's own Export, and we take it from there.
+
+- **Where:** the web vault (Tools, Import from your browser, with a pointer on the regular Import page) and the extension (Vault settings, Import from your browser, in its own window, since a file picker closes the popup). One component for both (`libs/importer/src/components/keykeeper/`).
+- **Which browsers:** Chrome, Edge, Brave, and Firefox on Windows and Mac, and Safari (the Passwords app) on a Mac. It picks the person's browser and computer from the user agent, and they can pick another.
+- **The steps:** that browser's export, step by step, with the confirm its computer asks for (Windows Hello, Touch ID, or the computer's password) and the file name it saves. The extension can open a Chromium browser's passwords page for them; a web page can't, so the steps say what to type.
+- **The import:** upstream's importer for that browser's file, into the person's own vault. A login already there (same site, username, and password) or repeated in the file is left out, and one without a password is skipped. A login whose password differs from one they have for the same site and username is imported into a folder, "Check these: from <browser>", for them to compare. A file that isn't that browser's export is refused by name.
+- **Afterwards:** a summary of what happened, a reminder to delete the export (it has every password in plain text), with how on that computer, and how to turn off the browser's own password saving. On managed computers the install script turns it off by policy.
+- **Tests:** unit tests for detection, the steps, and the sorting (with upstream's Chrome importer on a real export); a web vault test (Chrome and Firefox exports, a file that isn't one, the folder to check) and an extension test.
+
+**Automatic import (later).** Runs after first sign-in through the desktop agent, which ships after code signing.
+
 - Sources: Chrome, Edge, Brave, Opera, and Vivaldi through the upstream GPL importer (`apps/desktop/desktop_native/chromium_importer`). Firefox is ours to write.
 - Dedupe: identical URL, username, and password merge into one item. Same URL and username with different passwords: the most recently changed wins and the others go to the review queue.
 - Skip "never save" entries and entries with empty passwords.
