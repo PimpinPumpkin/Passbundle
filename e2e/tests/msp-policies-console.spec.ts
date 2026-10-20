@@ -87,9 +87,12 @@ test("an MSP admin changes a default policy and sees which clients took it, and 
     .getByRole("button", { name: "Edit the default Require two-step login" })
     .click();
   const dialog = admin.getByRole("dialog");
-  await expect(dialog).toContainText(
-    "Saving changes this policy in the 2 clients that follow the default.",
+  await expect(dialog.getByTestId("default-policy-followers")).toContainText(
+    "Saving changes this policy in the clients that follow the default and are checked here.",
   );
+  for (const name of ["Acme Dental", "Baker Law"]) {
+    await expect(dialog.getByRole("checkbox", { name })).toBeChecked();
+  }
   await dialog.getByRole("checkbox", { name: "Turn on" }).check();
   await dialog.getByRole("button", { name: "Save default" }).click();
   await expect(admin.getByRole("dialog")).toContainText(
@@ -119,6 +122,23 @@ test("an MSP admin changes a default policy and sees which clients took it, and 
       .getByTestId("msp-client-Baker Law")
       .getByTestId("msp-client-policies"),
   ).toHaveText("Defaults");
+
+  // A changed default can leave a following client as it is: unchecked, Baker
+  // Law keeps what it has, which becomes its own setting.
+  await row("Remove Unlock with PIN")
+    .getByRole("button", { name: "Edit the default Remove Unlock with PIN" })
+    .click();
+  const pin = admin.getByRole("dialog");
+  await pin.getByRole("checkbox", { name: "Turn on" }).check();
+  await pin.getByRole("checkbox", { name: "Baker Law" }).uncheck();
+  await pin.getByRole("button", { name: "Save default" }).click();
+  await expect(
+    toast(admin, "Saved the default. Changed in Acme Dental. Baker Law kept its own setting."),
+  ).toBeVisible();
+  await expect(row("Remove Unlock with PIN").getByTestId("msp-policy-own")).toContainText("Baker Law");
+  await expect(
+    admin.getByTestId("msp-client-Baker Law").getByTestId("msp-client-policies"),
+  ).toHaveText("1 own setting");
 
   const activity = admin.getByTestId("msp-activity");
   await expect(activity).toContainText(
