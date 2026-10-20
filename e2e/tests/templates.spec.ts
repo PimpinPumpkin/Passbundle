@@ -1,7 +1,9 @@
 // Item templates: New, From template, pick one, and the new item starts with
-// that template's fields and remembers which template it came from.
+// that template's fields and remembers which template it came from. Custom
+// templates, made in the editor or with "Save as template" from an item.
 import { expect, test } from "@playwright/test";
 
+import { addLogin } from "./support/autofill";
 import { signUp, webUserFor } from "./support/web";
 
 test("a new item from the API key template starts with its fields and shows its template", async ({
@@ -136,4 +138,44 @@ test("a custom template is made in the ordinary editor, and new items start with
   await expect(
     page.getByRole("row").filter({ hasText: "Front desk PC" }).getByTestId("keykeeper-template-badge"),
   ).toHaveCount(0);
+});
+
+test("Save as template turns an item's custom fields into a new template, without their values", async ({
+  page,
+}, testInfo) => {
+  await signUp(page, webUserFor("template-from-item", testInfo.repeatEachIndex));
+  await addLogin(page, {
+    name: "Contoso 365 admin",
+    username: "admin@contoso.example",
+    password: "not-a-real-password-1",
+    uri: "https://admin.contoso.example",
+    customFields: { Tenant: "contoso.onmicrosoft.com" },
+  });
+  const view = page.getByRole("dialog", { name: "View Login" });
+  await view.getByRole("button", { name: "Close" }).first().click();
+  await expect(view).toBeHidden();
+
+  await page.getByRole("row").filter({ hasText: "Contoso 365 admin" }).getByRole("button", { name: "Options" }).click();
+  await page.getByRole("menuitem", { name: "Save as template" }).click();
+
+  // A new template for logins, named after the item, with its field and not its value.
+  const editor = page.getByRole("dialog", { name: /^New/ });
+  await expect(editor.getByTestId("keykeeper-template-hint")).toContainText("template for new logins");
+  const name = editor.getByRole("textbox", { name: /Item name/ });
+  await expect(name).toHaveValue("Contoso 365 admin");
+  await expect(editor.getByRole("textbox", { name: "Tenant", exact: true })).toHaveValue("");
+  await name.fill("Microsoft 365 admin");
+  await editor.getByRole("button", { name: "Save" }).click();
+  await expect(editor).toBeHidden();
+  await page.getByRole("dialog", { name: /^View/ }).getByRole("button", { name: "Close" }).first().click();
+
+  // New logins start from it.
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.getByRole("menuitem", { name: "From template" }).click();
+  await page
+    .getByRole("dialog", { name: "New item from a template" })
+    .getByRole("button", { name: "Microsoft 365 admin", exact: true })
+    .click();
+  const login = page.getByRole("dialog", { name: "New Login" });
+  await expect(login.getByRole("textbox", { name: "Tenant", exact: true })).toHaveValue("");
 });
