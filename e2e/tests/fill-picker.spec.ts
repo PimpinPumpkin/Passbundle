@@ -167,7 +167,7 @@ test("never-fill keeps a field empty on every later autofill", async ({
   await expect(after.getByLabel("Username")).toHaveValue("");
 });
 
-test("a fill rule stays out of sight in the web vault, and survives editing the item there", async ({
+test("the web vault shows a fill rule in plain language, keeps it through an edit, and removes it when asked", async ({
   context,
   extensionId,
 }, testInfo) => {
@@ -197,6 +197,10 @@ test("a fill rule stays out of sight in the web vault, and survives editing the 
   const view = vault.getByRole("dialog", { name: "View Login" });
   await expect(view.getByRole("textbox", { name: "Customer ID" })).toBeVisible();
   await expect(view.getByText("keykeeper.fill")).toHaveCount(0);
+  // It lists the rule in plain language instead.
+  await expect(view.getByTestId("keykeeper-fill-rules")).toContainText(
+    "bank.example.test: the field with id custno gets the Customer ID field",
+  );
 
   // Editing and saving the item there keeps the rule.
   await view.getByRole("button", { name: "Edit" }).click();
@@ -212,4 +216,24 @@ test("a fill rule stays out of sight in the web vault, and survives editing the 
   await after.goto(`${site}/bank-login.html`);
   await autofillFrom(context, after, "Username", "Example Bank");
   await expect(after.getByLabel("Customer number")).toHaveValue("C-12345");
+
+  // Removing the rule in the editor: saved, it no longer fills.
+  const saved = vault.getByRole("dialog", { name: "View Login" });
+  await saved.getByRole("button", { name: "Edit" }).click();
+  const removing = vault.getByRole("dialog", { name: /Edit Login/ });
+  const rules = removing.getByTestId("keykeeper-fill-rules-editor");
+  await expect(rules).toContainText("bank.example.test: the field with id custno gets the Customer ID field");
+  await rules.getByRole("button", { name: /^Remove the rule: bank\.example\.test/ }).click();
+  await expect(rules).toHaveCount(0);
+  await removing.getByRole("button", { name: "Save" }).click();
+  await expect(removing).toBeHidden();
+  await expect(saved.getByTestId("keykeeper-fill-rules")).toHaveCount(0);
+  await expect(saved.getByRole("textbox", { name: "Customer ID" })).toBeVisible();
+  await syncExtension(context);
+  await expect.poll(() => itemHasFillRule(context, "Example Bank")).toBe(false);
+
+  const without = await context.newPage();
+  await without.goto(`${site}/bank-login.html`);
+  await autofillFrom(context, without, "Username", "Example Bank");
+  await expect(without.getByLabel("Customer number")).toHaveValue("");
 });
