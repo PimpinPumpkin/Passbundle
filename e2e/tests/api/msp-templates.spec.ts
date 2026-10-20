@@ -300,22 +300,12 @@ test("a technician limited to chosen clients sees only the templates and copies 
   const mspId = await api.msp(admin, "Northwind IT");
   const dental = await api.client(admin, mspId, "Acme Dental", "business");
   const law = await api.client(admin, mspId, "Baker Law", "business");
-  const added = await api.call(
-    admin,
-    "POST",
-    `/api/keykeeper/msp/${mspId}/staff`,
-    {
-      email: tech.email,
-      role: "technician",
-      access: {
+  await api.addStaff(admin, mspId, tech, "technician", {
         allClients: false,
         clients: [dental],
         custom: null,
         installCommands: true,
-      },
-    },
-  );
-  expect(added.status, JSON.stringify(added.body)).toBe(200);
+      });
 
   const source = await api.personalItem(admin);
   const everywhere = randomUUID();

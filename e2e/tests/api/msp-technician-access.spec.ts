@@ -181,17 +181,7 @@ test("a technician with a custom role acts only within it, sees vault items only
   };
 
   // Access chosen when adding them applies from the start.
-  const added = await api.call(
-    admin,
-    "POST",
-    `/api/keykeeper/msp/${mspId}/staff`,
-    {
-      email: tech.email,
-      role: "technician",
-      access: helpdesk,
-    },
-  );
-  expect(added.status, JSON.stringify(added.body)).toBe(200);
+  await api.addStaff(admin, mspId, tech, "technician", helpdesk);
   expect(await memberIn(api, admin, dental, tech)).toMatchObject({
     status: ACCEPTED,
     type: CUSTOM,
@@ -347,7 +337,7 @@ test("an invitation carries a technician's access, and access is checked", async
   expect(await memberIn(api, other, theirClient, newcomer)).toBeUndefined();
 });
 
-test("a technician with a custom role works in every Business client, and a client's two-step login and single organization policies leave MSP staff alone", async ({
+test("a technician with a custom role works in every Business client: single organization leaves MSP staff alone, and two-step login applies to them", async ({
   request,
 }) => {
   test.setTimeout(120_000);
@@ -361,22 +351,12 @@ test("a technician with a custom role works in every Business client, and a clie
 
   // A custom role makes them a regular member in each client, and both
   // clients have single organization on. Staff are exempt, as admins are.
-  const added = await api.call(
-    admin,
-    "POST",
-    `/api/keykeeper/msp/${mspId}/staff`,
-    {
-      email: tech.email,
-      role: "technician",
-      access: {
+  await api.addStaff(admin, mspId, tech, "technician", {
         allClients: true,
         clients: [],
         custom: { permissions: { manageUsers: true }, vaultItems: false },
         installCommands: true,
-      },
-    },
-  );
-  expect(added.status, JSON.stringify(added.body)).toBe(200);
+      });
   // One membership waiting in each client, both confirmed.
   expect(await api.confirmPending(admin, mspId)).toEqual([
     tech.email,
@@ -390,8 +370,9 @@ test("a technician with a custom role works in every Business client, and a clie
   }
 
   // Turning on two-step login revokes the client's own members without it,
-  // and turning on single organization again revokes members of other
-  // organizations, but neither touches the technician.
+  // and the technician without it too: staff follow a client's two-step
+  // policy. Turning on single organization again revokes members of other
+  // organizations, but not the technician.
   await api.addMember(admin, dental, member, "user");
   const policy = async (orgId: string, type: number) => {
     const result = await api.call(
@@ -406,19 +387,17 @@ test("a technician with a custom role works in every Business client, and a clie
   };
   await policy(dental, 0);
   await policy(law, 3);
-  expect(await memberIn(api, admin, dental, member)).toMatchObject({
-    status: REVOKED,
-  });
-  for (const org of [dental, law]) {
-    expect(await memberIn(api, admin, org, tech)).toMatchObject({
-      status: CONFIRMED,
+  for (const who of [member, tech]) {
+    expect(await memberIn(api, admin, dental, who)).toMatchObject({
+      status: REVOKED,
     });
   }
+  expect(await memberIn(api, admin, law, tech)).toMatchObject({
+    status: CONFIRMED,
+  });
 
-  // They still work in both clients.
-  for (const org of [dental, law]) {
-    expect(
-      (await api.call(tech, "GET", `/api/organizations/${org}/users`)).status,
-    ).toBe(200);
-  }
+  // They still work in the other client.
+  expect(
+    (await api.call(tech, "GET", `/api/organizations/${law}/users`)).status,
+  ).toBe(200);
 });

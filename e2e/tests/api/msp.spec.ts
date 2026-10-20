@@ -10,6 +10,7 @@ const ADMIN = 1;
 const USER = 2;
 const ACCEPTED = 1;
 const CONFIRMED = 2;
+const REVOKED = -1;
 
 test("staff join every client, existing and new, and the console confirms them", async ({
   request,
@@ -297,7 +298,7 @@ test("MSP names are checked", async ({ request }) => {
   ).toEqual([]);
 });
 
-test("a client's single-organization and two-step login policies don't lock its MSP out", async ({
+test("a client's single-organization policy doesn't lock its MSP out, and its two-step policy keeps the MSP's owners but applies to technicians", async ({
   request,
 }) => {
   const api = new Api(request);
@@ -310,7 +311,8 @@ test("a client's single-organization and two-step login policies don't lock its 
   await api.confirmPending(admin, mspId);
 
   // Single organization (3) and two-step login (0): the technician belongs to
-  // two clients and has no two-step login, which would remove a regular member.
+  // two clients, which single organization allows for staff, and has no
+  // two-step login, which the client may require of the people who reach it.
   for (const type of [3, 0]) {
     const turnedOn = await api.call(
       admin,
@@ -323,11 +325,11 @@ test("a client's single-organization and two-step login policies don't lock its 
     expect(turnedOn.status, JSON.stringify(turnedOn.body)).toBe(200);
   }
 
-  const techIn = (await api.members(admin, strict)).find(
-    (m) => m.email === tech.email,
-  );
-  expect(techIn).toMatchObject({ status: CONFIRMED, type: ADMIN });
-  expect(await api.orgsOf(tech)).toEqual([strict, other].sort());
+  const members = await api.members(admin, strict);
+  expect(members.find((m) => m.email === tech.email)).toMatchObject({ status: REVOKED, type: ADMIN });
+  expect(await api.orgsOf(tech)).toEqual([other]);
+  // The MSP's admins own the client, so the policy never removes them.
+  expect(members.find((m) => m.email === admin.email)).toMatchObject({ status: CONFIRMED });
 
   // A regular member in the same position is refused, as upstream intends.
   const member = await api.account("member");

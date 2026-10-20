@@ -255,7 +255,7 @@ test("changing a default changes every client that follows it and leaves clients
   });
 });
 
-test("a default reaches a client through its admin console's policy code: two-step login revokes the client's members without it, not MSP staff", async ({
+test("a default reaches a client through its admin console's policy code: two-step login revokes members and technicians without it, not the MSP's owners", async ({
   request,
 }) => {
   test.setTimeout(120_000);
@@ -275,7 +275,12 @@ test("a default reaches a client through its admin console's policy code: two-st
   expect(members.find((m) => m.email === member.email)).toMatchObject({
     status: REVOKED,
   });
+  // Technicians follow a client's two-step policy like its own members. The
+  // MSP's admins own the client, so they stay, as upstream keeps owners.
   expect(members.find((m) => m.email === tech.email)).toMatchObject({
+    status: REVOKED,
+  });
+  expect(members.find((m) => m.email === admin.email)).toMatchObject({
     status: CONFIRMED,
   });
 });
@@ -290,22 +295,12 @@ test("a technician sees the defaults and their own clients' settings, but only M
   const mspId = await api.msp(admin, "Northwind IT");
   const dental = await api.client(admin, mspId, "Acme Dental", "business");
   await api.client(admin, mspId, "Baker Law", "business");
-  const added = await api.call(
-    admin,
-    "POST",
-    `/api/keykeeper/msp/${mspId}/staff`,
-    {
-      email: tech.email,
-      role: "technician",
-      access: {
+  await api.addStaff(admin, mspId, tech, "technician", {
         allClients: false,
         clients: [dental],
         custom: null,
         installCommands: true,
-      },
-    },
-  );
-  expect(added.status, JSON.stringify(added.body)).toBe(200);
+      });
 
   const seen = await overview(api, tech, mspId);
   expect(seen.clients.map((c) => c.name)).toEqual(["Acme Dental"]);

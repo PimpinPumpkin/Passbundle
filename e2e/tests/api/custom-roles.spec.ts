@@ -193,8 +193,10 @@ const rows: Row[] = [
     }),
   },
   {
+    // The export holds every item, and a client's own custom roles can't
+    // have access to all items yet.
     name: "export the organization's vault",
-    allowed: [...ADMINS, "accessImportExport"],
+    allowed: ADMINS,
     request: async ({ orgId }) => ({
       method: "GET",
       path: `/api/organizations/${orgId}/export`,
@@ -658,4 +660,84 @@ test("owners and admins assign custom roles, and clients see them as Custom with
   const after = (await api.call(poc, "GET", "/api/accounts/profile")).body
     .organizations[0];
   expect(after.type).toBe(2);
+});
+
+test("a manage-users member gives others only collections it can reach, with no more than its own access, and never the right to manage them", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const owner = await api.account("owner");
+  const orgId = await api.organization(owner, "Grants Org");
+  const reachable = await api.collection(owner, orgId);
+  const readOnly = await api.collection(owner, orgId);
+  const elsewhere = await api.collection(owner, orgId);
+  const poc = await api.account("poc");
+  const pocId = await api.addCustomMember(owner, orgId, poc, { manageUsers: true });
+  // The owner gives the point of contact two collections, one read-only.
+  const assigned = await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${pocId}`, {
+    type: 4,
+    permissions: { manageUsers: true },
+    collections: [
+      { id: reachable, readOnly: false, hidePasswords: false, manage: false },
+      { id: readOnly, readOnly: true, hidePasswords: false, manage: false },
+    ],
+    groups: [],
+  });
+  expect(assigned.status, JSON.stringify(assigned.body)).toBe(200);
+
+  const invite = (collection: string, rights: { readOnly?: boolean; manage?: boolean }) =>
+    api.call(poc, "POST", `/api/organizations/${orgId}/users/invite`, {
+      emails: [`newcomer-${randomUUID().slice(0, 8)}@api.example.test`],
+      type: 2,
+      collections: [{ id: collection, readOnly: false, hidePasswords: false, manage: false, ...rights }],
+      groups: [],
+      permissions: {},
+    });
+  for (const [collection, rights, message] of [
+    [elsewhere, {}, /collections it can reach/],
+    [reachable, { manage: true }, /right to manage/],
+    [readOnly, {}, /more access to a collection than it has/],
+  ] as const) {
+    const refused = await invite(collection, rights);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.message).toMatch(message);
+  }
+  expect((await invite(reachable, {})).status).toBe(200);
+  expect((await invite(readOnly, { readOnly: true })).status).toBe(200);
+
+  // Editing someone, it changes only what it reaches: their other
+  // collections stay as they were.
+  const member = await api.account("member");
+  const memberId = await api.addMember(owner, orgId, member, "user");
+  const given = await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${memberId}`, {
+    type: 2,
+    collections: [{ id: elsewhere, readOnly: false, hidePasswords: false, manage: false }],
+    groups: [],
+  });
+  expect(given.status, JSON.stringify(given.body)).toBe(200);
+  const edited = await api.call(poc, "PUT", `/api/organizations/${orgId}/users/${memberId}`, {
+    type: 2,
+    collections: [{ id: reachable, readOnly: false, hidePasswords: false, manage: false }],
+    groups: [],
+  });
+  expect(edited.status, JSON.stringify(edited.body)).toBe(200);
+  const details = await api.call(owner, "GET", `/api/organizations/${orgId}/users/${memberId}?includeCollections=true`);
+  const ids = details.body.collections.map((c: { id: string }) => c.id).sort();
+  expect(ids).toEqual([reachable, elsewhere].sort());
+});
+
+test("a custom role with import and export can't export the vault, which holds every item, without access to all items", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const owner = await api.account("owner");
+  const orgId = await api.organization(owner, "Export Org");
+  await api.collection(owner, orgId);
+  const exporter = await api.account("exporter");
+  await api.addCustomMember(owner, orgId, exporter, { accessImportExport: true });
+  const refused = await api.call(exporter, "GET", `/api/organizations/${orgId}/export`);
+  expect(refused.status).toBe(400);
+  expect(refused.body.message).toMatch(/needs access to all items/);
+  const exported = await api.call(owner, "GET", `/api/organizations/${orgId}/export`);
+  expect(exported.status, JSON.stringify(exported.body)).toBe(200);
 });

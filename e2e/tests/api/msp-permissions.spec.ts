@@ -119,11 +119,12 @@ const rows: Row[] = [
         method: "POST",
         path: `/api/keykeeper/msp/${ctx.mspId}/staff`,
         data: { email: newcomer.email, role: "technician" },
+        // Adding someone invites them; they join when they accept.
         check: async (allowed) => {
-          const staff = (await overview(ctx)).staff.map(
-            (s: { email: string }) => s.email,
+          const invited = (await overview(ctx)).invites.map(
+            (i: { email: string }) => i.email,
           );
-          expect(staff.includes(newcomer.email)).toBe(allowed);
+          expect(invited.includes(newcomer.email)).toBe(allowed);
         },
       };
     },
@@ -440,22 +441,12 @@ test.describe("MSP permissions", () => {
       const orgId = await api.client(admin, mspId, "Matrix Client");
       await api.addStaff(admin, mspId, tech, "technician");
       const limited = await api.account("limited-tech");
-      const addedLimited = await api.call(
-        admin,
-        "POST",
-        `/api/keykeeper/msp/${mspId}/staff`,
-        {
-          email: limited.email,
-          role: "technician",
-          access: {
+      await api.addStaff(admin, mspId, limited, "technician", {
             allClients: false,
             clients: [orgId],
             custom: { permissions: { manageUsers: true }, vaultItems: false },
             installCommands: false,
-          },
-        },
-      );
-      expect(addedLimited.status, JSON.stringify(addedLimited.body)).toBe(200);
+          });
       await api.confirmPending(admin, mspId);
       await api.addMember(admin, orgId, owner, "owner");
       await api.addMember(admin, orgId, user, "user");
