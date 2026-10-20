@@ -216,19 +216,29 @@ export class Api {
     return created.body.id;
   }
 
+  /**
+   * Puts someone on an MSP's staff the only way there is: an invitation, which
+   * they accept with its token. Returns the invitation response.
+   */
   async addStaff(
     admin: Account,
     mspId: string,
     member: Account,
     role: "admin" | "technician",
+    access?: unknown,
   ) {
-    const added = await this.call(
+    const invited = await this.call(
       admin,
       "POST",
       `/api/keykeeper/msp/${mspId}/staff`,
-      { email: member.email, role },
+      { email: member.email, role, access },
     );
-    expect(added.status, JSON.stringify(added.body)).toBe(200);
+    expect(invited.status, JSON.stringify(invited.body)).toBe(200);
+    expect(invited.body.invited).toBe(true);
+    const token = new URL(invited.body.inviteUrl).hash.split("invite=")[1];
+    const accepted = await this.call(member, "POST", "/api/keykeeper/msp/invites/accept", { token });
+    expect(accepted.status, JSON.stringify(accepted.body)).toBe(200);
+    return invited.body;
   }
 
   /** What the MSP console does when it opens: confirms everything waiting that this caller can confirm. */

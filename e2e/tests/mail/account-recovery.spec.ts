@@ -6,7 +6,7 @@ import { expect, test } from "@playwright/test";
 
 import { Api, encString } from "../api/support";
 
-import { inviteParams, joinByEmail, waitForMessage } from "./mailbox";
+import { inviteParams, joinByEmail, verifyEmail, waitForMessage } from "./mailbox";
 
 test("MSP staff can't join a client's account recovery or be recovered by it; invited members can", async ({
   request,
@@ -17,6 +17,8 @@ test("MSP staff can't join a client's account recovery or be recovered by it; in
   const member = await api.account("member");
   const mspId = await api.msp(admin, "Recovery IT");
   const orgId = await api.client(admin, mspId, "Recovery Client", "business");
+  // Where the server sends email, a staff invitation needs a verified address.
+  await verifyEmail(api, tech);
   await api.addStaff(admin, mspId, tech, "technician");
   await api.confirmPending(admin, mspId);
 
@@ -39,7 +41,7 @@ test("MSP staff can't join a client's account recovery or be recovered by it; in
   );
   expect(enroll.status).toBe(400);
   expect(enroll.body.message).toContain(
-    "MSP staff can't join a client organization's account recovery",
+    "MSP staff can't join an organization's account recovery",
   );
 
   // And the client's owner can't recover a technician.
@@ -100,6 +102,40 @@ test("MSP staff can't join a client's account recovery or be recovered by it; in
   expect(memberDetails.body.resetPasswordKey).toBe(
     encString("member-recovery-key"),
   );
+});
+
+test("someone who joins an MSP's staff leaves every account recovery, and no organization can recover them", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  // A company's own organization, enrolling its members in account recovery.
+  const owner = await api.account("owner");
+  const orgName = `Recovery Co ${Date.now()}`;
+  const orgId = await api.organization(owner, orgName);
+  const policy = await api.call(owner, "PUT", `/api/organizations/${orgId}/policies/8`, {
+    policy: { enabled: true, data: { autoEnrollEnabled: true } },
+  });
+  expect(policy.status, JSON.stringify(policy.body)).toBe(200);
+  const person = await api.account("person");
+  const memberId = await joinByEmail(api, owner, orgId, orgName, person, { type: 2 });
+  const enrolled = await api.call(owner, "GET", `/api/organizations/${orgId}/users/${memberId}/reset-password-details`);
+  expect(enrolled.status, JSON.stringify(enrolled.body)).toBe(200);
+
+  // They join an MSP's staff. Their account will reach every client, so the
+  // company's recovery of it ends, and it can't be recovered at all.
+  const mspAdmin = await api.account("msp-admin");
+  const mspId = await api.msp(mspAdmin, "Elsewhere IT");
+  await verifyEmail(api, person);
+  await api.addStaff(mspAdmin, mspId, person, "technician");
+  const details = await api.call(owner, "GET", `/api/organizations/${orgId}/users/${memberId}/reset-password-details`);
+  expect(details.status).toBe(400);
+  expect(details.body.message).toContain("MSP staff can't be recovered");
+  const again = await api.call(person, "PUT", `/api/organizations/${orgId}/users/${person.userId}/reset-password-enrollment`, {
+    resetPasswordKey: encString("person-recovery-key"),
+    masterPasswordHash: person.password,
+  });
+  expect(again.status).toBe(400);
+  expect(again.body.message).toContain("MSP staff can't join an organization's account recovery");
 });
 
 test("a custom role with account recovery recovers regular members only", async ({

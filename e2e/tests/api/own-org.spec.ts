@@ -172,12 +172,7 @@ test("an MSP's client's install command stays in the MSP's console, out of reach
   const orgId = await api.client(mspAdmin, mspId, "Acme Dental", "business");
   // A technician without install commands is still an admin in the client.
   const tech = await api.account("tech");
-  const added = await api.call(mspAdmin, "POST", `/api/keykeeper/msp/${mspId}/staff`, {
-    email: tech.email,
-    role: "technician",
-    access: { allClients: true, clients: [], custom: null, installCommands: false },
-  });
-  expect(added.status, JSON.stringify(added.body)).toBe(200);
+  await api.addStaff(mspAdmin, mspId, tech, "technician", { allClients: true, clients: [], custom: null, installCommands: false });
   await api.confirmPending(mspAdmin, mspId);
   expect(await api.orgsOf(tech)).toContain(orgId);
 

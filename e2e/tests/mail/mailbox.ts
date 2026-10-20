@@ -2,6 +2,7 @@
 import { expect } from "@playwright/test";
 
 import { mailHttpPort } from "../../paths.mjs";
+import { type Account, type Api } from "../api/support";
 
 export type Message = {
   to: string[];
@@ -85,4 +86,18 @@ export async function joinByEmail(
   );
   expect(confirmed.status, JSON.stringify(confirmed.body)).toBe(200);
   return memberId;
+}
+
+/** Verifies an account's email the way a person does: from the link the server emails. */
+export async function verifyEmail(api: Api, account: Account) {
+  const sent = await api.call(account, "POST", "/api/accounts/verify-email");
+  expect(sent.status, JSON.stringify(sent.body)).toBe(200);
+  const message = await waitForMessage(account.email, /Verify Your Email/);
+  const link = /verify-email\/\?userId=([^&\s]+)&token=(\S+)/.exec(message.text);
+  expect(link, message.text).toBeTruthy();
+  const verified = await api.call(account, "POST", "/api/accounts/verify-email-token", {
+    userId: link![1],
+    token: link![2],
+  });
+  expect(verified.status, JSON.stringify(verified.body)).toBe(200);
 }

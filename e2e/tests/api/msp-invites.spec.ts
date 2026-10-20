@@ -162,3 +162,38 @@ test("a cancelled invitation stops working", async ({ request }) => {
     targetEmail: email,
   });
 });
+
+test("adding someone with an account invites them too, with the same answer as an address without one, and they join only by accepting", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const admin = await api.account("invite-admin");
+  const mspId = await api.msp(admin, "Consent IT");
+  await api.client(admin, mspId, "Consent Dental");
+  const existing = await api.account("existing");
+  const nobody = `nobody-${Date.now()}@api.example.test`;
+
+  const shape = (body: Record<string, unknown>) => Object.keys(body).sort();
+  const forExisting = await api.call(admin, "POST", `/api/keykeeper/msp/${mspId}/staff`, {
+    email: existing.email,
+    role: "technician",
+  });
+  const forNobody = await api.call(admin, "POST", `/api/keykeeper/msp/${mspId}/staff`, {
+    email: nobody,
+    role: "technician",
+  });
+  expect(forExisting.status).toBe(200);
+  expect(forNobody.status).toBe(200);
+  expect(shape(forExisting.body)).toEqual(shape(forNobody.body));
+  expect(forExisting.body.invited).toBe(true);
+
+  // Not on the staff, and in no client, until they accept.
+  const overview = await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}`);
+  expect(overview.body.staff.map((s: { email: string }) => s.email)).not.toContain(existing.email);
+  expect(await api.orgsOf(existing)).toEqual([]);
+  const token = forExisting.body.inviteUrl.split("invite=")[1];
+  const accepted = await api.call(existing, "POST", "/api/keykeeper/msp/invites/accept", { token });
+  expect(accepted.status, JSON.stringify(accepted.body)).toBe(200);
+  const after = await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}`);
+  expect(after.body.staff.map((s: { email: string }) => s.email)).toContain(existing.email);
+});

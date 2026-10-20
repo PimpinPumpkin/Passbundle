@@ -6,22 +6,9 @@ import { expect, test } from "@playwright/test";
 
 import { type Account, Api, encString, publicKey } from "../api/support";
 
-import { joinByEmail, type Message, waitForMessage } from "./mailbox";
+import { joinByEmail, type Message, verifyEmail, waitForMessage } from "./mailbox";
 
 /** Verifies an account's email the way a person does: the emailed link. */
-async function verifyEmail(api: Api, account: Account) {
-  const sent = await api.call(account, "POST", "/api/accounts/verify-email");
-  expect(sent.status, JSON.stringify(sent.body)).toBe(200);
-  const message = await waitForMessage(account.email, /Verify Your Email/);
-  const link = /verify-email\/\?userId=([^&\s]+)&token=(\S+)/.exec(message.text);
-  expect(link, message.text).toBeTruthy();
-  const verified = await api.call(account, "POST", "/api/accounts/verify-email-token", {
-    userId: link![1],
-    token: link![2],
-  });
-  expect(verified.status, JSON.stringify(verified.body)).toBe(200);
-}
-
 async function setUp(api: Api, name: string) {
   const admin = await api.account("msp-admin");
   const mspId = await api.msp(admin, `${name} IT`);
@@ -42,7 +29,7 @@ async function messagesTo(address: string): Promise<Message[]> {
   return response.json();
 }
 
-test("an install command limited to email domains lets in only verified accounts there, and email invitations still work", async ({
+test("an install command limited to email domains lets in only verified accounts there, and regular email invitations still work", async ({
   request,
 }) => {
   const api = new Api(request);
@@ -76,6 +63,11 @@ test("an install command limited to email domains lets in only verified accounts
   expect(unverified.body.message).toContain("Verify your email address first");
   await verifyEmail(api, insider);
   expect((await join(api, insider, token)).status).toBe(200);
+  const autoConfirm = async (email: string) =>
+    (await api.call(admin, "GET", "/api/keykeeper/organizations/pending")).body.data.find(
+      (p: { email: string }) => p.email === email,
+    )?.autoConfirm;
+  expect(await autoConfirm(insider.email)).toBe(true);
 
   // Someone the client's admins invited by email joins from any address.
   const guest = await api.account("guest", `guest-${Date.now()}@elsewhere.example.test`);
@@ -87,12 +79,35 @@ test("an install command limited to email domains lets in only verified accounts
     permissions: {},
   });
   expect(invited.status, JSON.stringify(invited.body)).toBe(200);
+  // Once they've proved the address: otherwise registering an invited
+  // address would be enough to take its invitation.
+  const unproved = await join(api, guest, token);
+  expect(unproved.status).toBe(400);
+  expect(unproved.body.message).toContain("Verify your email address first");
+  await verifyEmail(api, guest);
   expect((await join(api, guest, token)).status).toBe(200);
 
-  // Without domains, anyone with the command joins again.
+  // An invitation to be an admin is accepted only from its email.
+  const wouldBeAdmin = await api.account("would-be-admin", `admin-${Date.now()}@elsewhere.example.test`);
+  await verifyEmail(api, wouldBeAdmin);
+  const adminInvite = await api.call(admin, "POST", `/api/organizations/${orgId}/users/invite`, {
+    emails: [wouldBeAdmin.email],
+    type: 1,
+    collections: [],
+    groups: [],
+    permissions: {},
+  });
+  expect(adminInvite.status, JSON.stringify(adminInvite.body)).toBe(200);
+  const refused = await join(api, wouldBeAdmin, token);
+  expect(refused.status).toBe(400);
+  expect(refused.body.message).toBe("Accept your emailed invitation to Domain Co instead.");
+
+  // Without domains, anyone with the command can ask to join again, but an
+  // owner or admin approves them: nobody's app confirms them on its own.
   const cleared = await api.call(admin, "PUT", domainsUrl, { domains: [] });
   expect(cleared.body.domains).toEqual([]);
   expect((await join(api, outsider, token)).status).toBe(200);
+  expect(await autoConfirm(outsider.email)).toBe(false);
 
   const events = (await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}/events`)).body.data
     .filter((e: { event: string }) => e.event === "install_domains_set")
@@ -109,33 +124,46 @@ test("a client's own owners hear when someone joins with the install command, an
   const owner = await api.account("client-owner");
   await joinByEmail(api, admin, orgId, "Notice Co", owner, { type: 0 });
 
-  // Joining is automatic: they're in, and the owner is told who it was.
+  // Without email domains, someone who joins waits for an owner or admin,
+  // and the owner is told who it is.
   const person = await api.account("person");
   expect((await join(api, person, token)).status).toBe(200);
-  const joined = await waitForMessage(owner.email, new RegExp(`^${person.email} joined Notice Co$`));
-  expect(joined.text).toContain(`${person.email} joined Notice Co with your IT provider's install command.`);
+  const asked = await waitForMessage(owner.email, new RegExp(`^${person.email} is waiting to join Notice Co$`));
+  expect(asked.text).toContain(`${person.email} asked to join Notice Co with your IT provider's install command.`);
+  expect(asked.text).toContain("They get access once an admin approves them");
+  expect(asked.html).toContain("Approve them");
+
+  // Limited to the client's domains, a verified address there gets in with
+  // nobody confirming, and the owner hears who it was.
+  const domains = await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/clients/${orgId}/enrollment/domains`, {
+    domains: ["api.example.test"],
+  });
+  expect(domains.status, JSON.stringify(domains.body)).toBe(200);
+  const insider = await api.account("insider");
+  await verifyEmail(api, insider);
+  expect((await join(api, insider, token)).status).toBe(200);
+  const joined = await waitForMessage(owner.email, new RegExp(`^${insider.email} joined Notice Co$`));
+  expect(joined.text).toContain(`${insider.email} joined Notice Co with your IT provider's install command.`);
   expect(joined.text).toContain("They get access without anyone confirming them.");
   expect(joined.text).toContain(`/#/organizations/${orgId}/members`);
   expect(joined.html).toContain("Open the Members page");
 
   // Nobody at the MSP gets one per join, and the person isn't told about themselves.
-  const toAdmin = (await messagesTo(admin.email)).filter((m) => m.subject.includes(person.email));
+  const toAdmin = (await messagesTo(admin.email)).filter((m) => m.subject.includes(insider.email));
   expect(toAdmin).toEqual([]);
-  expect((await messagesTo(person.email)).filter((m) => / join/.test(m.subject))).toEqual([]);
+  expect((await messagesTo(insider.email)).filter((m) => / join/.test(m.subject))).toEqual([]);
 
-  // Where an admin approves joiners, the email says so.
+  // Where an admin approves every joiner, the email says so for them too.
   const approval = await api.call(admin, "PUT", `/api/keykeeper/organizations/${orgId}/joining`, {
     autoConfirm: false,
     inviteHours: 120,
   });
   expect(approval.status, JSON.stringify(approval.body)).toBe(200);
   const second = await api.account("second");
+  await verifyEmail(api, second);
   expect((await join(api, second, token)).status).toBe(200);
   const waiting = await waitForMessage(owner.email, new RegExp(`^${second.email} is waiting to join Notice Co$`));
   expect(waiting.text).toContain(`${second.email} asked to join Notice Co with your IT provider's install command.`);
-  expect(waiting.text).toContain("They get access once an admin approves them");
-  expect(waiting.html).toContain("Approve them");
-  void mspId;
 });
 
 test("a company's owners hear when someone joins with their own install command, and can limit it to their domains", async ({
@@ -155,15 +183,22 @@ test("a company's owners hear when someone joins with their own install command,
   const command = `/api/keykeeper/organizations/${orgId}/enrollment`;
   const { token } = (await api.call(owner, "POST", command)).body;
 
+  // Without domains, the owners approve whoever asks.
   const person = await api.account("person");
   expect((await join(api, person, token)).status).toBe(200);
-  const joined = await waitForMessage(owner.email, new RegExp(`^${person.email} joined Own IT Co$`));
-  expect(joined.text).toContain(`${person.email} joined Own IT Co with your install command.`);
+  const asked = await waitForMessage(owner.email, new RegExp(`^${person.email} is waiting to join Own IT Co$`));
+  expect(asked.text).toContain(`${person.email} asked to join Own IT Co with your install command.`);
 
-  // This server sends email, so the command can be limited to the company's domains.
+  // This server sends email, so the command can be limited to the company's
+  // domains, and then a verified address there gets in by itself.
   const limited = await api.call(owner, "PUT", `${command}/domains`, { domains: ["own-it.example.test"] });
   expect(limited.status, JSON.stringify(limited.body)).toBe(200);
   expect(limited.body.domains).toEqual(["own-it.example.test"]);
+  const insider = await api.account("insider", `insider-${Date.now()}@own-it.example.test`);
+  await verifyEmail(api, insider);
+  expect((await join(api, insider, token)).status).toBe(200);
+  const joined = await waitForMessage(owner.email, new RegExp(`^${insider.email} joined Own IT Co$`));
+  expect(joined.text).toContain(`${insider.email} joined Own IT Co with your install command.`);
   const stranger = await api.account("stranger");
   const refused = await join(api, stranger, token);
   expect(refused.status).toBe(400);
