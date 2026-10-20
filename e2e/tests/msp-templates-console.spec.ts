@@ -2,7 +2,8 @@
 // vault and adds it for every client, and it applies to all of them, a client
 // added later included; editing it changes every client's copy without
 // anything else to click; the copies show once, under "From <MSP>", when
-// making a new item; and removing it can take the copies away. Real keys
+// making a new item; narrowing it to one client can take the others' copies
+// away; and removing it can take the copies away. Real keys
 // throughout: each copy is encrypted for its client in the browser. See
 // DESIGN.md, "MSP templates".
 import { expect, test, type Page } from "@playwright/test";
@@ -166,6 +167,24 @@ test("a template added for every client applies to all of them, a new client inc
       .getByTestId("keykeeper-template-definition"),
   ).toContainText("It comes from Northwind IT, which keeps it up to date.");
   await closeView(admin);
+
+  // Only one client now: the others' copies can go to their trash.
+  await admin.goto("/#/msp");
+  await row.getByRole("button", { name: "Change clients for Firewall" }).click();
+  const appliesTo = admin.getByRole("dialog", { name: /Applies to/ });
+  await expect(appliesTo.getByRole("radio", { name: /Every client/ })).toBeChecked();
+  await appliesTo.getByRole("radio", { name: /Only the clients chosen here/ }).check();
+  await appliesTo.getByRole("checkbox", { name: "Acme Dental" }).check();
+  await appliesTo.getByRole("button", { name: "Save" }).click();
+  await expect(admin.getByText("2 of them have it.", { exact: false })).toBeVisible();
+  await admin.getByRole("button", { name: "Remove from those clients" }).click();
+  await expect(toast(admin, "Firewall now applies to Acme Dental.")).toBeVisible();
+  await expect(row).toContainText("Acme Dental");
+  await expect(row).not.toContainText("Every client");
+  await expect(row.getByTestId("msp-template-status")).toHaveText("Up to date");
+  chooser = await templateChooser(admin);
+  await expect(chooser.getByRole("region", { name: "From Northwind IT" }).getByRole("button")).toHaveCount(1);
+  await admin.keyboard.press("Escape");
 
   // Removing it, from the clients too.
   await admin.goto("/#/msp");
