@@ -384,3 +384,41 @@ test("defaults must be supported policies with options, and only the MSP's own c
     (await clientPolicy(api, admin, dental, MASTER_PASSWORD)).data.minLength,
   ).toBe(12);
 });
+
+test("a changed default skips the following clients the admin chose to keep as they are, which then have their own setting", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const admin = await api.account("msp-admin");
+  const mspId = await api.msp(admin, "Northwind IT");
+  const dental = await api.client(admin, mspId, "Acme Dental", "business");
+  const law = await api.client(admin, mspId, "Baker Law", "business");
+
+  const raised = await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/policies/${MASTER_PASSWORD}`, {
+    enabled: true,
+    data: { ...STRONG, minLength: 16 },
+    keep: [law],
+  });
+  expect(raised.status, JSON.stringify(raised.body)).toBe(200);
+  expect(names(raised.body.changed)).toEqual(["Acme Dental"]);
+  expect(names(raised.body.kept)).toEqual(["Baker Law"]);
+  expect((await clientPolicy(api, admin, dental, MASTER_PASSWORD)).data.minLength).toBe(16);
+  expect((await clientPolicy(api, admin, law, MASTER_PASSWORD)).data.minLength).toBe(12);
+  expect(await ownSettings(api, admin, mspId, law)).toEqual([MASTER_PASSWORD]);
+  expect(await ownSettings(api, admin, mspId, dental)).toEqual([]);
+
+  // Only the MSP's own clients can be kept, and nothing changes otherwise.
+  const otherAdmin = await api.account("other-admin");
+  const otherMsp = await api.msp(otherAdmin, "Elsewhere IT");
+  const elsewhere = await api.client(otherAdmin, otherMsp, "Elsewhere Co", "business");
+  const refused = await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/policies/${MASTER_PASSWORD}`, {
+    enabled: true,
+    data: { ...STRONG, minLength: 20 },
+    keep: [elsewhere],
+  });
+  expect(refused.status).toBe(400);
+  expect((await clientPolicy(api, admin, dental, MASTER_PASSWORD)).data.minLength).toBe(16);
+  expect(
+    (await overview(api, admin, mspId)).defaults.find((p) => p.type === MASTER_PASSWORD)!.data.minLength,
+  ).toBe(16);
+});
