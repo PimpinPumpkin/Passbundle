@@ -3,10 +3,19 @@
 // characters, with a lowercase and an uppercase letter and a digit, and only
 // -!#$&+/?@_ besides; the generator's usual 14 characters are too long there.
 // The page is the local fixture, under that name (see paths.mjs).
-import type { BrowserContext, Page } from "@playwright/test";
+import { test as webTest, type BrowserContext, type Page } from "@playwright/test";
 
 import { extensionFrame, hasElementDeep, waitForExtensionScan } from "./support/autofill";
 import { createAccount, expect, logInPopup, openPopup, test, userFor } from "./support/extension";
+import { signUp, webUserFor } from "./support/web";
+
+/** airfrance.com's published rules, as a pattern, plus one of each required kind. */
+function expectAirFranceRules(password: string) {
+  expect(password).toMatch(/^[-A-Za-z0-9!#$&+/?@_]{8,12}$/);
+  expect(password).toMatch(/[a-z]/);
+  expect(password).toMatch(/[A-Z]/);
+  expect(password).toMatch(/[0-9]/);
+}
 
 test.describe.configure({ timeout: 120_000 });
 
@@ -57,9 +66,30 @@ test("a suggested password follows the site's own password rules, and is the usu
   const site = await context.newPage();
   await site.goto("https://www.airfrance.com/signup.html");
   const password = await fillSuggestedPassword(context, site);
-  expect(password).toMatch(/^[-A-Za-z0-9!#$&+/?@_]{8,12}$/);
-  expect(password).toMatch(/[a-z]/);
-  expect(password).toMatch(/[A-Z]/);
-  expect(password).toMatch(/[0-9]/);
+  expectAirFranceRules(password);
   await expect(site.getByLabel("Confirm password")).toHaveValue(password);
+});
+
+webTest("the item editor's generator follows the item's website's password rules, showing what it uses", async ({
+  page,
+}, testInfo) => {
+  await signUp(page, webUserFor("site-rules-editor", testInfo.repeatEachIndex));
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Login" }).click();
+  const item = page.getByRole("dialog", { name: "New Login" });
+  await item.getByRole("textbox", { name: /Item name/ }).fill("Air France");
+  // A website the way people type it, without https://.
+  await item.getByRole("textbox", { name: "Website (URI)" }).fill("www.airfrance.com");
+  await item.getByTestId("generate-password-button").click();
+
+  const shown = page.locator("tools-password-generator bit-color-password").first();
+  await expect(shown).not.toHaveText("");
+  const offered = (await shown.textContent()) ?? "";
+  await page.getByRole("button", { name: "Use this password" }).click();
+  const password = item.getByRole("textbox", { name: "Password", exact: true });
+  await expect(password).not.toHaveValue("");
+  const used = await password.inputValue();
+  expectAirFranceRules(used);
+  // The one the generator showed (and would have copied), not another.
+  expect(offered.replace(/\s/g, "")).toContain(used);
 });
