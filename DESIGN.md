@@ -503,7 +503,7 @@ The goal is to be measurably better than upstream. 1Password currently does this
 - **Corpus:** reduced fixtures of real login patterns. Multi-step logins, iframes, shadow DOM, single-page apps, one-time-code fields, signup and change-password forms, card forms.
 - **Scoreboard:** every commit runs both the upstream extension and ours against the corpus. We publish the numbers.
 - **Reference material** (compatible licenses only): Chromium autofill heuristics (BSD-3-Clause), Firefox form detection (MPL-2.0), and `apple/password-manager-resources` quirks data (MIT).
-- **Per-site corrections:** handled by fill rules (next section). Sharing form structure (never values) is a later, opt-in idea.
+- **Per-site corrections:** handled by fill rules (next section), and shared, for people who choose to, as site fixes (see "Site fixes (opt-in)").
 
 ### Choosing what fills where
 
@@ -519,6 +519,21 @@ Upstream fills a custom field only when its name exactly matches the page field'
 - **The picker keeps upstream's rules:** an item that asks for the master password asks before its password, code, or hidden fields fill (the rule is saved, and the fill after the prompt uses it); hidden fields aren't offered to someone who can't see passwords; and a secret never goes into a frame from another site.
 - **Built so far:** the right-click picker (`fill-field-menu.ts`). Value rules fill first, before upstream's matching. Never-fill fields are hidden from upstream's field selection, so a value meant elsewhere moves to the next fitting field. Unit tests cover the rules and the menu. Tier 1 covers a custom field into a differently named field, and never-fill.
 - **Next:** show rules in plain language in the item editor and hide the raw `keykeeper.fill` fields there (they currently show as hidden custom fields), one-tap label-match suggestions, site-wide never-fill, translated menu strings, and the same picker inside the inline menu.
+
+### Site fixes (opt-in)
+
+When a site doesn't fill right, someone fixes it with the fill picker. Site fixes let that fix help everyone else on the same server, and tell us which sites need work, without passwords, custom field names, or browsing leaving anyone's device unless they choose. Decided October 2026: opt-in, anonymous, and nothing applies to others until several people agree.
+
+- **What a fix is:** the site's host, how to recognize the field (the id, name, or label a fill rule records), and which kind of value goes there: the username, the password, the one-time code, or "never fill". Never a value, a custom field's name (it can say something about the person), a page address beyond the host, or anything else on the page.
+- **Sharing is off until the person turns it on** (the extension's Autofill settings: "Share fixes I make with the fill picker"). With it on, each fix they make with the fill picker goes to their own server: PassBundle's hosted service, or the server their organization runs. Custom-field fixes stay on their device either way.
+- **"Report a problem with this site"** (the extension's current-tab view) sends the host and the shape of the page's sign-in fields (types, ids, names, labels, and autocomplete hints; never values) with an optional note. It's one report per click, sharing or not, and the form says exactly what goes.
+- **Anonymous:** a fix is stored once, with a count of the different people who sent it. The server counts each person once by a keyed hash of their account and the fix, with a key only the server has, so it never stores who sent what; problem reports keep no account at all. At most 20 problem reports per site a day are kept.
+- **Confirmed fixes apply to everyone on the server** once 3 different people have sent the same one (`SITE_FIX_REPORTERS`). The extension downloads the whole confirmed list when it unlocks and once a day, and matches it on the device, so asking doesn't tell the server which sites someone visits. A fix fills only where the person's own item has no rule for that field, with the same limits as their rules: the same host, a visible field, an id that decides, and passwords only into password fields for someone who can't see them.
+- **MSPs:** fixes their own staff share also show in the MSP console, with who sent them (staff are accountable to their MSP). An MSP admin can apply one to every client right away ("Use for every client"); those MSP site rules reach the members of its clients and its staff the same way, without waiting for three people. Changes go in the MSP's activity log.
+- **For us:** the server's admin page lists the sites with problem reports and the fixes waiting for confirmation, newest first. That's the private list of what needs work.
+- **Privacy policy:** a section says what each choice sends and that it's off by default.
+- **Tests:** unit tests for what a fix contains (and doesn't), sharing only when turned on, the downloaded list matched on the device, and fixes applied after the item's own rules with the same limits (`apps/browser/src/autofill/keykeeper/site-fixes.spec.ts`); API tests for counting each person once, the threshold, what a fix and a report can hold, the daily cap, and MSP rules with their permission matrix (`e2e/tests/api/site-fixes.spec.ts`); and an extension test where an MSP admin turns sharing on, fixes a field with the fill picker, sees it in the console, uses it for every client, and the extension applies it to a login without a rule (`e2e/tests/site-fixes.spec.ts`).
+- **Status:** built: the server (`keykeeper_site_fixes.rs`, a migration, the admin page's Sites list), the extension (`site-fixes.ts`, the Autofill settings section, the report page), and the console's Site fixes section. Not yet: a link to the report page from the current-tab list.
 
 ### One-time codes never become passwords
 
