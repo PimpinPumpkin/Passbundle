@@ -1,10 +1,13 @@
 // The whole path from an MSP's install command to account recovery, with real
-// keys: someone joins a Business client from the extension, which encrypts
-// their user key to the client's public key; the MSP console confirms them;
-// an MSP admin recovers their account; and they sign in with the new password
-// to an intact vault. If the extension's recovery key were wrong in any way,
+// keys: the extension asks someone whether to join a Business client, saying
+// its admins could then reset their master password; they join, and the
+// extension encrypts their user key to the client's public key; an MSP admin
+// approves them and recovers their account; and they sign in with the new
+// password to an intact vault. If the extension's recovery key were wrong in any way,
 // the last step would fail. Runs on the server that sends email, since the
 // server only offers account recovery with email.
+import type { Page } from "@playwright/test";
+
 import { mailServerPort } from "../paths.mjs";
 
 import { addLogin } from "./support/autofill";
@@ -16,7 +19,7 @@ import {
   test,
   userFor,
 } from "./support/extension";
-import { signUp, webUserFor } from "./support/web";
+import { confirmMember, signUp, webUserFor } from "./support/web";
 
 const mailServer = `https://127.0.0.1:${mailServerPort}`;
 const newPassword = "a brand new passphrase for 2026";
@@ -47,7 +50,7 @@ test("an MSP admin recovers the account of someone who joined through the instal
   const client = admin.getByTestId("msp-client-Recovery Dental");
   await client.getByRole("button", { name: "Install command" }).click();
   const command = await admin.getByTestId("msp-install-command").textContent();
-  const token = /-EnrollmentToken (\S+)/.exec(command ?? "")?.[1];
+  const token = /-EnrollmentToken '([A-Za-z0-9_-]{43})'/.exec(command ?? "")?.[1];
   expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
 
   // The person has an account with an item, and signs in to the extension.
@@ -63,11 +66,12 @@ test("an MSP admin recovers the account of someone who joined through the instal
   const popup = await openPopup(context, extensionId);
   await logInPopup(popup, person, mailServer);
 
-  // The install command hands the extension the token through browser policy;
-  // here the test hands it over directly, then runs the same join.
-  const outcome = await context
+  // The install command hands the extension the token and the server through
+  // browser policy; here the test hands them over directly, then runs the same
+  // join, which asks first.
+  const outcome = context
     .serviceWorkers()[0]
-    .evaluate(async (enrollmentToken) => {
+    .evaluate(async ({ enrollmentToken, server }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const main = (self as any).bitwardenMain;
       const userId = await new Promise<string>((resolve) => {
@@ -81,26 +85,39 @@ test("an MSP admin recovers the account of someone who joined through the instal
         );
       });
       const enrollment = main.keykeeperEnrollment;
+      // Let the run the unlock started, with the real (empty) policy, finish first.
+      await enrollment.run(userId);
       enrollment.platform = {
         ...enrollment.platform,
         managedToken: async () => enrollmentToken,
+        managedServer: async () => server,
       };
       return enrollment.run(userId);
-    }, token);
-  expect(outcome).toBe("joined");
+    }, { enrollmentToken: token, server: mailServer });
+  let prompt: Page | undefined;
+  await expect
+    .poll(() => (prompt = context.pages().find((p) => p.url().includes("keykeeper-join"))))
+    .toBeTruthy();
+  const question = prompt!.getByTestId("keykeeper-join");
+  await expect(question).toContainText("so you can join Recovery Dental");
+  await expect(question).toContainText(
+    "Recovery Dental's admins will be able to reset your master password",
+  );
+  await expect(prompt!.getByTestId("keykeeper-join-fingerprint")).toHaveText(/^\w+(-\w+){4}$/);
+  await prompt!.getByRole("button", { name: "Join", exact: true }).click();
+  expect(await outcome).toBe("joined");
 
-  // The MSP console confirms them when it opens.
+  // The command isn't limited to email domains, so an MSP admin approves
+  // them on the client's Members page: the console doesn't.
   await admin.goto("/#/vault");
   await admin.goto("/#/msp");
-  await expect(
-    admin.getByText("Confirmed 1 member", { exact: true }),
-  ).toBeVisible();
-
-  // The admin recovers the person's account with a new master password.
   await admin
     .getByTestId("msp-client-Recovery Dental")
     .getByRole("link", { name: "Open" })
     .click();
+  await confirmMember(admin, person.email);
+
+  // The admin recovers the person's account with a new master password.
   const row = admin.getByRole("row").filter({ hasText: person.email });
   await row.getByRole("button", { name: "Options" }).click();
   await admin.getByRole("menuitem", { name: "Recover account" }).click();

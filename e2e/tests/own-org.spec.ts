@@ -50,7 +50,7 @@ test("a business's organization starts with its policies and an install command,
   const section = page.getByTestId("org-install");
   const command = section.getByTestId("org-install-command");
   await expect(command).toContainText("-EnrollmentToken");
-  const token = /-EnrollmentToken (\S+)/.exec((await command.textContent())!)![1];
+  const token = /-EnrollmentToken '([A-Za-z0-9_-]{43})'/.exec((await command.textContent())!)![1];
   await expect(section.getByTestId("org-install-joins")).toContainText("0 people have joined with this command.");
 
   // Someone runs it and signs in. Their public key is real: the owner's web
