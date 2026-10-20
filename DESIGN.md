@@ -484,6 +484,27 @@ Bitwarden's Secrets Manager is a separate DevOps product under its source-availa
 - Later: allow and block lists through policy.
 - Never force-install third-party extensions.
 
+## Capacity
+
+What one Phase 0 server handles, measured by the load test in the private ops repo (`hosting/load/`): the Release image with the app and PostgreSQL sharing two cores (a mobile Xeon E-2276M) and 4 GB, 500 accounts with 100 items each (50,000 items in the database), and k6 on other cores.
+
+| Request | Per second | Median | 95th percentile |
+|---|---|---|---|
+| Sync (`/api/sync`, what every app does on unlock and after changes) | 451 | 110 ms | 119 ms |
+| Saving an item | 884 | 56 ms | 63 ms |
+| Signing in with the master password | 9 | 866 ms | 1.3 s |
+
+- **Signing in is the expensive one, on purpose:** the server hashes the master password hash again (PBKDF2, 600,000 rounds) before comparing it. Unlocking doesn't touch the server. On rollout day, 200 people signing in within the same minute wait at most about 20 seconds.
+- **What that means for people (assumptions, not measurements):** in the busiest hour, an active person's apps sync about 6 times and save once, and 1 in 10 people signs in with their password. Then one starter server has room for well over 100,000 people active in that hour. A provider's vCPU is often slower than these cores, so halve it to be safe. Resize when the busiest hour uses half the CPU (launch plan, "How it scales").
+- **Not measured yet:** live-update connections (one per open app), memory over days, and organizations with thousands of shared items.
+
+**Sync used to get slower as the service grew.** Upstream's item query (`Cipher::find_by_user`) left-joins items to memberships, collections, and groups and ORs the access conditions across the joins, which no index can serve, and upstream has no secondary indexes. So every sync read every item in the database: the same 100-item vault synced at 258 a second with 2,000 items in the database and 65 with 50,000 (310 ms in the item query).
+
+- **The fix (passbundle-server):**
+  - **Narrowing:** every access condition in that query goes through the join on the person's confirmed membership in the item's organization, or else it's the owner condition. So the query is first narrowed to items the person owns or that belong to one of their confirmed organizations, with those organizations looked up first. The conditions that decide are unchanged, and so is what it returns.
+  - **Indexes:** a migration (`keykeeper_lookup_indexes`) indexes what sync and sign-in look up by.
+- **Tests:** every API and mail test (permissions across owners, collections, groups, admins, custom roles, and MSP staff) passes unchanged on SQLite and PostgreSQL. The load test is the regression check for speed.
+
 ## Testing
 
 | Tier | When | Contents |
