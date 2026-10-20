@@ -72,12 +72,15 @@ test("an MSP admin chooses a technician's clients, role, and install commands, a
 
   // The technician sees only that client, without its install command, and
   // opens it where their role starts. Reloading locks the vault; unlock it.
+  // (It returns to the console, where they accepted the invitation.)
   await tech.reload();
   await tech
     .getByRole("textbox", { name: /^Master password/ })
     .fill(techUser.password);
-  await tech.getByRole("button", { name: "Unlock", exact: true }).click();
-  await tech.waitForURL(/#\/vault/);
+  const unlock = tech.getByRole("button", { name: "Unlock", exact: true });
+  await unlock.click();
+  await expect(unlock).toBeHidden();
+  await tech.goto("/#/vault");
   await tech.goto("/#/msp");
   const techDental = tech.getByTestId("msp-client-Acme Dental");
   await expect(techDental).toBeVisible();
