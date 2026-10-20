@@ -7,6 +7,7 @@ import {
   expect,
   test as base,
   type BrowserContext,
+  type Locator,
   type Page,
 } from "@playwright/test";
 
@@ -120,4 +121,20 @@ export async function logInPopup(popup: Page, user: User, server = serverUrl) {
   ).toBeVisible({
     timeout: 30_000,
   });
+}
+
+/**
+ * Presses a button that closes its own window, and waits for it to close.
+ * The window can close before the click returns, which Playwright reports as
+ * the page having closed; here that's the answer arriving, not a failure.
+ */
+export async function answerAndClose(page: Page, button: Locator) {
+  await Promise.all([
+    page.waitForEvent("close"),
+    button.click({ noWaitAfter: true }).catch((error: unknown) => {
+      if (!page.isClosed() && !String(error).includes("has been closed")) {
+        throw error;
+      }
+    }),
+  ]);
 }
