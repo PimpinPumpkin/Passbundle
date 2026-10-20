@@ -46,7 +46,22 @@ test("an MSP admin chooses a technician's clients, role, and install commands, a
   await newAccess.getByRole("checkbox", { name: "Manage users" }).check();
   await newAccess.getByRole("checkbox", { name: "Sees install commands" }).uncheck();
   await admin.getByRole("button", { name: "Add staff" }).click();
-  await expect(toast(admin, `Added ${techUser.email} to 1 client`)).toBeVisible();
+  await expect(toast(admin, `Invited ${techUser.email}`)).toBeVisible();
+  await expect(admin.getByTestId(`msp-invite-${techUser.email}`)).toContainText(
+    "Acme Dental · Custom role · No install commands",
+  );
+
+  // They accept from the link, and the console confirms them in Acme Dental.
+  const link = await admin.getByTestId("msp-invite-link").locator("pre").textContent();
+  await tech.goto(link!.slice(link!.indexOf("/#/")));
+  await tech
+    .getByTestId("msp-invitation")
+    .getByRole("button", { name: "Join Wingtip IT" })
+    .click();
+  await expect(toast(tech, "You joined Wingtip IT")).toBeVisible();
+  await admin.goto("/#/vault");
+  await admin.goto("/#/msp");
+  await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
   const staffRow = admin.getByTestId(`msp-staff-${techUser.email}`);
   await expect(staffRow.getByTestId("msp-staff-access")).toHaveText(
     "Acme Dental · Custom role · No install commands",

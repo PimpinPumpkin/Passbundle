@@ -12,7 +12,7 @@ import { signUp, webUserFor } from "./support/web";
 const toast = (page: Page, text: string) =>
   page.getByText(text, { exact: true });
 
-test("an MSP admin adds a client and a technician, and the technician gets in without a manual confirm", async ({
+test("an MSP admin adds a client and a technician, and the technician gets in once they accept, without a manual confirm", async ({
   browser,
 }, testInfo) => {
   // These tests drive several accounts end to end; CI machines are slower.
@@ -123,11 +123,23 @@ test("an MSP admin adds a client and a technician, and the technician gets in wi
   await expect(row.getByTestId("msp-client-expiring")).toHaveText("1");
   await expect(row.getByTestId("msp-client-reused")).toHaveText("0");
 
-  // A technician: added to every client and confirmed by the console.
+  // A technician: invited, even with an account, since joining an MSP's staff
+  // is theirs to accept. They accept from the link, and the console confirms
+  // them in every client.
   await admin
     .getByRole("textbox", { name: "Email of someone to add" })
     .fill(techUser.email);
   await admin.getByRole("button", { name: "Add staff" }).click();
+  await expect(toast(admin, `Invited ${techUser.email}`)).toBeVisible();
+  const link = await admin.getByTestId("msp-invite-link").locator("pre").textContent();
+  await tech.goto(link!.slice(link!.indexOf("/#/")));
+  await tech
+    .getByTestId("msp-invitation")
+    .getByRole("button", { name: "Join Northwind IT" })
+    .click();
+  await expect(toast(tech, "You joined Northwind IT")).toBeVisible();
+  await admin.goto("/#/vault");
+  await admin.goto("/#/msp");
   await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
   await expect(admin.getByTestId(`msp-staff-${techUser.email}`)).toContainText(
     "Technician",

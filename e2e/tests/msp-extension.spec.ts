@@ -1,6 +1,8 @@
 // An MSP's background work in the browser extension: with no vault tab open,
-// an MSP admin's extension confirms someone who joined a client through the
-// install command, and brings the client's copy of a template up to date after
+// an MSP admin's extension confirms someone invited to a client by email
+// (install command joins wait for approval unless the command is limited to
+// email domains, which needs a server that sends email; the mail tests cover
+// those), and brings the client's copy of a template up to date after
 // the admin edits it in the popup. Real keys throughout: the confirm encrypts
 // the org key to the person's real public key, and the copy is encrypted for
 // the client in the extension. See DESIGN.md, "MSP console" and "MSP templates".
@@ -22,7 +24,7 @@ import {
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
 
-test("with no vault tab open, an MSP admin's extension confirms someone who joined a client and updates the client's copy of a template", async ({
+test("with no vault tab open, an MSP admin's extension confirms someone invited to a client and updates the client's copy of a template", async ({
   context,
   extensionId,
   request,
@@ -70,13 +72,28 @@ test("with no vault tab open, an MSP admin's extension confirms someone who join
   const sourceId = new URLSearchParams(editHref!.split("?")[1]).get("itemId");
   expect(sourceId).toBeTruthy();
 
-  // The client's install token, from its install command.
-  await web.getByTestId("msp-client-Acme Dental").getByRole("button", { name: "Install command" }).click();
-  const command = await web.getByTestId("msp-install-command").textContent();
-  const token = command!.match(/-EnrollmentToken (\S+)$/)![1];
+  // Someone with an account is invited to the client by email. This test
+  // server sends no email, so the invitation counts as accepted at once, and
+  // they wait for the org key.
+  const api = new Api(request);
+  const { publicKey } = generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: "spki", format: "der" },
+    privateKeyEncoding: { type: "pkcs8", format: "der" },
+  });
+  const person = await api.account("FrontDesk", undefined, publicKey.toString("base64"));
+  await web.getByTestId("msp-client-Acme Dental").getByRole("link", { name: "Open" }).click();
+  await expect(web).toHaveURL(/#\/organizations\/[^/]+\/members/);
+  const orgId = /#\/organizations\/([^/]+)\//.exec(web.url())![1];
+  await web.getByRole("button", { name: "Invite member" }).click();
+  const invite = web.getByRole("dialog", { name: /Invite member/ });
+  await invite.getByRole("textbox", { name: /Email/ }).fill(person.email);
+  await invite.getByRole("button", { name: "Save" }).click();
+  await expect(invite).toBeHidden();
 
   // From here on, no vault tab: only the extension.
   await web.close();
+  expect(await api.orgsOf(person)).toEqual([]);
   const popup = await openPopup(context, extensionId);
   await logInPopup(popup, adminUser);
   const vaultUrl = popup.url();
@@ -89,22 +106,10 @@ test("with no vault tab open, an MSP admin's extension confirms someone who join
   const alarm = await worker.evaluate(() => chrome.alarms.get("keykeeper-msp-work"));
   expect(alarm?.periodInMinutes).toBe(5);
 
-  // Someone joins the client with the install token and waits for the org key.
-  const api = new Api(request);
-  const { publicKey } = generateKeyPairSync("rsa", {
-    modulusLength: 2048,
-    publicKeyEncoding: { type: "spki", format: "der" },
-    privateKeyEncoding: { type: "pkcs8", format: "der" },
-  });
-  const person = await api.account("FrontDesk", undefined, publicKey.toString("base64"));
-  const joined = await api.call(person, "POST", "/api/keykeeper/enrollment/join", { token });
-  expect(joined.status, JSON.stringify(joined.body)).toBe(200);
-  expect(await api.orgsOf(person)).toEqual([]);
-
   // The extension confirms them.
   await expect(async () => {
     expect(await runWork()).toEqual([]);
-    expect(await api.orgsOf(person)).toEqual([joined.body.organizationId]);
+    expect(await api.orgsOf(person)).toEqual([orgId]);
   }).toPass({ timeout: 60_000, intervals: [2_000] });
 
   // The admin adds a field to the template in the popup.
