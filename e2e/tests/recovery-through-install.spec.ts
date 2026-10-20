@@ -111,7 +111,11 @@ test("an MSP admin recovers the account of someone who joined through the instal
     "Recovery Dental's admins will be able to reset your master password",
   );
   await expect(prompt!.getByTestId("keykeeper-join-fingerprint")).toHaveText(/^\w+(-\w+){4}$/);
-  await prompt!.getByRole("button", { name: "Join", exact: true }).click();
+  // The answer closes the window, so the click doesn't wait for anything after.
+  await Promise.all([
+    prompt!.waitForEvent("close"),
+    prompt!.getByRole("button", { name: "Join", exact: true }).click({ noWaitAfter: true }),
+  ]);
   expect(await outcome).toBe("joined");
 
   // The command isn't limited to email domains, so an MSP admin approves
