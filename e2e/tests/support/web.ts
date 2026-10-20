@@ -21,3 +21,18 @@ export async function signUp(page: Page, user: WebUser) {
   await page.waitForURL(/#\/vault/);
   await expect(page).toHaveTitle(/Vaults/);
 }
+
+/**
+ * An owner or admin approves someone waiting on the Members page they have
+ * open, with upstream's Confirm and its fingerprint dialog.
+ */
+export async function confirmMember(page: Page, email: string) {
+  const row = page.getByRole("row").filter({ hasText: email });
+  await expect(row.getByText("Needs confirmation")).toBeVisible();
+  await row.getByRole("button", { name: "Options" }).click();
+  await page.getByRole("menuitem", { name: "Confirm" }).click();
+  const dialog = page.getByRole("dialog", { name: /Confirm user/ });
+  await dialog.getByRole("button", { name: "Confirm" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(row.getByText("Needs confirmation")).toHaveCount(0);
+}

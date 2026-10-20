@@ -7,7 +7,7 @@ import { generateKeyPairSync } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 
 import { Api } from "./api/support";
-import { signUp, webUserFor } from "./support/web";
+import { confirmMember, signUp, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
@@ -29,7 +29,7 @@ async function openSettings(page: Page, org: string) {
   await expect(page.getByRole("heading", { name: "Install command" })).toBeVisible();
 }
 
-test("a business's organization starts with its policies and an install command, and people who join with it get in", async ({
+test("a business's organization starts with its policies and an install command, and people who join with it get in once approved", async ({
   page,
   request,
 }, testInfo) => {
@@ -65,14 +65,13 @@ test("a business's organization starts with its policies and an install command,
   const joined = await api.call(person, "POST", "/api/keykeeper/enrollment/join", { token });
   expect(joined.status, JSON.stringify(joined.body)).toBe(200);
 
-  // Opening Members confirms them, and they have the Everyone collection.
+  // The command isn't limited to email domains, so the owner approves them
+  // on the Members page, and they have the Everyone collection.
   const orgId = /organizations\/([0-9a-f-]{36})/.exec(org)![1];
-  await expect(async () => {
-    await page.goto("/#/vault");
-    await page.goto(`${org}/members`);
-    await expect(page.getByText(person.email)).toBeVisible({ timeout: 5_000 });
-    expect(await api.orgsOf(person)).toEqual([orgId]);
-  }).toPass({ timeout: 60_000, intervals: [3_000] });
+  await page.goto("/#/vault");
+  await page.goto(`${org}/members`);
+  await confirmMember(page, person.email);
+  await expect.poll(() => api.orgsOf(person)).toEqual([orgId]);
   expect((await api.call(person, "GET", "/api/collections")).body.data).toHaveLength(1);
 
   // Replacing the token changes the command.
