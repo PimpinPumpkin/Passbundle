@@ -8,7 +8,9 @@
     - turns off the browser's own password saving and filling,
     - optionally turns off card and address autofill,
     - optionally gives the extension its server address and the client's
-      enrollment token, so people join the client after they sign in.
+      enrollment token, join secret, and organization key fingerprint, so
+      people join the client after they sign in (the extension asks first,
+      and checks the organization's key against the fingerprint).
   With the agent's files in an "agent" folder next to this script, it also
   installs the desktop agent to Program Files: it starts at every sign-in,
   the browsers can reach it for Windows Hello unlock (our extension only), and
@@ -18,7 +20,8 @@
 .EXAMPLE
   .\Install-PassBundle.ps1 -Browsers Edge,Chrome -DisableCardAutofill
 .EXAMPLE
-  .\Install-PassBundle.ps1 -ServerUrl https://vault.example.com -EnrollmentToken <token from the MSP console>
+  .\Install-PassBundle.ps1 -ServerUrl https://vault.example.com -EnrollmentToken <token> -JoinSecret <secret> -OrgKey <fingerprint>
+  (the MSP console's install command has all three)
 .EXAMPLE
   .\Install-PassBundle.ps1 -DisableAgentUpdates   # the RMM updates the agent instead
 .EXAMPLE
@@ -37,6 +40,14 @@ param(
   # The client's enrollment token, from the MSP console.
   [ValidatePattern('^[A-Za-z0-9_-]{43}$')]
   [string] $EnrollmentToken,
+  # The install command's join secret, which the server never sees: joins
+  # prove they know it. See DESIGN.md, "Joins a hacked server can't forge".
+  [ValidatePattern('^[A-Za-z0-9_-]{43}$')]
+  [string] $JoinSecret,
+  # The fingerprint of the client's organization key, which the extension
+  # checks before it escrows anything for account recovery.
+  [ValidatePattern('^[A-Za-z0-9_-]{43}$')]
+  [string] $OrgKey,
   # The agent doesn't update itself; the RMM pushes new versions instead.
   [switch] $DisableAgentUpdates,
   [switch] $Remove
@@ -112,6 +123,14 @@ function Set-ManagedSettings([string] $Browser) {
   if ($EnrollmentToken) {
     if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
     New-ItemProperty -Path $path -Name "enrollmentToken" -Value $EnrollmentToken -PropertyType String -Force | Out-Null
+  }
+  if ($JoinSecret) {
+    if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
+    New-ItemProperty -Path $path -Name "joinSecret" -Value $JoinSecret -PropertyType String -Force | Out-Null
+  }
+  if ($OrgKey) {
+    if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
+    New-ItemProperty -Path $path -Name "orgKeyFingerprint" -Value $OrgKey -PropertyType String -Force | Out-Null
   }
 }
 

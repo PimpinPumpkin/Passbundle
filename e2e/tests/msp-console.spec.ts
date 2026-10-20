@@ -64,14 +64,15 @@ test("an MSP admin adds a client and a technician, and the technician gets in on
   }
   await admin.goto("/#/msp");
 
-  // The client's install command for the RMM, with its enrollment token.
+  // The client's install command for the RMM, with its enrollment token, join
+  // secret, and the client's key fingerprint.
   await admin
     .getByTestId("msp-client-Acme Dental")
     .getByRole("button", { name: "Install command" })
     .click();
   const command = admin.getByTestId("msp-install-command");
   const shape = new RegExp(
-    `^\\.\\\\${brand.installScript.replace(".", "\\.")} -ServerUrl 'https://127\\.0\\.0\\.1:\\d+' -EnrollmentToken '[A-Za-z0-9_-]{43}'$`,
+    `^\\.\\\\${brand.installScript.replace(".", "\\.")} -ServerUrl 'https://127\\.0\\.0\\.1:\\d+' -EnrollmentToken '[A-Za-z0-9_-]{43}' -JoinSecret '[A-Za-z0-9_-]{43}' -OrgKey '[A-Za-z0-9_-]{43}'$`,
   );
   await expect(command).toHaveText(shape);
   const firstCommand = await command.textContent();

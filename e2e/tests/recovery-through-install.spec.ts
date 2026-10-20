@@ -50,8 +50,14 @@ test("an MSP admin recovers the account of someone who joined through the instal
   const client = admin.getByTestId("msp-client-Recovery Dental");
   await client.getByRole("button", { name: "Install command" }).click();
   const command = await admin.getByTestId("msp-install-command").textContent();
-  const token = /-EnrollmentToken '([A-Za-z0-9_-]{43})'/.exec(command ?? "")?.[1];
+  const part = (name: string) =>
+    new RegExp(`-${name} '([A-Za-z0-9_-]{43})'`).exec(command ?? "")?.[1] ?? null;
+  const token = part("EnrollmentToken");
   expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  // The command also carries the join secret and the client's key fingerprint.
+  const joinParts = { secret: part("JoinSecret"), orgKey: part("OrgKey") };
+  expect(joinParts.secret).not.toBeNull();
+  expect(joinParts.orgKey).not.toBeNull();
 
   // The person has an account with an item, and signs in to the extension.
   const person = userFor("recovery-person", testInfo.repeatEachIndex);
@@ -71,7 +77,7 @@ test("an MSP admin recovers the account of someone who joined through the instal
   // join, which asks first.
   const outcome = context
     .serviceWorkers()[0]
-    .evaluate(async ({ enrollmentToken, server }) => {
+    .evaluate(async ({ enrollmentToken, server, parts }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const main = (self as any).bitwardenMain;
       const userId = await new Promise<string>((resolve) => {
@@ -91,9 +97,10 @@ test("an MSP admin recovers the account of someone who joined through the instal
         ...enrollment.platform,
         managedToken: async () => enrollmentToken,
         managedServer: async () => server,
+        managedJoinParts: async () => parts,
       };
       return enrollment.run(userId);
-    }, { enrollmentToken: token, server: mailServer });
+    }, { enrollmentToken: token, server: mailServer, parts: joinParts });
   let prompt: Page | undefined;
   await expect
     .poll(() => (prompt = context.pages().find((p) => p.url().includes("keykeeper-join"))))
