@@ -124,6 +124,18 @@ test("an MSP admin adds a client and a technician, and the technician gets in on
   await expect(row.getByTestId("msp-client-expiring")).toHaveText("1");
   await expect(row.getByTestId("msp-client-reused")).toHaveText("0");
 
+  // The same item in the list of what's expiring across all clients, which
+  // opens it in the client's vault.
+  const expiring = admin.getByTestId("msp-expiring").getByTestId("msp-expiring-Front desk PC");
+  await expect(expiring).toContainText("Acme Dental");
+  await expect(expiring).toContainText("Expires in 5 days");
+  await expiring.getByRole("link", { name: "Front desk PC" }).click();
+  await expect(admin).toHaveURL(/#\/organizations\/[0-9a-f-]{36}\/vault/);
+  const opened = admin.getByRole("dialog", { name: /^View/ });
+  await expect(opened.getByRole("textbox", { name: "Username" })).toHaveValue("frontdesk@acme.test");
+  await opened.getByRole("button", { name: "Close" }).first().click();
+  await admin.goto("/#/msp");
+
   // A technician: invited, even with an account, since joining an MSP's staff
   // is theirs to accept. They accept from the link, and the console confirms
   // them in every client.
