@@ -151,14 +151,15 @@ test("a template added for every client applies to all of them, a new client inc
   ).toBeVisible();
   await admin.keyboard.press("Escape");
 
-  // A client's copy says where it comes from.
+  // A client's copy isn't in the vault's lists, only in the client's Templates
+  // collection, and says where it comes from there.
   await admin.goto("/#/vault");
-  await admin
-    .getByRole("row")
-    .filter({ hasText: "Firewall" })
-    .filter({ hasText: "Acme Dental" })
-    .getByText("Firewall", { exact: true })
-    .click();
+  const firewalls = admin.getByRole("row").filter({ hasText: "Firewall" });
+  await expect(firewalls.first()).toBeVisible();
+  await expect(firewalls.filter({ hasText: "Acme Dental" })).toHaveCount(0);
+  await admin.getByRole("button", { name: "vault: Acme Dental" }).click();
+  await admin.getByRole("button", { name: "Filter: Templates" }).click();
+  await firewalls.filter({ hasText: "Acme Dental" }).getByText("Firewall", { exact: true }).click();
   await expect(
     admin
       .getByRole("dialog", { name: /^View/ })
