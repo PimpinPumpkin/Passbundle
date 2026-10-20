@@ -30,8 +30,10 @@ New-ItemProperty -Path "$chromeRoot\ExtensionInstallForcelist" -Name "1" -Value 
 
 $serverUrl = "https://vault.example.test"
 $token = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJ0123456"
-& $script -DisableCardAutofill -ServerUrl "$serverUrl/" -EnrollmentToken $token
-& $script -DisableCardAutofill -ServerUrl "$serverUrl/" -EnrollmentToken $token   # second run must change nothing
+$joinSecret = "QEFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaW1xdXl8"
+$orgKey = "gpfywOP9ms6QtlYF65DLr2GSIBBe-lYsna8wlVbDQYE"
+& $script -DisableCardAutofill -ServerUrl "$serverUrl/" -EnrollmentToken $token -JoinSecret $joinSecret -OrgKey $orgKey
+& $script -DisableCardAutofill -ServerUrl "$serverUrl/" -EnrollmentToken $token -JoinSecret $joinSecret -OrgKey $orgKey   # second run must change nothing
 
 $chromeList = Forcelist $chromeRoot
 $edgeList = Forcelist $edgeRoot
@@ -53,6 +55,8 @@ function Managed([string] $Root, [string] $Id, [string] $Sub, [string] $Name) {
 Check "Chrome extension gets the server address" { (Managed $chromeRoot "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" "\environment" "base") -eq $serverUrl }
 Check "Chrome extension gets the enrollment token" { (Managed $chromeRoot "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" "" "enrollmentToken") -eq $token }
 Check "Edge extension gets the enrollment token" { (Managed $edgeRoot "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" "" "enrollmentToken") -eq $token }
+Check "Chrome extension gets the join secret" { (Managed $chromeRoot "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" "" "joinSecret") -eq $joinSecret }
+Check "Edge extension gets the organization key fingerprint" { (Managed $edgeRoot "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" "" "orgKeyFingerprint") -eq $orgKey }
 
 # Bad values are refused before anything is written.
 $refusedHttp = $false
@@ -61,10 +65,16 @@ Check "Plain HTTP server addresses are refused" { $refusedHttp }
 $refusedToken = $false
 try { & $script -EnrollmentToken "not-a-token" } catch { $refusedToken = $true }
 Check "Malformed enrollment tokens are refused" { $refusedToken }
+$refusedSecret = $false
+try { & $script -JoinSecret "x'; calc" } catch { $refusedSecret = $true }
+Check "Malformed join secrets are refused" { $refusedSecret }
+$refusedOrgKey = $false
+try { & $script -OrgKey "short" } catch { $refusedOrgKey = $true }
+Check "Malformed organization key fingerprints are refused" { $refusedOrgKey }
 
 # The script has no way to force-install anything but our IDs: its parameters
 # are exactly these, so a new one needs a review of this check.
-$allowed = "Browsers", "DisableCardAutofill", "DisableAddressAutofill", "KeepBrowserPasswordManager", "ServerUrl", "EnrollmentToken", "DisableAgentUpdates", "Remove"
+$allowed = "Browsers", "DisableCardAutofill", "DisableAddressAutofill", "KeepBrowserPasswordManager", "ServerUrl", "EnrollmentToken", "JoinSecret", "OrgKey", "DisableAgentUpdates", "Remove"
 $own = (Get-Command $script).Parameters.Keys | Where-Object { [System.Management.Automation.PSCmdlet]::CommonParameters -notcontains $_ -and [System.Management.Automation.PSCmdlet]::OptionalCommonParameters -notcontains $_ }
 Check "Parameters are exactly the reviewed set" { -not (Compare-Object @($own | Sort-Object) @($allowed | Sort-Object)) }
 
