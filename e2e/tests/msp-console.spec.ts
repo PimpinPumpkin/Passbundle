@@ -71,7 +71,7 @@ test("an MSP admin adds a client and a technician, and the technician gets in on
     .click();
   const command = admin.getByTestId("msp-install-command");
   const shape = new RegExp(
-    `^\\.\\\\${brand.installScript.replace(".", "\\.")} -ServerUrl https://127\\.0\\.0\\.1:\\d+ -EnrollmentToken [A-Za-z0-9_-]{43}$`,
+    `^\\.\\\\${brand.installScript.replace(".", "\\.")} -ServerUrl 'https://127\\.0\\.0\\.1:\\d+' -EnrollmentToken '[A-Za-z0-9_-]{43}'$`,
   );
   await expect(command).toHaveText(shape);
   const firstCommand = await command.textContent();

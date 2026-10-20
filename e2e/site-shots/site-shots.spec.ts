@@ -13,7 +13,7 @@ import { chromium, expect, test, type Browser, type Locator, type Page } from "@
 import { paths, siteHost, siteHostRules } from "../paths.mjs";
 import { Api } from "../tests/api/support";
 import { logInPopup } from "../tests/support/extension";
-import { signUp, type WebUser } from "../tests/support/web";
+import { confirmMember, signUp, type WebUser } from "../tests/support/web";
 
 import { clientVault, clients, emailOf, personalVault } from "./data";
 
@@ -278,7 +278,7 @@ test("a company with its own IT: its members, policies, and install command", as
   await web.goto("/#/vault");
   await web.goto(`${org}/settings`);
   const command = await web.getByTestId("org-install-command").textContent();
-  const token = /-EnrollmentToken (\S+)/.exec(command!)![1];
+  const token = /-EnrollmentToken '([A-Za-z0-9_-]{43})'/.exec(command!)![1];
 
   // The people join with it, as after a rollout. Their public key is real for the confirm.
   const api = new Api(request);
@@ -296,13 +296,13 @@ test("a company with its own IT: its members, policies, and install command", as
     emails.push(email);
   }
 
-  // Opening Members confirms everyone who joined.
-  await expect(async () => {
-    await web.goto("/#/vault");
-    await web.goto(`${org}/members`);
-    await expect(web.getByText(emails.at(-1)!)).toBeVisible({ timeout: 5_000 });
-    await expect(web.getByRole("row").getByText("Needs confirmation")).toHaveCount(0, { timeout: 2_000 });
-  }).toPass({ timeout: 90_000, intervals: [3_000] });
+  // The owner approves everyone who joined: limiting the command to email
+  // domains, which lets people in without that, needs a server that sends email.
+  await web.goto("/#/vault");
+  await web.goto(`${org}/members`);
+  for (const email of emails) {
+    await confirmMember(web, email);
+  }
 
   for (const scheme of schemes) {
     await web.emulateMedia({ colorScheme: scheme });

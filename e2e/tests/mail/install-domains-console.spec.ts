@@ -22,7 +22,9 @@ test("an MSP admin limits a client's install command to its email domains, and l
     page.getByTestId("msp-client-Acme Dental").getByRole("button", { name: "Install command" }).click();
   await open();
   const panel = page.getByTestId("msp-install");
-  await expect(panel).toContainText("Anyone who has it can ask to join, so treat it like a password.");
+  await expect(panel).toContainText(
+    "Anyone who has it can ask to join, and an owner or admin approves each one, so treat it like a password.",
+  );
   const field = panel.getByRole("textbox", { name: "Only these email domains can join" });
   await expect(field).toHaveValue("");
 
@@ -50,7 +52,7 @@ test("an MSP admin limits a client's install command to its email domains, and l
 
   await field.fill("");
   await panel.getByRole("button", { name: "Save domains" }).click();
-  await expect(toast(page, "Anyone with the command can join Acme Dental")).toBeVisible();
+  await expect(toast(page, "Anyone with the command can ask to join Acme Dental")).toBeVisible();
   await expect(panel).toContainText("Anyone who has it can ask to join");
 
   // Activity loads with the console; a page reload would lock the vault.
