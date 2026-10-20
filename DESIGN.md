@@ -559,14 +559,18 @@ After a sign-in form is submitted, upstream asks the page for the typed values o
 
 ## Script access (our Secrets Manager)
 
-Bitwarden's Secrets Manager is a separate DevOps product under its source-available license, so we can't use it. Ours starts from what MSPs need: RMM scripts that use credentials (domain admin, client API keys) without pasting them into the RMM in plain text. The full design, for review, is `docs/script-access.md`, with test vectors in `docs/vectors/script-access-v1.json`.
+Bitwarden's Secrets Manager is a separate DevOps product under its source-available license, so we can't use it. Ours starts from what MSPs need: RMM scripts that use credentials (domain admin, client API keys) without pasting them into the RMM in plain text. The full design is `docs/script-access.md`, with test vectors in `docs/vectors/script-access-v1.json`.
 
 - **Scoped tokens:** a token reads only the fields of the items it was granted, in one organization. It can't list or browse the vault.
 - **Made for scripts:** a PowerShell module first (`Get-PassBundleCredential -Item "Domain admin"`), the command-line client later.
 - **Short-lived and limited:** tokens expire (at most a year), can be limited to networks, and are revoked instantly. Binding to a machine comes with the desktop agent.
 - **End-to-end encrypted:** a grant is a copy of the chosen fields, encrypted with a key derived from the token's seed, which the server never sees. The token key is also sealed with the organization key, so apps that hold it keep copies current after edits.
 - **Audited:** every read is logged with token, item, time, and address. A token's first use from a new address shows in the MSP's activity log.
-- **Status:** designed and decided (October 20, 2026); being built.
+- **Status:** built (October 20, 2026).
+  - **Settings page:** an organization's owners and admins, and its MSP's admins, make tokens, see each token's reads, and revoke them. The token string shows once, with the lines a script needs.
+  - **The module:** the server serves `PassBundle.psm1` with its own address filled in. It works in Windows PowerShell 5.1 and PowerShell 7 with nothing to install, and gives `Get-PassBundleCredential` and `Get-PassBundleSecret` (username, password, a current one-time code, or a custom field).
+  - **Copies kept current:** the web vault and the extension refresh a grant's copy after its item changes, and the settings page shows a token as Updating until they have.
+  - **Tests:** the API tests cover reads, refusals, networks, the 60-a-minute limit, refreshing, and who may do what. The module runs against the test server, and the vectors' checks run under Windows PowerShell 5.1 and PowerShell 7 on Windows. Upstream's crypto checks the vectors too.
 - **Later:** rotation helpers that change a credential and update the item together, plus CI integrations if developers ask.
 - **Clean room:** designed from public descriptions only. Never read Bitwarden's Secrets Manager code or SDK.
 
