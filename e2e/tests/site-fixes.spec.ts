@@ -1,8 +1,9 @@
 // Site fixes end to end (DESIGN.md, "Site fixes (opt-in)"): an MSP admin
 // turns on sharing in the extension, fixes a field with the fill picker, sees
 // the fix in the MSP console, uses it for every client, and the extension then
-// applies it to a login that has no rule of its own. The API tests cover
-// three people confirming a fix and the permissions.
+// applies it to a login that has no rule of its own. Also: reporting a site
+// from the current tab's suggestions. The API tests cover three people
+// confirming a fix, the permissions, and what a report can hold.
 import type { BrowserContext, Page } from "@playwright/test";
 
 import { addLogin, chooseFirstInlineMenuItem, waitForExtensionScan } from "./support/autofill";
@@ -110,4 +111,51 @@ test("a fix an MSP admin shares from the fill picker, used for every client, fil
   await chooseFirstInlineMenuItem(context, after, "Second login");
   await expect(password).toHaveValue("not-a-real-password-1");
   await expect(after.getByLabel("Username")).toHaveValue("");
+});
+
+test("the current tab's suggestions link to a report of that site's fields, which never carries what's typed in them", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const host = `site-report-${testInfo.repeatEachIndex}.example.test`;
+  const user = userFor("site-report", testInfo.repeatEachIndex);
+  const web = await createAccount(context, user);
+  // A login for the site, so the popup lists the tab's suggestions (an empty vault shows none).
+  await web.goto(`${serverUrl}/#/vault`);
+  await addLogin(web, { name: "Report login", username: "report-user", password: "not-a-real-password-1", uri: `https://${host}` });
+  const popup = await openPopup(context, extensionId);
+  await logInPopup(popup, user);
+
+  const page = await context.newPage();
+  await page.goto(`https://${host}/simple-login.html`);
+  await waitForExtensionScan(context, page, "username");
+  await page.getByLabel("Username").fill("typed-but-never-sent");
+
+  // The popup lists the suggestions for the active tab, so the site's tab goes
+  // in front, and the popup loads fresh, as when it opens.
+  await page.bringToFront();
+  await popup.reload();
+  await expect(popup.getByRole("heading", { name: "Autofill suggestions" })).toBeVisible();
+  await popup.getByTestId("current-tab-site-problem-link").click();
+  const report = popup.getByTestId("site-problem");
+  await expect(report).toContainText(host);
+  await expect(popup.getByTestId("site-problem-fields")).toContainText("username");
+  await expect(popup.getByTestId("site-problem-fields")).toContainText("current-password");
+  await popup.getByRole("textbox", { name: /What went wrong/ }).fill("The username box stays empty");
+  const sent = popup.waitForRequest(
+    (r) => r.method() === "POST" && r.url().endsWith("/api/keykeeper/site-problems"),
+  );
+  await popup.getByRole("button", { name: "Send report" }).click();
+  const body = (await sent).postDataJSON();
+  expect(body.host).toBe(host);
+  expect(body.note).toBe("The username box stays empty");
+  expect(body.fields).toContainEqual({
+    id: "username",
+    name: "username",
+    label: "Username",
+    type: "text",
+    autocomplete: "username",
+  });
+  expect(JSON.stringify(body)).not.toContain("typed-but-never-sent");
+  await expect(report).toContainText("Sent.");
 });
