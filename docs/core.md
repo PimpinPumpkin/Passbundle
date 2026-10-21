@@ -134,6 +134,7 @@ The app locks by itself, the same as Lock: every key and everything decrypted is
 The Flutter app calls the core through plain C functions (`core/src/ffi.rs`), with JSON in and out, rather than a code generator such as flutter_rust_bridge: fewer moving parts, and every call is visible in one file.
 - Each call is a command ("unlock with this password", "search for this", "copy this item's password") and gets back plain data for the screen. No key ever crosses the bridge, and no call takes or returns key material.
 - Calls that take a while (signing in, unlocking, syncing, saving) run on a background isolate, and the screens don't read from the core while one runs.
+- Calls that wait on the network or the desktop agent's socket run on a thread of the core's own. Dart signals the threads that run Dart (its profiler does, in debug builds), and a signal arriving during a blocking read or connect ends it with "Interrupted system call". The Android tests found this.
 
 ## Unlock with Windows Hello or Touch ID
 
