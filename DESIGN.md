@@ -28,7 +28,16 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
   - **Small native pieces only where an OS insists**, such as the phones' autofill, drawn from the same design.
   - **Desktop:** the window is part of the tray app. Closing the window ends its process, leaving only the small agent.
   - **Order:** the core, then desktop (Windows, macOS, and Linux), then mobile.
-  - **Status:** the core's design and vectors are written. A prototype (the core plus the Flutter app, in a new local repo, `passbundle-apps`) opens the vectors' sample vault.
+  - **Status (October 21, 2026):** in the public repo `PimpinPumpkin/passbundle-apps`, whose CI builds, tests, and measures it on Linux, macOS, and Windows.
+    - **The core** follows its design and vectors, and signs in, syncs, saves, and does two-step login on a real server (see `docs/core.md`, "Tests").
+    - **The app** is a prototype that unlocks the vectors' sample vault through the core.
+    - **The prototype, measured in CI** (first launch on CI machines; Linux in a virtual display with software rendering, which inflates its memory):
+
+      | | Windows | macOS | Linux |
+      |---|---|---|---|
+      | Download, compressed | 12.3 MB | 17.5 MB | 10.2 MB |
+      | First frame | 1.3 s | 2.1 s | 3.8 s |
+      | Memory, vault open | 103 MB private | 42 MB footprint | 290 MB (software rendering) |
 - Open-source build of the Bitwarden clients (`passbundle-clients`), rebranded: web vault, browser extension, CLI. The extension and web vault stay upstream's for now, and can move onto the core later, compiled to WebAssembly.
 - **No Electron.** We don't ship upstream's Electron desktop app (about 150 MB on disk and hundreds of MB of RAM for what is mostly a tray icon). The desktop side is a small native agent. See "Desktop agent" below.
 - Mobile push delivery is our own (APNs, FCM, and UnifiedPush on Android).

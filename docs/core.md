@@ -75,11 +75,22 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 ## Signing in
 
 1. Prelogin, then derive the master key and the login hash.
-2. `POST /identity/connect/token` with the password grant: the email, the login hash, `scope=api offline_access`, and this device's type, name, and identifier. A second step (an authenticator code or an emailed code) goes back with the same request.
+2. `POST /identity/connect/token` with the password grant: the email, the login hash, `scope=api offline_access`, and this device:
+   - its type, as upstream numbers them (6 Windows, 7 macOS, 8 Linux, 0 Android, 1 iOS), with `client_id` `desktop` or `mobile`;
+   - a name ("PassBundle on Windows");
+   - an identifier made once per install and kept by the app.
 3. The response carries the access token, the refresh token, the user key, and the private key. The core opens the user key with the stretched master key; a wrong password fails here, on the device, as well as on the server.
 4. Sync, then open the vault.
 
-Unlocking later is steps 1 and 3 without the network: the KDF settings and the encrypted user key are in the cached sync.
+**Two-step login.** If the account has it on, the server answers step 2 with the methods it offers. The core does an authenticator app's code and an emailed code (it asks the server to send the email); the others come later.
+- The sign-in waits for the code holding the login hash and the stretched master key, in memory only, so the slow KDF runs once.
+- The code goes back with the same request.
+
+**Unlocking later** is steps 1 and 3 without the network: the KDF settings are kept with the email, and the encrypted user key is in the cached sync.
+
+**The session.** The access token is refreshed with the refresh token a minute before it expires. When the server refuses the refresh token, the app is signed out and asks for the master password.
+
+**Saving an item** sends it encrypted, under its organization's key or the user key, with the revision it was edited from. The server refuses an edit made from a copy that's since changed (more than two seconds older), so one device can't overwrite another's newer edit; the app syncs and the person tries again.
 
 ## What's kept where
 
@@ -107,6 +118,7 @@ The Flutter app calls the core through `flutter_rust_bridge`. Each call is a com
 ## Network
 
 - HTTPS only, to the server the person set, with the OS's own certificate checks (rustls with `rustls-platform-verifier`), so an office's own root certificate works as it does in their browser.
+- The one exception is plain HTTP to this computer (`localhost`, `127.0.0.1`, `::1`), which browsers treat as secure too: a server running on the same machine, and the core's tests.
 - No other hosts, no analytics.
 - Website icons come from the person's server (`/icons`), as in the other apps.
 
@@ -120,7 +132,16 @@ The Flutter app calls the core through `flutter_rust_bridge`. Each call is a com
   - a sample sync that ties them together.
 - **Checked with upstream's crypto:** a script in the clients repo opens every vector with upstream's `PureCrypto` (derive, unwrap, decapsulate, decrypt), and tier 1 runs it, as for the other vectors.
 - **The core's own tests** read the vectors and must produce or open every value.
-- **Against the test server** (next): the core signs up, signs in, syncs, and edits on a real server. The web vault reads what the core wrote, and the core reads what the web vault wrote, both with real keys.
+- **Against a real server** (`core/tests/server.rs` in `passbundle-apps`, run by its CI against the server's `keykeeper` branch), with real keys:
+  - signing up as an app would;
+  - a wrong password, and two-step login with an authenticator code;
+  - sync, saving, editing, refusing an edit from a stale copy, trash, and refreshing the session;
+  - an organization made with its key sealed to the owner's public key, and its items.
+- **Next:** the web vault reads what the core wrote, and the core reads what the web vault wrote.
+
+## Speed
+
+The KDF is most of unlocking. On ARM (Apple silicon, phones) the core uses the chip's SHA-256 instructions, so PBKDF2 at 600,000 iterations takes about 46 ms on an M1 Pro instead of 288. x86 uses its own SHA extensions.
 
 ## Not yet
 
