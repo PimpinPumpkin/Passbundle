@@ -107,12 +107,19 @@ check "launchd runs it" launchctl print "gui/$uid/$label"
 if ! agent_running; then
   # Why not: launchd's view, then the agent's own words, run by hand for a moment.
   launchctl print "gui/$uid/$label" | grep -E "state|last exit|pid|program" || true
-  launchctl asuser "$uid" sudo -u "$user" "$app/Contents/MacOS/passbundle-agent" > /tmp/agent.out 2>&1 &
+  launchctl asuser "$uid" sudo -u "$user" env RUST_BACKTRACE=1 "$app/Contents/MacOS/passbundle-agent" > /tmp/agent.out 2>&1 &
   sleep 5
   echo "The agent, run by hand:"
   cat /tmp/agent.out
   pgrep -lu "$uid" passbundle || echo "(no passbundle processes)"
   pkill -u "$uid" -x passbundle-agent || true
+  # macOS's own report of the crash: what stopped it, and where.
+  report=$(ls -t "$home/Library/Logs/DiagnosticReports/"passbundle-agent* /Library/Logs/DiagnosticReports/passbundle-agent* 2> /dev/null | head -1)
+  if [ -n "$report" ]; then
+    echo "Crash report $report:"
+    head -c 6000 "$report"
+    echo
+  fi
 fi
 check "it listens on its socket" eventually socket_ready
 first=$(agent_pid)
