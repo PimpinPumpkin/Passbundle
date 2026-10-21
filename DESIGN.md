@@ -54,7 +54,7 @@ One small native app per computer, written in Rust. No bundled browser engine an
   - Drives onboarding for managed users by opening the right page at the right time.
 - **Upstream's Rust, with care:** the `desktop_native` crates are GPL-3.0, but `biometric` links Bitwarden's SDK crates, which declare a license file instead of a standard open-source license, and `desktop_core` links `bitwarden-russh`, which declares none. So the agent is its own Cargo workspace (`agent` in `passbundle-apps`, moved there from `passbundle-clients` on October 21, 2026, next to the app) and links neither. GPL code it takes from upstream is copied in with a note saying where from.
 - **Targets:** installer under 10 MB, under 20 MB of RAM when idle, no extra processes.
-- **Updates:** a small self-updater. A release is a manifest signed with our offline update key (minisign), and the agent installs it only if the signature verifies with the key compiled in, it's for this platform, it's newer, it's served over HTTPS, and the download has the stated size and SHA-256. Installed agents update from a scheduled task (Windows) or a launch daemon (macOS), never because the network told them to. Organizations that push updates through their RMM turn self-updates off by policy.
+- **Updates:** a small self-updater. A release is a manifest signed with our offline update key (minisign), and the agent installs it only if the signature verifies with the key compiled in, it's for this platform, it's newer, it's served over HTTPS, and the download has the stated size and SHA-256. Installed agents update from a scheduled task (Windows), never because the network told them to. On macOS the agent is inside the app, and replacing one program would break the app's signature, so the app updates whole: from the RMM for now, and by itself later. Organizations that push updates through their RMM turn self-updates off by policy.
 - **The desktop vault window** is our Flutter app (see "Clients" above, decided October 20, 2026), built into the agent's tray app.
 - **Order:** Windows first, then macOS.
 - **Status:** the foundation is built (`agent` in `passbundle-apps`, version 0.1): the tray icon and menu (the version, Open web vault, Quit), one agent per signed-in user, settings by policy (web vault URL, self-updates off), and the signed self-updater. Its CI (in `passbundle-apps`) runs its tests on Windows, macOS, and Linux, checks the release build is under 10 MB (0.9 MB on macOS), and runs it in the tray; tier 1 builds its test build for the extension's end-to-end tests. Idle, it uses 8.5 MB of memory on macOS. Not yet: the update key (made offline; until then builds don't update themselves) and installing it from the RMM script (waits on code signing). Biometric unlock is built (see "Biometric unlock"). The agent won't do the MSP background work (see "MSP templates").
@@ -103,6 +103,20 @@ Unlock the browser extension with Windows Hello or Touch ID, through the desktop
 - Our extension IDs are compiled into the installer. It can force-install only our extension, never one named by the server.
 - To change targeting, the MSP reruns the script, which applies the org's current settings.
 - **Status:** `installer/windows/Install-PassBundle.ps1` applies the browser policies and, with the agent's two programs in an `agent` folder next to it, installs the desktop agent: to Program Files, started at every sign-in (the machine's Run key), registered for Chrome and Edge as our native-messaging host for our extension IDs only, with the server address in its policy, and a SYSTEM task that runs its signed updater daily and at startup (`-DisableAgentUpdates` for MSPs who update through their RMM). With the app's files in an `app` folder too, it installs our app next to the agent, with a Start menu shortcut: the agent's tray opens it, and it starts the agent if it isn't running. `-Remove` undoes all of it. Tier 2 builds the agent and the app on a Windows machine, installs as an RMM would, checks every piece, has the installed host reach the running agent, and opens the installed app. Not yet: the signed MSI and the download with a pinned signer (waits on code signing), the import helper, Firefox, and updating the host program and the app along with the agent (the updater replaces only the agent).
+- **Status, macOS:** `installer/macos/install-passbundle.sh`, run as root by the RMM with `PassBundle.app` next to it, does the following:
+  - installs the app to /Applications, with the agent and the native-messaging host inside it;
+  - starts the agent at every login (a LaunchAgent that restarts it after a crash, not after Quit), and now for whoever is at the screen;
+  - registers the host for Chrome and Edge, for our extension IDs only;
+  - run again with a new app, replaces it and restarts the agent; with the same app, changes nothing;
+  - `--remove` undoes it all.
+
+  macOS takes browser policies and the agent's settings only from a configuration profile that an MDM installs. `make-profile.sh` writes that profile with the Windows script's options: the forced extension, the browser's own password manager and autofill, and the extension's server, enrollment token, join secret, and key fingerprint. The agent gets the server too.
+
+  Testing:
+  - Tier 1 lints the scripts and reads the profile back.
+  - Tier 2 builds the app on a Mac, installs it as an RMM would, and checks every piece. It checks the agent is running and listening, that launchd restarts it after a crash, and that the app opens. Then it updates and removes it.
+
+  Not yet: a signed and notarized app and a download with a pinned signer (waits on the Apple Developer account), Touch ID unlock, Firefox, and the app updating itself.
 
 ### Import helper
 

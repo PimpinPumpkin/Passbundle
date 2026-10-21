@@ -1,0 +1,74 @@
+# Tier 2 on macOS: the RMM-style install on a disposable Mac, with the app
+# and its desktop agent built from passbundle-apps: installed, the agent
+# started for whoever is at the screen, updated, and removed. The configuration
+# profile only an MDM can install, so tier 1 reads it instead. Nightly, on
+# installer changes (pull requests included), and on demand.
+name: Tier 2 (macOS)
+
+on:
+  pull_request:
+    paths:
+      - "installer/macos/**"
+      - ".github/workflows/tier2-macos.yml"
+  push:
+    branches: [main]
+    paths:
+      - "installer/macos/**"
+      - ".github/workflows/tier2-macos.yml"
+  schedule:
+    - cron: "41 7 * * *"
+  workflow_dispatch:
+    inputs:
+      apps-ref:
+        description: The passbundle-apps branch to build the app and agent from
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: RMM-style install
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-apps
+          ref: ${{ inputs.apps-ref || 'main' }}
+          path: apps
+          persist-credentials: false
+      - name: Install the desktop agent's and the core's Rust toolchains
+        run: (cd apps/agent && rustup toolchain install) && (cd apps/core && rustup toolchain install)
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: |
+            apps/agent
+            apps/core
+      # For this Mac's chip only: passbundle-apps' CI builds and checks the
+      # universal app; this checks installing it.
+      - name: Build the app with the agent inside, next to the install script as an RMM package has it
+        run: |
+          (cd apps/agent && cargo build --locked --release)
+          (cd apps/core && cargo build --locked --release --features ffi)
+          # Flutter at the release passbundle-apps pins (its .github/workflows/ci.yml).
+          git clone --quiet --depth 1 --branch 3.47.6 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          test "$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)" = 5fc346839b5d0eef006ed8404392afb4dfae428d
+          flutter="$RUNNER_TEMP/flutter/bin/flutter"
+          "$flutter" config --no-analytics
+          (cd apps/app && "$flutter" build macos --release)
+          app=installer/macos/PassBundle.app
+          ditto apps/app/build/macos/Build/Products/Release/passbundle.app "$app"
+          mkdir -p "$app/Contents/Frameworks"
+          cp apps/core/target/release/libpassbundle_core.dylib "$app/Contents/Frameworks/"
+          cp apps/agent/target/release/passbundle-agent apps/agent/target/release/passbundle-agent-host "$app/Contents/MacOS/"
+          # Ad hoc, until code signing, with the app's own entitlements.
+          codesign --force --deep --sign - --entitlements apps/app/macos/Runner/Release.entitlements "$app"
+          ls "$app/Contents/MacOS"
+      - name: The configuration profile
+        run: python3 -I installer/macos/tests/test_profile.py
+      - name: Install as an RMM would, update, and remove
+        run: sudo sh installer/macos/tests/test-install.sh
