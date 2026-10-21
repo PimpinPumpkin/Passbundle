@@ -50,6 +50,14 @@ execFileSync(
     "/CN=127.0.0.1",
     "-addext",
     "subjectAltName=IP:127.0.0.1",
+    // A server's certificate, not a CA's, so strict TLS checks (the core's
+    // rustls) accept it as the one certificate they're told to trust.
+    "-addext",
+    "basicConstraints=critical,CA:FALSE",
+    "-addext",
+    "keyUsage=critical,digitalSignature,keyEncipherment",
+    "-addext",
+    "extendedKeyUsage=serverAuth",
   ],
   { stdio: "ignore" },
 );

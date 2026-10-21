@@ -37,6 +37,7 @@ jobs:
       server: ${{ steps.pick.outputs.server }}
       clients: ${{ steps.pick.outputs.clients }}
       meta: ${{ steps.pick.outputs.meta }}
+      apps: ${{ steps.pick.outputs.apps }}
     steps:
       - name: Pick each repo's branch
         id: pick
@@ -73,12 +74,15 @@ jobs:
           if [ "$caller" != pimpinpumpkin/passbundle ]; then
             meta=$(linked Passbundle main)
           fi
+          # Our own apps' core, for the interop test (passbundle-apps has its own CI).
+          apps=$(linked passbundle-apps main)
           {
             echo "server=$server"
             echo "clients=$clients"
             echo "meta=$meta"
+            echo "apps=$apps"
           } >> "$GITHUB_OUTPUT"
-          echo "Server: $server. Clients: $clients. Tests: ${meta:-this commit}."
+          echo "Server: $server. Clients: $clients. Apps: $apps. Tests: ${meta:-this commit}."
 
   server:
     name: Server tests and build
@@ -363,9 +367,40 @@ jobs:
         shell: pwsh
         run: .\docs\vectors\check-script-module.ps1 -Module server\src\static\scripts\PassBundle.psm1 -Vectors docs\vectors\script-access-v1.json
 
+  core-interop:
+    # Our own apps' core (passbundle-apps), built as the tool the interop
+    # test drives (e2e/tests/core-interop.spec.ts).
+    name: The core's interop tool
+    needs: refs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: core
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-apps
+          ref: ${{ needs.refs.outputs.apps }}
+          persist-credentials: false
+      - name: The OS secret store's headers
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libdbus-1-dev pkg-config
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: core
+      - name: Build
+        run: cargo build --locked --release --features test-trust --example interop
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: core-interop
+          path: core/target/release/examples/interop
+          retention-days: 3
+
   e2e:
     name: End-to-end (${{ matrix.part }})
-    needs: [refs, server, clients]
+    needs: [refs, server, clients, core-interop]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # Five machines share the suite, each with its own servers: the API
@@ -398,6 +433,10 @@ jobs:
         with:
           name: clients
           path: build/clients
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: core-interop
+          path: build/core
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
@@ -414,8 +453,9 @@ jobs:
           KK_EXTENSION: ${{ github.workspace }}/build/clients/extension-chrome
           KK_BRAND: ${{ github.workspace }}/build/clients/brand.json
           KK_AGENT: ${{ github.workspace }}/build/clients/agent
+          KK_CORE_INTEROP: ${{ github.workspace }}/build/core/interop
           KK_SERVER_LOG: ${{ github.workspace }}/e2e/server-log/server.log
-        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" "$KK_AGENT"/* && npx playwright test ${{ matrix.args }}
+        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" "$KK_AGENT"/* "$KK_CORE_INTEROP" && npx playwright test ${{ matrix.args }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
