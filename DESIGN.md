@@ -27,7 +27,7 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
   - **One core:** a Rust library (`docs/core.md`) does everything but drawing: keys, the vault format, sync, search, one-time codes. A logic bug shows up everywhere or nowhere.
   - **Small native pieces only where an OS insists**, such as the phones' autofill, drawn from the same design.
   - **Desktop:** the window is part of the tray app. Closing the window ends its process, leaving only the small agent.
-  - **Order:** the core, then desktop (Windows, macOS, and Linux), then mobile.
+  - **Order:** the core, then desktop (Windows, macOS, and Linux), then mobile (`docs/phones.md`: Android first, then iOS).
   - **Status (October 21, 2026):** in the public repo `PimpinPumpkin/passbundle-apps`, whose CI builds, tests, and measures it on Linux, macOS, and Windows.
     - **The core** follows its design and vectors, and signs in, syncs, saves, and does two-step login on a real server (see `docs/core.md`, "Tests").
     - **The app** is a prototype that unlocks the vectors' sample vault through the core.
