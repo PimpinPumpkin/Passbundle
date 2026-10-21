@@ -188,6 +188,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: The agent's native-messaging test vectors, checked with upstream's own crypto
         run: node apps/agent/tests/vectors/check-upstream.mjs apps/agent/tests/vectors/native-messaging.json .
+      - name: Script access test vectors, checked with upstream's own crypto
+        run: node scripts/keykeeper/check-script-vectors.mjs libs/admin-console/src/common/keykeeper/script-access.vectors.json .
       - name: Upstream unit tests for every file we changed
         run: |
           base=$(cat .keykeeper-base)
@@ -324,6 +326,33 @@ jobs:
             apps/agent/target/release/passbundle-agent-host.exe
           if-no-files-found: error
           retention-days: 3
+
+  script-module:
+    # RMMs mostly run scripts in Windows PowerShell 5.1, which the Linux
+    # end-to-end suite can't, so the module's checks run here under both.
+    name: Script access module on Windows
+    needs: refs
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/Passbundle
+          ref: ${{ needs.refs.outputs.meta }}
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-server
+          ref: ${{ needs.refs.outputs.server }}
+          path: server
+          sparse-checkout: src/static/scripts
+          persist-credentials: false
+      - name: Windows PowerShell 5.1
+        shell: powershell
+        run: .\docs\vectors\check-script-module.ps1 -Module server\src\static\scripts\PassBundle.psm1 -Vectors docs\vectors\script-access-v1.json
+      - name: PowerShell 7
+        shell: pwsh
+        run: .\docs\vectors\check-script-module.ps1 -Module server\src\static\scripts\PassBundle.psm1 -Vectors docs\vectors\script-access-v1.json
 
   e2e:
     name: End-to-end (${{ matrix.part }})

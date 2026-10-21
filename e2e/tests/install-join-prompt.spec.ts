@@ -6,6 +6,7 @@ import type { Page } from "@playwright/test";
 
 import { Api } from "./api/support";
 import {
+  answerAndClose,
   createAccount,
   expect,
   logInPopup,
@@ -83,11 +84,8 @@ test("the install command's join asks first; Not now joins nothing, and a token 
   );
   // This test server sends no email, so the client offers no account recovery.
   await expect(prompt!.getByText("Account recovery")).toHaveCount(0);
-  // The answer closes the window, so the click doesn't wait for anything after.
-  await Promise.all([
-    prompt!.waitForEvent("close"),
-    prompt!.getByRole("button", { name: "Not now" }).click({ noWaitAfter: true }),
-  ]);
+  // The answer closes the window.
+  await answerAndClose(prompt!, prompt!.getByRole("button", { name: "Not now" }));
   expect(await outcome).toBe("declined");
 
   // Nobody joined, and the next unlock doesn't ask again.

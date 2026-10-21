@@ -12,6 +12,7 @@ import { mailServerPort } from "../paths.mjs";
 
 import { addLogin } from "./support/autofill";
 import {
+  answerAndClose,
   createAccount,
   expect,
   logInPopup,
@@ -111,11 +112,8 @@ test("an MSP admin recovers the account of someone who joined through the instal
     "Recovery Dental's admins will be able to reset your master password",
   );
   await expect(prompt!.getByTestId("keykeeper-join-fingerprint")).toHaveText(/^\w+(-\w+){4}$/);
-  // The answer closes the window, so the click doesn't wait for anything after.
-  await Promise.all([
-    prompt!.waitForEvent("close"),
-    prompt!.getByRole("button", { name: "Join", exact: true }).click({ noWaitAfter: true }),
-  ]);
+  // The answer closes the window.
+  await answerAndClose(prompt!, prompt!.getByRole("button", { name: "Join", exact: true }));
   expect(await outcome).toBe("joined");
 
   // The command isn't limited to email domains, so an MSP admin approves

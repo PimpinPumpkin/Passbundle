@@ -85,7 +85,7 @@ The script checks that `token` is its own token and `item` is the item it asked 
 
 ## The PowerShell module
 
-- One file, `PassBundle.psm1`, plain PowerShell with .NET's own HKDF, AES, and HMAC, so it runs on Windows PowerShell 5.1 and PowerShell 7 with nothing to install. The server serves it, and the console shows the line to fetch it.
+- One file, `PassBundle.psm1`, plain PowerShell with .NET's AES and HMAC (and HKDF written out with HMAC, since Windows PowerShell 5.1's .NET has none), so it runs on Windows PowerShell 5.1 and PowerShell 7 with nothing to install. The server serves it, and the console shows the line to fetch it.
 - `Get-PassBundleCredential -Item <name or id>` returns a `PSCredential`; `Get-PassBundleSecret -Item <name or id> -Field password|username|totp|<custom field>` returns one value (a one-time code is computed on the machine from the copied secret). The token comes from `$env:PASSBUNDLE_TOKEN` or `-Token`.
 - It isn't signed until code signing exists; RMMs run scripts with an execution policy that allows that, and the console says so.
 - Later: the same in the command-line client for macOS and Linux scripts.
@@ -95,8 +95,8 @@ The script checks that `token` is its own token and `item` is the item it asked 
 - The vectors: the token string, the auth secret and its hash, the token key, a sealed token key and spec, a copy, and copies the script must refuse (tampered, sealed with the wrong key, another item's, another token's). `node docs/vectors/make-script-access-v1.mjs` makes them with plain Node; upstream's own crypto opens them (the clients' tests check that, as for the native-messaging vectors).
 - Clients: unit tests for making a token, copies, specs, and refreshing.
 - Server: unit tests for the checks; API tests for every endpoint against every role, a token reading only its grants, expiry, revocation, networks, the rate limit, and refresh permissions.
-- The module: tier 1 runs it under PowerShell 7 on Linux against the test server, decrypting real copies and refusing the vectors' bad ones.
-- End to end: an MSP admin makes a token in the console, the module reads the credential, an edit in the web vault reaches the script, and revoking stops it.
+- The module: tier 1 runs it under PowerShell 7 on Linux against the test server, decrypting real copies and refusing bad ones and a revoked token. `docs/vectors/check-script-module.ps1` checks it against the vectors and RFC 6238's codes, on Windows under Windows PowerShell 5.1 and PowerShell 7.
+- End to end: an owner makes a token in the web vault with real keys, a script reads just the granted fields, an edit in the web vault reaches the script, the reads show, and revoking stops it. The API tests cover MSP admins and everyone else.
 
 ## Decisions (October 20, 2026)
 
