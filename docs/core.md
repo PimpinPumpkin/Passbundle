@@ -98,6 +98,7 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 |---|---|
 | Server address, email, KDF settings | the app's data folder |
 | The last sync, as the server sent it (secrets still encrypted) | the app's data folder |
+| When to lock by itself (below) | the app's data folder, kept for whoever signs in on this device |
 | Refresh token | the OS's secret store: Keychain (macOS, iOS), Credential Manager (Windows), Secret Service (Linux), Keystore (Android) |
 | Access token | memory only |
 | (Where) | the OS's local app data folder, in `PassBundle`: `AppData\Local` on Windows, `Application Support` on macOS, `~/.local/share` on Linux. Files are readable only by the person (mode 600 where the OS has modes). The secret store entry is service `PassBundle`, account `<email> on <server>`. |
@@ -111,8 +112,22 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 ## Memory
 
 - Keys and decrypted secrets live in types that wipe themselves when dropped (`zeroize`).
-- Locking drops them all, along with every decrypted item. The app locks after the timeout the person or a policy sets, and when the computer sleeps or the screen locks, if they choose.
+- Locking drops them all, along with every decrypted item. The app also locks by itself (below).
 - **Secrets stay out of Dart.** The screens get what they draw: names, usernames, websites, folders. A password, a one-time code secret, or a hidden field reaches Dart only while the person has it revealed on screen. Copying never passes through Dart: the core puts the value on the clipboard itself, and clears it after 30 seconds if it's still there (never something copied since). It's marked to stay out of clipboard history, the cloud clipboard, and clipboard monitors on Windows, and out of clipboard managers on macOS (`org.nspasteboard.ConcealedType`); Linux under X11 has no such mark. Dart's strings can't be wiped, so this keeps secrets in Rust's memory, which can. The exceptions are what the person types or edits: the master password passes through Dart once (the field is cleared as soon as the core has it), and an item's secrets pass through Dart while its editor is open, as typing them would.
+
+## Locking by itself
+
+The app locks by itself, the same as Lock: every key and everything decrypted is dropped, and whatever was open over the vault (an item's editor, a menu) closes at once.
+
+- **After a time without using the computer:** 1, 5, 15 (the default), or 30 minutes, 1 or 4 hours, or only when the app closes. Using the computer is the OS's own count of keyboard, mouse, and touch input, so working in other apps keeps the vault open, as desktop password managers do: `GetLastInputInfo` on Windows, `CGEventSourceSecondsSinceLastEventType` on macOS, GNOME's idle monitor on Linux. Where the OS doesn't say (Linux desktops other than GNOME), the app's own use counts. The OS's count never outlasts the app's: if the person used the app more recently than the OS says anything was touched, the app's time counts.
+- **When the computer sleeps or its screen locks** (one switch, on by default):
+  - Before sleeping, on the OS's notice to the app's window (`WM_POWERBROADCAST` on Windows, `NSWorkspace`'s will-sleep notice on macOS, systemd-logind's `PrepareForSleep` on Linux), so the vault isn't open in memory while asleep, or on screen on waking.
+  - If a notice comes too late or not at all, the core still sees that the computer slept: it compares a clock that counts time asleep with one that doesn't (interrupt time with and without sleep on Windows, `CLOCK_MONOTONIC_RAW` and `CLOCK_UPTIME_RAW` on macOS, `CLOCK_BOOTTIME` and `CLOCK_MONOTONIC` on Linux), and locks at the first check after waking.
+  - The screen locked: the session's state on Windows (`WTSQuerySessionInformation`), the session dictionary's `CGSSessionScreenIsLocked` on macOS, logind's `LockedHint` on Linux.
+- **With that switch off**, time asleep still counts toward the wait: waking resets the OS's idle count, so the core adds the time asleep to the idle time it saw before.
+- **The clock set back** doesn't stretch the wait: the app's own time is the longer of the wall clock's and a monotonic clock's.
+- **How:** the core decides (`core/src/autolock.rs`), from what the OS says, and is tested with made-up readings. The app asks every two seconds while unlocked, and tells the core when the person uses it (at most once a second). A check while a slow call (a sync) has the core waits for the next one; a sleep notice then locks as soon as that call is done.
+- **Not yet:** a longest wait an organization sets by policy, which MSPs will want. Upstream's server leaves that policy out of its open-source build, so ours gets designed and built in full: the server, a policy page in the web vault, and the apps keeping to it.
 
 ## The bridge to the app
 
