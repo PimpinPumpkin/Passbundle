@@ -30,7 +30,7 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
   - **Order:** the core, then desktop (Windows, macOS, and Linux), then mobile.
   - **Status (October 21, 2026):** in the public repo `PimpinPumpkin/passbundle-apps`, whose CI builds, tests, and measures it on Linux, macOS, and Windows.
     - **The core** follows its design and vectors, and signs in, syncs, saves, and does two-step login on a real server (see `docs/core.md`, "Tests").
-    - **The app** is a prototype that unlocks the vectors' sample vault through the core.
+    - **The app** signs in to a PassBundle server, unlocks offline or with Windows Hello (through the desktop agent), copies through the core, adds, edits, and trashes items, and locks by itself after a chosen time or when the computer sleeps (`docs/core.md`, "Locking by itself").
     - **The prototype, measured in CI** (first launch on CI machines; Linux in a virtual display with software rendering, which inflates its memory):
 
       | | Windows | macOS | Linux |
