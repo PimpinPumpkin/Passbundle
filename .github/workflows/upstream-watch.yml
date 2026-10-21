@@ -58,7 +58,15 @@ jobs:
           sparse-checkout: |
             package.json
             package-lock.json
-            apps/agent/Cargo.lock
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-apps
+          path: apps
+          sparse-checkout: |
+            agent/Cargo.lock
+            core/Cargo.lock
           sparse-checkout-cone-mode: false
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -72,7 +80,7 @@ jobs:
         # The audits exit non-zero when they find something; the report says what.
         run: |
           cargo audit --json --file server/Cargo.lock > server-audit.json || true
-          cargo audit --json --file clients/apps/agent/Cargo.lock > agent-audit.json || true
+          cargo audit --json --file apps/agent/Cargo.lock > agent-audit.json || true
           (cd clients && npm audit --omit=dev --package-lock-only --json > ../npm-audit.json) || true
       - name: Report
         id: report

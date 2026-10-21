@@ -31,7 +31,7 @@ export const paths = {
   brand: process.env.KK_BRAND ?? repo("clients", "brand/brand.json"),
   // The desktop agent and its native-messaging host, built with the
   // stand-in authenticator: `cargo build --features test-authenticator`.
-  agent: process.env.KK_AGENT ?? repo("clients", "apps/agent/target/debug"),
+  agent: process.env.KK_AGENT ?? repo("apps", "agent/target/debug"),
 };
 export const brand = JSON.parse(fs.readFileSync(paths.brand, "utf8"));
 

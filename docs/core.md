@@ -139,9 +139,9 @@ Design, October 21, 2026. The desktop agent already unlocks the browser extensio
 - **Memory:** the RSA key, the session key, and the user key in messages are wiped when dropped; none of them reaches Dart.
 - **Without the agent** (not installed, or quit from its tray) the option doesn't show.
 - **Platforms:** Windows first, where the agent's Windows Hello is built. macOS when the agent's Touch ID is (it waits on code signing). Linux has none yet.
-- **Code:** the core gets the protocol's client side and the peer check. The peer check is the agent's, copied with a note saying where from, until the agent moves into `passbundle-apps` with the app it now belongs to (proposed, separately).
+- **Code:** the core gets the protocol's client side and the peer check. The agent moved into `passbundle-apps` on October 21, 2026, so the core and the agent can share the peer check.
 - **Tests:**
-  - The core's client against the protocol's vectors (`apps/agent/tests/vectors/native-messaging.json` in the clients repo, copied into the core's tests). It opens every message and re-encrypts each, with its IV, to the identical string, and unwraps the session key with the vectors' RSA key. Upstream's crypto already checks the same vectors.
+  - The core's client against the protocol's vectors (`agent/tests/vectors/native-messaging.json`, in this same repo now). It opens every message and re-encrypts each, with its IV, to the identical string, and unwraps the session key with the vectors' RSA key. Upstream's crypto already checks the same vectors.
   - The core's client against a real agent, built with its stand-in authenticator (the agent's test feature, which release builds refuse), over a real socket: turning it on, unlocking, a wrong user, a cancelled prompt, and a program pretending to be the agent.
   - Real Windows Hello, by hand with the Windows Hello test kit, at each release.
 

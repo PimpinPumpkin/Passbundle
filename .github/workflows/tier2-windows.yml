@@ -1,5 +1,5 @@
 # Tier 2 on Windows: the RMM-style install on a disposable machine, with the
-# desktop agent built from passbundle-clients, then real Chrome and Edge confirm
+# desktop agent built from passbundle-apps, then real Chrome and Edge confirm
 # they picked up the policies. Nightly, on installer changes, and on demand.
 name: Tier 2 (Windows)
 
@@ -15,9 +15,9 @@ on:
     - cron: "23 7 * * *"
   workflow_dispatch:
     inputs:
-      clients-ref:
-        description: The passbundle-clients branch to build the desktop agent from
-        default: keykeeper
+      apps-ref:
+        description: The passbundle-apps branch to build the desktop agent from
+        default: main
 
 permissions:
   contents: read
@@ -33,26 +33,26 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: PimpinPumpkin/passbundle-clients
-          ref: ${{ inputs.clients-ref || 'keykeeper' }}
-          path: clients
+          repository: PimpinPumpkin/passbundle-apps
+          ref: ${{ inputs.apps-ref || 'main' }}
+          path: apps
           sparse-checkout: |
-            apps/agent
+            agent
             brand
           persist-credentials: false
       - name: Install the desktop agent's Rust toolchain
-        working-directory: clients/apps/agent
+        working-directory: apps/agent
         run: rustup toolchain install
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          workspaces: clients/apps/agent
+          workspaces: apps/agent
       - name: Build the desktop agent, next to the install script as an RMM package has it
-        working-directory: clients/apps/agent
+        working-directory: apps/agent
         shell: pwsh
         run: |
           cargo build --locked --release
-          New-Item -ItemType Directory -Force ../../../installer/windows/agent | Out-Null
-          Copy-Item target/release/passbundle-agent.exe, target/release/passbundle-agent-host.exe ../../../installer/windows/agent/
+          New-Item -ItemType Directory -Force ../../installer/windows/agent | Out-Null
+          Copy-Item target/release/passbundle-agent.exe, target/release/passbundle-agent-host.exe ../../installer/windows/agent/
       - name: Install as an RMM would, and check the registry
         shell: pwsh
         run: ./installer/windows/tests/Test-Install.ps1
