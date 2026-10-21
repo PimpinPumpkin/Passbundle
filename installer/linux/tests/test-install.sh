@@ -91,13 +91,13 @@ check "the desktop entry is valid" desktop-file-validate "$entry"
 check "with its icon" cmp -s "$icon" "$app/data/com.passbundle.app.png"
 ext='p["3rdparty"]["extensions"]'
 check "Chrome extension gets the server address, without a trailing slash" policy_is "$chrome/passbundle.json" \
-  "$ext[\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"][\"environment\"] == {\"base\": \"$server_url\"}"
+  "${ext}[\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"][\"environment\"] == {\"base\": \"$server_url\"}"
 check "Chrome extension gets the enrollment token" policy_is "$chrome/passbundle.json" \
-  "$ext[\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"][\"enrollmentToken\"] == \"$token\""
+  "${ext}[\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"][\"enrollmentToken\"] == \"$token\""
 check "Chrome extension gets the join secret" policy_is "$chrome/passbundle.json" \
-  "$ext[\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"][\"joinSecret\"] == \"$join_secret\""
+  "${ext}[\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"][\"joinSecret\"] == \"$join_secret\""
 check "Edge extension gets the organization key fingerprint" policy_is "$edge/passbundle.json" \
-  "$ext[\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"][\"orgKeyFingerprint\"] == \"$org_key\""
+  "${ext}[\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"][\"orgKeyFingerprint\"] == \"$org_key\""
 check "Edge address autofill off" policy_is "$edge/passbundle.json" 'p["AutofillAddressEnabled"] is False'
 
 echo "Again, with nothing new"

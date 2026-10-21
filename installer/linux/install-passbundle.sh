@@ -203,7 +203,9 @@ policy() { # extension update-url
 # A list policy set in two files is the browser's pick of one, so say so.
 warn_about_others() {
   for other in "$1"/*.json; do
-    [ -f "$other" ] && [ "$other" != "$1/$POLICY_FILE" ] || continue
+    if [ ! -f "$other" ] || [ "$other" = "$1/$POLICY_FILE" ]; then
+      continue
+    fi
     if grep -q '"ExtensionInstallForcelist"' "$other"; then
       echo "Warning: $other also force-installs extensions; the browser uses only one file's list. Put ours in it, or theirs in $1/$POLICY_FILE." >&2
     fi
