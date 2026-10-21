@@ -65,8 +65,12 @@ jobs:
           mkdir -p "$app/Contents/Frameworks"
           cp apps/core/target/release/libpassbundle_core.dylib "$app/Contents/Frameworks/"
           cp apps/agent/target/release/passbundle-agent apps/agent/target/release/passbundle-agent-host "$app/Contents/MacOS/"
-          # Ad hoc, until code signing, with the app's own entitlements.
-          codesign --force --deep --sign - --entitlements apps/app/macos/Runner/Release.entitlements "$app"
+          # Ad hoc, until code signing: what was added first, on its own (the
+          # app's entitlements are the app's, never the agent's), then the app.
+          codesign --force --sign - "$app/Contents/Frameworks/libpassbundle_core.dylib" \
+            "$app/Contents/MacOS/passbundle-agent" "$app/Contents/MacOS/passbundle-agent-host"
+          codesign --force --sign - --entitlements apps/app/macos/Runner/Release.entitlements "$app"
+          codesign --verify --deep --strict "$app"
           ls "$app/Contents/MacOS"
       - name: The configuration profile
         run: python3 -I installer/macos/tests/test_profile.py
