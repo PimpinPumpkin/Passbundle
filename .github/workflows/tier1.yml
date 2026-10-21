@@ -279,6 +279,25 @@ jobs:
         shell: pwsh
         run: .\docs\vectors\check-script-module.ps1 -Module server\src\static\scripts\PassBundle.psm1 -Vectors docs\vectors\script-access-v1.json
 
+  mac-installer:
+    # The Mac install scripts: shellcheck, and the configuration profile, which
+    # only an MDM installs, so this reads it back. Tier 2 (macOS) installs for
+    # real on a Mac.
+    name: Mac install scripts
+    needs: refs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/Passbundle
+          ref: ${{ needs.refs.outputs.meta }}
+          persist-credentials: false
+      - name: Lint the scripts
+        run: shellcheck installer/macos/*.sh installer/macos/tests/*.sh
+      - name: The configuration profile
+        run: python3 -I installer/macos/tests/test_profile.py
+
   agent-test-build:
     # The desktop agent (passbundle-apps, agent/), built with the stand-in for
     # Windows Hello that the extension's end-to-end tests use. Its own checks

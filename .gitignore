@@ -2,3 +2,8 @@
 node_modules/
 target/
 *.log
+
+# What the RMM package puts next to the install scripts; CI builds them.
+installer/windows/agent/
+installer/windows/app/
+installer/macos/PassBundle.app/
