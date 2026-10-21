@@ -117,6 +117,16 @@ Unlock the browser extension with Windows Hello or Touch ID, through the desktop
   - Tier 2 builds the app on a Mac, installs it as an RMM would, and checks every piece. It checks the agent is running and listening, that launchd restarts it after a crash, and that the app opens. Then it updates and removes it.
 
   Not yet: a signed and notarized app and a download with a pinned signer (waits on the Apple Developer account), Touch ID unlock, Firefox, and the app updating itself.
+- **Status, Linux:** `installer/linux/install-passbundle.sh` is run as root by the RMM. With the app's bundle in a `passbundle` folder next to it, it installs the app to /opt/passbundle, with a desktop entry and icon so it's in the applications menu.
+  - Linux browsers read managed policies from files, so the script sets the Windows script's policies itself, with the same options: one file of our own in Chrome's and Edge's managed policies folders.
+  - A list policy set in two files is the browser's pick of one, so if another vendor's file also force-installs extensions, it says so and leaves that file alone.
+  - Without the app's folder, it sets the policies only.
+  - Run again, it changes nothing; with a new app, it replaces it. `--remove` undoes it all.
+  - The desktop agent isn't installed: on Linux it has no tray and no biometric unlock yet.
+
+  Testing: tier 2 builds the app on Linux and installs as an RMM would. It checks every file, owner, and mode, and the desktop entry. It checks the app opens, and that another vendor's policy file is left alone. Then it updates and removes, and real Chrome and Edge report the policies.
+
+  Not yet: packages (.deb, .rpm, Flatpak), Firefox, and the agent.
 
 ### Import helper
 

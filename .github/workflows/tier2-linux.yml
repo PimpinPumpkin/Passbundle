@@ -1,0 +1,92 @@
+# Tier 2 on Linux: the RMM-style install on a disposable machine, with the
+# app built from passbundle-apps: policies alone, then the app, updated and
+# removed, then real Chrome and Edge confirm they picked up the policies.
+# Nightly, on installer changes (pull requests included), and on demand.
+name: Tier 2 (Linux)
+
+on:
+  pull_request:
+    paths:
+      - "installer/linux/**"
+      - "e2e/linux/**"
+      - "e2e/playwright.linux.config.ts"
+      - ".github/workflows/tier2-linux.yml"
+  push:
+    branches: [main]
+    paths:
+      - "installer/linux/**"
+      - "e2e/linux/**"
+      - "e2e/playwright.linux.config.ts"
+      - ".github/workflows/tier2-linux.yml"
+  schedule:
+    - cron: "53 7 * * *"
+  workflow_dispatch:
+    inputs:
+      apps-ref:
+        description: The passbundle-apps branch to build the app from
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: RMM-style install and browser policy check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-apps
+          ref: ${{ inputs.apps-ref || 'main' }}
+          path: apps
+          persist-credentials: false
+      - name: Build tools, a virtual display, and the desktop entry checker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang cmake ninja-build pkg-config libgtk-3-dev libdbus-1-dev libssl-dev xvfb desktop-file-utils
+      - name: Install the core's Rust toolchain
+        working-directory: apps/core
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: apps/core
+      - name: Build the app (the core and Flutter), next to the install script as an RMM package has it
+        run: |
+          (cd apps/core && cargo build --locked --release --features ffi)
+          # Flutter at the release passbundle-apps pins (its .github/workflows/ci.yml).
+          git clone --quiet --depth 1 --branch 3.47.6 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          test "$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)" = 5fc346839b5d0eef006ed8404392afb4dfae428d
+          flutter="$RUNNER_TEMP/flutter/bin/flutter"
+          "$flutter" config --no-analytics
+          (cd apps/app && "$flutter" build linux --release)
+          cp -R apps/app/build/linux/x64/release/bundle installer/linux/passbundle
+          cp apps/core/target/release/libpassbundle_core.so installer/linux/passbundle/lib/
+          ls installer/linux/passbundle installer/linux/passbundle/data
+      - name: Install as an RMM would, update, and remove
+        run: |
+          Xvfb :99 -screen 0 1280x800x24 &
+          sleep 2
+          sudo DISPLAY=:99 sh installer/linux/tests/test-install.sh
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Install test dependencies
+        working-directory: e2e
+        run: npm ci --no-audit --no-fund
+      - name: Chrome and Edge report the policies
+        working-directory: e2e
+        run: npx playwright test -c playwright.linux.config.ts
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: tier2-linux-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 14

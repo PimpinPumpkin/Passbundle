@@ -1,8 +1,8 @@
 """Checks make-profile.sh's configuration profiles: each is a valid profile
 with what its options ask for and nothing else, the same options make the same
 profile, and bad values are refused. Only an MDM installs a profile, so CI
-reads them instead. Also checks the Mac scripts and the Windows script name
-the same extensions.
+reads them instead. Also checks the Mac, Linux, and Windows scripts name the
+same extensions.
 
     python3 installer/macos/tests/test_profile.py
 """
@@ -16,6 +16,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 MAKE = HERE.parent / "make-profile.sh"
 INSTALL = HERE.parent / "install-passbundle.sh"
+LINUX = HERE.parent.parent / "linux" / "install-passbundle.sh"
 WINDOWS = HERE.parent.parent / "windows" / "Install-PassBundle.ps1"
 
 CHROME = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -136,13 +137,13 @@ for args, why in [
     run = make(*args)
     check(f"refuses {why}", run.returncode != 0 and run.stdout == "")
 
-# One set of extension IDs: the Mac scripts' and the Windows script's.
+# One set of extension IDs: the Mac and Linux scripts' and the Windows script's.
 windows = WINDOWS.read_text(encoding="utf-8")
 ids = set(re.findall(r'Id = "([a-p]{32})"', windows))
-for script in (MAKE, INSTALL):
+for script in (MAKE, INSTALL, LINUX):
     text = script.read_text(encoding="utf-8")
     check(
-        f"{script.name} names the Windows script's extensions",
+        f"{script.parent.name}/{script.name} names the Windows script's extensions",
         ids == {CHROME, EDGE} and f'CHROME_EXTENSION="{CHROME}"' in text and f'EDGE_EXTENSION="{EDGE}"' in text,
     )
 
