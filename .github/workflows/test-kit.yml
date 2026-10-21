@@ -14,6 +14,9 @@ on:
       server-ref:
         description: The passbundle-server branch
         default: keykeeper
+      apps-ref:
+        description: The passbundle-apps branch (the desktop agent)
+        default: main
   push:
     branches: [main]
     paths:
@@ -43,34 +46,34 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: PimpinPumpkin/passbundle-clients
-          ref: ${{ inputs.clients-ref || 'keykeeper' }}
-          path: clients
+          repository: PimpinPumpkin/passbundle-apps
+          ref: ${{ inputs.apps-ref || 'main' }}
+          path: apps
           sparse-checkout: |
-            apps/agent
+            agent
             brand
           persist-credentials: false
       - name: Install the pinned Rust toolchains
         shell: bash
-        run: (cd server && rustup toolchain install) && (cd clients/apps/agent && rustup toolchain install)
+        run: (cd server && rustup toolchain install) && (cd apps/agent && rustup toolchain install)
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: |
             server
-            clients/apps/agent
+            apps/agent
       - name: Build the server (SQLite, OpenSSL linked in)
         working-directory: server
         run: cargo build --locked --release --features sqlite,vendored_openssl
       - name: Build the desktop agent
-        working-directory: clients/apps/agent
+        working-directory: apps/agent
         run: cargo build --locked --release
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: kit-windows-builds
           path: |
             server/target/release/vaultwarden.exe
-            clients/apps/agent/target/release/passbundle-agent.exe
-            clients/apps/agent/target/release/passbundle-agent-host.exe
+            apps/agent/target/release/passbundle-agent.exe
+            apps/agent/target/release/passbundle-agent-host.exe
           if-no-files-found: error
           retention-days: 3
 
@@ -151,7 +154,7 @@ jobs:
         run: |
           mkdir -p kit/server kit/agent
           cp builds/server/target/release/vaultwarden.exe kit/server/
-          cp builds/clients/apps/agent/target/release/passbundle-agent.exe builds/clients/apps/agent/target/release/passbundle-agent-host.exe kit/agent/
+          cp builds/apps/agent/target/release/passbundle-agent.exe builds/apps/agent/target/release/passbundle-agent-host.exe kit/agent/
           cp -r clients/web/build kit/web-vault
           cp -r clients/browser/build kit/extension
           cp installer/windows/test-kit/Try-WindowsHello.ps1 installer/windows/test-kit/extension-key.json installer/windows/test-kit/README.txt kit/

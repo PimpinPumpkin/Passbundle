@@ -200,7 +200,7 @@ function Install-Agent {
   } else {
     if ((Get-Item $AgentPolicy).GetValueNames() -contains "Updates") { Remove-ItemProperty -Path $AgentPolicy -Name "Updates" }
     # Signed updates, daily and at startup, with the rights to replace the agent.
-    # The agent checks each release's signature itself (see apps/agent/README.md).
+    # The agent checks each release's signature itself (see agent/README.md in passbundle-apps).
     $action = New-ScheduledTaskAction -Execute (Join-Path $InstallDir "passbundle-agent.exe") -Argument "--update"
     $triggers = @((New-ScheduledTaskTrigger -Daily -At "3:17am"), (New-ScheduledTaskTrigger -AtStartup))
     $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
