@@ -75,11 +75,22 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 ## Signing in
 
 1. Prelogin, then derive the master key and the login hash.
-2. `POST /identity/connect/token` with the password grant: the email, the login hash, `scope=api offline_access`, and this device's type, name, and identifier. A second step (an authenticator code or an emailed code) goes back with the same request.
+2. `POST /identity/connect/token` with the password grant: the email, the login hash, `scope=api offline_access`, and this device:
+   - its type, as upstream numbers them (6 Windows, 7 macOS, 8 Linux, 0 Android, 1 iOS), with `client_id` `desktop` or `mobile`;
+   - a name ("PassBundle on Windows");
+   - an identifier made once per install and kept by the app.
 3. The response carries the access token, the refresh token, the user key, and the private key. The core opens the user key with the stretched master key; a wrong password fails here, on the device, as well as on the server.
 4. Sync, then open the vault.
 
-Unlocking later is steps 1 and 3 without the network: the KDF settings and the encrypted user key are in the cached sync.
+**Two-step login.** If the account has it on, the server answers step 2 with the methods it offers. The core does an authenticator app's code and an emailed code (it asks the server to send the email); the others come later.
+- The sign-in waits for the code holding the login hash and the stretched master key, in memory only, so the slow KDF runs once.
+- The code goes back with the same request.
+
+**Unlocking later** is steps 1 and 3 without the network: the KDF settings are kept with the email, and the encrypted user key is in the cached sync.
+
+**The session.** The access token is refreshed with the refresh token a minute before it expires. When the server refuses the refresh token, the app is signed out and asks for the master password.
+
+**Saving an item** sends it encrypted, under its organization's key or the user key, with the revision it was edited from. The server refuses an edit made from a copy that's since changed (more than two seconds older), so one device can't overwrite another's newer edit; the app syncs and the person tries again.
 
 ## What's kept where
 
@@ -89,8 +100,11 @@ Unlocking later is steps 1 and 3 without the network: the KDF settings and the e
 | The last sync, as the server sent it (secrets still encrypted) | the app's data folder |
 | Refresh token | the OS's secret store: Keychain (macOS, iOS), Credential Manager (Windows), Secret Service (Linux), Keystore (Android) |
 | Access token | memory only |
+| (Where) | the OS's local app data folder, in `PassBundle`: `AppData\Local` on Windows, `Application Support` on macOS, `~/.local/share` on Linux. Files are readable only by the person (mode 600 where the OS has modes). The secret store entry is service `PassBundle`, account `<email> on <server>`. |
 | Master password, master key, user key, private key, organization keys, anything decrypted | memory only, while unlocked; never on disk |
 
+- **No secret store** (a Linux desktop without a keyring running): nothing is kept. The vault still unlocks from this device, and the app asks to sign in again to sync.
+- **Signing out** forgets the kept sync and the refresh token; the server and email stay, to sign in again.
 - **Unlock with Windows Hello or Touch ID** comes later, with its own design. On the desktop it should be the same enrollment the desktop agent already makes for the extension, so unlocking one unlocks the other.
 - **"Never lock"** (keeping the user key on disk) isn't offered.
 
@@ -98,15 +112,18 @@ Unlocking later is steps 1 and 3 without the network: the KDF settings and the e
 
 - Keys and decrypted secrets live in types that wipe themselves when dropped (`zeroize`).
 - Locking drops them all, along with every decrypted item. The app locks after the timeout the person or a policy sets, and when the computer sleeps or the screen locks, if they choose.
-- **Secrets stay out of Dart.** The screens get what they draw: names, usernames, websites, folders. A password, a one-time code secret, or a hidden field reaches Dart only while the person has it revealed on screen. Copying never passes through Dart: the core puts the value on the clipboard itself, and clears it after 30 seconds if it's still there. Dart's strings can't be wiped, so this keeps secrets in Rust's memory, which can. The one exception is the master password: it's typed into the app's own field, so it passes through Dart once, and the field is cleared as soon as the core has it.
+- **Secrets stay out of Dart.** The screens get what they draw: names, usernames, websites, folders. A password, a one-time code secret, or a hidden field reaches Dart only while the person has it revealed on screen. Copying never passes through Dart: the core puts the value on the clipboard itself, and clears it after 30 seconds if it's still there (never something copied since). It's marked to stay out of clipboard history, the cloud clipboard, and clipboard monitors on Windows, and out of clipboard managers on macOS (`org.nspasteboard.ConcealedType`); Linux under X11 has no such mark. Dart's strings can't be wiped, so this keeps secrets in Rust's memory, which can. The exceptions are what the person types or edits: the master password passes through Dart once (the field is cleared as soon as the core has it), and an item's secrets pass through Dart while its editor is open, as typing them would.
 
 ## The bridge to the app
 
-The Flutter app calls the core through `flutter_rust_bridge`. Each call is a command ("unlock with this password", "search for this", "copy this item's password") and gets back plain data for the screen. No key ever crosses the bridge, and no call takes or returns key material.
+The Flutter app calls the core through plain C functions (`core/src/ffi.rs`), with JSON in and out, rather than a code generator such as flutter_rust_bridge: fewer moving parts, and every call is visible in one file.
+- Each call is a command ("unlock with this password", "search for this", "copy this item's password") and gets back plain data for the screen. No key ever crosses the bridge, and no call takes or returns key material.
+- Calls that take a while (signing in, unlocking, syncing, saving) run on a background isolate, and the screens don't read from the core while one runs.
 
 ## Network
 
 - HTTPS only, to the server the person set, with the OS's own certificate checks (rustls with `rustls-platform-verifier`), so an office's own root certificate works as it does in their browser.
+- The one exception is plain HTTP to this computer (`localhost`, `127.0.0.1`, `::1`), which browsers treat as secure too: a server running on the same machine, and the core's tests.
 - No other hosts, no analytics.
 - Website icons come from the person's server (`/icons`), as in the other apps.
 
@@ -120,7 +137,20 @@ The Flutter app calls the core through `flutter_rust_bridge`. Each call is a com
   - a sample sync that ties them together.
 - **Checked with upstream's crypto:** a script in the clients repo opens every vector with upstream's `PureCrypto` (derive, unwrap, decapsulate, decrypt), and tier 1 runs it, as for the other vectors.
 - **The core's own tests** read the vectors and must produce or open every value.
-- **Against the test server** (next): the core signs up, signs in, syncs, and edits on a real server. The web vault reads what the core wrote, and the core reads what the web vault wrote, both with real keys.
+- **Against a real server** (`core/tests/server.rs` in `passbundle-apps`, run by its CI against the server's `keykeeper` branch), with real keys:
+  - signing up as an app would;
+  - a wrong password, and two-step login with an authenticator code;
+  - sync, saving, editing, refusing an edit from a stale copy, trash, and refreshing the session;
+  - an organization made with its key sealed to the owner's public key, and its items.
+- **Next:** the web vault reads what the core wrote, and the core reads what the web vault wrote.
+
+## New passwords
+
+The generator draws characters uniformly with the OS's random numbers from the kinds chosen (upper and lower case, digits, symbols), with at least one of each, and leaves out look-alikes (0 O, 1 l I) unless asked. The default is 20 characters.
+
+## Speed
+
+The KDF is most of unlocking. On ARM (Apple silicon, phones) the core uses the chip's SHA-256 instructions, so PBKDF2 at 600,000 iterations takes about 46 ms on an M1 Pro instead of 288. x86 uses its own SHA extensions.
 
 ## Not yet
 
