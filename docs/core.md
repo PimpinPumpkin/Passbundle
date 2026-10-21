@@ -167,7 +167,7 @@ Design, October 21, 2026. The desktop agent already unlocks the browser extensio
   - a wrong password, and two-step login with an authenticator code;
   - sync, saving, editing, refusing an edit from a stale copy, trash, and refreshing the session;
   - an organization made with its key sealed to the owner's public key, and its items.
-- **Next:** the web vault reads what the core wrote, and the core reads what the web vault wrote.
+- **With the web vault** (`e2e/tests/core-interop.spec.ts`, tier 1, with the core's `interop` tool built from `passbundle-apps`): the web vault makes an account, an organization, and an item in each, and the core opens them. The core saves its own item in each, and the web vault shows every field as the core wrote it. Real keys on both sides. The tool trusts the test server's throwaway certificate through a `test-trust` build feature the app never has.
 
 ## New passwords
 
