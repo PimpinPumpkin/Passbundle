@@ -22,9 +22,16 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
 
 ### Clients
 
-- Open-source build of the Bitwarden clients (`passbundle-clients`), rebranded: web vault, browser extension, CLI. The vault UI people use every day is the extension and the web vault.
+- **Our own apps for desktop and mobile** (decided October 20, 2026). Bitwarden's format and our server stay for storage and encryption; the apps are ours.
+  - **One look everywhere:** one Flutter app for Windows, macOS, Linux, iOS, and Android, with our own design (brand colors, bundled Inter), light and dark. It doesn't try to look like each OS.
+  - **One core:** a Rust library (`docs/core.md`) does everything but drawing: keys, the vault format, sync, search, one-time codes. A logic bug shows up everywhere or nowhere.
+  - **Small native pieces only where an OS insists**, such as the phones' autofill, drawn from the same design.
+  - **Desktop:** the window is part of the tray app. Closing the window ends its process, leaving only the small agent.
+  - **Order:** the core, then desktop (Windows, macOS, and Linux), then mobile.
+  - **Status:** the core's design and vectors are written. A prototype (the core plus the Flutter app, in a new local repo, `passbundle-apps`) opens the vectors' sample vault.
+- Open-source build of the Bitwarden clients (`passbundle-clients`), rebranded: web vault, browser extension, CLI. The extension and web vault stay upstream's for now, and can move onto the core later, compiled to WebAssembly.
 - **No Electron.** We don't ship upstream's Electron desktop app (about 150 MB on disk and hundreds of MB of RAM for what is mostly a tray icon). The desktop side is a small native agent. See "Desktop agent" below.
-- Mobile comes later, from `bitwarden/android` and `bitwarden/ios`, with our own push delivery (APNs, FCM, and UnifiedPush on Android).
+- Mobile push delivery is our own (APNs, FCM, and UnifiedPush on Android).
 - The SDK comes from the upstream open-source `sdk-internal` build. Fork it only when we need to change it.
 
 ### Desktop agent (no Electron, no web view)
@@ -39,7 +46,7 @@ One small native app per computer, written in Rust. No bundled browser engine an
 - **Upstream's Rust, with care:** the `desktop_native` crates are GPL-3.0, but `biometric` links Bitwarden's SDK crates, which declare a license file instead of a standard open-source license, and `desktop_core` links `bitwarden-russh`, which declares none. So the agent is its own Cargo workspace (`apps/agent` in `passbundle-clients`) and links neither. GPL code it takes from upstream is copied in with a note saying where from.
 - **Targets:** installer under 10 MB, under 20 MB of RAM when idle, no extra processes.
 - **Updates:** a small self-updater. A release is a manifest signed with our offline update key (minisign), and the agent installs it only if the signature verifies with the key compiled in, it's for this platform, it's newer, it's served over HTTPS, and the download has the stated size and SHA-256. Installed agents update from a scheduled task (Windows) or a launch daemon (macOS), never because the network told them to. Organizations that push updates through their RMM turn self-updates off by policy.
-- **A desktop vault window is a later decision**, made only if customers ask for one. The options then: native UI per OS (SwiftUI on macOS, WinUI on Windows), the lightest and most native but two UIs to build; or Tauri, which reuses the Angular UI through the OS's own web view, much lighter than Electron but still a few browser processes on Windows.
+- **The desktop vault window** is our Flutter app (see "Clients" above, decided October 20, 2026), built into the agent's tray app.
 - **Order:** Windows first, then macOS.
 - **Status:** the foundation is built (`apps/agent`, version 0.1): the tray icon and menu (the version, Open web vault, Quit), one agent per signed-in user, settings by policy (web vault URL, self-updates off), and the signed self-updater. Tier 1 runs its tests on Windows and macOS, checks the release build is under 10 MB (0.9 MB on macOS), and runs it in the tray. Idle, it uses 8.5 MB of memory on macOS. Not yet: the update key (made offline; until then builds don't update themselves) and installing it from the RMM script (waits on code signing). Biometric unlock is built (see "Biometric unlock"). The agent won't do the MSP background work (see "MSP templates").
 
