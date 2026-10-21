@@ -105,7 +105,7 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 
 - **No secret store** (a Linux desktop without a keyring running): nothing is kept. The vault still unlocks from this device, and the app asks to sign in again to sync.
 - **Signing out** forgets the kept sync and the refresh token; the server and email stay, to sign in again.
-- **Unlock with Windows Hello or Touch ID** comes later, with its own design. On the desktop it should be the same enrollment the desktop agent already makes for the extension, so unlocking one unlocks the other.
+- **Unlock with Windows Hello or Touch ID:** through the desktop agent, with the extension's enrollment (below).
 - **"Never lock"** (keeping the user key on disk) isn't offered.
 
 ## Memory
@@ -119,6 +119,31 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 The Flutter app calls the core through plain C functions (`core/src/ffi.rs`), with JSON in and out, rather than a code generator such as flutter_rust_bridge: fewer moving parts, and every call is visible in one file.
 - Each call is a command ("unlock with this password", "search for this", "copy this item's password") and gets back plain data for the screen. No key ever crosses the bridge, and no call takes or returns key material.
 - Calls that take a while (signing in, unlocking, syncing, saving) run on a background isolate, and the screens don't read from the core while one runs.
+
+## Unlock with Windows Hello or Touch ID
+
+Design, October 21, 2026. The desktop agent already unlocks the browser extension with Windows Hello (DESIGN.md, "Biometric unlock"). The app uses the same agent, the same protocol, and the same enrollment: one Windows Hello setup covers both, and the agent stays the one place a key is kept for it. It changes how keys are handled, so this comes before the code; the protocol's vectors already exist.
+
+- **The app is one more client of the agent.** It connects to the agent's own socket (the one the native-messaging host uses) and speaks the same protocol:
+  - `setupEncryption` with a new RSA-2048 key, and back the agent's 64-byte session key, wrapped with RSA-OAEP (SHA-1);
+  - then type 2 messages carrying `command`, `messageId`, `userId`, and `timestamp`, dropped outside 10 seconds.
+- **It checks who it reached**, as the host does. The program at the other end must be the `passbundle-agent` installed next to the app, by the OS's own answer: on Windows the pipe server's image path, on macOS and Linux the socket peer's executable. Otherwise the app sends nothing, least of all the user key.
+- **Turning it on:**
+  - In the app's settings, while unlocked: "Unlock with Windows Hello". The app sends `keykeeper.biometric.enroll` with the user id and user key over the encrypted channel, and the agent asks for Windows Hello and keeps the key sealed, as for the extension.
+  - An account the extension already enrolled has the same user key, so it stays one enrollment.
+- **Unlocking:**
+  - The lock screen offers it when `getBiometricsStatusForUser` says it's set up.
+  - `unlockWithBiometricsForUser` asks for Windows Hello and returns the user key, and the core opens the kept vault with it, as after the master password, without the KDF.
+  - The master password always works too.
+- **Turning it off, and signing out,** send `keykeeper.biometric.remove`. That ends it for the extension too (it's one enrollment), and the app says so first.
+- **Memory:** the RSA key, the session key, and the user key in messages are wiped when dropped; none of them reaches Dart.
+- **Without the agent** (not installed, or quit from its tray) the option doesn't show.
+- **Platforms:** Windows first, where the agent's Windows Hello is built. macOS when the agent's Touch ID is (it waits on code signing). Linux has none yet.
+- **Code:** the core gets the protocol's client side and the peer check. The peer check is the agent's, copied with a note saying where from, until the agent moves into `passbundle-apps` with the app it now belongs to (proposed, separately).
+- **Tests:**
+  - The core's client against the protocol's vectors (`apps/agent/tests/vectors/native-messaging.json` in the clients repo, copied into the core's tests). It opens every message and re-encrypts each, with its IV, to the identical string, and unwraps the session key with the vectors' RSA key. Upstream's crypto already checks the same vectors.
+  - The core's client against a real agent, built with its stand-in authenticator (the agent's test feature, which release builds refuse), over a real socket: turning it on, unlocking, a wrong user, a cancelled prompt, and a program pretending to be the agent.
+  - Real Windows Hello, by hand with the Windows Hello test kit, at each release.
 
 ## Network
 
