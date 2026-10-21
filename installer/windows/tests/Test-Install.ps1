@@ -170,6 +170,26 @@ if ($haveAgent) {
   Write-Output "skip  no agent build next to the script; agent checks not run"
 }
 
+# The app, when its files are next to the script (Tier 2 builds them into installer/windows/app).
+$haveApp = Test-Path (Join-Path $PSScriptRoot "..\app\passbundle.exe")
+$shortcut = Join-Path $env:ProgramData "Microsoft\Windows\Start Menu\Programs\PassBundle.lnk"
+if ($haveApp) {
+  Check "The app is installed next to the agent" { Test-Path (Join-Path $installDir "passbundle.exe") }
+  Check "The app's core is installed with it" { Test-Path (Join-Path $installDir "passbundle_core.dll") }
+  Check "The Start menu has PassBundle" {
+    (Test-Path $shortcut) -and ((New-Object -ComObject WScript.Shell).CreateShortcut($shortcut).TargetPath -eq (Join-Path $installDir "passbundle.exe"))
+  }
+  # It opens, from a folder of its own, and stays open.
+  $data = Join-Path $env:TEMP "pb-installer-app"
+  $app = Start-Process -FilePath (Join-Path $installDir "passbundle.exe") -PassThru -Environment @{ PB_DATA_DIR = $data; PB_SECRETS = "memory" }
+  Start-Sleep -Seconds 8
+  Check "The installed app opens and stays open" { -not $app.HasExited }
+  Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
+  Get-Process -Name "passbundle-agent" -ErrorAction SilentlyContinue | Stop-Process -Force
+} else {
+  Write-Output "skip  no app build next to the script; app checks not run"
+}
+
 if ($env:KK_SKIP_REMOVE -ne "1") {
   & $script -Remove
   Check "Remove keeps the other vendor's extension" { (Forcelist $chromeRoot) -contains $foreign }
@@ -183,6 +203,10 @@ if ($env:KK_SKIP_REMOVE -ne "1") {
     Check "Remove stops the agent starting at sign-in" { -not ((Get-Item $runKey).GetValueNames() -contains "PassBundle") }
     Check "Remove drops the update task" { -not (Get-ScheduledTask -TaskName $updateTask -ErrorAction SilentlyContinue) }
     Check "Remove drops the agent's policy" { -not (Test-Path $agentPolicy) }
+  }
+  if ($haveApp) {
+    Check "Remove uninstalls the app" { -not (Test-Path (Join-Path $installDir "passbundle.exe")) }
+    Check "Remove drops the Start menu shortcut" { -not (Test-Path $shortcut) }
   }
   # Leave the policies applied for the browser check that follows.
   & $script -DisableCardAutofill | Out-Null

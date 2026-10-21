@@ -15,6 +15,9 @@
   installs the desktop agent to Program Files: it starts at every sign-in,
   the browsers can reach it for Windows Hello unlock (our extension only), and
   a SYSTEM task installs its signed updates. Without them, policies only.
+  With the app's files in an "app" folder next to this script, it installs the
+  PassBundle app next to the agent, with a Start menu shortcut: the agent's
+  tray opens it, and it starts the agent if it isn't running.
   Existing policies from other vendors are left alone. Running it again changes nothing.
 
 .EXAMPLE
@@ -81,6 +84,11 @@ $RunKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
 $RunName = "PassBundle"
 $AgentPolicy = "HKLM:\SOFTWARE\Policies\PassBundle\Agent"
 $UpdateTask = "PassBundle agent update"
+
+# Our app (passbundle-apps), next to the agent: the tray's "Open PassBundle"
+# finds it there, and it finds the agent. See DESIGN.md, "Clients".
+$AppSource = Join-Path $PSScriptRoot "app"
+$AppShortcut = Join-Path $env:ProgramData "Microsoft\Windows\Start Menu\Programs\PassBundle.lnk"
 
 function Set-Dword([string] $Path, [string] $Name, [int] $Value) {
   if (-not (Test-Path $Path)) { New-Item -Path $Path -Force | Out-Null }
@@ -210,8 +218,28 @@ function Install-Agent {
   Write-Output "Installed the PassBundle desktop agent to $InstallDir; it starts when people next sign in"
 }
 
+function Test-AppSource {
+  Test-Path (Join-Path $AppSource "passbundle.exe")
+}
+
+function Install-App {
+  if (-not (Test-Path $InstallDir)) { New-Item -Path $InstallDir -ItemType Directory | Out-Null }
+  # The app's files can't be replaced while it runs. It's a window: whoever
+  # had it open opens it again from the tray or the Start menu.
+  Get-Process -Name "passbundle" -ErrorAction SilentlyContinue | Stop-Process -Force
+  Copy-Item -Path (Join-Path $AppSource "*") -Destination $InstallDir -Recurse -Force
+  $shell = New-Object -ComObject WScript.Shell
+  $link = $shell.CreateShortcut($AppShortcut)
+  $link.TargetPath = Join-Path $InstallDir "passbundle.exe"
+  $link.WorkingDirectory = $InstallDir
+  $link.Description = "PassBundle"
+  $link.Save()
+  Write-Output "Installed the PassBundle app to $InstallDir, with a Start menu shortcut"
+}
+
 function Remove-Agent {
-  Get-Process -Name "passbundle-agent", "passbundle-agent-host" -ErrorAction SilentlyContinue | Stop-Process -Force
+  Get-Process -Name "passbundle", "passbundle-agent", "passbundle-agent-host" -ErrorAction SilentlyContinue | Stop-Process -Force
+  if (Test-Path $AppShortcut) { Remove-Item -Path $AppShortcut -Force }
   if (Get-ScheduledTask -TaskName $UpdateTask -ErrorAction SilentlyContinue) {
     Unregister-ScheduledTask -TaskName $UpdateTask -Confirm:$false
   }
@@ -223,15 +251,18 @@ function Remove-Agent {
   $policyRoot = Split-Path $AgentPolicy -Parent
   if (Test-Path $policyRoot) { Remove-Item -Path $policyRoot -Recurse -Force }
   if (Test-Path $InstallDir) { Remove-Item -Path $InstallDir -Recurse -Force }
-  Write-Output "Removed the PassBundle desktop agent"
+  Write-Output "Removed the PassBundle desktop agent and app"
 }
 
 if ($Remove) {
   Remove-Agent
-} elseif (Test-AgentSource) {
-  Install-Agent
 } else {
-  Write-Warning "No desktop agent next to this script ($AgentSource): browser policies only."
+  if (Test-AgentSource) {
+    Install-Agent
+  } else {
+    Write-Warning "No desktop agent next to this script ($AgentSource): no tray or Windows Hello."
+  }
+  if (Test-AppSource) { Install-App }
 }
 
 foreach ($browser in $Browsers) {

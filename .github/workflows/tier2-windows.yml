@@ -26,7 +26,7 @@ jobs:
   install:
     name: RMM-style install and browser policy check
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -36,16 +36,15 @@ jobs:
           repository: PimpinPumpkin/passbundle-apps
           ref: ${{ inputs.apps-ref || 'main' }}
           path: apps
-          sparse-checkout: |
-            agent
-            brand
           persist-credentials: false
-      - name: Install the desktop agent's Rust toolchain
-        working-directory: apps/agent
-        run: rustup toolchain install
+      - name: Install the desktop agent's and the core's Rust toolchains
+        shell: bash
+        run: (cd apps/agent && rustup toolchain install) && (cd apps/core && rustup toolchain install)
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          workspaces: apps/agent
+          workspaces: |
+            apps/agent
+            apps/core
       - name: Build the desktop agent, next to the install script as an RMM package has it
         working-directory: apps/agent
         shell: pwsh
@@ -53,6 +52,20 @@ jobs:
           cargo build --locked --release
           New-Item -ItemType Directory -Force ../../installer/windows/agent | Out-Null
           Copy-Item target/release/passbundle-agent.exe, target/release/passbundle-agent-host.exe ../../installer/windows/agent/
+      - name: Build the app (the core and Flutter), next to the install script too
+        shell: bash
+        run: |
+          (cd apps/core && cargo build --locked --release --features ffi)
+          # Flutter at the release passbundle-apps pins (its .github/workflows/ci.yml).
+          git clone --quiet --depth 1 --branch 3.47.6 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          test "$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)" = 5fc346839b5d0eef006ed8404392afb4dfae428d
+          flutter="$RUNNER_TEMP/flutter/bin/flutter.bat"
+          "$flutter" config --no-analytics
+          (cd apps/app && "$flutter" build windows --release)
+          mkdir -p installer/windows/app
+          cp -r apps/app/build/windows/x64/runner/Release/. installer/windows/app/
+          cp apps/core/target/release/passbundle_core.dll installer/windows/app/
+          ls installer/windows/app
       - name: Install as an RMM would, and check the registry
         shell: pwsh
         run: ./installer/windows/tests/Test-Install.ps1
