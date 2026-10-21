@@ -190,6 +190,15 @@ jobs:
         run: node apps/agent/tests/vectors/check-upstream.mjs apps/agent/tests/vectors/native-messaging.json .
       - name: Script access test vectors, checked with upstream's own crypto
         run: node scripts/keykeeper/check-script-vectors.mjs libs/admin-console/src/common/keykeeper/script-access.vectors.json .
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/Passbundle
+          ref: ${{ needs.refs.outputs.meta }}
+          path: meta
+          sparse-checkout: docs/vectors
+          persist-credentials: false
+      - name: The core's test vectors, checked with upstream's own crypto
+        run: node meta/docs/vectors/check-core-vectors.mjs meta/docs/vectors/core-v1.json .
       - name: Upstream unit tests for every file we changed
         run: |
           base=$(cat .keykeeper-base)
