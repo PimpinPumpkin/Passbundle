@@ -9,6 +9,7 @@ set -u
 here=$(cd "$(dirname "$0")" && pwd)
 script="$here/../install-passbundle.sh"
 app="/Applications/PassBundle.app"
+helper="$app/Contents/Helpers/PassBundle Agent.app"
 label="com.passbundle.agent"
 launch_agent="/Library/LaunchAgents/$label.plist"
 chrome_host="/Library/Google/Chrome/NativeMessagingHosts/$label.json"
@@ -55,7 +56,7 @@ app_running() { pgrep -u "$uid" -x passbundle; }
 
 # A host manifest for our extensions only, pointing into the installed app.
 host_ok() {
-  python3 -I - "$1" "$app/Contents/MacOS/passbundle-agent-host" << 'EOF'
+  python3 -I - "$1" "$helper/Contents/MacOS/passbundle-agent-host" << 'EOF'
 import json, sys
 m = json.load(open(sys.argv[1]))
 assert m["name"] == "com.passbundle.agent", m
@@ -71,7 +72,8 @@ EOF
 launch_agent_ok() {
   plutil -lint "$launch_agent" &&
     [ "$(plutil -extract Label raw "$launch_agent")" = "$label" ] &&
-    [ "$(plutil -extract ProgramArguments.0 raw "$launch_agent")" = "$app/Contents/MacOS/passbundle-agent" ] &&
+    [ "$(plutil -extract ProgramArguments.0 raw "$launch_agent")" = "$helper/Contents/MacOS/passbundle-agent" ] &&
+    [ "$(plutil -extract AssociatedBundleIdentifiers raw "$launch_agent")" = com.passbundle.app ] &&
     [ "$(plutil -extract RunAtLoad raw "$launch_agent")" = true ] &&
     [ "$(plutil -extract KeepAlive.SuccessfulExit raw "$launch_agent")" = false ]
 }
@@ -92,8 +94,8 @@ check "refuses an unknown option" sh -c "! sh '$script' --surprise"
 echo "Installing"
 sh "$script" || failures=$((failures + 1))
 check "the app is in Applications" test -x "$app/Contents/MacOS/passbundle"
-check "with the agent inside" test -x "$app/Contents/MacOS/passbundle-agent"
-check "and the native-messaging host" test -x "$app/Contents/MacOS/passbundle-agent-host"
+check "with the agent inside, an app of its own" test -x "$helper/Contents/MacOS/passbundle-agent"
+check "and the native-messaging host" test -x "$helper/Contents/MacOS/passbundle-agent-host"
 check "and the core" test -f "$app/Contents/Frameworks/libpassbundle_core.dylib"
 check "its signature holds" codesign --verify --deep --strict "$app"
 check "only root can change it" app_root_owned
@@ -107,7 +109,7 @@ check "launchd runs it" launchctl print "gui/$uid/$label"
 if ! agent_running; then
   # Why not: launchd's view, then the agent's own words, run by hand for a moment.
   launchctl print "gui/$uid/$label" | grep -E "state|last exit|pid|program" || true
-  launchctl asuser "$uid" sudo -u "$user" env RUST_BACKTRACE=1 "$app/Contents/MacOS/passbundle-agent" > /tmp/agent.out 2>&1 &
+  launchctl asuser "$uid" sudo -u "$user" env RUST_BACKTRACE=1 "$helper/Contents/MacOS/passbundle-agent" > /tmp/agent.out 2>&1 &
   sleep 5
   echo "The agent, run by hand:"
   cat /tmp/agent.out

@@ -35,10 +35,23 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Which passbundle-apps branch
+        id: apps
+        env:
+          INPUT: ${{ inputs.apps-ref }}
+          HEAD: ${{ github.head_ref }}
+        run: |
+          # On demand, the one asked for; for a pull request, a linked branch of the same name if there is one.
+          ref="${INPUT:-main}"
+          if [ -z "$INPUT" ] && [ -n "$HEAD" ] && git ls-remote --exit-code --heads https://github.com/PimpinPumpkin/passbundle-apps "$HEAD" > /dev/null; then
+            ref="$HEAD"
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "passbundle-apps: $ref"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: PimpinPumpkin/passbundle-apps
-          ref: ${{ inputs.apps-ref || 'main' }}
+          ref: ${{ steps.apps.outputs.ref }}
           path: apps
           persist-credentials: false
       - name: Install the desktop agent's and the core's Rust toolchains
@@ -62,16 +75,8 @@ jobs:
           (cd apps/app && "$flutter" build macos --release)
           app=installer/macos/PassBundle.app
           ditto apps/app/build/macos/Build/Products/Release/passbundle.app "$app"
-          mkdir -p "$app/Contents/Frameworks"
-          cp apps/core/target/release/libpassbundle_core.dylib "$app/Contents/Frameworks/"
-          cp apps/agent/target/release/passbundle-agent apps/agent/target/release/passbundle-agent-host "$app/Contents/MacOS/"
-          # Ad hoc, until code signing: what was added first, on its own (the
-          # app's entitlements are the app's, never the agent's), then the app.
-          codesign --force --sign - "$app/Contents/Frameworks/libpassbundle_core.dylib" \
-            "$app/Contents/MacOS/passbundle-agent" "$app/Contents/MacOS/passbundle-agent-host"
-          codesign --force --sign - --entitlements apps/app/macos/Runner/Release.entitlements "$app"
-          codesign --verify --deep --strict "$app"
-          ls "$app/Contents/MacOS"
+          # The core in Frameworks, the agent as an app of its own in Helpers, signed ad hoc.
+          apps/tools/bundle-mac.sh "$app" apps/core/target/release/libpassbundle_core.dylib apps/agent/target/release
       - name: The configuration profile
         run: python3 -I installer/macos/tests/test_profile.py
       - name: Install as an RMM would, update, and remove

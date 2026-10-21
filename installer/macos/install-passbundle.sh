@@ -3,7 +3,8 @@
 #
 # Run as root, typically from an RMM's or MDM's script step, with
 # PassBundle.app next to this script (the RMM package). It:
-#   - installs PassBundle.app to /Applications, replacing an older one,
+#   - installs PassBundle.app to /Applications, replacing an older one (the
+#     agent is inside it, an app of its own: Contents/Helpers/PassBundle Agent.app),
 #   - starts the desktop agent at every login (a LaunchAgent), and now for
 #     whoever is at the screen,
 #   - lets Chrome and Edge reach the agent, for our extension only (the
@@ -22,6 +23,8 @@ set -eu
 
 APP_SOURCE="$(cd "$(dirname "$0")" && pwd)/PassBundle.app"
 APP="/Applications/PassBundle.app"
+# The agent and the native-messaging host, in the app's helper.
+HELPER="Contents/Helpers/PassBundle Agent.app/Contents/MacOS"
 # The agent's launchd label, and the native-messaging host's name:
 # brand.json's nativeMessagingHost, as in Install-PassBundle.ps1.
 LABEL="com.passbundle.agent"
@@ -32,6 +35,8 @@ HOST_DIRS="/Library/Google/Chrome/NativeMessagingHosts /Library/Microsoft/Edge/N
 CHROME_EXTENSION="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 EDGE_EXTENSION="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 PROGRAMS="passbundle passbundle-agent passbundle-agent-host"
+# What the app's bundle ID is, for macOS's list of what starts at login.
+APP_ID="com.passbundle.app"
 
 fail() {
   echo "$1" >&2
@@ -72,8 +77,8 @@ put_file() {
 }
 
 install_app() {
-  for program in $PROGRAMS; do
-    [ -x "$APP_SOURCE/Contents/MacOS/$program" ] ||
+  for program in "Contents/MacOS/passbundle" "$HELPER/passbundle-agent" "$HELPER/passbundle-agent-host"; do
+    [ -x "$APP_SOURCE/$program" ] ||
       fail "PassBundle.app next to this script is missing $program; use the app from the RMM package."
   done
   [ -f "$APP_SOURCE/Contents/Frameworks/libpassbundle_core.dylib" ] ||
@@ -103,8 +108,10 @@ install_launch_agent() {
 	<string>$LABEL</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>$APP/Contents/MacOS/passbundle-agent</string>
+		<string>$APP/$HELPER/passbundle-agent</string>
 	</array>
+	<key>AssociatedBundleIdentifiers</key>
+	<string>$APP_ID</string>
 	<key>RunAtLoad</key>
 	<true/>
 	<key>KeepAlive</key>
@@ -127,7 +134,7 @@ install_hosts() {
 {
   "name": "$LABEL",
   "description": "PassBundle desktop agent",
-  "path": "$APP/Contents/MacOS/passbundle-agent-host",
+  "path": "$APP/$HELPER/passbundle-agent-host",
   "type": "stdio",
   "allowed_origins": [
     "chrome-extension://$CHROME_EXTENSION/",
