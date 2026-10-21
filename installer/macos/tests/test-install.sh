@@ -104,6 +104,16 @@ check "Edge can reach the agent, for our extension only" host_ok "$edge_host"
 check "the manifests are root's and read-only" root_owned "$chrome_host"
 check "the agent is running for $user" eventually agent_running
 check "launchd runs it" launchctl print "gui/$uid/$label"
+if ! agent_running; then
+  # Why not: launchd's view, then the agent's own words, run by hand for a moment.
+  launchctl print "gui/$uid/$label" | grep -E "state|last exit|pid|program" || true
+  launchctl asuser "$uid" sudo -u "$user" "$app/Contents/MacOS/passbundle-agent" > /tmp/agent.out 2>&1 &
+  sleep 5
+  echo "The agent, run by hand:"
+  cat /tmp/agent.out
+  pgrep -lu "$uid" passbundle || echo "(no passbundle processes)"
+  pkill -u "$uid" -x passbundle-agent || true
+fi
 check "it listens on its socket" eventually socket_ready
 first=$(agent_pid)
 
