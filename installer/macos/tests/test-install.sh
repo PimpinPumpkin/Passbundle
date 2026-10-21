@@ -114,7 +114,7 @@ if ! agent_running; then
   pgrep -lu "$uid" passbundle || echo "(no passbundle processes)"
   pkill -u "$uid" -x passbundle-agent || true
   # macOS's own report of the crash: what stopped it, and where.
-  report=$(ls -t "$home/Library/Logs/DiagnosticReports/"passbundle-agent* /Library/Logs/DiagnosticReports/passbundle-agent* 2> /dev/null | head -1)
+  report=$(find "$home/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports -name 'passbundle-agent*' -type f 2> /dev/null | head -1)
   if [ -n "$report" ]; then
     echo "Crash report $report:"
     head -c 6000 "$report"
@@ -132,10 +132,24 @@ check "says it's up to date" says_up_to_date
 check "the agent keeps running, not restarted" agent_is "$first"
 
 echo "The app"
-launchctl asuser "$uid" sudo -u "$user" open "$app"
+launchctl asuser "$uid" sudo -u "$user" open "$app" || echo "open said no ($?)"
 check "opens" eventually app_running
 sleep 3
 check "and stays open" app_running
+if ! app_running; then
+  # Why not: the app's own words, run by hand for a moment, and macOS's crash report.
+  launchctl asuser "$uid" sudo -u "$user" "$app/Contents/MacOS/passbundle" > /tmp/app.out 2>&1 &
+  sleep 5
+  echo "The app, run by hand:"
+  head -c 3000 /tmp/app.out
+  echo
+  report=$(find "$home/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports -name 'passbundle-*' ! -name 'passbundle-agent*' -type f 2> /dev/null | head -1)
+  if [ -n "$report" ]; then
+    echo "Crash report $report:"
+    head -c 6000 "$report"
+    echo
+  fi
+fi
 pkill -u "$uid" -x passbundle
 
 echo "The agent stopping unexpectedly"
