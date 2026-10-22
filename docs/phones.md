@@ -51,7 +51,7 @@ The phone's own fingerprint or face unlock, standing in for the desktop agent's 
 
 ## Copying
 
-- **Android:** the core asks Kotlin to put the value on the clipboard marked sensitive (`ClipDescription.EXTRA_IS_SENSITIVE`, Android 13 and later), so the keyboard's clipboard preview and the system's copy notice don't show it, and clears it after 30 seconds if it's still ours.
+- **Android:** Kotlin takes the value from the core (the screen asks Kotlin to copy an item's field; the value never passes through Dart) and puts it on the clipboard marked sensitive (`ClipDescription.EXTRA_IS_SENSITIVE`, Android 13 and later), so the keyboard's clipboard preview and the system's copy notice don't show it. After 30 seconds it clears it if it's still ours. Android hides the clipboard from apps in the background, so there the app can't tell what's on it, and it clears it anyway: the 30 seconds are the promise.
 - **iOS:** Swift puts it on the pasteboard for this device only (`localOnly`, so not Universal Clipboard) with a 30-second expiry (`expirationDate`), which iOS enforces even if the app is suspended.
 
 ## Autofill
@@ -60,7 +60,8 @@ The part that's most of the work, and native, because each OS draws its own list
 
 **Android: an autofill service** (`AutofillService`), in Kotlin, in the app's own process.
 - The OS asks it to fill a sign-in screen in another app or in a browser. The service asks the core for logins matching the app's package name or the page's domain, with the same matching rules as the extension (the item's websites and its Android app URIs, `androidapp://<package>`). It answers with datasets: the item's name and username, which the OS shows in its list. The password goes into a dataset only when the person picks it, through an authentication step (below).
-- **Locked:** one entry, "Unlock PassBundle", opens our unlock screen (biometrics or the master password), then fills.
+- **Locked:** one entry, "Unlock PassBundle". With fingerprint or face unlock on, picking it asks for that and then offers the logins, without leaving the app being filled. Otherwise it opens PassBundle to unlock with the master password, and the person fills again.
+- **Which logins:** the core decides (`core/src/matching.rs`), by the rules the web vault and the extension use. Each of an item's websites can be set to match by its registrable domain (the default, by the Public Suffix List, so `a.github.io` never fills on `b.github.io`), its host, or never. The rules that need a page's whole address (starts with, exact, regular expression) aren't offered, since Android gives only the domain. Editing an item in the app keeps each website's setting.
 - **Saving:** when the person signs in with something new, the OS offers "Save to PassBundle", and the app opens the editor with the username and password filled in.
 - **Apps aren't websites:** an app's package name matches an item only through the item's own `androidapp://` URI or the app's verified link to a website (Digital Asset Links), never a lookalike name. Browsers that pass the page's domain to autofill (Chrome since version 135, with its "autofill using another service" setting) fill by domain.
 - **The core stays in the process:** the service runs in the app's process, so it shares the unlocked core with the app. When the app is locked, so is autofill.
@@ -75,6 +76,8 @@ The part that's most of the work, and native, because each OS draws its own list
 
 - **Lock after a time away:** phones have no "idle time" for the whole device, so the wait counts from when the app leaves the screen. The choices are the desktop's (1, 5, 15, or 30 minutes, 1 or 4 hours), plus "Immediately", which phones' password managers offer because people switch apps all the time. The default is 5 minutes.
 - **When the phone locks** (on by default): Android's screen-off broadcast; iOS's notice that protected data is about to become unavailable.
+- **Back in front:** the app checks the wait the moment it's shown again, before the vault is in front of anyone.
+- **Out of screenshots:** the vault stays out of screenshots, screen recordings, and the app switcher's preview (`FLAG_SECURE` on Android).
 - **On Android, autofill follows the app's lock;** on iOS the extension locks when it closes.
 
 ## Order and tests
@@ -82,7 +85,9 @@ The part that's most of the work, and native, because each OS draws its own list
 1. **Android first:** its emulator runs in CI on Linux, autofill included.
    - The core built for Android, and its tests run on the emulator (the test programs pushed with `adb`).
    - The app on the emulator: sign in, unlock, browse, copy, lock.
-   - Then the Keystore, biometric unlock, and the autofill service, each with tests on the emulator. Biometrics use the emulator's simulated fingerprint (`adb emu finger touch`). Autofill is driven with a small test app that has a sign-in form.
+   - Then the Keystore, biometric unlock, and the autofill service, each with tests on the emulator.
+     - Biometric unlock: debug builds have a stand-in for Android's prompt that says yes, with a Keystore key that needs no biometrics, as the desktop agent's test authenticator does. Release builds refuse it. Everything but the OS prompt is tested: sealing the user key, unlocking with it, and signing out removing it. The real prompt gets checked by hand on a real phone, because enrolling a fingerprint on an emulator means typing a PIN into Android's own prompt.
+     - Autofill is driven with a small test app that has a sign-in form (`app/android/autofilltest`): PassBundle, signed in and locked with biometric unlock on, offers to unlock, then the login, and fills the form.
 2. **iOS second:** CI's Macs build it and run it in the simulator, with simulated Face ID enrollment and matches. The extension is tested with the simulator's Settings turning it on.
 3. **Real phones:** a check by hand at each release, as for Windows Hello. Store listings, signing keys, and the Apple Developer account are the owner's.
 
