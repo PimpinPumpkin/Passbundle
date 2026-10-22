@@ -23,8 +23,11 @@ type Fixture = {
   what: string;
   /** The frame the fields are in, if not the page itself. */
   frame?: string;
-  /** In order: optionally click something, then fill from the menu in a field. */
-  steps: { click?: string; field: string }[];
+  /**
+   * In order: optionally click something, then fill from the menu in a field,
+   * clicking it first unless the page put the cursor there (`focused`).
+   */
+  steps: { click?: string; field: string; focused?: boolean }[];
   /** Each field to check, and what it should hold after filling. */
   want: Record<string, Want>;
   /** Why it doesn't fill right today; leave out when it does. */
@@ -43,7 +46,13 @@ const corpus: Fixture[] = [
     what: "the email first, then the password in its place",
     steps: [{ field: "#email" }, { click: "#next", field: "#password" }],
     want: { "#email": "username", "#password": "password" },
-    known: "the password field shown after Next (un-hidden, not added) gets no menu",
+  },
+  {
+    file: "email-then-password-focus.html",
+    what: "two steps, and Next puts the cursor in the password field",
+    steps: [{ field: "#email" }, { click: "#next", field: "#password", focused: true }],
+    want: { "#email": "username", "#password": "password" },
+    known: "a field the page focuses as it shows it gets no menu until it's clicked",
   },
   {
     file: "late-login.html",
@@ -96,7 +105,13 @@ const corpus: Fixture[] = [
   },
   {
     file: "aria-label-login.html",
-    what: "aria-labels only, with meaningless ids",
+    what: "aria-labels only, from the password field",
+    steps: [{ field: "#i_18" }],
+    want: { "#i_17": "username", "#i_18": "password" },
+  },
+  {
+    file: "aria-label-login.html",
+    what: "aria-labels only, from the username field",
     steps: [{ field: "#i_17" }],
     want: { "#i_17": "username", "#i_18": "password" },
     known: "a text field named only by an aria-label isn't taken for a username, so it gets no menu",
@@ -125,8 +140,16 @@ async function fieldsIn(page: Page, fixture: Fixture): Promise<Page | Frame> {
  * helper, but focus may be in a frame or a shadow root, so it asks whether an
  * input deep down still has it.
  */
-async function fillFromMenu(context: BrowserContext, page: Page, where: Page | Frame, field: string) {
-  await where.locator(field).click();
+async function fillFromMenu(
+  context: BrowserContext,
+  page: Page,
+  where: Page | Frame,
+  field: string,
+  focused = false,
+) {
+  if (!focused) {
+    await where.locator(field).click();
+  }
   await waitForInlineMenuItem(context, page, ITEM);
   const focusLeftThePage = () =>
     page.evaluate(() => {
@@ -163,8 +186,10 @@ async function score(context: BrowserContext, fixture: Fixture): Promise<Result>
       try {
         if (step.click) {
           await where.locator(step.click).click();
+          // A person takes a moment before the next thing; so does the page.
+          await page.waitForTimeout(700);
         }
-        await fillFromMenu(context, page, where, step.field);
+        await fillFromMenu(context, page, where, step.field, step.focused);
         await expect(where.locator(step.field)).not.toHaveValue("", { timeout: 5000 });
       } catch {
         throw new Error(`no menu or no fill in ${step.field} (step ${i + 1})`);
@@ -200,8 +225,10 @@ test("the autofill corpus: what fills, and what doesn't yet", async ({ context, 
   await web.close();
   await logInPopup(await openPopup(context, extensionId), user);
 
+  // CORPUS_ONLY=<file> runs one page, while working on it.
+  const only = process.env.CORPUS_ONLY;
   const results: Result[] = [];
-  for (const fixture of corpus) {
+  for (const fixture of corpus.filter((f) => !only || f.file === only)) {
     results.push(await score(context, fixture));
   }
 
@@ -210,7 +237,7 @@ test("the autofill corpus: what fills, and what doesn't yet", async ({ context, 
     `Autofill corpus: ${filled} of ${results.length} pages fill right`,
     ...results.map(
       (r) =>
-        `${r.filled ? "fills " : r.known ? "known " : "BROKE "} ${r.file.padEnd(28)} ${r.what}${r.detail ? ` (${r.detail})` : ""}`,
+        `${r.filled ? "fills " : r.known ? "known " : "BROKE "} ${r.file.padEnd(32)} ${r.what}${r.detail ? ` (${r.detail})` : ""}`,
     ),
   ].join("\n");
   console.log(table);
