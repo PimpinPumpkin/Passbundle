@@ -67,7 +67,19 @@ test("create an account", async ({ page }) => {
   await page.getByRole("textbox", { name: /^Master password/, exact: false }).first().fill(user.password);
   await page.getByRole("textbox", { name: /Confirm master password/ }).fill(user.password);
   await page.getByRole("button", { name: "Create account" }).click();
+  // First, an offer to bring passwords over, from where they are now.
+  await page.waitForURL(/#\/setup-import/);
+  await expect(page.getByRole("heading", { name: "Bring your passwords over" })).toBeVisible();
+  for (const source of ["Your browser", "Apple Passwords", "1Password", "Bitwarden", "LastPass", "Something else"]) {
+    await expect(page.getByRole("button", { name: new RegExp(`^${source}`) })).toBeVisible();
+  }
+  await page.getByRole("button", { name: "Skip for now" }).click();
   await expectNoNags(page);
+  await expect(page).toHaveTitle(/Vaults/);
+  // Skipped means skipped: the vault doesn't send it back.
+  await page.goto("/#/sends");
+  await page.goto("/#/vault");
+  await expect(page).toHaveURL(/#\/vault/);
   await expect(page).toHaveTitle(/Vaults/);
 });
 
