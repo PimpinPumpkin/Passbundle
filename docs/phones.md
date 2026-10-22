@@ -120,4 +120,4 @@ The core signs and makes passkeys (`docs/core.md`, "Passkeys"); each OS asks for
 
 ## Not yet
 
-Passkeys (designed above), Wear OS and watchOS, tablets' own layout (they get the desktop layout when wide enough), sharing from other apps into a new item, a list in Settings to stop trusting a browser (clearing PassBundle's storage does it for now), and matching an app to its website through Digital Asset Links.
+Passkeys on iPhone (designed above), Wear OS and watchOS, tablets' own layout (they get the desktop layout when wide enough), sharing from other apps into a new item, a list in Settings to stop trusting a browser (clearing PassBundle's storage does it for now), and matching an app to its website through Digital Asset Links.
