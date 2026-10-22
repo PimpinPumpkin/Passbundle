@@ -297,7 +297,7 @@ A login can hold a passkey (upstream's `fido2Credentials`), made by the browser 
 - **The key:** a new P-256 key from the OS's random numbers; the credential ID is a new random UUID.
 - **Attestation "none":** `{"fmt": "none", "attStmt": {}, "authData": ...}` in CBOR, the authenticator data carrying the attested credential data: PassBundle's AAGUID, the credential ID's length and the ID, and the public key as a COSE key (`{1: 2, 3: -7, -1: 1, -2: x, -3: y}`).
 - **PassBundle's AAGUID:** `09c5ee5f-0845-48e6-aef4-c7c443317de5`, made at random for this design. The browser extension still uses upstream's for now.
-- **Where it goes:** into the login the person picks, or a new login named after the site, with the site as its website and the account's name as its username. A new login follows the same rules as one made in the editor: the personal vault, or a collection where an organization's policy says so.
+- **Where it goes:** into the login the person picks, or a new login named after the site's ID (which the passkey is bound to, not the name the site gives itself, which any site can make up), with the site as its website and the account's name as its username. A new login follows the same rules as one made in the editor: the personal vault, or a collection where an organization's policy says so.
 - **It's saved before the site hears of it.** Offline, it's refused, so a site never holds a passkey the vault lost.
 - **A site's list of passkeys it already has** (`excludeCredentials`): if one of them is in the vault, nothing is made, and the person is told they have one there, as the spec has it.
 
