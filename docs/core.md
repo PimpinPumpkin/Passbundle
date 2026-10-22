@@ -60,6 +60,7 @@ What the core reads and writes. Everything else is refused (below).
 
 **Items.** An item's fields (name, notes, username, password, one-time code secret, URIs, custom fields, and the rest) are type 2 strings under its item key if it has one, otherwise under the user key, or the organization's key for an organization's item. Folders use the user key, collections their organization's key.
 
+- **Cards and identities** have their own details, each a type 2 string under the same key. A card's number and security code, and an identity's Social Security, passport, and license numbers, are secrets like a password: kept zeroizing in the core, and out of it only when revealed or copied. Lists show a card by its brand and the number's last 4 digits ("Visa, *1111") and an identity by its name. Search reads a card's holder and brand, and an identity's name, company, email, and username, never a secret. The apps show and copy them; the web vault edits them for now. The vectors have one of each, opened by the core and by upstream's crypto.
 - Our server and apps don't make item keys today; the core reads them so an item that has one still opens.
 - It writes new items without item keys, like the other apps, until they all do. Editing an item that has one keeps it, and encrypts what changed under it ("Editing keeps what the app doesn't show", below).
 
