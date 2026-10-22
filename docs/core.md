@@ -251,10 +251,59 @@ The generator makes a password or a passphrase, drawn uniformly with the OS's ra
 - **The last choices** are kept on the device (`generator.json`, nothing secret), for whoever uses it next.
 - **An organization's "Password generator" policy** (upstream's type 2, from the sync) holds the choices, in the app and in the core before it generates. It binds everyone, owners too, as Bitwarden's apps have it. Across organizations the strictest of each part wins, as upstream combines them: the highest minimum length, digit and symbol counts, and word count; any required kind of character, capitals, or number; and a password over a passphrase when two organizations disagree. The generator shows that the organization sets some choices and won't go below them.
 
+## Passkeys
+
+A login can hold a passkey (upstream's `fido2Credentials`), made by the browser extension, by upstream's apps, or by ours. The apps will use them to sign in to websites and apps, on phones through the OS (Android's Credential Manager, iOS's AutoFill), the way they fill passwords. This is the design; nothing here is built yet.
+
+**What's stored**, upstream's format, so a passkey made anywhere works everywhere. Each value is a type 2 string under the item's key, except the date:
+
+| Field | What it holds |
+|---|---|
+| `credentialId` | a UUID (its 16 bytes are the credential ID), or `b64.` and the ID in base64url for one imported from elsewhere |
+| `keyType`, `keyAlgorithm`, `keyCurve` | `public-key`, `ECDSA`, `P-256` |
+| `keyValue` | the private key, PKCS#8, base64url without padding |
+| `rpId`, `rpName` | the site's ID (a domain) and its name |
+| `userHandle` | the site's ID for the account, base64url |
+| `userName`, `userDisplayName` | the account's names, as the site gave them |
+| `counter` | the signature counter, in decimal |
+| `discoverable` | `true` or `false` |
+| `creationDate` | when it was made (ISO 8601, not encrypted) |
+
+- **Only ES256** (ECDSA on P-256 with SHA-256), which is what upstream makes and every site takes. Any other kind of key is refused, like other formats the core doesn't know.
+- **The private key never leaves the core.** It's decrypted only to sign, in Rust, and zeroized after. Dart, Kotlin, and Swift get the signature and what goes around it.
+- **One passkey per login**, as upstream: making one for a login replaces the one it had (after asking), and fills in the login's username if it had none.
+
+**Signing in** (an assertion, WebAuthn's `authenticatorGetAssertion`):
+
+- **The authenticator data:** SHA-256 of the site's ID, then the flags, then the counter (4 bytes, big-endian).
+- **The flags:** user present, always; user verified, only when the person proved who they are in this sign-in (Face ID, a fingerprint, or the master password, unlocking just now included); backup eligible and backed up, since the vault syncs.
+- **The signature:** ECDSA over the authenticator data followed by the client data hash, DER-encoded. The core signs with RFC 6979's deterministic nonces, so the vectors can fix the bytes.
+- **The client data hash:** iOS always gives it, and so does Android for a browser. For another Android app the provider builds the client data itself (`webauthn.get`, the site's challenge, and the app's origin, `android:apk-key-hash:` and its signing certificate's SHA-256). It does that only after the site's Digital Asset Links say that app may use its passkeys (below).
+- **The counter, as upstream:** a passkey whose counter is 0 stays at 0, since a synced passkey can't keep one counter across devices and sites accept 0. One with a counter above 0 has it raised and the login saved before the signature goes back. Offline it's refused, rather than sign with a counter the site has already seen.
+- **Asking for the master password again:** a login that asks for it asks before its passkey signs, as for its password, and that counts as the person proving who they are.
+- **When a site wants proof of who it is** (`userVerification: required`) and the person didn't just give it, the provider asks for Face ID, a fingerprint, or the master password first.
+
+**Making one** (WebAuthn's `authenticatorMakeCredential`):
+
+- **The key:** a new P-256 key from the OS's random numbers; the credential ID is a new random UUID.
+- **Attestation "none":** `{"fmt": "none", "attStmt": {}, "authData": ...}` in CBOR, the authenticator data carrying the attested credential data: PassBundle's AAGUID, the credential ID's length and the ID, and the public key as a COSE key (`{1: 2, 3: -7, -1: 1, -2: x, -3: y}`).
+- **PassBundle's AAGUID:** `09c5ee5f-0845-48e6-aef4-c7c443317de5`, made at random for this design. The browser extension still uses upstream's for now.
+- **Where it goes:** into the login the person picks, or a new login named after the site, with the site as its website and the account's name as its username. A new login follows the same rules as one made in the editor: the personal vault, or a collection where an organization's policy says so.
+- **It's saved before the site hears of it.** Offline, it's refused, so a site never holds a passkey the vault lost.
+- **A site's list of passkeys it already has** (`excludeCredentials`): if one of them is in the vault, nothing is made, and the person is told they have one there, as the spec has it.
+
+**Tests,** when it's built:
+
+- **Vectors:** a fixed P-256 key, site ID, client data hash, counter, and flags. The authenticator data and the signature are fixed bytes (RFC 6979), and Node's own crypto verifies the signature with the public key.
+- **Upstream's format:** the vectors' `keyValue` opens with WebCrypto's PKCS#8 import, as upstream's authenticator reads it, and the passkey's strings open with upstream's `PureCrypto`.
+- **Making one:** the attestation object is read back with an independent CBOR reader, its COSE key matching the private key.
+- **Both ways with the browser extension:** a real-server test makes a passkey in our extension on a test page and signs in with it from the core, and the other way round. The test page checks each with its own WebAuthn verifier.
+- **Phones:** the emulator and simulator tests sign in to a test app and a test page with a passkey, and make one.
+
 ## Speed
 
 The KDF is most of unlocking. On ARM (Apple silicon, phones) the core uses the chip's SHA-256 instructions, so PBKDF2 at 600,000 iterations takes about 46 ms on an M1 Pro instead of 288. x86 uses its own SHA extensions.
 
 ## Not yet
 
-Unlock with biometrics, passkeys, attachments, Sends, organization admin, the MSP console (the web vault keeps it), autofill on phones and in browsers, and importing. Each gets designed when it's next.
+Sends, organization admin, the MSP console (the web vault keeps it), importing, and passkeys on computers (the browser extension has them there). Each gets designed when it's next.

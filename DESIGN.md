@@ -556,8 +556,10 @@ Disable it, don't purge it.
 
 ## Passkeys
 
-- Inherited from upstream GPL code: passkeys in the browser extension, the Windows 11 plugin authenticator and macOS AutoFill provider on desktop, and Android Credential Manager and the iOS credential provider on mobile.
+- Inherited from upstream GPL code: passkeys in the browser extension, the Windows 11 plugin authenticator and macOS AutoFill provider on desktop. Upstream's mobile apps have them too, but our phone apps are our own.
 - Our job: make sure the server stores and syncs passkey items correctly (verify against Vaultwarden), then cover registration and sign-in in tiers 1 and 2.
+- **Our apps (designed, not built):** `docs/core.md` "Passkeys" and `docs/phones.md` "Passkeys". The core signs and makes ES256 passkeys in upstream's format, the private key never leaving it. Android 14 and later get them through Credential Manager, with the site's Digital Asset Links checked for apps; iOS 17 and later through the AutoFill extension. Vectors fix the bytes (RFC 6979), and a real-server test runs passkeys both ways between the core and our extension.
+- **AAGUID:** our apps get PassBundle's own (`09c5ee5f-0845-48e6-aef4-c7c443317de5`). The browser extension still makes passkeys with upstream's, so sites that name a passkey's maker by its AAGUID name upstream's product for them. Moving the extension to ours, and listing ours where sites look it up, is the owner's call.
 
 ## Autofill
 
