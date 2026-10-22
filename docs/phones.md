@@ -70,7 +70,25 @@ The part that's most of the work, and native, because each OS draws its own list
 - It's a separate process with a tight memory limit, so it doesn't run Flutter. Its few screens (the matching logins, and the unlock screen) are native SwiftUI, drawn in our design.
 - It links the same core, reads the kept vault from the App Group, and unlocks on its own (Face ID makes that quick), because it can't share the app's memory.
 - **Suggestions above the keyboard:** after each sync the app gives iOS the list of websites and usernames (`ASCredentialIdentityStore`), never passwords, so iOS can suggest a login; picking one asks Face ID and fills it without showing our screen.
-- **Passkeys** come later, in the same extension.
+- **Passkeys** are in the same extension (below).
+
+## Passkeys
+
+The core signs and makes passkeys (`docs/core.md`, "Passkeys"); each OS asks for them its own way. Designed, not built yet.
+
+**Android: a credential provider** (`CredentialProviderService`, from AndroidX's `credentials` library, Apache 2.0), in Kotlin, in the app's process like autofill.
+- **Android 14 and later only.** Earlier versions take passkeys only from Google's own provider.
+- **Signing in:** Android asks first what PassBundle has for a site (`onBeginGetCredentialRequest`). It answers with the site's passkeys by account name, or "Unlock PassBundle" while it's locked (unlocking as autofill does, then the list). Picking one opens PassBundle's own screen, which asks for Face ID or a fingerprint when the person hasn't just proved who they are, then has the core sign.
+- **Who's asking:** a browser on Google's privileged list (the one autofill uses, `assets/browsers.json`, checked by signing certificate) gives the page's origin and the client data hash, and the browser has already checked the site's ID against the page. Any other app is checked against the site's Digital Asset Links: the core fetches `https://<site>/.well-known/assetlinks.json` itself (HTTPS, no redirects off the site, at most 64 KB, 10 seconds) and goes on only if it names that app's package and signing certificate for `delegate_permission/common.get_login_creds`. The answer is kept on the phone for a day. Then the provider builds the client data with the app's origin.
+- **Making one:** Android asks where to save a new passkey (`onBeginCreateCredentialRequest`). PassBundle offers itself, and its screen picks the login (or a new one), as in "Making one".
+- **Browsers the person trusted for autofill don't count here.** An unlisted app can't give Android a page's origin, so it's checked as an app.
+
+**iOS: the AutoFill extension** (iOS 17 and later), the same one that fills passwords.
+- It says it provides passkeys (`ProvidesPasskeys`), and iOS hands it the site's ID and the client data hash, having checked the app's associated domains or Safari's page itself.
+- **Suggestions:** after each sync the app gives iOS each passkey's site, account name, credential ID, and user handle (`ASPasskeyCredentialIdentity`), never a key. iOS lists them in its own passkey sheet, and the extension opens only when one is picked.
+- **Signing in and making one:** the extension unlocks as for passwords, asks for Face ID when the site wants proof and it wasn't just given, and answers with `ASPasskeyAssertionCredential` or `ASPasskeyRegistrationCredential`.
+
+**Tests:** the core's Digital Asset Links check against a local test server; on the emulator, a test app signing in and making a passkey through Credential Manager (debug builds can point the test site's name at the test server, as they stand in for the biometric prompt); on the simulator, the AutoFill test's page doing the same in Safari.
 
 ## Locking
 
@@ -93,4 +111,4 @@ The part that's most of the work, and native, because each OS draws its own list
 
 ## Not yet
 
-Passkeys, Wear OS and watchOS, tablets' own layout (they get the desktop layout when wide enough), and sharing from other apps into a new item.
+Passkeys (designed above), Wear OS and watchOS, tablets' own layout (they get the desktop layout when wide enough), and sharing from other apps into a new item.
