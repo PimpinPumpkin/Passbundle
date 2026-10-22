@@ -192,6 +192,7 @@ Where the apps sign in, so nobody types a server address who doesn't have to:
   - macOS: the MDM profile's managed preferences (`com.passbundle.agent`, `ServerUrl`);
   - Linux: `/etc/passbundle/policy.json` (`ServerUrl`), which the Linux install script writes, read only if it's root's and only root can change it;
   - Android: the app's managed configuration (`server_url`), which an MDM sets.
+  - iOS: the app's managed app configuration (`server_url` in `com.apple.configuration.managed`), which an MDM sets.
 
   Nothing the person, or something running as them, can write is read, so nobody can point the apps at another server this way.
 - **Someone hosting their own**: "Self-hosted?" on the sign-in screen shows the server field. Signing in to that server once keeps it showing, for next time.
