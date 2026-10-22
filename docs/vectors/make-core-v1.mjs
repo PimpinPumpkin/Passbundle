@@ -115,6 +115,8 @@ const ids = {
   shared: "4e5f6071-8293-4a41-bcd2-e3f405162738",
   withKey: "5f607182-93a4-4b52-cde3-f40516273849",
   note: "60718293-a4b5-4c63-def4-05162738495a",
+  card: "718293a4-b5c6-4d74-8f01-162738495a6b",
+  identity: "8293a4b5-c6d7-4e85-9012-2738495a6b7c",
 };
 
 // What each item opens to.
@@ -150,6 +152,49 @@ const items = {
     fields: [{ name: "API key", value: "k-123", type: 1 }],
   },
 };
+
+// A card and an identity: their own details, under the user key. Their IVs
+// come from a counter of their own, so adding them left every earlier string
+// as it was.
+let detailIvCounter = 0;
+const detailIv = () => Buffer.alloc(16, 0x10 + detailIvCounter++);
+const encDetails = (key, details) =>
+  Object.fromEntries(
+    Object.entries(details).map(([k, text]) => [k, text == null ? null : enc2(key, Buffer.from(text, "utf8"), detailIv())]),
+  );
+const card = {
+  name: "Everyday card",
+  notes: "For travel.",
+  card: { cardholderName: "Ana Lopez", brand: "Visa", number: "4111111111111111", expMonth: "7", expYear: "2029", code: "123" },
+};
+const identity = {
+  name: "Ana at home",
+  notes: null,
+  identity: {
+    title: "Ms",
+    firstName: "Ana",
+    middleName: "María",
+    lastName: "López",
+    address1: "1 Example Street",
+    address2: "Apartment 2",
+    address3: null,
+    city: "Springfield",
+    state: "IL",
+    postalCode: "62701",
+    country: "US",
+    company: "Example Co",
+    email: "ana.lopez@example.test",
+    phone: "+1 555 0100",
+    ssn: "123-45-6789",
+    username: "analopez",
+    passportNumber: "X0000000",
+    licenseNumber: "D000-0000-0000",
+  },
+};
+const encWithDetails = (key, item, kind) => ({
+  ...encDetails(key, { name: item.name, notes: item.notes }),
+  [kind]: encDetails(key, item[kind]),
+});
 
 const encLogin = (key, item) => ({
   name: enc(key, item.name),
@@ -210,6 +255,8 @@ const sync = {
       type: 2,
       secureNote: { type: 0 },
     },
+    { ...cipher(ids.card, encWithDetails(userKey, card, "card")), type: 3 },
+    { ...cipher(ids.identity, encWithDetails(userKey, identity, "identity")), type: 4 },
   ],
   policies: [],
   sends: [],
@@ -351,6 +398,8 @@ const vectors = {
       [ids.shared]: { ...items.shared, type: 1, folderId: null, organizationId: ids.organization, favorite: false },
       [ids.withKey]: { ...items.withKey, type: 1, folderId: null, organizationId: null, favorite: false },
       [ids.note]: { name: "Gate code", notes: "4417#", type: 2, folderId: null, organizationId: null, favorite: false },
+      [ids.card]: { ...card, type: 3, folderId: null, organizationId: null, favorite: false },
+      [ids.identity]: { ...identity, type: 4, folderId: null, organizationId: null, favorite: false },
     },
   },
   totp,

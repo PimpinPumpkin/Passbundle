@@ -2,8 +2,8 @@
 // upstream's own crypto, the SDK's public PureCrypto API, from a checkout of
 // the clients repo: the master keys derive, the user key, private key,
 // organization keys, and item key open, every item's strings open to what the
-// vectors say, and the refused strings are refused. Tier 1 runs it with this
-// repo checked out in meta/:
+// vectors say (a card's and an identity's details too), and the refused
+// strings are refused. Tier 1 runs it with this repo checked out in meta/:
 //
 //   node meta/docs/vectors/check-core-vectors.mjs meta/docs/vectors/core-v1.json .
 import fs from "node:fs";
@@ -99,6 +99,12 @@ for (const c of v.sync.ciphers) {
       uris: c.login.uris.map((u) => open(u.uri, key)),
       fields: c.fields.map((f) => ({ name: open(f.name, key), value: open(f.value, key), type: f.type })),
     });
+  }
+  // A card's or an identity's own details, each string opened.
+  for (const kind of ["card", "identity"]) {
+    if (c[kind]) {
+      seen[kind] = Object.fromEntries(Object.entries(c[kind]).map(([k, text]) => [k, open(text, key)]));
+    }
   }
   const expected = Object.fromEntries(Object.keys(seen).map((k) => [k, want[k]]));
   check(JSON.stringify(seen) === JSON.stringify(expected), `item ${want.name} opens`);
