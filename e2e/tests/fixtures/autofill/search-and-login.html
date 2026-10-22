@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sign in</title>
+  </head>
+  <body>
+    <!-- A site search in the header, and a newsletter box, around the login. -->
+    <header>
+      <form action="/search" role="search">
+        <label for="q">Search</label>
+        <input id="q" name="q" type="search" />
+      </form>
+    </header>
+    <form action="/signed-in.html" method="post">
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" />
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" />
+      <button type="submit">Sign in</button>
+    </form>
+    <footer>
+      <form action="/subscribe">
+        <label for="news">Get our newsletter</label>
+        <input id="news" name="email" type="email" placeholder="you@example.com" />
+        <button type="submit">Subscribe</button>
+      </form>
+    </footer>
+  </body>
+</html>
