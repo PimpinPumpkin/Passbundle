@@ -127,7 +127,28 @@ The app locks by itself, the same as Lock: every key and everything decrypted is
 - **With that switch off**, time asleep still counts toward the wait: waking resets the OS's idle count, so the core adds the time asleep to the idle time it saw before.
 - **The clock set back** doesn't stretch the wait: the app's own time is the longer of the wall clock's and a monotonic clock's.
 - **How:** the core decides (`core/src/autolock.rs`), from what the OS says, and is tested with made-up readings. The app asks every two seconds while unlocked, and tells the core when the person uses it (at most once a second). A check while a slow call (a sync) has the core waits for the next one; a sleep notice then locks as soon as that call is done.
-- **Not yet:** a longest wait an organization sets by policy, which MSPs will want. Upstream's server leaves that policy out of its open-source build, so ours gets designed and built in full: the server, a policy page in the web vault, and the apps keeping to it.
+- **An organization can set the longest wait** (below).
+
+## Locking by policy
+
+An organization can set how long its members' vaults may stay open, which MSPs want for every client. Upstream's server leaves this policy out of its open-source code, and its page for it is under the Bitwarden License, so ours is designed and built here in full. We don't read either.
+
+- **The policy** is upstream's "vault timeout" policy (type 9), with the data upstream's open-source clients read: `{"type", "minutes", "action"}`. Keeping that shape means the web vault and the browser extension, which are upstream's code, already keep to it; what's ours is the server accepting it, the web vault's page to set it, and the core keeping to it.
+- **What an organization can set:**
+  - **The longest wait** before locking, from 1 minute to a day (`"type": "custom"`, with `minutes`). A person can choose a shorter one.
+  - **Immediately** (`"immediately"`): phones lock as the app leaves the screen; computers when the app's window is closed or minimized.
+  - **When the computer locks** (`"onSystemLock"`): "Lock when the computer sleeps or its screen locks" stays on. The wait is the person's.
+  - **Lock or sign out** when the time comes (`"action"`: `"lock"`, the default, or `"logOut"`). Signing out is what Sign out does: the kept vault and its keys are deleted from the device, and the person signs in again.
+  - The page doesn't offer upstream's `"never"` or `"onAppRestart"`: neither limits our apps, which always lock when they close.
+- **The server** accepts type 9 and refuses data it doesn't understand: a type other than the three above (or upstream's two that limit nothing), minutes outside 1 to 1,440 for a longest wait, or an action other than lock or sign out. So a client never gets a policy it can't read. An MSP's default policies can include it. The Business preset's "lock when the computer locks" (DESIGN.md) is this policy, and goes into the preset next. The web vault can't see the computer lock, so there upstream's code turns a "never" or "on refresh" choice into locking on refresh, and leaves a timed choice alone; the extension locks with the computer.
+- **Who it binds:** everyone in the organization who has joined, owners, admins, and MSP staff included. Upstream exempts people who can manage policies; we don't, because the policy protects what a person can reach, and admins and MSP staff reach the most (as with MSP staff and two-step login). The web vault and the extension keep upstream's rule until we change it there too.
+- **More than one organization:** the strictest of each part applies: the shortest wait, immediately over any wait, the computer locking if any says so, and signing out if any says so.
+- **In the apps:** the core keeps the person's own choice and the policy apart, and applies the stricter.
+  - Settings offers only the waits the policy allows and says why ("Your organization locks PassBundle after 15 minutes at most"). With "when the computer locks", that switch shows on and can't be turned off.
+  - A choice made before the policy (a longer wait) is kept, not changed: the policy's wait applies while the policy does, and the person's own choice comes back if the organization drops it or they leave.
+  - The policy comes with each sync and is kept with the vault (`sync.json`), so it applies offline and from the moment the vault unlocks.
+- **Status:** the server and the web vault's page are built, with their tests (`e2e/tests/api/vault-lock-policy.spec.ts`, `e2e/tests/vault-lock-policy.spec.ts`). The apps keeping to it is built in passbundle-apps' `lock-policy` branch (`core/src/lock_policy.rs`, its tests, and Settings), which goes up once the Android work ahead of it merges.
+- **Tests:** the server refuses each kind of bad data and keeps good data as sent; the web vault's page turns each choice into that data and back; the core combines policies from several organizations (made-up policies) and locks, or signs out, by them (made-up readings); the app's Settings offers only what the policy allows; and end to end, the web vault sets the policy and the core, signed in to the same server, keeps to it.
 
 ## The bridge to the app
 
