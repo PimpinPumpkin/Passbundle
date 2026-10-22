@@ -120,6 +120,7 @@ Unlock the browser extension with Windows Hello or Touch ID, through the desktop
 - **Status, Linux:** `installer/linux/install-passbundle.sh` is run as root by the RMM. With the app's bundle in a `passbundle` folder next to it, it installs the app to /opt/passbundle, with a desktop entry and icon so it's in the applications menu.
   - Linux browsers read managed policies from files, so the script sets the Windows script's policies itself, with the same options: one file of our own in Chrome's and Edge's managed policies folders.
   - A list policy set in two files is the browser's pick of one, so if another vendor's file also force-installs extensions, it says so and leaves that file alone.
+  - With a server address, it also writes the app's own policy (`/etc/passbundle/policy.json`), so the app signs in to that server without asking (`docs/core.md`, "Servers").
   - Without the app's folder, it sets the policies only.
   - Run again, it changes nothing; with a new app, it replaces it. `--remove` undoes it all.
   - The desktop agent isn't installed: on Linux it has no tray and no biometric unlock yet.

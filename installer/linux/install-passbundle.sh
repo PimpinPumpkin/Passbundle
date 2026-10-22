@@ -31,6 +31,8 @@ APP_ID="com.passbundle.app"
 DESKTOP_ENTRY="/usr/share/applications/$APP_ID.desktop"
 ICON="/usr/share/icons/hicolor/256x256/apps/$APP_ID.png"
 POLICY_FILE="passbundle.json"
+# The app's own policy: the server it signs in to (docs/core.md, "Servers").
+APP_POLICY="/etc/passbundle/policy.json"
 CHROME_POLICIES="/etc/opt/chrome/policies/managed"
 EDGE_POLICIES="/etc/opt/edge/policies/managed"
 # The only extensions this can ever force-install, the same as
@@ -229,13 +231,19 @@ install_policies() {
         ;;
     esac
   done
+  # The app signs in to the organization's server without asking.
+  if [ -n "$server_url" ]; then
+    printf '{\n  "ServerUrl": "%s"\n}\n' "$server_url" > "$written"
+    put_file "$APP_POLICY" < "$written"
+  fi
   rm -f "$written"
 }
 
 if [ -n "$remove" ]; then
   pkill -x passbundle 2> /dev/null || true
   rm -rf "$APP" "/opt/.passbundle.installing"
-  rm -f "$DESKTOP_ENTRY" "$ICON" "$CHROME_POLICIES/$POLICY_FILE" "$EDGE_POLICIES/$POLICY_FILE"
+  rm -f "$DESKTOP_ENTRY" "$ICON" "$CHROME_POLICIES/$POLICY_FILE" "$EDGE_POLICIES/$POLICY_FILE" "$APP_POLICY"
+  rmdir "$(dirname "$APP_POLICY")" 2> /dev/null || true
   refresh_menus
   echo "Removed PassBundle and its browser policies."
   exit 0

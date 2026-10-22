@@ -99,6 +99,8 @@ check "Chrome extension gets the join secret" policy_is "$chrome/passbundle.json
 check "Edge extension gets the organization key fingerprint" policy_is "$edge/passbundle.json" \
   "${ext}[\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"][\"orgKeyFingerprint\"] == \"$org_key\""
 check "Edge address autofill off" policy_is "$edge/passbundle.json" 'p["AutofillAddressEnabled"] is False'
+check "the app gets the server, without a trailing slash" policy_is /etc/passbundle/policy.json "p == {\"ServerUrl\": \"$server_url\"}"
+check "the app's policy is root's and read-only" sh -c "[ \"\$(stat -c '%U:%G %a' /etc/passbundle/policy.json)\" = 'root:root 644' ]"
 
 echo "Again, with nothing new"
 out=$(sh "$script" --disable-card-autofill --disable-address-autofill --server-url "$server_url/" \
@@ -126,6 +128,7 @@ check "the menu entry is gone" test ! -e "$entry"
 check "the icon is gone" test ! -e "$icon"
 check "our Chrome policies are gone" test ! -e "$chrome/passbundle.json"
 check "our Edge policies are gone" test ! -e "$edge/passbundle.json"
+check "the app's policy is gone" test ! -e /etc/passbundle/policy.json
 check "the other vendor's file is still there" sh -c "[ \"\$(cat '$foreign')\" = \"\$1\" ]" _ "$foreign_before"
 check "removing again is fine" sh "$script" --remove
 rm -f "$foreign"
