@@ -7,7 +7,7 @@ import { test as webTest, type BrowserContext, type Page } from "@playwright/tes
 
 import { extensionFrame, hasElementDeep, waitForExtensionScan } from "./support/autofill";
 import { createAccount, expect, logInPopup, openPopup, test, userFor } from "./support/extension";
-import { signUp, webUserFor } from "./support/web";
+import { newItem, signUp, webUserFor } from "./support/web";
 
 /** airfrance.com's published rules, as a pattern, plus one of each required kind. */
 function expectAirFranceRules(password: string) {
@@ -74,8 +74,7 @@ webTest("the item editor's generator follows the item's website's password rules
   page,
 }, testInfo) => {
   await signUp(page, webUserFor("site-rules-editor", testInfo.repeatEachIndex));
-  await page.getByRole("button", { name: "New", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Login" }).click();
+  await newItem(page, "Login");
   const item = page.getByRole("dialog", { name: "New Login" });
   await item.getByRole("textbox", { name: /Item name/ }).fill("Air France");
   // A website the way people type it, without https://.

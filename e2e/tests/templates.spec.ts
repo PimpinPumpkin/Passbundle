@@ -4,16 +4,14 @@
 import { expect, test } from "@playwright/test";
 
 import { addLogin } from "./support/autofill";
-import { signUp, webUserFor } from "./support/web";
+import { newTemplate, signUp, templatePicker, webUserFor } from "./support/web";
 
 test("a new item from the API key template starts with its fields and shows its template", async ({
   page,
 }, testInfo) => {
   await signUp(page, webUserFor("template", testInfo.repeatEachIndex));
 
-  await page.getByRole("button", { name: "New", exact: true }).click();
-  await page.getByRole("menuitem", { name: "From template" }).click();
-  const picker = page.getByRole("dialog", { name: "New item from a template" });
+  const picker = await templatePicker(page);
   for (const name of ["API key", "Server", "Wi-Fi network", "Software license", "Certificate"]) {
     await expect(picker.getByRole("button", { name, exact: true })).toBeVisible();
   }
@@ -41,12 +39,7 @@ test("a new item from the API key template starts with its fields and shows its 
 test("a login-based template keeps the login fields too", async ({ page }, testInfo) => {
   await signUp(page, webUserFor("template-login", testInfo.repeatEachIndex));
 
-  await page.getByRole("button", { name: "New", exact: true }).click();
-  await page.getByRole("menuitem", { name: "From template" }).click();
-  await page
-    .getByRole("dialog", { name: "New item from a template" })
-    .getByRole("button", { name: "Server", exact: true })
-    .click();
+  await (await templatePicker(page)).getByRole("button", { name: "Server", exact: true }).click();
 
   const editor = page.getByRole("dialog", { name: "New Login" });
   await editor.getByRole("textbox", { name: /Item name/ }).fill("Build server");
@@ -66,13 +59,7 @@ test("a custom template is made in the ordinary editor, and new items start with
 }, testInfo) => {
   await signUp(page, webUserFor("template-custom", testInfo.repeatEachIndex));
 
-  await page.getByRole("button", { name: "New", exact: true }).click();
-  await page.getByRole("menuitem", { name: "From template" }).click();
-  await page
-    .getByRole("dialog", { name: "New item from a template" })
-    .getByRole("button", { name: "Create template" })
-    .click();
-  await page.getByRole("dialog", { name: "New template" }).getByRole("button", { name: "Logins" }).click();
+  await newTemplate(page, "logins");
 
   // A template is a note: its name is the template's, its custom fields are the template's.
   const editor = page.getByRole("dialog", { name: /^New/ });
@@ -109,10 +96,7 @@ test("a custom template is made in the ordinary editor, and new items start with
   ).toHaveText("Template");
 
   // The picker lists it under the person's own templates.
-  await page.getByRole("button", { name: "New", exact: true }).click();
-  await page.getByRole("menuitem", { name: "From template" }).click();
-  await page
-    .getByRole("dialog", { name: "New item from a template" })
+  await (await templatePicker(page))
     .getByRole("region", { name: "My templates" })
     .getByRole("button", { name: "Client laptop", exact: true })
     .click();
@@ -170,10 +154,7 @@ test("Save as template turns an item's custom fields into a new template, withou
   await page.getByRole("dialog", { name: /^View/ }).getByRole("button", { name: "Close" }).first().click();
 
   // New logins start from it.
-  await page.getByRole("button", { name: "New", exact: true }).click();
-  await page.getByRole("menuitem", { name: "From template" }).click();
-  await page
-    .getByRole("dialog", { name: "New item from a template" })
+  await (await templatePicker(page))
     .getByRole("button", { name: "Microsoft 365 admin", exact: true })
     .click();
   const login = page.getByRole("dialog", { name: "New Login" });

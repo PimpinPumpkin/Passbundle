@@ -1,11 +1,11 @@
 // The extension's item list flags items that expire soon.
 import { createAccount, expect, logInPopup, openPopup, test, userFor } from "./support/extension";
+import { newItem } from "./support/web";
 
 test("the popup's item list flags an item that expires soon", async ({ context, extensionId }, testInfo) => {
   const user = userFor("expires-ext", testInfo.repeatEachIndex);
   const web = await createAccount(context, user);
-  await web.getByRole("button", { name: "New", exact: true }).click();
-  await web.getByRole("menuitem", { name: "Login" }).click();
+  await newItem(web, "Login");
   const dialog = web.getByRole("dialog", { name: "New Login" });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill("Example API key");
   const inTwoDays = new Date();
@@ -27,8 +27,7 @@ test("the extension reminds once, on the device, when an item is about to expire
 }, testInfo) => {
   const user = userFor("expires-remind", testInfo.repeatEachIndex);
   const web = await createAccount(context, user);
-  await web.getByRole("button", { name: "New", exact: true }).click();
-  await web.getByRole("menuitem", { name: "Login" }).click();
+  await newItem(web, "Login");
   const dialog = web.getByRole("dialog", { name: "New Login" });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill("Example certificate");
   const inFiveDays = new Date();

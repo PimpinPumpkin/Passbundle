@@ -49,3 +49,47 @@ export async function confirmMember(page: Page, email: string) {
   await expect(dialog).toBeHidden();
   await expect(row.getByText("Needs confirmation")).toHaveCount(0);
 }
+
+/** Opens the New item picker in the vault (DESIGN.md, "Our own screens"). */
+export async function openNewItem(page: Page) {
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  const picker = page.getByRole("dialog", { name: "What are you saving?" });
+  await expect(picker).toBeVisible();
+  return picker;
+}
+
+/**
+ * Starts a new item: Login, Secure note, Card, or Identity, or a kind under
+ * More. In an organization's vault in the admin console, New is still
+ * upstream's menu.
+ */
+export async function newItem(page: Page, kind: string) {
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  const picker = page.getByRole("dialog", { name: "What are you saving?" });
+  const menuItem = page.getByRole("menuitem", { name: kind });
+  await expect(picker.or(menuItem)).toBeVisible();
+  if (await menuItem.isVisible()) {
+    await menuItem.click();
+    return;
+  }
+  const tile = picker.getByTestId("new-item-main").getByRole("button", { name: new RegExp(`^${kind}`) });
+  if ((await tile.count()) > 0) {
+    await tile.click();
+    return;
+  }
+  await picker.getByRole("button", { name: "More categories" }).click();
+  await picker.getByRole("button", { name: kind, exact: true }).click();
+}
+
+/** The picker with More open: the other kinds, and templates by group. */
+export async function templatePicker(page: Page) {
+  const picker = await openNewItem(page);
+  await picker.getByRole("button", { name: "More categories" }).click();
+  return picker;
+}
+
+/** Starts a new custom template whose items are logins or notes. */
+export async function newTemplate(page: Page, items: "logins" | "notes") {
+  const picker = await templatePicker(page);
+  await picker.getByRole("button", { name: items === "logins" ? "a template for logins" : "for notes" }).click();
+}
