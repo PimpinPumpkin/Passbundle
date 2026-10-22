@@ -208,8 +208,11 @@ jobs:
             sed 's/\.html$/.ts/' | sort -u |
             while read -r file; do if [ -f "$file" ]; then echo "$file"; fi; done > "$RUNNER_TEMP/changed.txt"
           cat "$RUNNER_TEMP/changed.txt"
+          # The clients' jest config asks for 8 workers; the runner has 4
+          # cores and 16 GB, and a large set of Angular tests then runs it out
+          # of memory (the runner shuts down mid-run).
           if [ -s "$RUNNER_TEMP/changed.txt" ]; then
-            xargs npx jest --ci --findRelatedTests < "$RUNNER_TEMP/changed.txt"
+            xargs npx jest --ci --maxWorkers=4 --findRelatedTests < "$RUNNER_TEMP/changed.txt"
           fi
 
   other-browsers:
