@@ -279,11 +279,11 @@ jobs:
         shell: pwsh
         run: .\docs\vectors\check-script-module.ps1 -Module server\src\static\scripts\PassBundle.psm1 -Vectors docs\vectors\script-access-v1.json
 
-  mac-installer:
-    # The Mac install scripts: shellcheck, and the configuration profile, which
-    # only an MDM installs, so this reads it back. Tier 2 (macOS) installs for
-    # real on a Mac.
-    name: Mac install scripts
+  install-scripts:
+    # The Mac and Linux install scripts: shellcheck, and the Mac configuration
+    # profile, which only an MDM installs, so this reads it back. Tier 2
+    # (macOS, Linux) installs for real.
+    name: Mac and Linux install scripts
     needs: refs
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -294,7 +294,7 @@ jobs:
           ref: ${{ needs.refs.outputs.meta }}
           persist-credentials: false
       - name: Lint the scripts
-        run: shellcheck installer/macos/*.sh installer/macos/tests/*.sh
+        run: shellcheck installer/macos/*.sh installer/macos/tests/*.sh installer/linux/*.sh installer/linux/tests/*.sh
       - name: The configuration profile
         run: python3 -I installer/macos/tests/test_profile.py
 
