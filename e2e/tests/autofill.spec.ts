@@ -166,3 +166,46 @@ for (const codePage of ["otp-tagged.html", "otp-masked.html", "otp-bare.html"]) 
     await expectNoPromptAfterSubmit(page);
   });
 }
+
+// A passwordless sign-in shows the email and the code that was sent on one
+// page, so the submission has a username and a short numeric secret, just like
+// a sign-in with a PIN, and the value check above can't tell them apart. The
+// extension knows the field by what the page calls it. The same page with a
+// PIN still offers to save, which also shows a prompt would have appeared.
+test("never offers the code from a passwordless sign-in as a password, but saves a PIN", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const site = "https://login.example.test";
+  await setUpSavedLogin(context, extensionId, userFor("passwordless", testInfo.repeatEachIndex), site);
+  await proveSaveDetectorWorks(context, site);
+
+  const page = await context.newPage();
+  await page.goto(`${site}/email-code.html`);
+  await waitForExtensionScan(context, page, "code");
+  await page.getByLabel("Email").fill("alice@example.test");
+  await page.getByLabel("Enter the 6-digit code we sent you").fill("123456");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.waitForURL(`${site}/signed-in.html`);
+  await expectNoPromptAfterSubmit(page);
+  await page.close();
+
+  // Up to three tries, like the calibration: upstream's detector sometimes
+  // misses a prompt on its own.
+  for (let attempt = 1; ; attempt++) {
+    const pin = await context.newPage();
+    await pin.goto(`${site}/email-pin.html`);
+    await waitForExtensionScan(context, pin, "pin");
+    await pin.getByLabel("Email").fill("alice@example.test");
+    await pin.getByLabel("PIN").fill("123456");
+    await pin.getByRole("button", { name: "Sign in" }).click();
+    const prompted = await expect
+      .poll(() => hasNotificationBar(pin), { timeout: 10_000 })
+      .toBe(true)
+      .then(() => true)
+      .catch(() => false);
+    await pin.close();
+    if (prompted) return;
+    if (attempt === 3) throw new Error("No save prompt for a sign-in with a PIN in three tries.");
+  }
+});

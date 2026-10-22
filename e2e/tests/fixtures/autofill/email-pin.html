@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8" /><title>Sign in with a PIN</title></head>
+  <body>
+    <!-- The same shape as email-code.html, but the secret is the person's own
+         numeric PIN, which is worth saving. -->
+    <form action="/signed-in.html" method="post">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" />
+      <label for="pin">PIN</label>
+      <input id="pin" name="pin" type="password" inputmode="numeric" />
+      <button type="submit">Sign in</button>
+    </form>
+  </body>
+</html>
