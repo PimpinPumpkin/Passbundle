@@ -1,7 +1,7 @@
 // Generated passwords follow the site's own published password rules
 // (DESIGN.md, "Health (better than Watchtower)"). airfrance.com takes 8 to 12
 // characters, with a lowercase and an uppercase letter and a digit, and only
-// -!#$&+/?@_ besides; the generator's usual 14 characters are too long there.
+// -!#$&+/?@_ besides; the generator's usual 20 characters are too long there.
 // The page is the local fixture, under that name (see paths.mjs).
 import { test as webTest, type BrowserContext, type Page } from "@playwright/test";
 
@@ -61,7 +61,7 @@ test("a suggested password follows the site's own password rules, and is the usu
   // A site without published rules gets the generator's usual password.
   const elsewhere = await context.newPage();
   await elsewhere.goto("https://signup.example.test/signup.html");
-  expect(await fillSuggestedPassword(context, elsewhere)).toHaveLength(14);
+  expect(await fillSuggestedPassword(context, elsewhere)).toHaveLength(20);
 
   const site = await context.newPage();
   await site.goto("https://www.airfrance.com/signup.html");
