@@ -262,7 +262,7 @@ The generator makes a password or a passphrase, drawn uniformly with the OS's ra
 
 A login can hold a passkey (upstream's `fido2Credentials`), made by the browser extension, by upstream's apps, or by ours. The apps will use them to sign in to websites and apps, on phones through the OS (Android's Credential Manager, iOS's AutoFill), the way they fill passwords.
 
-**Built so far:** the core reads a login's passkey (its key left encrypted until it signs), lists a site's passkeys, signs in with one (`pb_passkeys`, `pb_passkey_assert`), raising and saving the counter of one that counts, and makes one into a new or existing login (`pb_passkey_create`), saved before it answers. A real-server test makes passkeys and signs in with them, the signatures verified with their own public keys. The apps show a login's passkey (who it's for, when it was made). Not yet: the phones' providers, and the test both ways with our extension.
+**Built so far:** the core reads a login's passkey (its key left encrypted until it signs), lists a site's passkeys, signs in with one (`pb_passkeys`, `pb_passkey_assert`), raising and saving the counter of one that counts, and makes one into a new or existing login (`pb_passkey_create`), saved before it answers. A real-server test makes passkeys and signs in with them, the signatures verified with their own public keys. The apps show a login's passkey (who it's for, when it was made). Android's passkey provider uses them (`docs/phones.md`, "Passkeys"). Not yet: iOS's, and the test both ways with our extension.
 
 **What's stored**, upstream's format, so a passkey made anywhere works everywhere. Each value is a type 2 string under the item's key, except the date:
 
