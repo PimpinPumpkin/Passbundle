@@ -2,8 +2,9 @@
 // upstream's own crypto, the SDK's public PureCrypto API, from a checkout of
 // the clients repo: the master keys derive, the user key, private key,
 // organization keys, and item key open, every item's strings open to what the
-// vectors say (a card's and an identity's details too), and the refused
-// strings are refused. Tier 1 runs it with this repo checked out in meta/:
+// vectors say (a card's and an identity's details too), every attachment
+// opens, and the refused strings and files are refused. Tier 1 runs it with
+// this repo checked out in meta/:
 //
 //   node meta/docs/vectors/check-core-vectors.mjs meta/docs/vectors/core-v1.json .
 import fs from "node:fs";
@@ -108,6 +109,28 @@ for (const c of v.sync.ciphers) {
   }
   const expected = Object.fromEntries(Object.keys(seen).map((k) => [k, want[k]]));
   check(JSON.stringify(seen) === JSON.stringify(expected), `item ${want.name} opens`);
+}
+
+// Attachments: the file's name and key open with the item's key, and the
+// file opens with its own key; a changed file is refused.
+const fileKeys = {};
+for (const c of v.sync.ciphers) {
+  for (const a of c.attachments ?? []) {
+    const key = keyFor(c);
+    const want = v.opened.items[c.id].attachments.find((w) => w.id === a.id);
+    check(open(a.fileName, key) === want.fileName, `attachment ${want.fileName}'s name opens`);
+    const fileKey = attempt(() => PureCrypto.unwrap_symmetric_key(a.key, key));
+    fileKeys[a.id] = fileKey;
+    const file = v.attachmentFiles[a.id];
+    const opened = fileKey && attempt(() => PureCrypto.symmetric_decrypt_filedata(bytes(file.encrypted), fileKey));
+    check(opened != null && same(opened, file.plain), `attachment ${want.fileName} opens`);
+  }
+}
+for (const r of v.attachmentRefused) {
+  check(
+    attempt(() => PureCrypto.symmetric_decrypt_filedata(bytes(r.encrypted), fileKeys[r.id])) === null,
+    `refused attachment: ${r.why}`,
+  );
 }
 
 for (const r of v.refused) {
