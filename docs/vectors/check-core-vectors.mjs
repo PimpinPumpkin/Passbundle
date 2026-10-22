@@ -3,10 +3,13 @@
 // the clients repo: the master keys derive, the user key, private key,
 // organization keys, and item key open, every item's strings open to what the
 // vectors say (a card's and an identity's details too), every attachment
-// opens, and the refused strings and files are refused. Tier 1 runs it with
-// this repo checked out in meta/:
+// opens, a passkey's values open and its key imports the way upstream's
+// authenticator reads it, its signatures verify (with Node's own crypto), and
+// the refused strings and files are refused. Tier 1 runs it with this repo
+// checked out in meta/:
 //
 //   node meta/docs/vectors/check-core-vectors.mjs meta/docs/vectors/core-v1.json .
+import { createPublicKey, verify, webcrypto } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -130,6 +133,51 @@ for (const r of v.attachmentRefused) {
   check(
     attempt(() => PureCrypto.symmetric_decrypt_filedata(bytes(r.encrypted), fileKeys[r.id])) === null,
     `refused attachment: ${r.why}`,
+  );
+}
+
+// Passkeys: every value opens with the item's key; the key imports as
+// upstream's authenticator reads it (WebCrypto, PKCS#8, ECDSA P-256) and is
+// the one whose public key the vectors name; each assertion's signature
+// verifies over the authenticator data and the client data hash.
+for (const c of v.sync.ciphers) {
+  for (const credential of c.login?.fido2Credentials ?? []) {
+    const key = keyFor(c);
+    const want = v.opened.items[c.id].passkey;
+    const seen = Object.fromEntries(
+      Object.entries(credential).map(([k, text]) => [k, k === "creationDate" ? text : open(text, key)]),
+    );
+    const expected = { ...want, counter: String(want.counter), discoverable: String(want.discoverable) };
+    check(
+      Object.keys(expected).every((k) => seen[k] === expected[k]),
+      `${want.rpName}'s passkey opens`,
+    );
+    const imported = await webcrypto.subtle
+      .importKey("pkcs8", Buffer.from(seen.keyValue, "base64url"), { name: "ECDSA", namedCurve: "P-256" }, true, ["sign"])
+      .catch(() => null);
+    const jwk = imported && (await webcrypto.subtle.exportKey("jwk", imported));
+    check(
+      jwk != null &&
+        Buffer.from(jwk.x, "base64url").equals(Buffer.from(v.passkeyPublic.x, "base64")) &&
+        Buffer.from(jwk.y, "base64url").equals(Buffer.from(v.passkeyPublic.y, "base64")),
+      `${want.rpName}'s passkey key imports as upstream reads it`,
+    );
+  }
+}
+const passkeyPublicKey = createPublicKey({
+  key: {
+    kty: "EC",
+    crv: "P-256",
+    x: Buffer.from(v.passkeyPublic.x, "base64").toString("base64url"),
+    y: Buffer.from(v.passkeyPublic.y, "base64").toString("base64url"),
+  },
+  format: "jwk",
+});
+for (const a of v.passkeyAssertions) {
+  const signed = Buffer.concat([Buffer.from(a.authenticatorData, "base64"), Buffer.from(a.clientDataHash, "base64")]);
+  check(
+    verify("sha256", signed, passkeyPublicKey, Buffer.from(a.signature, "base64")),
+    `passkey assertion (${a.userVerified ? "verified" : "present"}) verifies`,
   );
 }
 
