@@ -8,7 +8,7 @@
 // DESIGN.md, "MSP templates".
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUp, webUserFor } from "./support/web";
+import { newTemplate, signUp, templatePicker, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) =>
@@ -27,12 +27,10 @@ async function closeView(page: Page) {
   await expect(view).toBeHidden();
 }
 
-/** Opens "New item from a template" in the vault. */
+/** Opens the New item picker's templates in the vault. */
 async function templateChooser(page: Page) {
   await page.goto("/#/vault");
-  await page.getByRole("button", { name: "New", exact: true }).click();
-  await page.getByRole("menuitem", { name: "From template" }).click();
-  return page.getByRole("dialog", { name: "New item from a template" });
+  return templatePicker(page);
 }
 
 test("a template added for every client applies to all of them, a new client included, edits reach every client on their own, and removing it can take the copies away", async ({
@@ -57,12 +55,8 @@ test("a template added for every client applies to all of them, a new client inc
   await expect(templates).toContainText("Make a template first");
 
   // A template in the admin's own vault.
-  let chooser = await templateChooser(admin);
-  await chooser.getByRole("button", { name: "Create template" }).click();
-  await admin
-    .getByRole("dialog", { name: "New template" })
-    .getByRole("button", { name: "Notes" })
-    .click();
+  await admin.goto("/#/vault");
+  await newTemplate(admin, "notes");
   const editor = admin.getByRole("dialog", { name: /^New/ });
   await editor.getByRole("textbox", { name: /Item name/ }).fill("Firewall");
   await editor.getByRole("button", { name: "Add field" }).click();
@@ -142,7 +136,7 @@ test("a template added for every client applies to all of them, a new client inc
 
   // Making an item: the three clients' copies show once, from the MSP; the
   // admin's own shows under their own templates.
-  chooser = await templateChooser(admin);
+  let chooser = await templateChooser(admin);
   const fromMsp = chooser.getByRole("region", { name: "From Northwind IT" });
   await expect(fromMsp.getByRole("button")).toHaveCount(1);
   await expect(

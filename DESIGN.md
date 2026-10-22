@@ -478,6 +478,8 @@ Fixes for things that annoy users of Bitwarden and 1Password today.
 - **Context-aware new items:** creating an item while viewing a folder or collection puts it there.
 - **Onboarding day works:** upstream rate-limits logins per IP (a burst of 10, then one per minute) and signup, pre-login, and hint requests per IP (a shared burst of 50, then one per minute). A whole office behind one NAT address would get stuck after ten to twenty-five people. Built: the strict limit is per account now, and an address's limits fit an office (see "Login limits"). Later: allowances for an org's known addresses and enrolled devices.
 - **No nags:** upstream's web vault interrupts every fresh login with an extension page, an "Are you sure?" dialog, and a welcome tour. All three go. Extension setup happens through onboarding instead.
+- **New item picker (built, web vault):** New opens "What are you saving?": Login, Secure note, Card, and Identity as big tiles, and "More categories" for the other item types and every template (built-in, your own, your organizations', your MSP's), with a search and links to make a template. Folder and Collection are buttons at the bottom. Like 1Password's, so what people save most is one click and the rest is one more (`libs/vault/src/keykeeper/new-item-dialog.component.ts`). The admin console keeps upstream's menu for now.
+- **Only categories with items** show in the vault's filter list (Favorites too, once something is one); the one being viewed stays while it's open.
 
 ## Item templates
 

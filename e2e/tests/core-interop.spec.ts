@@ -10,7 +10,7 @@ import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 import { core, coreTool, serverCertificate } from "./support/core";
-import { signUp, webUserFor, type WebUser } from "./support/web";
+import { newItem, signUp, webUserFor, type WebUser } from "./support/web";
 
 test.skip(!coreTool && !process.env.CI, "KK_CORE_INTEROP isn't set; tier 1 builds the core's interop tool");
 
@@ -29,8 +29,7 @@ async function createOrganization(owner: Page, name: string): Promise<string> {
 /** A login made in the web vault, from the page given (a vault or an organization's). */
 async function webLogin(page: Page, at: string, item: { name: string; username: string; password: string; notes: string }) {
   await page.goto(at);
-  await page.getByRole("button", { name: "New", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Login" }).click();
+  await newItem(page, "Login");
   const dialog = page.getByRole("dialog", { name: "New Login" });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill(item.name);
   await dialog.getByRole("textbox", { name: /Username/ }).fill(item.username);

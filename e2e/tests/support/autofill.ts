@@ -3,6 +3,7 @@
 import type { BrowserContext, Frame, Page } from "@playwright/test";
 
 import { expect } from "./extension";
+import { newItem } from "./web";
 
 // The extension scans a page shortly after it loads and only then watches for
 // a form submission. People take longer than that to start typing; tests
@@ -100,8 +101,7 @@ export async function addLogin(
     customFields?: Record<string, string>;
   },
 ) {
-  await web.getByRole("button", { name: "New", exact: true }).click();
-  await web.getByRole("menuitem", { name: "Login" }).click();
+  await newItem(web, "Login");
   const dialog = web.getByRole("dialog", { name: "New Login" });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill(item.name);
   await dialog.getByRole("textbox", { name: "Username", exact: true }).fill(item.username);

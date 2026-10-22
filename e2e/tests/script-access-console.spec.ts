@@ -8,7 +8,7 @@ import { createDecipheriv, createHmac, hkdfSync, timingSafeEqual } from "node:cr
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUp, webUserFor } from "./support/web";
+import { newItem, signUp, webUserFor } from "./support/web";
 
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
 
@@ -51,8 +51,7 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
 
   // A login in the organization, with a note the token isn't granted.
   await page.goto(`/#/organizations/${orgId}/vault`);
-  await page.getByRole("button", { name: "New", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Login" }).click();
+  await newItem(page, "Login");
   const item = page.getByRole("dialog", { name: "New Login" });
   await item.getByRole("textbox", { name: /Item name/ }).fill("Domain admin");
   await item.getByRole("textbox", { name: /Username/ }).fill("admin@contoso.example");

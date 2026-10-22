@@ -20,6 +20,7 @@ import {
   test,
   userFor,
 } from "./support/extension";
+import { newTemplate } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
@@ -42,13 +43,7 @@ test("with no vault tab open, an MSP admin's extension confirms someone invited 
   await expect(toast(web, "Added Acme Dental")).toBeVisible();
 
   await web.goto(`${serverUrl}/#/vault`);
-  await web.getByRole("button", { name: "New", exact: true }).click();
-  await web.getByRole("menuitem", { name: "From template" }).click();
-  await web
-    .getByRole("dialog", { name: "New item from a template" })
-    .getByRole("button", { name: "Create template" })
-    .click();
-  await web.getByRole("dialog", { name: "New template" }).getByRole("button", { name: "Notes" }).click();
+  await newTemplate(web, "notes");
   const editor = web.getByRole("dialog", { name: /^New/ });
   await editor.getByRole("textbox", { name: /Item name/ }).fill("Firewall");
   await editor.getByRole("button", { name: "Add field" }).click();

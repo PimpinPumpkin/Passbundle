@@ -3,7 +3,7 @@
 // day the test runs (browsers in tests use UTC).
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUp, webUserFor } from "./support/web";
+import { newItem, signUp, webUserFor } from "./support/web";
 
 /** "YYYY-MM-DD" for today plus some days, in UTC like the test browser. */
 function isoInDays(days: number): string {
@@ -13,8 +13,7 @@ function isoInDays(days: number): string {
 }
 
 async function openNewLogin(page: Page, name: string) {
-  await page.getByRole("button", { name: "New", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Login" }).click();
+  await newItem(page, "Login");
   const dialog = page.getByRole("dialog", { name: "New Login" });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill(name);
   return dialog;

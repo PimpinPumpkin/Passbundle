@@ -2,6 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { brand } from "../paths.mjs";
 
+import { newItem, openNewItem } from "./support/web";
+
 // One account for the whole file. Tests run in order and build on each other,
 // against a server that starts empty for every run.
 const user = {
@@ -100,10 +102,28 @@ test("vault page carries our brand, including logos", async ({ page }) => {
   expect(leftovers).toEqual([]);
 });
 
+test("New offers the kinds people save most first, and the rest under More", async ({ page }) => {
+  await logIn(page);
+  const picker = await openNewItem(page);
+  const main = picker.getByTestId("new-item-main").getByRole("button");
+  await expect(main).toHaveCount(4);
+  for (const [i, kind] of ["Login", "Secure note", "Card", "Identity"].entries()) {
+    await expect(main.nth(i)).toContainText(kind);
+  }
+  await expect(picker.getByRole("button", { name: "API key", exact: true })).toHaveCount(0);
+  await picker.getByRole("button", { name: "More categories" }).click();
+  for (const name of ["SSH key", "API key", "Server", "Wi-Fi network"]) {
+    await expect(picker.getByRole("button", { name, exact: true })).toBeVisible();
+  }
+  await picker.getByRole("searchbox", { name: "Find a category" }).fill("wi-fi");
+  await expect(picker.getByRole("button", { name: "Server", exact: true })).toHaveCount(0);
+  await picker.getByRole("button", { name: /Folder$/ }).click();
+  await expect(page.getByRole("dialog", { name: /New folder|Add folder/ })).toBeVisible();
+});
+
 test("a saved login survives logging out and back in", async ({ page }) => {
   await logIn(page);
-  await page.getByRole("button", { name: "New", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Login" }).click();
+  await newItem(page, "Login");
   const dialog = page.getByRole("dialog", { name: "New Login" });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill("Example Bank");
   await dialog.getByRole("textbox", { name: "Username", exact: true }).fill("alice-bank");
