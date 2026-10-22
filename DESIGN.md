@@ -509,6 +509,7 @@ Any item can expire: API keys, certificates, licenses, domains, passports, cards
 
 Upstream gives us about 70 importers. They include 1Password, LastPass (with direct import), Dashlane, Keeper, Proton Pass, Enpass, KeePass, and the browsers. Our job is making them painless.
 
+- **Apple Passwords:** now, from a Mac, the Passwords app's CSV export, through the guided import (the Safari guide) and the first-run import step; an iPhone-only person needs a Mac to export today. Later, with iOS and macOS 26, Apple's credential exchange (the FIDO Alliance's Credential Exchange format): Passwords hands logins and passkeys straight to another app on the device, with no file. Our iPhone app, an AutoFill provider already, takes it in, encrypts on the device, and saves to the vault; the Mac app the same way. It needs the iPhone app installed, so it waits on the Apple Developer account. Android's Credential Manager is adding the same exchange; the Android app takes it when it's there.
 - **Detect and guide:** the desktop agent detects installed password managers and walks the user through that product's export with exact steps. Then it imports and securely deletes the export file.
 - **Direct import** where the source allows it, as upstream already does for LastPass.
 - **Business:** the admin bulk-imports shared vaults into collections, mapping source folders and shared folders. Each member's private items go through the same guided import during their onboarding.
@@ -572,6 +573,19 @@ The goal is to be measurably better than upstream. 1Password currently does this
 - **Scoreboard:** every commit runs both the upstream extension and ours against the corpus. We publish the numbers.
 - **Reference material** (compatible licenses only): Chromium autofill heuristics (BSD-3-Clause), Firefox form detection (MPL-2.0), and `apple/password-manager-resources` quirks data (MIT).
 - **Per-site corrections:** handled by fill rules (next section), and shared, for people who choose to, as site fixes (see "Site fixes (opt-in)").
+
+### How it keeps getting better
+
+Most sites fill on the generic rules; the work is the long tail, found one site at a time. The loop:
+
+1. **Finding them:** opt-in problem reports and shared site fixes (built, below) say which sites fail and how, as the shape of their sign-in fields, never values. MSP consoles see their staff's.
+2. **A fixture for each:** every site we fix gets a reduced page in the corpus that reproduces its pattern (our own markup, not the site's code), so it can't break again unnoticed.
+3. **The scoreboard:** CI runs our extension and upstream's against the whole corpus on every change and publishes the numbers. A change that makes any fixture worse fails.
+4. **Curated fixes, shipped as data:** fixes we've reviewed ship in the extension as a list, like the site password rules: selectors and field roles only, never code from a server, so a compromised server or list can't run anything in a page. Fixes three people sent apply on their own server before that (built), and an MSP's apply to its clients at once.
+5. **Generic first:** when several sites fail the same way, the fix goes into the generic matching instead of the list.
+
+- **Not learned automatically:** nothing is learned from page contents in the background; every shared fix is something a person chose with the fill picker, and every curated one is reviewed by us.
+- **Status:** steps 1 and the server half of 4 are built. Next: the corpus beyond today's 8 fixtures (multi-step, iframes, shadow DOM, single-page apps, one-time codes, card forms) and the scoreboard (milestone 4), then the curated list.
 
 ### Choosing what fills where
 
