@@ -26,9 +26,11 @@ test("a length chosen in the web vault's generator is the extension's too", asyn
   await length.fill("31");
   await length.press("Tab");
   const sent = JSON.parse((await saved).request().postData() ?? "{}");
-  // Only encrypted on its way to the server.
+  // Only encrypted on its way to the server: none of the settings' words.
   expect(sent.data).toMatch(/^2\./);
-  expect(sent.data).not.toContain("31");
+  for (const word of ["generator", "length", "passbundle.settings"]) {
+    expect(sent.data).not.toContain(word);
+  }
 
   const popup = await openPopup(context, extensionId);
   await logInPopup(popup, user);
