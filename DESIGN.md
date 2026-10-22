@@ -37,9 +37,9 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
       - It keeps the session's refresh token sealed with a key in the Android Keystore.
       - It unlocks with the phone's biometrics. The user key is sealed with a Keystore key that needs the person's strong biometrics for each use and is voided when a fingerprint or face is added. It goes from the Keystore to the core without passing through Dart.
       - It locks the phone way: after a time away (5 minutes by default, or "Immediately"), when the phone locks, and it checks on coming back. The vault stays out of screenshots and the app switcher.
-      - It fills other apps' and browsers' sign-in forms as Android's autofill service. Logins match by an app's `androidapp://` link or the page's registrable domain. A password is taken from the core only once someone picks its login, and a locked PassBundle offers to unlock first.
-      - CI runs it all on an Android 10 emulator: the core's tests, the app's own tests (signing in to a real server through adb), and filling a test app's sign-in form through autofill. Biometric unlock uses debug builds' stand-in for Android's prompt there. The app's tests also pass on a real Pixel.
-      - Next: saving new sign-ins from autofill, then iOS. The real biometric prompt gets checked by hand on a phone.
+      - It fills other apps' and browsers' sign-in forms as Android's autofill service. Logins match by an app's `androidapp://` link or the page's registrable domain. A password is taken from the core only once someone picks its login, and a locked PassBundle offers to unlock first. Signing in somewhere with something new, Android offers to save it to PassBundle, which opens the editor filled in.
+      - CI runs it all on an Android 10 emulator: the core's tests, the app's own tests (signing in to a real server through adb), and filling a test app's sign-in form through autofill, then saving a new sign-in from it. Biometric unlock uses debug builds' stand-in for Android's prompt there. The app's tests also pass on a real Pixel.
+      - Next: iOS. The real biometric prompt gets checked by hand on a phone.
     - **The prototype, measured in CI** (first launch on CI machines; Linux in a virtual display with software rendering, which inflates its memory):
 
       | | Windows | macOS | Linux |
