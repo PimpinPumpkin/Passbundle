@@ -10,6 +10,7 @@ const ACCEPTED = 1;
 const MASTER_PASSWORD = 1;
 const SINGLE_ORG = 3;
 const RESET_PASSWORD = 8;
+const VAULT_LOCK = 9;
 
 /** A new organization, made the way the web vault's New organization page does. */
 async function create(api: Api, owner: Account, name: string, preset?: "business" | "none") {
@@ -63,11 +64,13 @@ test("a company's organization starts with the Business preset and an install co
   const orgId = await makeOrg(api, owner, "Northpoint Logistics", "business");
 
   // The Business preset: single organization, master password requirements,
-  // and account recovery with automatic enrollment.
+  // account recovery with automatic enrollment, and vaults that lock when the
+  // computer locks.
   expect(await enabledPolicies(api, owner, orgId)).toEqual([
     { type: MASTER_PASSWORD, data: expect.objectContaining({ minLength: 12, minComplexity: 3 }) },
     { type: SINGLE_ORG, data: null },
     { type: RESET_PASSWORD, data: expect.objectContaining({ autoEnrollEnabled: true }) },
+    { type: VAULT_LOCK, data: { type: "onSystemLock", minutes: null, action: "lock" } },
   ]);
   // Everyone and Admins.
   const collections = await api.call(owner, "GET", `/api/organizations/${orgId}/collections`);

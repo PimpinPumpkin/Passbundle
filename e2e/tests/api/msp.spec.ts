@@ -384,8 +384,9 @@ test("a client with Business defaults starts with account recovery, a strong mas
     );
   };
   // Account recovery (8) with automatic enrollment, single organization (3),
-  // and the master password policy (1).
+  // the master password policy (1), and vault lock (9).
   expect(await policies(business)).toEqual({
+    9: { type: "onSystemLock", minutes: null, action: "lock" },
     8: { autoEnrollEnabled: true },
     3: null,
     1: {

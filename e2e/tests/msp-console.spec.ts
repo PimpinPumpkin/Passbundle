@@ -57,6 +57,7 @@ test("an MSP admin adds a client and a technician, and the technician gets in on
   for (const policy of [
     /Master password requirements/,
     /^Single organization/,
+    /^Vault lock/,
   ]) {
     await expect(admin.getByRole("button", { name: policy })).toContainText(
       "On",

@@ -5,8 +5,9 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { signUp, webUserFor } from "./support/web";
 
-/** A toast message. Toasts here have no ARIA role, so find them by text. */
-const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
+/** A toast message. Toasts here have no ARIA role, so find them by text; the
+ * last, since the one before can still be showing. */
+const toast = (page: Page, text: string) => page.getByText(text, { exact: true }).last();
 
 /** The longest wait's select, which shows its choice beside its search box. */
 const atMost = (dialog: Locator) =>
