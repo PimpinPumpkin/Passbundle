@@ -92,6 +92,15 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 
 **Saving an item** sends it encrypted, under its organization's key or the user key, with the revision it was edited from. The server refuses an edit made from a copy that's since changed (more than two seconds older), so one device can't overwrite another's newer edit; the app syncs and the person tries again.
 
+**Asking for the master password again.** An item can ask for the master password before its secrets are used (upstream's "master password re-prompt", which the web vault and the extension set and honor). The apps honor it the same way:
+
+- **Opening such an item asks for the master password first.** Its name, username, and websites still show in lists, as upstream's do; its secrets (password, one-time code, notes, hidden fields, a card's number and code, an identity's ID numbers) don't reveal, copy, or fill until it's given.
+- **The check:** the core derives the master key with the account's KDF settings (the same ones it unlocks with, checked the same way) and opens the kept protected user key with it. It's right only if that opens and gives the user key the vault is open with. Nothing new is stored, and nothing is sent to the server.
+- **How long it lasts:** for that item, until another item asks, or the vault locks. The core enforces it (`App::value` and the reveal calls refuse with "asks for the master password first"), so a screen can't skip it.
+- **Phones:** filling a login that asks, through Android's autofill, asks for the master password first in PassBundle's own dialog. iOS's AutoFill extension will ask in its own screen, with the extension.
+- **Biometrics don't stand in for it**, as in upstream's browser extension and web vault: it's there for the person who already unlocked with them.
+- **Tests** (`core/tests/reprompt.rs`, the app tests): on the sample vault with one login set to ask, its secrets are refused before the master password and given after it, a wrong password says so, giving it for another item moves it, locking forgets it, and an edit waits for it; opening the item in the app asks, a wrong password says so, and the right one shows it.
+
 **Editing keeps what the app doesn't show.** The server replaces an item with what an edit sends, so an edit sends back everything the app doesn't change, as the server sent it:
 
 - **The item's own key**, if it has one. What changed is encrypted under it, so what's kept as sent (below), and its attachments' keys, still open. Without it, those would be lost.
