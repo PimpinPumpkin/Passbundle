@@ -11,7 +11,7 @@ Design, October 21, 2026. The phone apps are the desktop app's Flutter screens a
 ## The core on phones
 
 - **Android:** a shared library (`libpassbundle_core.so`) for `arm64-v8a`, plus `x86_64` for the emulator, built with the Android NDK and packed into the app. No 32-bit ARM: Google Play has required 64-bit since 2019, and business phones are.
-- **iOS:** a static library in an XCFramework, for devices (`arm64`) and the simulator (`arm64`), linked into the app and its autofill extension. Dart finds it in the process (`DynamicLibrary.process()`).
+- **iOS:** a static library in an XCFramework, for devices (`arm64`) and the simulator (`arm64`), linked into the app and its autofill extension. Dart finds it in the process (`DynamicLibrary.process()`). iOS 17 and later: the AutoFill extension's newer credential requests start there, and iPhones from 2018 on run it. `tools/ios-core.sh` in passbundle-apps builds it, and runs the core's tests on an iPhone simulator, as CI does.
 - **The data folder** is the app's own: on Android the app's private files folder, which the app passes to the core at start (`pb_open`); on iOS an App Group container, so the autofill extension reads the same kept vault.
 
 ## Kept where
