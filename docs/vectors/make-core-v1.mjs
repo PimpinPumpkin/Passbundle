@@ -117,6 +117,7 @@ const ids = {
   note: "60718293-a4b5-4c63-def4-05162738495a",
   card: "718293a4-b5c6-4d74-8f01-162738495a6b",
   identity: "8293a4b5-c6d7-4e85-9012-2738495a6b7c",
+  sshKey: "93a4b5c6-d7e8-4f96-a123-38495a6b7c8d",
 };
 
 // What each item opens to.
@@ -153,7 +154,7 @@ const items = {
   },
 };
 
-// A card and an identity: their own details, under the user key. Their IVs
+// A card, an identity, and an SSH key: their own details, under the user key. Their IVs
 // come from a counter of their own, so adding them left every earlier string
 // as it was.
 let detailIvCounter = 0;
@@ -189,6 +190,17 @@ const identity = {
     username: "analopez",
     passportNumber: "X0000000",
     licenseNumber: "D000-0000-0000",
+  },
+};
+// A throwaway SSH key made for these vectors (ssh-keygen -t ed25519), not
+// anyone's: the private key is the secret.
+const sshKey = {
+  name: "Build server",
+  notes: null,
+  sshKey: {
+    privateKey: "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACD3IYD4ZeTVoQWPQMD/CRdyTUJmQZK8WsDe0sy1RNMpvwAAAJh+8z37fvM9\n+wAAAAtzc2gtZWQyNTUxOQAAACD3IYD4ZeTVoQWPQMD/CRdyTUJmQZK8WsDe0sy1RNMpvw\nAAAEB7hUH//1DBbTXg7NdVFy5/r7YDEb7emZqiEU4ezXECBPchgPhl5NWhBY9AwP8JF3JN\nQmZBkrxawN7SzLVE0ym/AAAAEGFuYUBleGFtcGxlLnRlc3QBAgMEBQ==\n-----END OPENSSH PRIVATE KEY-----\n",
+    publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPchgPhl5NWhBY9AwP8JF3JNQmZBkrxawN7SzLVE0ym/ ana@example.test",
+    keyFingerprint: "SHA256:k2+1nIjCHkFBQuNjX3pfGfjzx2d4elCIgjUsO9rVmu8",
   },
 };
 const encWithDetails = (key, item, kind) => ({
@@ -257,6 +269,7 @@ const sync = {
     },
     { ...cipher(ids.card, encWithDetails(userKey, card, "card")), type: 3 },
     { ...cipher(ids.identity, encWithDetails(userKey, identity, "identity")), type: 4 },
+    { ...cipher(ids.sshKey, encWithDetails(userKey, sshKey, "sshKey")), type: 5 },
   ],
   policies: [],
   sends: [],
@@ -400,6 +413,7 @@ const vectors = {
       [ids.note]: { name: "Gate code", notes: "4417#", type: 2, folderId: null, organizationId: null, favorite: false },
       [ids.card]: { ...card, type: 3, folderId: null, organizationId: null, favorite: false },
       [ids.identity]: { ...identity, type: 4, folderId: null, organizationId: null, favorite: false },
+      [ids.sshKey]: { ...sshKey, type: 5, folderId: null, organizationId: null, favorite: false },
     },
   },
   totp,
