@@ -203,6 +203,53 @@ const sshKey = {
     keyFingerprint: "SHA256:k2+1nIjCHkFBQuNjX3pfGfjzx2d4elCIgjUsO9rVmu8",
   },
 };
+// Attachments: each file encrypted with a key of its own (an EncArrayBuffer:
+// the type byte 2, the IV, the MAC, then the ciphertext), and that key and
+// the file's name under the item's key. One on an item under the user key,
+// one on the item with its own key.
+let fileIvCounter = 0;
+const fileIv = () => Buffer.alloc(16, 0x70 + fileIvCounter++);
+const encFile = (key64, plain) => {
+  const iv = fileIv();
+  const cipher = createCipheriv("aes-256-cbc", key64.subarray(0, 32), iv);
+  const ct = Buffer.concat([cipher.update(plain), cipher.final()]);
+  const mac = createHmac("sha256", key64.subarray(32, 64)).update(Buffer.concat([iv, ct])).digest();
+  return Buffer.concat([Buffer.from([2]), iv, mac, ct]);
+};
+const files = {
+  recovery: {
+    id: "a1b2c3d4e5f6a7b8c9d0",
+    on: "personal",
+    fileName: "recovery-codes.txt",
+    key: bytes(0x20, 64),
+    plain: Buffer.from("Recovery codes:\n1234-5678\n8765-4321\n", "utf8"),
+  },
+  binary: {
+    id: "b2c3d4e5f6a7b8c9d0e1",
+    on: "withKey",
+    fileName: "backup-key.bin",
+    key: bytes(0x60, 64),
+    plain: bytes(0x00, 256),
+  },
+};
+const encAttachment = (itemKey64, f) => ({
+  id: f.id,
+  url: null,
+  fileName: enc2(itemKey64, Buffer.from(f.fileName, "utf8"), fileIv()),
+  key: enc2(itemKey64, f.key, fileIv()),
+  size: String(f.plain.length),
+  sizeName: `${f.plain.length} Bytes`,
+  object: "attachment",
+});
+const attachmentFiles = Object.fromEntries(
+  Object.values(files).map((f) => [f.id, { encrypted: b64(encFile(f.key, f.plain)), plain: b64(f.plain) }]),
+);
+const tamperedFile = (() => {
+  const blob = Buffer.from(attachmentFiles[files.recovery.id].encrypted, "base64");
+  blob[17] ^= 1; // a MAC byte
+  return b64(blob);
+})();
+
 const encWithDetails = (key, item, kind) => ({
   ...encDetails(key, { name: item.name, notes: item.notes }),
   [kind]: encDetails(key, item[kind]),
@@ -256,12 +303,19 @@ const sync = {
   folders: [{ id: ids.folder, name: enc(userKey, "Personal"), revisionDate: "2026-10-20T18:00:00.000Z" }],
   collections: [{ id: ids.collection, organizationId: ids.organization, name: enc(organizationKey, "IT"), readOnly: false }],
   ciphers: [
-    cipher(ids.personal, encLogin(userKey, items.personal), { folderId: ids.folder, favorite: true }),
+    cipher(ids.personal, encLogin(userKey, items.personal), {
+      folderId: ids.folder,
+      favorite: true,
+      attachments: [encAttachment(userKey, files.recovery)],
+    }),
     cipher(ids.shared, encLogin(organizationKey, items.shared), {
       organizationId: ids.organization,
       collectionIds: [ids.collection],
     }),
-    cipher(ids.withKey, encLogin(itemKey, items.withKey), { key: encryptedItemKey }),
+    cipher(ids.withKey, encLogin(itemKey, items.withKey), {
+      key: encryptedItemKey,
+      attachments: [encAttachment(itemKey, files.binary)],
+    }),
     {
       ...cipher(ids.note, { name: enc(userKey, "Gate code"), notes: enc(userKey, "4417#") }),
       type: 2,
@@ -407,15 +461,32 @@ const vectors = {
     folders: { [ids.folder]: "Personal" },
     collections: { [ids.collection]: "IT" },
     items: {
-      [ids.personal]: { ...items.personal, type: 1, folderId: ids.folder, organizationId: null, favorite: true },
+      [ids.personal]: {
+        ...items.personal,
+        type: 1,
+        folderId: ids.folder,
+        organizationId: null,
+        favorite: true,
+        attachments: [{ id: files.recovery.id, fileName: files.recovery.fileName, size: files.recovery.plain.length }],
+      },
       [ids.shared]: { ...items.shared, type: 1, folderId: null, organizationId: ids.organization, favorite: false },
-      [ids.withKey]: { ...items.withKey, type: 1, folderId: null, organizationId: null, favorite: false },
+      [ids.withKey]: {
+        ...items.withKey,
+        type: 1,
+        folderId: null,
+        organizationId: null,
+        favorite: false,
+        attachments: [{ id: files.binary.id, fileName: files.binary.fileName, size: files.binary.plain.length }],
+      },
       [ids.note]: { name: "Gate code", notes: "4417#", type: 2, folderId: null, organizationId: null, favorite: false },
       [ids.card]: { ...card, type: 3, folderId: null, organizationId: null, favorite: false },
       [ids.identity]: { ...identity, type: 4, folderId: null, organizationId: null, favorite: false },
       [ids.sshKey]: { ...sshKey, type: 5, folderId: null, organizationId: null, favorite: false },
     },
   },
+  // Each attachment's file as the server stores it, and what it opens to.
+  attachmentFiles,
+  attachmentRefused: [{ why: "MAC changed", id: files.recovery.id, encrypted: tamperedFile }],
   totp,
   totpRefused,
   refused: [
