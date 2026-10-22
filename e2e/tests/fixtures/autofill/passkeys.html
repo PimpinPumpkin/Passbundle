@@ -1,0 +1,91 @@
+<!doctype html>
+<!-- A site with passkeys (extension-passkeys.spec.ts): makes one, then signs
+     in with it, and checks what comes back as a site would: its challenge,
+     its own origin, its ID, and the signature with the passkey's public key. -->
+<html lang="en">
+<head><meta charset="utf-8"><title>Passkeys Example</title></head>
+<body>
+  <h1>Passkeys Example</h1>
+  <button id="make">Make a passkey</button>
+  <button id="signin">Sign in with a passkey</button>
+  <p id="result" role="status"></p>
+  <script>
+    const say = (text) => (document.getElementById("result").textContent = text);
+    const bytes = (b) => new Uint8Array(b instanceof ArrayBuffer ? b : b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength));
+    const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+    const sha256 = async (b) => new Uint8Array(await crypto.subtle.digest("SHA-256", b));
+    // DER (SEQUENCE of two INTEGERs) to the 64 bytes WebCrypto verifies.
+    const raw = (der) => {
+      const read = (at) => {
+        const length = der[at + 1];
+        let n = der.slice(at + 2, at + 2 + length);
+        while (n.length > 32 && n[0] === 0) n = n.slice(1);
+        const out = new Uint8Array(32);
+        out.set(n, 32 - n.length);
+        return [out, at + 2 + length];
+      };
+      const [r, next] = read(2);
+      const [s] = read(next);
+      return new Uint8Array([...r, ...s]);
+    };
+    let publicKey;
+    // A public key kept from before (a test hands it over): what the site's server would have.
+    window.usePublicKey = async (b64) => {
+      const spki = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      publicKey = await crypto.subtle.importKey("spki", spki, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+    };
+    async function checks(response, type, challenge) {
+      const client = JSON.parse(new TextDecoder().decode(response.clientDataJSON));
+      if (client.type !== type) return `client data type ${client.type}`;
+      const sent = btoa(String.fromCharCode(...challenge)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      if (client.challenge !== sent) return "another challenge";
+      if (client.origin !== location.origin) return `origin ${client.origin}`;
+      // A sign-in's response has it; a new passkey's gives it by a method.
+      const authData = bytes(response.authenticatorData ?? response.getAuthenticatorData());
+      if (!same(authData.slice(0, 32), await sha256(new TextEncoder().encode(location.hostname)))) return "another site's ID";
+      if ((authData[32] & 1) === 0) return "no user presence";
+      return null;
+    }
+    document.getElementById("make").onclick = async () => {
+      try {
+        const challenge = crypto.getRandomValues(new Uint8Array(32));
+        const credential = await navigator.credentials.create({
+          publicKey: {
+            rp: { id: location.hostname, name: "Passkeys Example" },
+            user: { id: new TextEncoder().encode("user-1"), name: "ana@passkeys.example.test", displayName: "Ana" },
+            challenge,
+            pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+            authenticatorSelection: { residentKey: "required", userVerification: "discouraged" },
+            attestation: "none",
+          },
+        });
+        const problem = await checks(credential.response, "webauthn.create", challenge);
+        if (problem) return say(`Making a passkey went wrong: ${problem}`);
+        publicKey = await crypto.subtle.importKey("spki", credential.response.getPublicKey(), { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+        // For a test to hand to another browser, as the site's server would keep it.
+        window.passkeyPublicKey = btoa(String.fromCharCode(...bytes(credential.response.getPublicKey())));
+        say("Made a passkey");
+      } catch (e) {
+        say(`Making a passkey failed: ${e.name} ${e.message}`);
+      }
+    };
+    document.getElementById("signin").onclick = async () => {
+      try {
+        const challenge = crypto.getRandomValues(new Uint8Array(32));
+        const credential = await navigator.credentials.get({
+          publicKey: { challenge, rpId: location.hostname, allowCredentials: [], userVerification: "discouraged" },
+        });
+        const problem = await checks(credential.response, "webauthn.get", challenge);
+        if (problem) return say(`Signing in went wrong: ${problem}`);
+        const signed = new Uint8Array([...bytes(credential.response.authenticatorData), ...(await sha256(credential.response.clientDataJSON))]);
+        const ok = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, publicKey, raw(bytes(credential.response.signature)), signed);
+        if (!ok) return say("Signing in went wrong: the signature doesn't verify");
+        if (new TextDecoder().decode(credential.response.userHandle) !== "user-1") return say("Signing in went wrong: another account");
+        say("Signed in with a passkey, signature checked");
+      } catch (e) {
+        say(`Signing in failed: ${e.name} ${e.message}`);
+      }
+    };
+  </script>
+</body>
+</html>
