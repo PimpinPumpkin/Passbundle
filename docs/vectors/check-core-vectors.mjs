@@ -100,8 +100,8 @@ for (const c of v.sync.ciphers) {
       fields: c.fields.map((f) => ({ name: open(f.name, key), value: open(f.value, key), type: f.type })),
     });
   }
-  // A card's or an identity's own details, each string opened.
-  for (const kind of ["card", "identity"]) {
+  // A card's, an identity's, or an SSH key's own details, each string opened.
+  for (const kind of ["card", "identity", "sshKey"]) {
     if (c[kind]) {
       seen[kind] = Object.fromEntries(Object.entries(c[kind]).map(([k, text]) => [k, open(text, key)]));
     }
