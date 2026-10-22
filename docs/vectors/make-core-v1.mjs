@@ -20,6 +20,8 @@ import {
   constants,
 } from "node:crypto";
 
+import { publicKey as p256Public, sign as rfc6979Sign } from "./rfc6979-p256.mjs";
+
 const bytes = (start, length) => Buffer.from(Array.from({ length }, (_, i) => (start + i) & 0xff));
 const b64 = (buffer) => Buffer.from(buffer).toString("base64");
 const sha256 = (data) => createHash("sha256").update(data).digest();
@@ -241,6 +243,69 @@ const encAttachment = (itemKey64, f) => ({
   sizeName: `${f.plain.length} Bytes`,
   object: "attachment",
 });
+// A passkey (docs/core.md, "Passkeys") on the item with its own key, in
+// upstream's format: each value a type 2 string under the item's key, except
+// the date. Its key is RFC 6979's own P-256 example key (A.2.5), so anyone
+// can check what it signs; the signatures here come from this repo's own
+// RFC 6979 signer (rfc6979-p256.mjs), not the core's or OpenSSL's. Its IVs
+// come from a counter of their own.
+let passkeyIvCounter = 0;
+const passkeyIv = () => Buffer.alloc(16, 0x40 + passkeyIvCounter++);
+const passkeyPrivate = Buffer.from("C9AFA9D845BA75166B5C215767B1D6934E50C3DB36E89B127B8A622B120F6721", "hex");
+const passkeyPoint = p256Public(passkeyPrivate);
+const passkeyPkcs8 = createPrivateKey({
+  key: {
+    kty: "EC",
+    crv: "P-256",
+    d: passkeyPrivate.toString("base64url"),
+    x: passkeyPoint.x.toString("base64url"),
+    y: passkeyPoint.y.toString("base64url"),
+  },
+  format: "jwk",
+}).export({ type: "pkcs8", format: "der" });
+const passkey = {
+  credentialId: "0c2f6a8e-4d1b-4f3a-9e7c-5b8d2a1f6e40",
+  keyType: "public-key",
+  keyAlgorithm: "ECDSA",
+  keyCurve: "P-256",
+  keyValue: passkeyPkcs8.toString("base64url"),
+  rpId: "backup.example.test",
+  userHandle: bytes(0xa0, 16).toString("base64url"),
+  userName: "backup@example.test",
+  counter: "0",
+  rpName: "Backup Service",
+  userDisplayName: "Ana Lopez",
+  discoverable: "true",
+};
+const encPasskey = (itemKey64) => ({
+  ...Object.fromEntries(
+    Object.entries(passkey).map(([k, text]) => [k, enc2(itemKey64, Buffer.from(text, "utf8"), passkeyIv())]),
+  ),
+  creationDate: "2026-10-20T18:00:00.000Z",
+});
+// Signing in with it: the authenticator data (the site ID's SHA-256, the
+// flags, the counter) and the ES256 signature over it and the client data
+// hash, DER-encoded. With and without the person proving who they are.
+const passkeyAssertions = [
+  { userVerified: true, flags: 0x1d },
+  { userVerified: false, flags: 0x19 },
+].map(({ userVerified, flags }, i) => {
+  const clientDataHash = sha256(Buffer.from(`client data ${i}`, "utf8"));
+  const authenticatorData = Buffer.concat([sha256(Buffer.from(passkey.rpId, "utf8")), Buffer.from([flags, 0, 0, 0, 0])]);
+  const signature = rfc6979Sign(passkeyPrivate, Buffer.concat([authenticatorData, clientDataHash])).der;
+  return {
+    itemId: ids.withKey,
+    rpId: passkey.rpId,
+    clientDataHash: b64(clientDataHash),
+    userVerified,
+    authenticatorData: b64(authenticatorData),
+    signature: b64(signature),
+    credentialId: b64(Buffer.from(passkey.credentialId.replaceAll("-", ""), "hex")),
+    userHandle: b64(bytes(0xa0, 16)),
+  };
+});
+const passkeyPublic = { x: b64(passkeyPoint.x), y: b64(passkeyPoint.y) };
+
 const attachmentFiles = Object.fromEntries(
   Object.values(files).map((f) => [f.id, { encrypted: b64(encFile(f.key, f.plain)), plain: b64(f.plain) }]),
 );
@@ -255,7 +320,7 @@ const encWithDetails = (key, item, kind) => ({
   [kind]: encDetails(key, item[kind]),
 });
 
-const encLogin = (key, item) => ({
+const encLogin = (key, item, fido2Credentials) => ({
   name: enc(key, item.name),
   notes: item.notes == null ? null : enc(key, item.notes),
   login: {
@@ -263,6 +328,7 @@ const encLogin = (key, item) => ({
     password: enc(key, item.password),
     totp: item.totp == null ? null : enc(key, item.totp),
     uris: item.uris.map((uri) => ({ uri: enc(key, uri), match: null })),
+    ...(fido2Credentials ? { fido2Credentials } : {}),
   },
   fields: item.fields.map((f) => ({ name: enc(key, f.name), value: enc(key, f.value), type: f.type, linkedId: null })),
 });
@@ -312,7 +378,7 @@ const sync = {
       organizationId: ids.organization,
       collectionIds: [ids.collection],
     }),
-    cipher(ids.withKey, encLogin(itemKey, items.withKey), {
+    cipher(ids.withKey, encLogin(itemKey, items.withKey, [encPasskey(itemKey)]), {
       key: encryptedItemKey,
       attachments: [encAttachment(itemKey, files.binary)],
     }),
@@ -477,6 +543,7 @@ const vectors = {
         organizationId: null,
         favorite: false,
         attachments: [{ id: files.binary.id, fileName: files.binary.fileName, size: files.binary.plain.length }],
+        passkey: { ...passkey, counter: 0, discoverable: true, creationDate: "2026-10-20T18:00:00.000Z" },
       },
       [ids.note]: { name: "Gate code", notes: "4417#", type: 2, folderId: null, organizationId: null, favorite: false },
       [ids.card]: { ...card, type: 3, folderId: null, organizationId: null, favorite: false },
@@ -487,6 +554,9 @@ const vectors = {
   // Each attachment's file as the server stores it, and what it opens to.
   attachmentFiles,
   attachmentRefused: [{ why: "MAC changed", id: files.recovery.id, encrypted: tamperedFile }],
+  // The passkey's public key, and signing in with it.
+  passkeyPublic,
+  passkeyAssertions,
   totp,
   totpRefused,
   refused: [
