@@ -18,40 +18,54 @@ const chromeUserAgent =
 
 export const serverUrl = `https://127.0.0.1:${port}`;
 
-// Loads the built extension into a real Chromium profile. Extensions need the
-// full Chromium build, not the headless shell, so this uses channel "chromium".
+/**
+ * A real Chromium profile with the built extension loaded, in a new folder:
+ * close it, then remove the folder. Extensions need the full Chromium build,
+ * not the headless shell, so this uses channel "chromium".
+ */
+export async function launchWithExtension(): Promise<{ context: BrowserContext; profile: string }> {
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), "keykeeper-ext-"));
+  const context = await chromium.launchPersistentContext(profile, {
+    channel: "chromium",
+    locale: "en-US",
+    timezoneId: "UTC",
+    args: [
+      `--disable-extensions-except=${paths.extension}`,
+      `--load-extension=${paths.extension}`,
+      // The test server uses a throwaway self-signed certificate.
+      "--ignore-certificate-errors",
+      // Headless Chromium says "HeadlessChrome/", which upstream's browser
+      // detection misreads as Safari. Real users never send it.
+      `--user-agent=${chromeUserAgent}`,
+      hostResolverRules,
+    ],
+  });
+  return { context, profile };
+}
+
+/** The extension's ID in a profile, once its worker is up. */
+export async function extensionIdOf(context: BrowserContext): Promise<string> {
+  // Poll for the worker instead of waiting for its event: it can register
+  // between a check and a subscription, and the event is then missed.
+  await expect
+    .poll(() => context.serviceWorkers().length, { timeout: 15_000 })
+    .toBeGreaterThan(0);
+  return new URL(context.serviceWorkers()[0].url()).host;
+}
+
+// Loads the built extension into a real Chromium profile for each test.
 export const test = base.extend<{
   context: BrowserContext;
   extensionId: string;
 }>({
   context: async ({}, use) => {
-    const profile = fs.mkdtempSync(path.join(os.tmpdir(), "keykeeper-ext-"));
-    const context = await chromium.launchPersistentContext(profile, {
-      channel: "chromium",
-      locale: "en-US",
-      timezoneId: "UTC",
-      args: [
-        `--disable-extensions-except=${paths.extension}`,
-        `--load-extension=${paths.extension}`,
-        // The test server uses a throwaway self-signed certificate.
-        "--ignore-certificate-errors",
-        // Headless Chromium says "HeadlessChrome/", which upstream's browser
-        // detection misreads as Safari. Real users never send it.
-        `--user-agent=${chromeUserAgent}`,
-        hostResolverRules,
-      ],
-    });
+    const { context, profile } = await launchWithExtension();
     await use(context);
     await context.close();
     fs.rmSync(profile, { recursive: true, force: true });
   },
   extensionId: async ({ context }, use) => {
-    // Poll for the worker instead of waiting for its event: it can register
-    // between a check and a subscription, and the event is then missed.
-    await expect
-      .poll(() => context.serviceWorkers().length, { timeout: 15_000 })
-      .toBeGreaterThan(0);
-    await use(new URL(context.serviceWorkers()[0].url()).host);
+    await use(await extensionIdOf(context));
   },
 });
 
