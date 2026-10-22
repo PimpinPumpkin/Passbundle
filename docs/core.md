@@ -121,6 +121,17 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 - **Refused:** editing an SSH key (the web vault edits them for now), changing an item into another kind (a login into a note, say), and moving an item to another owner, which the web vault does by re-encrypting it.
 - **Tested** on the vectors' item with its own key, changed as the web vault would leave it: the edit keeps each of these, what the server keeps opens again under the same key, and the history reads back newest first (`core/tests/editing.rs`).
 
+## Making an account
+
+The apps make an account the way upstream's apps do, so it opens in the web vault, the browser extension, and upstream's apps too (`core/src/signup.rs`, `App::sign_up`, `pb_sign_up`). On the sign-in screen, "Create account".
+
+- **The keys:** the master key from the master password and the email (trimmed, lower case) with PBKDF2-SHA256 at 600,000 iterations, upstream's default for new accounts (Argon2id can be chosen in the web vault afterward); a new 64-byte user key, sealed with the stretched master key (a type 2 string); and a new 2048-bit RSA key pair, its private key (PKCS#8) sealed with the user key, its public key (SubjectPublicKeyInfo) as is.
+- **What the server gets:** the email, the name, the hint, the login hash (never the password), the KDF settings, the sealed user key, the public key, and the sealed private key. Nothing it gets opens the vault.
+- **Through upstream's endpoints:** `register/send-verification-email` answers with a token for the email, and `register/finish` takes the account with it. A server that checks the address emails the token as a link instead: the app says to finish from that email, then sign in.
+- **Checked first,** in the app and again in the core: an email address, a master password of 12 characters or more (upstream's minimum), typed twice, and a hint that doesn't contain it. The app says the master password can't be seen or reset by PassBundle.
+- **Then it signs in,** as signing in does, so the new vault is open at once.
+- **Tests:** from the vectors' password, keys, and IVs, the core makes exactly the vectors' account (the login hash, the sealed user key with each KDF, the sealed private key, and the public key), which upstream's crypto opens (`check-core-vectors.mjs`). A real-server test makes an account in the app, signs in from another device with its master password, and has a second account for the same email refused. App tests cover the form's checks.
+
 ## What's kept where
 
 | What | Where |
