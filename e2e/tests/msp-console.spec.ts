@@ -231,6 +231,11 @@ test("a client's own owner sees its MSP on the Members page and removes it; the 
   await owner.goto(membersUrl);
   const ownerBanner = owner.getByTestId("client-msp");
   await expect(ownerBanner).toContainText("Contoso IT manages this organization");
+  // It says what each of the MSP's people can do here.
+  const staffLine = ownerBanner.getByTestId("client-msp-staff");
+  await expect(staffLine).toHaveCount(1);
+  await expect(staffLine).toContainText(adminUser.email);
+  await expect(staffLine).toContainText("Owner, with every vault item");
   await ownerBanner.getByRole("button", { name: "Remove Contoso IT" }).click();
   await owner.getByRole("dialog").getByRole("button", { name: "Remove Contoso IT" }).click();
   await expect(toast(owner, "Removed Contoso IT")).toBeVisible();
