@@ -263,7 +263,7 @@ The generator makes a password or a passphrase, drawn uniformly with the OS's ra
 
 A login can hold a passkey (upstream's `fido2Credentials`), made by the browser extension, by upstream's apps, or by ours. The apps will use them to sign in to websites and apps, on phones through the OS (Android's Credential Manager, iOS's AutoFill), the way they fill passwords.
 
-**Built so far:** the core reads a login's passkey (its key left encrypted until it signs), lists a site's passkeys, signs in with one (`pb_passkeys`, `pb_passkey_assert`), raising and saving the counter of one that counts, and makes one into a new or existing login (`pb_passkey_create`), saved before it answers. A real-server test makes passkeys and signs in with them, the signatures verified with their own public keys. The apps show a login's passkey (who it's for, when it was made). Android's passkey provider uses them (`docs/phones.md`, "Passkeys"). Not yet: iOS's, and the test both ways with our extension.
+**Built so far:** the core reads a login's passkey (its key left encrypted until it signs), lists a site's passkeys, signs in with one (`pb_passkeys`, `pb_passkey_assert`), raising and saving the counter of one that counts, and makes one into a new or existing login (`pb_passkey_create`), saved before it answers. A real-server test makes passkeys and signs in with them, the signatures verified with their own public keys. The apps show a login's passkey (who it's for, when it was made). Android's passkey provider uses them (`docs/phones.md`, "Passkeys"), and they work both ways with our browser extension's (below). Not yet: iOS's.
 
 **What's stored**, upstream's format, so a passkey made anywhere works everywhere. Each value is a type 2 string under the item's key, except the date:
 
@@ -308,7 +308,7 @@ A login can hold a passkey (upstream's `fido2Credentials`), made by the browser 
 - **Vectors:** a fixed P-256 key, site ID, client data hash, counter, and flags. The authenticator data and the signature are fixed bytes (RFC 6979), and Node's own crypto verifies the signature with the public key.
 - **Upstream's format:** the vectors' `keyValue` opens with WebCrypto's PKCS#8 import, as upstream's authenticator reads it, and the passkey's strings open with upstream's `PureCrypto`.
 - **Making one:** the attestation object is read back with an independent CBOR reader, its COSE key matching the private key.
-- **Both ways with the browser extension:** a real-server test makes a passkey in our extension on a test page and signs in with it from the core, and the other way round. The test page checks each with its own WebAuthn verifier.
+- **Both ways with the browser extension** (`e2e/tests/passkeys-interop.spec.ts`, through the app's own calls in the core's interop tool): the extension makes a passkey on the test page, and the core signs in with it, its signature checked with the public key the page kept, for the site's ID and the account; the core makes one, and the extension signs in with it on the test page, which checks it with its own WebAuthn verifier.
 - **Phones:** the emulator and simulator tests sign in to a test app and a test page with a passkey, and make one.
 
 ## Speed
