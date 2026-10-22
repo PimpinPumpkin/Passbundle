@@ -45,9 +45,20 @@ export async function openNewItem(page: Page) {
   return picker;
 }
 
-/** Starts a new item: Login, Secure note, Card, or Identity, or a kind under More. */
+/**
+ * Starts a new item: Login, Secure note, Card, or Identity, or a kind under
+ * More. In an organization's vault in the admin console, New is still
+ * upstream's menu.
+ */
 export async function newItem(page: Page, kind: string) {
-  const picker = await openNewItem(page);
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  const picker = page.getByRole("dialog", { name: "What are you saving?" });
+  const menuItem = page.getByRole("menuitem", { name: kind });
+  await expect(picker.or(menuItem)).toBeVisible();
+  if (await menuItem.isVisible()) {
+    await menuItem.click();
+    return;
+  }
   const tile = picker.getByTestId("new-item-main").getByRole("button", { name: new RegExp(`^${kind}`) });
   if ((await tile.count()) > 0) {
     await tile.click();
