@@ -9,6 +9,9 @@
 //   supports, not Bitwarden's newest: the server must understand the clients.
 // - Known vulnerabilities in what we ship (cargo audit for the server and the
 //   desktop agent, npm audit of the clients' production dependencies).
+// - Apple's site data (apple/password-manager-resources: sites' password
+//   rules and change-password pages) changed since the commit the clients
+//   take it from.
 //
 // See DESIGN.md, "Keeping up with upstream".
 import fs from "node:fs";
@@ -33,6 +36,12 @@ export function compareVersions(a, b) {
 /** The web vault a Vaultwarden release ships, from its docker/DockerSettings.yaml. */
 export function supportedWebVault(dockerSettings) {
   const match = /^vault_version:\s*"?([^"\s]+)"?/m.exec(dockerSettings);
+  return match ? match[1] : null;
+}
+
+/** The apple/password-manager-resources commit a generated site data file names, or null. */
+export function siteDataCommit(file) {
+  const match = /apple\/password-manager-resources, quirks\/[\w-]+\.json at\s*\n\/\/\s*([0-9a-f]{40})/.exec(file ?? "");
   return match ? match[1] : null;
 }
 
@@ -81,6 +90,7 @@ export function npmFindings(report) {
  *   bitwardenLatest: { web?: string, browser?: string },
  *   audits: { name: string, npm?: boolean, findings: { id: string, package: string, title: string, fix: string }[] }[],
  *   accepted?: { npm?: Record<string, string>, cargo?: Record<string, string> },
+ *   siteData?: { ours: string | null, newer: { sha: string, date: string } | null },
  * }} input
  */
 export function plan(input) {
@@ -100,6 +110,14 @@ export function plan(input) {
   if (input.webVaultForLatest && compareVersions(input.webVaultForLatest, input.clientsBase) > 0) {
     actions.push(
       `Vaultwarden now ships web vault ${input.webVaultForLatest}: move the clients from ${input.clientsBase} with the server.`,
+    );
+  }
+  const site = input.siteData;
+  if (site?.ours && site.newer) {
+    actions.push(
+      `Apple's site data (password rules, change-password pages) changed on ${site.newer.date.slice(0, 10)}, ` +
+        `after the clients' ${site.ours.slice(0, 7)}: in the clients, run ` +
+        `\`node scripts/keykeeper/update-site-data.mjs ${site.newer.sha}\` and review the diff.`,
     );
   }
   const accepted = input.accepted ?? { npm: {}, cargo: {} };
@@ -200,6 +218,24 @@ async function main() {
     { name: "Clients (npm audit, production)", npm: true, findings: npmFindings(readJson(args["npm-clients"])) },
   ];
   const accepted = JSON.parse(fs.readFileSync(new URL("./accepted.json", import.meta.url), "utf8"));
+  // The site data's commit, and whether Apple changed its quirks since.
+  const ours = siteDataCommit(
+    await raw(
+      "PimpinPumpkin/passbundle-clients",
+      args["clients-ref"] || "keykeeper",
+      "libs/common/src/tools/keykeeper/site-password-rules.data.ts",
+    ),
+  );
+  let newer = null;
+  if (ours) {
+    const [latest] = await github("repos/apple/password-manager-resources/commits?path=quirks&per_page=1");
+    if (latest && latest.sha !== ours) {
+      const comparison = await github(`repos/apple/password-manager-resources/compare/${ours}...${latest.sha}`);
+      if (comparison.status === "ahead") {
+        newer = { sha: latest.sha, date: latest.commit.committer.date };
+      }
+    }
+  }
   const result = plan({
     serverBase,
     clientsBase,
@@ -209,6 +245,7 @@ async function main() {
     bitwardenLatest: { web: newest("web-v"), browser: newest("browser-v") },
     audits,
     accepted,
+    siteData: { ours, newer },
   });
   const text = report(result, new Date().toISOString().slice(0, 10));
   process.stdout.write(text);
