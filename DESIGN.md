@@ -39,7 +39,14 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
       - It locks the phone way: after a time away (5 minutes by default, or "Immediately"), when the phone locks, and it checks on coming back. The vault stays out of screenshots and the app switcher.
       - It fills other apps' and browsers' sign-in forms as Android's autofill service. Logins match by an app's `androidapp://` link or the page's registrable domain. A password is taken from the core only once someone picks its login, and a locked PassBundle offers to unlock first. Signing in somewhere with something new, Android offers to save it to PassBundle, which opens the editor filled in, or the login it updates.
       - CI runs it all on an Android 10 emulator: the core's tests, the app's own tests (signing in to a real server through adb), and filling a test app's sign-in form through autofill, then saving a new sign-in from it and a new password for it. Biometric unlock uses debug builds' stand-in for Android's prompt there. The app's tests also pass on a real Pixel.
-      - Next: iOS. The real biometric prompt gets checked by hand on a phone.
+      - The real biometric prompt gets checked by hand on a phone.
+    - **iOS** (`docs/phones.md`):
+      - The core is a static library in an XCFramework, linked into the app, where Dart finds it in the process.
+      - The app opens the vault kept in its own folder. It copies straight from the core to the pasteboard through Swift, for this device only and expiring after 30 seconds. It checks certificates with iOS's own verifier.
+      - It keeps the session's refresh token in the Keychain, and unlocks with Face ID or Touch ID: the user key is a Keychain item for this device only that needs the person's current biometrics, voided when a face or finger is added. It goes between the Keychain and the core without passing through Dart.
+      - It locks the phone way, as on Android, including when the phone locks.
+      - CI runs it on an iPhone simulator: the core's tests, and the app's own tests (signing in to a real server on the runner), with debug builds' stand-in for the Face ID prompt.
+      - Next: keeping the vault out of the app switcher's snapshot, then the AutoFill extension. The real prompt gets checked by hand on an iPhone.
     - **The prototype, measured in CI** (first launch on CI machines; Linux in a virtual display with software rendering, which inflates its memory):
 
       | | Windows | macOS | Linux |
