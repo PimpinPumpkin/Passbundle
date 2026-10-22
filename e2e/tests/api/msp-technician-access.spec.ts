@@ -13,11 +13,14 @@ const ACCEPTED = 1;
 const CONFIRMED = 2;
 const REVOKED = -1;
 
+type Custom = { permissions: Record<string, boolean>; vaultItems: boolean };
+
 type Access = {
   allClients: boolean;
   clients: string[];
-  custom: { permissions: Record<string, boolean>; vaultItems: boolean } | null;
+  custom: Custom | null;
   installCommands: boolean;
+  clientRoles?: { client: string; custom: Custom | null }[];
 };
 
 const EVERY_CLIENT: Access = {
@@ -281,6 +284,241 @@ test("a technician with a custom role acts only within it, sees vault items only
   expect((await role("technician")).status).toBe(200);
   expect(await memberIn(api, admin, dental, tech)).toMatchObject({
     status: CONFIRMED,
+    type: CUSTOM,
+  });
+});
+
+test("a technician can have a different role in some clients, which applies there at once, and roles are checked", async ({
+  request,
+}) => {
+  test.setTimeout(120_000);
+  const api = new Api(request);
+  const admin = await api.account("msp-admin");
+  const tech = await api.account("helpdesk");
+  const mspId = await api.msp(admin, "Northwind IT");
+  const dental = await api.client(admin, mspId, "Acme Dental");
+  const law = await api.client(admin, mspId, "Baker Law");
+  const helpdesk: Custom = {
+    permissions: { manageUsers: true, manageResetPassword: true },
+    vaultItems: false,
+  };
+  const access: Access = {
+    allClients: true,
+    clients: [],
+    custom: helpdesk,
+    installCommands: false,
+    clientRoles: [{ client: law, custom: null }],
+  };
+
+  // Helpdesk everywhere, but admin at the law firm, from the start.
+  await api.addStaff(admin, mspId, tech, "technician", access);
+  await api.confirmPending(admin, mspId);
+  expect(await memberIn(api, admin, dental, tech)).toMatchObject({
+    status: CONFIRMED,
+    type: CUSTOM,
+  });
+  expect(await memberIn(api, admin, law, tech)).toMatchObject({
+    status: CONFIRMED,
+    type: ADMIN,
+  });
+  const listed = (
+    await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}`)
+  ).body.staff.find((s: { email: string }) => s.email === tech.email);
+  expect(listed.access.clientRoles).toEqual([{ client: law, custom: null }]);
+  // The law firm's owners see it too.
+  const seen = await api.call(
+    admin,
+    "GET",
+    `/api/keykeeper/organizations/${law}/msp`,
+  );
+  expect(
+    seen.body.staff.find((s: { email: string }) => s.email === tech.email),
+  ).toMatchObject({ role: "admin", vaultItems: true });
+
+  // A custom role of its own there instead, then none: each applies at once.
+  const policiesOnly: Custom = {
+    permissions: { managePolicies: true },
+    vaultItems: false,
+  };
+  expect(
+    (
+      await setAccess(api, admin, mspId, tech, {
+        ...access,
+        clientRoles: [{ client: law, custom: policiesOnly }],
+      })
+    ).status,
+  ).toBe(200);
+  const atLaw = (
+    await api.call(admin, "GET", `/api/organizations/${law}/users`)
+  ).body.data.find((m: { email: string }) => m.email === tech.email);
+  expect(atLaw).toMatchObject({ type: CUSTOM });
+  expect(atLaw.permissions).toMatchObject({
+    managePolicies: true,
+    manageUsers: false,
+  });
+  expect(
+    (await api.call(tech, "GET", `/api/organizations/${law}/policies`)).status,
+  ).toBe(200);
+  expect(
+    (await api.call(tech, "GET", `/api/organizations/${dental}/policies`))
+      .status,
+  ).toBe(403);
+  expect(
+    (await setAccess(api, admin, mspId, tech, { ...access, clientRoles: [] }))
+      .status,
+  ).toBe(200);
+  expect(await memberIn(api, admin, law, tech)).toMatchObject({
+    type: CUSTOM,
+  });
+  expect(
+    (await api.call(tech, "GET", `/api/organizations/${law}/policies`)).status,
+  ).toBe(403);
+
+  // The audit log says where the role differs.
+  expect(
+    (
+      await setAccess(api, admin, mspId, tech, {
+        ...access,
+        clientRoles: [{ client: law, custom: null }],
+      })
+    ).status,
+  ).toBe(200);
+  const changed = (
+    await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}/events`)
+  ).body.data.find((e: { event: string }) => e.event === "staff_access_changed");
+  expect(changed.detail).toBe(
+    "every client, custom role (manage users, account recovery), no vault items, no install commands; in Baker Law, as admin",
+  );
+
+  // Checked: once per client, only clients they reach, and a custom role
+  // needs a permission.
+  const refused = async (next: Access, message: RegExp) => {
+    const result = await setAccess(api, admin, mspId, tech, next);
+    expect(result.status, JSON.stringify(result.body)).toBe(400);
+    expect(result.body.message).toMatch(message);
+  };
+  await refused(
+    {
+      ...access,
+      clientRoles: [
+        { client: law, custom: null },
+        { client: law, custom: helpdesk },
+      ],
+    },
+    /only one role/,
+  );
+  await refused(
+    { ...access, allClients: false, clients: [dental] },
+    /only for a client the technician reaches/,
+  );
+  await refused(
+    {
+      ...access,
+      clientRoles: [{ client: law, custom: { permissions: {}, vaultItems: true } }],
+    },
+    /at least one permission/,
+  );
+  const other = await api.account("other-msp-admin");
+  const otherMsp = await api.msp(other, "Other IT");
+  const theirClient = await api.client(other, otherMsp, "Not Yours Inc");
+  await refused(
+    { ...access, clientRoles: [{ client: theirClient, custom: null }] },
+    /Client not found/,
+  );
+  expect(await memberIn(api, admin, law, tech)).toMatchObject({ type: ADMIN });
+
+  // Removed and added again, they start over: no role at the law firm.
+  expect(
+    (
+      await api.call(
+        admin,
+        "DELETE",
+        `/api/keykeeper/msp/${mspId}/staff/${tech.userId}`,
+      )
+    ).status,
+  ).toBe(200);
+  await api.addStaff(admin, mspId, tech, "technician", {
+    ...access,
+    clientRoles: [],
+  });
+  await api.confirmPending(admin, mspId);
+  const again = (
+    await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}`)
+  ).body.staff.find((s: { email: string }) => s.email === tech.email);
+  expect(again.access.clientRoles).toEqual([]);
+  expect(await memberIn(api, admin, law, tech)).toMatchObject({ type: CUSTOM });
+});
+
+test("an invitation's roles in clients that have left the MSP by the time it's accepted drop out, and a role must say what it is", async ({
+  request,
+}) => {
+  test.setTimeout(120_000);
+  const api = new Api(request);
+  const admin = await api.account("msp-admin");
+  const owner = await api.account("law-owner");
+  const mspId = await api.msp(admin, "Northwind IT");
+  const dental = await api.client(admin, mspId, "Acme Dental");
+  const law = await api.client(admin, mspId, "Baker Law");
+  await api.addMember(admin, law, owner, "owner");
+  await api.confirmPending(admin, mspId);
+  const policiesOnly: Custom = {
+    permissions: { managePolicies: true },
+    vaultItems: false,
+  };
+  const email = `roles-tech-${Date.now()}@api.example.test`;
+  const invited = await api.call(admin, "POST", `/api/keykeeper/msp/${mspId}/staff`, {
+    email,
+    role: "technician",
+    access: {
+      ...EVERY_CLIENT,
+      custom: { permissions: { manageUsers: true }, vaultItems: false },
+      clientRoles: [
+        { client: law, custom: null },
+        { client: dental, custom: policiesOnly },
+      ],
+    },
+  });
+  expect(invited.status, JSON.stringify(invited.body)).toBe(200);
+
+  // The law firm's own owner removes the MSP before the invitation is taken.
+  expect(
+    (await api.call(owner, "DELETE", `/api/keykeeper/organizations/${law}/msp`))
+      .status,
+  ).toBe(200);
+  const newcomer = await api.account("roles-tech", email);
+  const token = new URL(invited.body.inviteUrl).hash.split("invite=")[1];
+  const accepted = await api.call(
+    newcomer,
+    "POST",
+    "/api/keykeeper/msp/invites/accept",
+    { token },
+  );
+  expect(accepted.status, JSON.stringify(accepted.body)).toBe(200);
+  await api.confirmPending(admin, mspId);
+  const listed = (
+    await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}`)
+  ).body.staff.find((s: { email: string }) => s.email === email);
+  expect(listed.access.clientRoles).toHaveLength(1);
+  expect(listed.access.clientRoles[0]).toMatchObject({
+    client: dental,
+    custom: policiesOnly,
+  });
+  const atDental = (
+    await api.call(admin, "GET", `/api/organizations/${dental}/users`)
+  ).body.data.find((m: { email: string }) => m.email === email);
+  expect(atDental).toMatchObject({ status: CONFIRMED, type: CUSTOM });
+  expect(atDental.permissions).toMatchObject({
+    managePolicies: true,
+    manageUsers: false,
+  });
+
+  // A role that leaves out what it is isn't admin: it's refused.
+  const vague = await setAccess(api, admin, mspId, newcomer, {
+    ...EVERY_CLIENT,
+    clientRoles: [{ client: dental } as unknown as { client: string; custom: Custom | null }],
+  });
+  expect(vague.status).not.toBe(200);
+  expect(await memberIn(api, admin, dental, newcomer)).toMatchObject({
     type: CUSTOM,
   });
 });

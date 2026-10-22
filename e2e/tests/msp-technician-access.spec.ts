@@ -1,7 +1,8 @@
 // Technician access in the MSP console: an MSP admin limits a new technician
 // to one client with a custom role and no install commands, the technician
 // sees just that and works inside it, then the admin widens their access from
-// the Staff section and it reaches every client at once.
+// the Staff section and it reaches every client at once, then gives them a
+// different role in one client.
 import { expect, test, type Page } from "@playwright/test";
 
 import { signUp, webUserFor } from "./support/web";
@@ -124,6 +125,29 @@ test("an MSP admin chooses a technician's clients, role, and install commands, a
         .getByRole("button", { name: "Install command" }),
     ).toBeVisible();
   }
+
+  // A different role in one client: a custom role that manages users at
+  // Baker Law, admin everywhere else.
+  await staffRow.getByRole("button", { name: "Edit access" }).click();
+  await editor.getByRole("button", { name: "Add a client with a different role" }).click();
+  const row = editor.getByTestId("client-role");
+  await row.getByRole("combobox", { name: "Client" }).selectOption({ label: "Baker Law" });
+  await row.getByRole("combobox", { name: "Role there" }).selectOption({ label: "Custom" });
+  await row.getByRole("checkbox", { name: "Manage users" }).check();
+  await editor.getByRole("button", { name: "Save access" }).click();
+  await expect(toast(admin, `Saved ${techUser.email}'s access`)).toBeVisible();
+  await expect(staffRow.getByTestId("msp-staff-access")).toHaveText(
+    "Every client · Admin · Install commands · Custom role in Baker Law",
+  );
+  await expect(admin.getByTestId("msp-activity")).toContainText(
+    `${adminUser.email} set ${techUser.email}'s access: every client, as admin, install commands; in Baker Law, custom role (manage users), no vault items`,
+  );
+  // Admin at Acme Dental still, so its policies are theirs; not at Baker Law.
+  await tech.goto("/#/vault");
+  await tech.goto("/#/msp");
+  await tech.getByTestId("msp-client-Baker Law").getByRole("link", { name: "Open" }).click();
+  await expect(tech.getByRole("button", { name: "Invite member" })).toBeVisible();
+  await expect(tech.getByRole("link", { name: "Policies" })).toHaveCount(0);
 
   await techContext.close();
   await adminContext.close();
