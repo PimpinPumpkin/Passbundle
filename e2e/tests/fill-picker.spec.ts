@@ -1,9 +1,14 @@
-// The fill picker: right-click a field, "Fill this field with", an item, and a
-// value or "Never fill this field". It fills now and remembers the choice on
+// The fill picker: right-click a field (or open the menu inside it), "Fill
+// this field with", an item, and a value or "Never fill this field". It fills now and remembers the choice on
 // the item for every later autofill.
 import type { BrowserContext, Page } from "@playwright/test";
 
-import { addLogin, chooseFirstInlineMenuItem, waitForExtensionScan } from "./support/autofill";
+import {
+  addLogin,
+  chooseFirstInlineMenuItem,
+  waitForExtensionScan,
+  waitForInlineMenuItem,
+} from "./support/autofill";
 import {
   createAccount,
   expect,
@@ -130,6 +135,57 @@ test("fills a custom field into the right-clicked field, and remembers it", asyn
   await expect(after.getByLabel("Username")).toHaveValue("alice-bank");
   await expect(after.getByLabel("Password")).toHaveValue("not-a-real-password-1");
   await expect(after.getByLabel("Customer number")).toHaveValue("C-12345");
+});
+
+// The same picker inside the menu in a field: its button beside the item, then
+// a value. Driven with the keyboard, as people can, since the menu is in a
+// closed shadow root: into the menu, right to the picker, Enter opens its
+// values, down to one, Enter fills it.
+test("picks a value for a field from the menu inside it, and remembers it", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const user = userFor("picker-inline", testInfo.repeatEachIndex);
+  const web = await createAccount(context, user);
+  await addLogin(web, {
+    name: "Example Bank",
+    username: "alice-bank",
+    password: "not-a-real-password-1",
+    uri: site,
+    customFields: { "Customer ID": "C-12345" },
+  });
+  await web.close();
+  await logInPopup(await openPopup(context, extensionId), user);
+
+  // This bank's "Username" box wants the customer ID.
+  const page = await context.newPage();
+  await page.goto(`${site}/bank-login.html`);
+  const username = page.getByLabel("Username", { exact: true });
+  await waitForExtensionScan(context, page, "username");
+  await username.click();
+  await waitForInlineMenuItem(context, page, "Example Bank");
+  const focusLeftThePage = () => page.evaluate(() => document.activeElement?.tagName !== "INPUT");
+  await expect(async () => {
+    if (!(await focusLeftThePage())) {
+      await page.keyboard.press("ArrowDown");
+    }
+    await expect.poll(focusLeftThePage, { timeout: 1000 }).toBe(true);
+  }).toPass({ timeout: 10_000 });
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  // Username, Password, then the custom field.
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(username).toHaveValue("C-12345");
+  await expect.poll(() => itemHasFillRule(context, "Example Bank")).toBe(true);
+
+  // After: a normal autofill puts it there again, and the password in its place.
+  const after = await context.newPage();
+  await after.goto(`${site}/bank-login.html`);
+  await autofillFrom(context, after, "Password", "Example Bank");
+  await expect(after.getByLabel("Username", { exact: true })).toHaveValue("C-12345");
+  await expect(after.getByLabel("Password")).toHaveValue("not-a-real-password-1");
 });
 
 test("never-fill keeps a field empty on every later autofill", async ({
