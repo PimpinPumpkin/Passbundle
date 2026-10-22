@@ -140,7 +140,7 @@ test("an MSP admin chooses a technician's clients, role, and install commands, a
     "Every client · Admin · Install commands · Custom role in Baker Law",
   );
   await expect(admin.getByTestId("msp-activity")).toContainText(
-    `${adminUser.email} set ${techUser.email}'s access: every client, as admin, install commands; in Baker Law custom role (manage users), no vault items`,
+    `${adminUser.email} set ${techUser.email}'s access: every client, as admin, install commands; in Baker Law, custom role (manage users), no vault items`,
   );
   // Admin at Acme Dental still, so its policies are theirs; not at Baker Law.
   await tech.goto("/#/vault");
