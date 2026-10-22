@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sign in</title>
+  </head>
+  <body>
+    <!-- No form element: the fields sit in divs and a script signs in. -->
+    <div class="login">
+      <div><label for="user">User ID</label> <input id="user" type="text" /></div>
+      <div><label for="pass">Password</label> <input id="pass" type="password" /></div>
+      <div><button type="button" id="go">Log in</button></div>
+    </div>
+    <script>
+      document.getElementById("go").addEventListener("click", () => {
+        fetch("/signed-in.html", { method: "POST" }).then(() => (location.href = "/signed-in.html"));
+      });
+    </script>
+  </body>
+</html>

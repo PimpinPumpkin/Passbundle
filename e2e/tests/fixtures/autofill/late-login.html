@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sign in</title>
+  </head>
+  <body>
+    <!-- A single-page app: the form is drawn a moment after the page loads. -->
+    <main id="app">Loading…</main>
+    <script>
+      setTimeout(() => {
+        document.getElementById("app").innerHTML = `
+          <form action="/signed-in.html" method="post">
+            <label for="username">Username</label>
+            <input id="username" name="username" type="text" />
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" />
+            <button type="submit">Sign in</button>
+          </form>`;
+      }, 800);
+    </script>
+  </body>
+</html>

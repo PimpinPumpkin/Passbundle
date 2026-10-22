@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sign in</title>
+  </head>
+  <body>
+    <!-- Decoy fields bots fill and people never see: they must stay empty. -->
+    <form action="/signed-in.html" method="post">
+      <input id="trap-user" name="username" type="text" style="display: none" />
+      <input id="trap-pass" name="password" type="password" tabindex="-1" aria-hidden="true"
+        style="position: absolute; left: -10000px; top: 0" />
+      <label for="login">Login</label>
+      <input id="login" name="login" type="text" />
+      <label for="secret">Password</label>
+      <input id="secret" name="secret" type="password" />
+      <button type="submit">Sign in</button>
+    </form>
+  </body>
+</html>
