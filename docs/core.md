@@ -222,7 +222,12 @@ Where the apps sign in, so nobody types a server address who doesn't have to:
 
 ## New passwords
 
-The generator draws characters uniformly with the OS's random numbers from the kinds chosen (upper and lower case, digits, symbols), with at least one of each, and leaves out look-alikes (0 O, 1 l I) unless asked. The default is 20 characters.
+The generator makes a password or a passphrase, drawn uniformly with the OS's random numbers:
+
+- **A password:** characters from the kinds chosen (upper and lower case, digits, symbols), with at least one of each, leaving out look-alikes (0 O, 1 l I) unless asked. The default is 20 characters; the app offers 4 to 64, and the core takes up to 128.
+- **A passphrase:** 3 to 20 words from EFF's long word list (7,776 words, about 12.9 bits each), with up to 3 characters between them, optionally capitalized, and optionally with a digit at the end of one word. The default is 6 words (about 77 bits), as EFF advises.
+- **The last choices** are kept on the device (`generator.json`, nothing secret), for whoever uses it next.
+- **Not yet:** the organization's "Password generator" policy, which every generator should enforce (DESIGN.md, "Org password rules").
 
 ## Speed
 
