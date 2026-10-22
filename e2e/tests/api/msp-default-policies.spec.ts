@@ -12,6 +12,7 @@ const SINGLE_ORG = 3;
 const REQUIRE_SSO = 4;
 const DISABLE_SEND = 6;
 const RESET_PASSWORD = 8;
+const VAULT_LOCK = 9;
 const CONFIRMED = 2;
 const REVOKED = -1;
 
@@ -129,10 +130,13 @@ test("a new MSP's defaults are the Business policies, and a new client starts wi
       .filter((p) => p.enabled)
       .map((p) => p.type)
       .sort(),
-  ).toEqual([MASTER_PASSWORD, SINGLE_ORG]);
+  ).toEqual([MASTER_PASSWORD, SINGLE_ORG, VAULT_LOCK]);
   expect(
     start.defaults.find((p) => p.type === MASTER_PASSWORD)!.data,
   ).toMatchObject({ minLength: 12, minComplexity: 3 });
+  expect(
+    start.defaults.find((p) => p.type === VAULT_LOCK)!.data,
+  ).toMatchObject({ type: "onSystemLock", action: "lock" });
 
   const dental = await api.client(admin, mspId, "Acme Dental", "business");
   expect((await clientPolicy(api, admin, dental, SINGLE_ORG)).enabled).toBe(
@@ -144,6 +148,10 @@ test("a new MSP's defaults are the Business policies, and a new client starts wi
   expect((await clientPolicy(api, admin, dental, RESET_PASSWORD)).enabled).toBe(
     true,
   );
+  expect((await clientPolicy(api, admin, dental, VAULT_LOCK)).data).toMatchObject({
+    type: "onSystemLock",
+    action: "lock",
+  });
   expect(await ownSettings(api, admin, mspId, dental)).toEqual([]);
 
   // A client added without the defaults has its own settings: all off.
@@ -151,6 +159,7 @@ test("a new MSP's defaults are the Business policies, and a new client starts wi
   expect(await ownSettings(api, admin, mspId, bare)).toEqual([
     MASTER_PASSWORD,
     SINGLE_ORG,
+    VAULT_LOCK,
   ]);
 });
 
