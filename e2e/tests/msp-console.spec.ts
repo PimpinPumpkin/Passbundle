@@ -154,7 +154,9 @@ test("an MSP admin adds a client and a technician, and the technician gets in on
   await expect(toast(tech, "You joined Northwind IT")).toBeVisible();
   await admin.goto("/#/vault");
   await admin.goto("/#/msp");
-  await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
+  // Either the console confirms them as it opens (and says so), or the web
+  // vault's background work already has (it runs when items change and every
+  // few minutes); the technician getting into the client below is the proof.
   await expect(admin.getByTestId(`msp-staff-${techUser.email}`)).toContainText(
     "Technician",
   );
