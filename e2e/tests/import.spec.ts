@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUp, webUserFor, type WebUser } from "./support/web";
+import { signUp, startSignUp, webUserFor, type WebUser } from "./support/web";
 
 const fixtures = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "import");
 const bitwardenExport = () => fs.readFileSync(path.join(fixtures, "bitwarden-export.json"), "utf8");
@@ -58,6 +58,27 @@ test("imports a Bitwarden export with every item, folder, and detail intact", as
   await page.goto("/#/vault");
   await expect(page.getByText("Test Visa").first()).toBeVisible();
   await expect(page.getByText("Alice at home").first()).toBeVisible();
+});
+
+test("a new account brings a Bitwarden export over before its vault opens", async ({ page }, testInfo) => {
+  await startSignUp(page, webUserFor("setup-import", testInfo.repeatEachIndex));
+  await page.getByRole("button", { name: /^Bitwarden/ }).click();
+  await expect(page.getByRole("heading", { name: "From Bitwarden", exact: true })).toBeVisible();
+  await expect(page.getByText("In Bitwarden's web vault, open Tools, then Export vault.")).toBeVisible();
+
+  // The importer is already set to Bitwarden's export: paste it and import.
+  await page.getByRole("textbox", { name: /copy\/paste the import file contents/ }).fill(bitwardenExport());
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  const result = page.getByRole("dialog", { name: "Data successfully imported" });
+  await expect(result.getByText("A total of 4 items were imported.")).toBeVisible();
+  await result.getByRole("button", { name: "Ok" }).click();
+
+  // Then a reminder about the export, and on to the vault, with the items.
+  await expect(page.getByText("Delete the export now")).toBeVisible();
+  await page.getByRole("button", { name: "Go to my vault" }).click();
+  await page.waitForURL(/#\/vault/);
+  await expect(page.getByText("Example Git host").first()).toBeVisible();
+  await expect(page.getByText("Test Visa").first()).toBeVisible();
 });
 
 test("a password-protected export moves everything to another account, with no plaintext on disk", async ({

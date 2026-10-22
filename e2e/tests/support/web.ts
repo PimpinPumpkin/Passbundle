@@ -9,8 +9,15 @@ export const webUserFor = (prefix: string, repeatIndex: number): WebUser => ({
   password: "correct horse battery staple 42",
 });
 
-/** Creates an account and lands in its vault. */
+/** Creates an account and lands in its vault, skipping the offer to import. */
 export async function signUp(page: Page, user: WebUser) {
+  await startSignUp(page, user);
+  await skipImport(page);
+  await expect(page).toHaveTitle(/Vaults/);
+}
+
+/** Creates an account, up to the offer to import that comes first. */
+export async function startSignUp(page: Page, user: WebUser) {
   await page.goto("/#/signup");
   await page.getByLabel(/Email address/).fill(user.email);
   await page.getByLabel("Name").fill(user.name);
@@ -18,8 +25,14 @@ export async function signUp(page: Page, user: WebUser) {
   await page.getByRole("textbox", { name: /^Master password/ }).first().fill(user.password);
   await page.getByRole("textbox", { name: /Confirm master password/ }).fill(user.password);
   await page.getByRole("button", { name: "Create account" }).click();
+  await page.waitForURL(/#\/setup-import/);
+}
+
+/** Right after signing up, the web vault offers to import first: skip it. */
+export async function skipImport(page: Page) {
+  await page.waitForURL(/#\/setup-import/);
+  await page.getByRole("button", { name: "Skip for now" }).click();
   await page.waitForURL(/#\/vault/);
-  await expect(page).toHaveTitle(/Vaults/);
 }
 
 /**

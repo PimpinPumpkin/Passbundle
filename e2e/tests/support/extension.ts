@@ -12,6 +12,7 @@ import {
 } from "@playwright/test";
 
 import { brand, hostResolverRules, paths, port } from "../../paths.mjs";
+import { skipImport } from "./web";
 
 const chromeUserAgent =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
@@ -97,7 +98,7 @@ export async function createAccount(
     .getByRole("textbox", { name: /Confirm master password/ })
     .fill(user.password);
   await web.getByRole("button", { name: "Create account" }).click();
-  await web.waitForURL(/#\/vault/);
+  await skipImport(web);
   return web;
 }
 
