@@ -28,9 +28,9 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
   - **Small native pieces only where an OS insists**, such as the phones' autofill, drawn from the same design.
   - **Desktop:** the window is part of the tray app. Closing the window ends its process, leaving only the small agent.
   - **Order:** the core, then desktop (Windows, macOS, and Linux), then mobile (`docs/phones.md`: Android first, then iOS).
-  - **Status (October 21, 2026):** in the public repo `PimpinPumpkin/passbundle-apps`, whose CI builds, tests, and measures it on Linux, macOS, and Windows.
+  - **Status (October 22, 2026):** in the public repo `PimpinPumpkin/passbundle-apps`, whose CI builds, tests, and measures it on Linux, macOS, and Windows, and on Android and iPhone emulators and simulators.
     - **The core** follows its design and vectors, and signs in, syncs, saves, and does two-step login on a real server (see `docs/core.md`, "Tests").
-    - **The app** signs in to a PassBundle server, unlocks offline or with Windows Hello (through the desktop agent), copies through the core, adds, edits, and trashes items, and locks by itself after a chosen time or when the computer sleeps (`docs/core.md`, "Locking by itself").
+    - **The app** signs in to a PassBundle server, unlocks offline or with Windows Hello (through the desktop agent), copies through the core, adds, edits, and trashes logins, notes, cards, and identities, and locks by itself after a chosen time or when the computer sleeps (`docs/core.md`, "Locking by itself"), held to an organization's Vault lock policy. Editing keeps what it doesn't show (`docs/core.md`, "Editing keeps what the app doesn't show"). Its generator makes passwords or passphrases, held to an organization's Password generator policy. An item that asks for the master password again gets it before its secrets show, copy, or fill (`docs/core.md`, "Asking for the master password again").
     - **Android** (`docs/phones.md`):
       - The core is built with the NDK for phones and the emulator.
       - The app opens the vault kept in its own folder. It copies straight from the core to the clipboard through Kotlin, marked sensitive and cleared after 30 seconds. It checks certificates with Android's own verifier.
@@ -46,7 +46,9 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
       - It keeps the session's refresh token in the Keychain, and unlocks with Face ID or Touch ID: the user key is a Keychain item for this device only that needs the person's current biometrics, voided when a face or finger is added. It goes between the Keychain and the core without passing through Dart.
       - It locks the phone way, as on Android, including when the phone locks. The vault stays out of the app switcher's snapshot.
       - CI runs it on an iPhone simulator: the core's tests, and the app's own tests (signing in to a real server on the runner), with debug builds' stand-in for the Face ID prompt.
-      - Next: the AutoFill extension. The real prompt gets checked by hand on an iPhone.
+      - It fills websites in Safari and other apps through its AutoFill extension (SwiftUI, linked to the same core, reading the kept vault from the App Group and unlocking with Face ID or the master password), and gives iOS each login's username and domains after each sync, so iOS suggests them above the keyboard.
+      - CI checks the extension is built with its entitlements and the core, and registered with iOS; turning it on in Settings and filling a sign-in page in Safari run once builds are signed with an Apple Developer account (docs/phones.md, "Testing").
+      - The real prompt gets checked by hand on an iPhone.
     - **The prototype, measured in CI** (first launch on CI machines; Linux in a virtual display with software rendering, which inflates its memory):
 
       | | Windows | macOS | Linux |

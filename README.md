@@ -15,7 +15,7 @@ It's built on two widely used open-source codebases: the [Bitwarden clients](htt
 | [Passbundle](https://github.com/PimpinPumpkin/Passbundle) (this one) | | AGPL-3.0 | Design, tests, installer, infrastructure |
 | [passbundle-clients](https://github.com/PimpinPumpkin/passbundle-clients) | [bitwarden/clients](https://github.com/bitwarden/clients) | GPL-3.0 | Web vault, browser extension, CLI |
 | [passbundle-server](https://github.com/PimpinPumpkin/passbundle-server) | [dani-garcia/vaultwarden](https://github.com/dani-garcia/vaultwarden) | AGPL-3.0 | Server |
-| Mobile apps (later) | bitwarden/android, bitwarden/ios | GPL-3.0 | Android and iOS |
+| [passbundle-apps](https://github.com/PimpinPumpkin/passbundle-apps) | | GPL-3.0 | Our own apps for Windows, macOS, Linux, Android, and iPhone (Flutter screens on a Rust core), and the desktop agent |
 
 Start with [DESIGN.md](DESIGN.md). Before contributing, read [CLEAN_ROOM.md](CLEAN_ROOM.md).
 
