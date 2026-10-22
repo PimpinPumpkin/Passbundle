@@ -301,6 +301,7 @@ A login can hold a passkey (upstream's `fido2Credentials`), made by the browser 
 - **Where it goes:** into the login the person picks, or a new login named after the site's ID (which the passkey is bound to, not the name the site gives itself, which any site can make up), with the site as its website and the account's name as its username. A new login follows the same rules as one made in the editor: the personal vault, or a collection where an organization's policy says so.
 - **It's saved before the site hears of it.** Offline, it's refused, so a site never holds a passkey the vault lost.
 - **A site's list of passkeys it already has** (`excludeCredentials`): if one of them is in the vault, nothing is made, and the person is told they have one there, as the spec has it.
+- **Not yet: replacing the account's old passkey.** WebAuthn has a new passkey for the same site and account (user handle) replace the old one; the phones make another login for now, so signing up again leaves the old passkey beside the new one. Putting it in the login that has the old one, after asking, is next, with the phones' choice of login.
 
 **Tests,** when it's built:
 
