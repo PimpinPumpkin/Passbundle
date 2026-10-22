@@ -230,8 +230,9 @@ Where the apps sign in, so nobody types a server address who doesn't have to:
 
 - HTTPS only, to the server the person set, with the OS's own certificate checks (rustls with `rustls-platform-verifier`), so an office's own root certificate works as it does in their browser.
 - The one exception is plain HTTP to this computer (`localhost`, `127.0.0.1`, `::1`), which browsers treat as secure too: a server running on the same machine, and the core's tests.
-- No other hosts, no analytics.
+- No other hosts (except, on Android, a site's own Digital Asset Links file when an app asks for its sign-ins: `docs/phones.md`), no analytics.
 - Website icons come from the person's server (`/icons`), as in the other apps.
+- **Which format it reads:** every call to the server says which upstream client version's vault format the core reads (`Bitwarden-Client-Version`, upstream's wire name: 2026.8.0, the web vault and extension PassBundle ships). A server holds back what an older client can't read, so a client that doesn't say gets no SSH keys. A real-server test saves an SSH key as upstream's apps do and checks it comes through the core's sync.
 
 ## Tests
 
