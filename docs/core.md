@@ -268,7 +268,7 @@ The generator makes a password or a passphrase, drawn uniformly with the OS's ra
 
 - **A password:** characters from the kinds chosen (upper and lower case, digits, symbols), with at least one of each, leaving out look-alikes (0 O, 1 l I) unless asked. The default is 20 characters; the app offers 4 to 64, and the core takes up to 128.
 - **A passphrase:** 3 to 20 words from EFF's long word list (7,776 words, about 12.9 bits each), with up to 3 characters between them, optionally capitalized, and optionally with a digit at the end of one word. The default is 6 words (about 77 bits), as EFF advises.
-- **The last choices** are kept on the device (`generator.json`, nothing secret), for whoever uses it next.
+- **The last choices** are kept on the device (`generator.json`, nothing secret) and follow the account to its other devices and the web vault and extension (`synced_settings.rs`; DESIGN.md, "Generator settings"): after each sync, and when the generator closes (`pb_sync_settings`), the core saves a change made here, or takes the server's newer one. The server has them encrypted with the user key. What it last had, as far as this device knows, is in `generator-synced.json`.
 - **An organization's "Password generator" policy** (upstream's type 2, from the sync) holds the choices, in the app and in the core before it generates. It binds everyone, owners too, as Bitwarden's apps have it. Across organizations the strictest of each part wins, as upstream combines them: the highest minimum length, digit and symbol counts, and word count; any required kind of character, capitals, or number; and a password over a passphrase when two organizations disagree. The generator shows that the organization sets some choices and won't go below them.
 
 ## Passkeys
