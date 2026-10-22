@@ -110,7 +110,7 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 - **Yes-or-no, linked, and nameless custom fields**, which the app's editor doesn't edit, and **our own data on items** (`keykeeper.*` fields: fill rules, the expiration date, the template marker), which the apps never show or edit as custom fields, as the web vault and the extension don't. Each is kept in its place among the item's fields. The item view shows the expiration date.
 - **Each website's checksum**, base64 of its address's SHA-256 under the item's key, as upstream writes it. Upstream's apps show an item with its own key only the websites whose checksum matches, so a server can't swap one in; keeping the key without them would hide the websites there.
 - **The password history**, with what upstream's apps add on an edit, newest first: a changed password, then each hidden field whose value changed or that went ("name: value"), keeping the 5 newest. A changed password sets the date it changed.
-- **Refused:** editing a card, an identity, or an SSH key (the app shows them; the web vault edits them for now), changing a login into a note or back, and moving an item to another owner, which the web vault does by re-encrypting it.
+- **Refused:** editing an SSH key (the web vault edits them for now), changing an item into another kind (a login into a note, say), and moving an item to another owner, which the web vault does by re-encrypting it.
 - **Tested** on the vectors' item with its own key, changed as the web vault would leave it: the edit keeps each of these, what the server keeps opens again under the same key, and the history reads back newest first (`core/tests/editing.rs`).
 
 ## What's kept where
