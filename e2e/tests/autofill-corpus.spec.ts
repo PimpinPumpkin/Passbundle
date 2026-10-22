@@ -52,7 +52,6 @@ const corpus: Fixture[] = [
     what: "two steps, and Next puts the cursor in the password field",
     steps: [{ field: "#email" }, { click: "#next", field: "#password", focused: true }],
     want: { "#email": "username", "#password": "password" },
-    known: "a field the page focuses as it shows it gets no menu until it's clicked",
   },
   {
     file: "late-login.html",
@@ -138,7 +137,8 @@ async function fieldsIn(page: Page, fixture: Fixture): Promise<Page | Frame> {
 /**
  * Picks the corpus login from the menu inside a field. Like the shared
  * helper, but focus may be in a frame or a shadow root, so it asks whether an
- * input deep down still has it.
+ * input deep down still has it. Says which part failed: no menu, a menu that
+ * didn't take the keyboard, or nothing filled.
  */
 async function fillFromMenu(
   context: BrowserContext,
@@ -150,7 +150,11 @@ async function fillFromMenu(
   if (!focused) {
     await where.locator(field).click();
   }
-  await waitForInlineMenuItem(context, page, ITEM);
+  try {
+    await waitForInlineMenuItem(context, page, ITEM);
+  } catch {
+    throw new Error(`no menu in ${field}`);
+  }
   const focusLeftThePage = () =>
     page.evaluate(() => {
       let el: Element | null = document.activeElement;
@@ -165,13 +169,22 @@ async function fillFromMenu(
       }
       return el?.tagName !== "INPUT";
     });
-  await expect(async () => {
-    if (!(await focusLeftThePage())) {
-      await page.keyboard.press("ArrowDown");
-    }
-    await expect.poll(focusLeftThePage, { timeout: 1000 }).toBe(true);
-  }).toPass({ timeout: 10_000 });
+  try {
+    await expect(async () => {
+      if (!(await focusLeftThePage())) {
+        await page.keyboard.press("ArrowDown");
+      }
+      await expect.poll(focusLeftThePage, { timeout: 1000 }).toBe(true);
+    }).toPass({ timeout: 10_000 });
+  } catch {
+    throw new Error(`the menu in ${field} didn't take the keyboard`);
+  }
   await page.keyboard.press("Enter");
+  try {
+    await expect(where.locator(field)).not.toHaveValue("", { timeout: 5000 });
+  } catch {
+    throw new Error(`picked in ${field}, but it stayed empty`);
+  }
 }
 
 type Result = { file: string; what: string; filled: boolean; known?: string; detail: string };
@@ -185,14 +198,14 @@ async function score(context: BrowserContext, fixture: Fixture): Promise<Result>
     for (const [i, step] of fixture.steps.entries()) {
       try {
         if (step.click) {
+          // A person takes a moment between things; so does the page.
+          await page.waitForTimeout(700);
           await where.locator(step.click).click();
-          // A person takes a moment before the next thing; so does the page.
           await page.waitForTimeout(700);
         }
         await fillFromMenu(context, page, where, step.field, step.focused);
-        await expect(where.locator(step.field)).not.toHaveValue("", { timeout: 5000 });
-      } catch {
-        throw new Error(`no menu or no fill in ${step.field} (step ${i + 1})`);
+      } catch (e) {
+        throw new Error(`step ${i + 1}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
     // Anything else the fill would do has happened by now.
