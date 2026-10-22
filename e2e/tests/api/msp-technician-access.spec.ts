@@ -47,6 +47,20 @@ async function memberIn(api: Api, admin: Account, orgId: string, who: Account) {
   return (await api.members(admin, orgId)).find((m) => m.email === who.email);
 }
 
+/**
+ * What a client's own owners and admins are told one of the MSP's people can
+ * do there (the MSP admin is an owner of every client, so asks for them).
+ */
+async function staffSeen(api: Api, admin: Account, orgId: string, who: Account) {
+  const seen = await api.call(
+    admin,
+    "GET",
+    `/api/keykeeper/organizations/${orgId}/msp`,
+  );
+  expect(seen.status).toBe(200);
+  return seen.body.staff.find((s: { email: string }) => s.email === who.email);
+}
+
 /** How many of a client's collections someone gets in their own vault. */
 async function collectionsSeen(api: Api, who: Account, orgId: string) {
   const sync = await api.call(who, "GET", "/api/sync?excludeDomains=true");
@@ -196,6 +210,17 @@ test("a technician with a custom role acts only within it, sees vault items only
     manageResetPassword: true,
     managePolicies: false,
   });
+  // The client's owners see the role, its permissions, and no vault items.
+  expect(await staffSeen(api, admin, dental, tech)).toMatchObject({
+    role: "custom",
+    permissions: ["manageUsers", "manageResetPassword"],
+    vaultItems: false,
+  });
+  expect(await staffSeen(api, admin, dental, admin)).toMatchObject({
+    role: "owner",
+    permissions: [],
+    vaultItems: true,
+  });
 
   // Their role reaches members, not policies; no install commands; no items.
   expect(
@@ -227,6 +252,10 @@ test("a technician with a custom role acts only within it, sees vault items only
     ).status,
   ).toBe(200);
   expect(await collectionsSeen(api, tech, dental)).toBe(2);
+  expect(await staffSeen(api, admin, dental, tech)).toMatchObject({
+    role: "custom",
+    vaultItems: true,
+  });
   const org = (
     await api.call(tech, "GET", "/api/accounts/profile")
   ).body.organizations.find((o: { id: string }) => o.id === dental);
@@ -307,6 +336,11 @@ test("an invitation carries a technician's access, and access is checked", async
     type: ADMIN,
   });
   expect(await memberIn(api, admin, dental, newcomer)).toBeUndefined();
+  expect(await staffSeen(api, admin, law, newcomer)).toMatchObject({
+    role: "admin",
+    permissions: [],
+    vaultItems: true,
+  });
 
   // Clients must be the MSP's own, and a custom role needs a permission.
   const other = await api.account("other-msp-admin");
