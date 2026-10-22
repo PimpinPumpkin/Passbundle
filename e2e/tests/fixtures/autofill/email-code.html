@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8" /><title>Sign in with a code</title></head>
+  <body>
+    <!-- A passwordless sign-in: the email and the code that was sent, on one
+         page, the code masked like a password and called only a "code". -->
+    <form action="/signed-in.html" method="post">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" />
+      <label for="code">Enter the 6-digit code we sent you</label>
+      <input id="code" name="code" type="password" inputmode="numeric" />
+      <button type="submit">Sign in</button>
+    </form>
+  </body>
+</html>

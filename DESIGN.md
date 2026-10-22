@@ -600,8 +600,8 @@ This is a hard invariant, enforced by tier 1 tests.
 - Every password update keeps the old value in password history, and the notification has an Undo.
 - The corpus includes many one-time-code page variants. Any save prompt on them fails the build.
 - **Found in upstream:** the background keeps a sign-in's submitted form data for five seconds and fills a later username-less submission's gaps from it. A code pasted on the second step within that window becomes "alice-example changed her password to 123456". Fixed: a username-less submission whose only secret is 4 to 8 digits is never stored or merged. A username with a numeric PIN still saves.
-- **Next:** field-based detection in the content script, for passwordless sign-ins that show an email field next to the code field (the value check above can't tell those from a PIN login).
-- **Tier 1 coverage:** tagged, masked (`type="password"`), and bare code fields, each on its own page and as the second step of a sign-in submitted inside the five-second window, after a calibration that proves the prompt still works for a real password change. Unit tests cover the guard and fail without it.
+- **Fields the page calls a code:** upstream skips fields tagged as codes. Ours also never takes a field for the password to save when the page calls it a code ("Enter the code we sent you", "Login code", an `otp` id) and nothing about it says password or PIN (`apps/browser/src/autofill/keykeeper/one-time-code-fields.ts`). That covers passwordless sign-ins that show the email next to the code, which the value check can't tell from a PIN login. A PIN on the same kind of page still offers to save.
+- **Tier 1 coverage:** tagged, masked (`type="password"`), and bare code fields, each on its own page and as the second step of a sign-in submitted inside the five-second window, after a calibration that proves the prompt still works for a real password change; and a passwordless sign-in with the email and a masked code on one page, next to the same page with a PIN, which still prompts. Unit tests cover the guard and the field check, and fail without them.
 
 ### Missed save prompts on fast sites (upstream race)
 
