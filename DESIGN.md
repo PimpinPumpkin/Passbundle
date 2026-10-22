@@ -44,9 +44,9 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
       - The core is a static library in an XCFramework, linked into the app, where Dart finds it in the process.
       - The app opens the vault kept in its own folder. It copies straight from the core to the pasteboard through Swift, for this device only and expiring after 30 seconds. It checks certificates with iOS's own verifier.
       - It keeps the session's refresh token in the Keychain, and unlocks with Face ID or Touch ID: the user key is a Keychain item for this device only that needs the person's current biometrics, voided when a face or finger is added. It goes between the Keychain and the core without passing through Dart.
-      - It locks the phone way, as on Android, including when the phone locks.
+      - It locks the phone way, as on Android, including when the phone locks. The vault stays out of the app switcher's snapshot.
       - CI runs it on an iPhone simulator: the core's tests, and the app's own tests (signing in to a real server on the runner), with debug builds' stand-in for the Face ID prompt.
-      - Next: keeping the vault out of the app switcher's snapshot, then the AutoFill extension. The real prompt gets checked by hand on an iPhone.
+      - Next: the AutoFill extension. The real prompt gets checked by hand on an iPhone.
     - **The prototype, measured in CI** (first launch on CI machines; Linux in a virtual display with software rendering, which inflates its memory):
 
       | | Windows | macOS | Linux |
