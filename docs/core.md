@@ -261,7 +261,9 @@ The generator makes a password or a passphrase, drawn uniformly with the OS's ra
 
 ## Passkeys
 
-A login can hold a passkey (upstream's `fido2Credentials`), made by the browser extension, by upstream's apps, or by ours. The apps will use them to sign in to websites and apps, on phones through the OS (Android's Credential Manager, iOS's AutoFill), the way they fill passwords. This is the design; nothing here is built yet.
+A login can hold a passkey (upstream's `fido2Credentials`), made by the browser extension, by upstream's apps, or by ours. The apps will use them to sign in to websites and apps, on phones through the OS (Android's Credential Manager, iOS's AutoFill), the way they fill passwords.
+
+**Built so far:** the core reads a login's passkey (its key left encrypted until it signs), lists a site's passkeys, signs in with one (`pb_passkeys`, `pb_passkey_assert`), raising and saving the counter of one that counts, and makes one into a new or existing login (`pb_passkey_create`), saved before it answers. A real-server test makes passkeys and signs in with them, the signatures verified with their own public keys. The apps show a login's passkey (who it's for, when it was made). Android's passkey provider uses them (`docs/phones.md`, "Passkeys"), and they work both ways with our browser extension's (below). Not yet: iOS's.
 
 **What's stored**, upstream's format, so a passkey made anywhere works everywhere. Each value is a type 2 string under the item's key, except the date:
 
@@ -296,16 +298,17 @@ A login can hold a passkey (upstream's `fido2Credentials`), made by the browser 
 - **The key:** a new P-256 key from the OS's random numbers; the credential ID is a new random UUID.
 - **Attestation "none":** `{"fmt": "none", "attStmt": {}, "authData": ...}` in CBOR, the authenticator data carrying the attested credential data: PassBundle's AAGUID, the credential ID's length and the ID, and the public key as a COSE key (`{1: 2, 3: -7, -1: 1, -2: x, -3: y}`).
 - **PassBundle's AAGUID:** `09c5ee5f-0845-48e6-aef4-c7c443317de5`, made at random for this design. The browser extension still uses upstream's for now.
-- **Where it goes:** into the login the person picks, or a new login named after the site, with the site as its website and the account's name as its username. A new login follows the same rules as one made in the editor: the personal vault, or a collection where an organization's policy says so.
+- **Where it goes:** into the login the person picks, or a new login named after the site's ID (which the passkey is bound to, not the name the site gives itself, which any site can make up), with the site as its website and the account's name as its username. A new login follows the same rules as one made in the editor: the personal vault, or a collection where an organization's policy says so.
 - **It's saved before the site hears of it.** Offline, it's refused, so a site never holds a passkey the vault lost.
 - **A site's list of passkeys it already has** (`excludeCredentials`): if one of them is in the vault, nothing is made, and the person is told they have one there, as the spec has it.
+- **Not yet: replacing the account's old passkey.** WebAuthn has a new passkey for the same site and account (user handle) replace the old one; the phones make another login for now, so signing up again leaves the old passkey beside the new one. Putting it in the login that has the old one, after asking, is next, with the phones' choice of login.
 
 **Tests,** when it's built:
 
 - **Vectors:** a fixed P-256 key, site ID, client data hash, counter, and flags. The authenticator data and the signature are fixed bytes (RFC 6979), and Node's own crypto verifies the signature with the public key.
 - **Upstream's format:** the vectors' `keyValue` opens with WebCrypto's PKCS#8 import, as upstream's authenticator reads it, and the passkey's strings open with upstream's `PureCrypto`.
 - **Making one:** the attestation object is read back with an independent CBOR reader, its COSE key matching the private key.
-- **Both ways with the browser extension:** a real-server test makes a passkey in our extension on a test page and signs in with it from the core, and the other way round. The test page checks each with its own WebAuthn verifier.
+- **Both ways with the browser extension** (`e2e/tests/passkeys-interop.spec.ts`, through the app's own calls in the core's interop tool): the extension makes a passkey on the test page, and the core signs in with it, its signature checked with the public key the page kept, for the site's ID and the account; the core makes one, and the extension signs in with it on the test page, which checks it with its own WebAuthn verifier.
 - **Phones:** the emulator and simulator tests sign in to a test app and a test page with a passkey, and make one.
 
 ## Speed

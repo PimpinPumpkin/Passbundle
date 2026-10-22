@@ -3,20 +3,16 @@
 // account, an organization, and an item in each; the core opens them, then
 // saves its own item in each, and the web vault shows them. Tier 1 builds the
 // core's interop tool (KK_CORE_INTEROP); without it, this test is skipped.
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import tls from "node:tls";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { port } from "../paths.mjs";
-
+import { core, coreTool, serverCertificate } from "./support/core";
 import { signUp, webUserFor, type WebUser } from "./support/web";
 
-const tool = process.env.KK_CORE_INTEROP;
-test.skip(!tool && !process.env.CI, "KK_CORE_INTEROP isn't set; tier 1 builds the core's interop tool");
+test.skip(!coreTool && !process.env.CI, "KK_CORE_INTEROP isn't set; tier 1 builds the core's interop tool");
 
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
 
@@ -46,47 +42,6 @@ async function webLogin(page: Page, at: string, item: { name: string; username: 
   const view = page.getByRole("dialog", { name: "View Login" });
   await view.getByRole("button", { name: "Close" }).first().click();
   await expect(view).toBeHidden();
-}
-
-/** The test server's certificate, for the core to trust (its usual trust is the OS's). */
-async function serverCertificate(dir: string): Promise<string> {
-  const der = await new Promise<Buffer>((resolve, reject) => {
-    const socket = tls.connect({ host: "127.0.0.1", port: Number(port), rejectUnauthorized: false }, () => {
-      resolve(socket.getPeerCertificate(true).raw);
-      socket.end();
-    });
-    socket.on("error", reject);
-  });
-  const file = path.join(dir, "server.pem");
-  fs.writeFileSync(
-    file,
-    `-----BEGIN CERTIFICATE-----\n${der.toString("base64").match(/.{1,64}/g)!.join("\n")}\n-----END CERTIFICATE-----\n`,
-  );
-  return file;
-}
-
-type Read = {
-  items: {
-    name: string;
-    username: string | null;
-    password: string | null;
-    notes: string | null;
-    uris: string[];
-    organizationId: string | null;
-    fields: { name: string; value: string; hidden: boolean }[];
-  }[];
-  saved: boolean;
-};
-
-/** Runs the core: signs in, reads every item, and saves the draft, if any. */
-function core(dir: string, cert: string, user: WebUser, draft?: object): Read {
-  const args = [`https://127.0.0.1:${port}`, cert, user.email, user.password];
-  if (draft) {
-    const file = path.join(dir, `draft-${Date.now()}.json`);
-    fs.writeFileSync(file, JSON.stringify(draft));
-    args.push(file);
-  }
-  return JSON.parse(execFileSync(tool!, args, { encoding: "utf8", timeout: 60_000 }));
 }
 
 /** Reloading locks the web vault; unlocking it again syncs. */
