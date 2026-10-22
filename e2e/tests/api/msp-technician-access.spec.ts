@@ -426,6 +426,27 @@ test("a technician can have a different role in some clients, which applies ther
     /Client not found/,
   );
   expect(await memberIn(api, admin, law, tech)).toMatchObject({ type: ADMIN });
+
+  // Removed and added again, they start over: no role at the law firm.
+  expect(
+    (
+      await api.call(
+        admin,
+        "DELETE",
+        `/api/keykeeper/msp/${mspId}/staff/${tech.userId}`,
+      )
+    ).status,
+  ).toBe(200);
+  await api.addStaff(admin, mspId, tech, "technician", {
+    ...access,
+    clientRoles: [],
+  });
+  await api.confirmPending(admin, mspId);
+  const again = (
+    await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}`)
+  ).body.staff.find((s: { email: string }) => s.email === tech.email);
+  expect(again.access.clientRoles).toEqual([]);
+  expect(await memberIn(api, admin, law, tech)).toMatchObject({ type: CUSTOM });
 });
 
 test("an invitation carries a technician's access, and access is checked", async ({
