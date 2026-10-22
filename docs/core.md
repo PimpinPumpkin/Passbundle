@@ -182,6 +182,20 @@ Design, October 21, 2026. The desktop agent already unlocks the browser extensio
   - The core's client against a real agent, built with its stand-in authenticator (the agent's test feature, which release builds refuse), over a real socket: turning it on, unlocking, a wrong user, a cancelled prompt, and a program pretending to be the agent.
   - Real Windows Hello, by hand with the Windows Hello test kit, at each release.
 
+## Servers
+
+Where the apps sign in, so nobody types a server address who doesn't have to:
+
+- **PassBundle's own server** (brand.json's web vault, `https://vault.passbundle.com`) by default. Someone on PassBundle's hosted service signs in with their email and master password and is never asked.
+- **A server an organization set by policy**, which the apps then use and show ("Your organization's server: vault.example.com") instead of a field. It comes only from places an administrator writes:
+  - Windows: the machine policy key the RMM install writes for the desktop agent (`HKLM\SOFTWARE\Policies\PassBundle\Agent`, `ServerUrl`);
+  - macOS: the MDM profile's managed preferences (`com.passbundle.agent`, `ServerUrl`);
+  - Linux: `/etc/passbundle/policy.json` (`ServerUrl`), which the Linux install script writes, read only if it's root's and only root can change it;
+  - Android: the app's managed configuration (`server_url`), which an MDM sets.
+
+  Nothing the person, or something running as them, can write is read, so nobody can point the apps at another server this way.
+- **Someone hosting their own**: "Self-hosted?" on the sign-in screen shows the server field. Signing in to that server once keeps it showing, for next time.
+
 ## Network
 
 - HTTPS only, to the server the person set, with the OS's own certificate checks (rustls with `rustls-platform-verifier`), so an office's own root certificate works as it does in their browser.
