@@ -49,9 +49,11 @@ jobs:
           repository: PimpinPumpkin/passbundle-apps
           ref: ${{ inputs.apps-ref || 'main' }}
           path: apps
+          # The agent, its brand, and the socket crate it shares with the core.
           sparse-checkout: |
             agent
             brand
+            ipc
           persist-credentials: false
       - name: Install the pinned Rust toolchains
         shell: bash
