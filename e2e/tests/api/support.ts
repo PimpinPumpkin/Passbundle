@@ -2,12 +2,17 @@
 // stores keys and encrypted values as opaque strings and never decrypts them,
 // so tests use stand-in key material instead of real crypto.
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import {
   type APIRequestContext,
   type APIResponse,
   expect,
 } from "@playwright/test";
+
+import { port } from "../../paths.mjs";
 
 const b64 = (s: string) => Buffer.from(s).toString("base64");
 
@@ -375,4 +380,28 @@ export class Api {
     expect(confirmed.status, JSON.stringify(confirmed.body)).toBe(200);
     return membership.id;
   }
+}
+
+/**
+ * Counts rows in the test server's SQLite database, read-only, for tests that
+ * check what the server keeps (or no longer keeps) after a request. Null when
+ * the server runs on PostgreSQL (KK_DATABASE_URL), where those checks are
+ * left to the API's answers.
+ */
+export async function serverDatabase(): Promise<
+  ((sql: string, ...params: string[]) => number) | null
+> {
+  if (process.env.KK_DATABASE_URL) {
+    return null;
+  }
+  const data = fs.readFileSync(path.join(os.tmpdir(), `keykeeper-e2e-data-${port}`), "utf8");
+  const { DatabaseSync } = await import("node:sqlite");
+  return (sql, ...params) => {
+    const db = new DatabaseSync(path.join(data, "db.sqlite3"), { readOnly: true });
+    try {
+      return Number(Object.values(db.prepare(sql).get(...params) ?? {})[0] ?? 0);
+    } finally {
+      db.close();
+    }
+  };
 }

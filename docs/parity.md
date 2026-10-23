@@ -35,7 +35,7 @@ Checked October 23, 2026. A feature-by-feature look at where PassBundle stands a
 | Crypto wallet, medical record, outdoor license, reward program, Social Security number | No | Yes, built-in categories | **Partly** | Crypto wallet is planned as a built-in template. The rest can be made as custom templates today. | [op-categories] |
 | User-defined item templates | No | No (fixed categories; custom fields or duplicating an item instead) | **Built** | Personal, organization, and MSP-pushed templates, "Save as template", and "New item from a template". | [bw-items] [op-categories] [op-templates-forum] |
 | Password history | Yes, last 5 per login | Yes | **Built** | Inherited in the extension and web vault. | [bw-history] [op-history] |
-| Item version history and restore | No (password history only) | Yes (Business: "View Item History" permission) | **Missing** | | [bw-history] [op-history] |
+| Item version history and restore | No (password history only) | Yes (Business: "View Item History" permission) | **Partly** | The web vault: every edit keeps the version before (the newest 20, then one a day, up to 100 per item), for whoever can open the item, with who saved it, a side-by-side view of what changed, restore, and clearing by whoever can delete the item (DESIGN.md, "Item history"). Not in the extension or our apps yet. | [bw-history] [op-history] |
 | Archive | Yes (Premium or paid org, since 2026.2) | Yes, every plan | **Built** | Inherited; our server turns it on for everyone. Not in our apps yet. | [bw-items] [op-archive] |
 | Favorites | Yes | Yes | **Built** | Extension, web vault, and our apps. | [bw-fav] [op-tags] |
 | Tags | No (folders only; long-running forum request) | Yes, nested, several per item | **Missing** | Folders are inherited, and our apps make, rename, and delete them. | [bw-tags] [bw-folders] [op-tags] |
@@ -248,7 +248,7 @@ Ranked by how often an MSP will hit them when choosing between the three.
 10. **Groups on by default, and manageable by custom roles.** Clients' departments map to groups, and ours are off unless a server setting turns them on.
 11. **Filling Windows desktop apps** (Quick Access or auto-type style). Many small businesses run desktop line-of-business apps; 1Password fills them, and Bitwarden is building it.
 12. **Firewall rules per organization** (allowed networks and countries). MSPs like to keep a client's vault to its offices; 1Password offers it.
-13. **Item version history with restore.** Technicians editing shared documentation need more undo than password history.
+13. **Item version history in the extension and our apps.** Technicians editing shared documentation need more undo than password history; the web vault has it, and the rest should show and restore the same versions.
 14. **Guests for contractors:** one shared vault, no seat. Clients' outside vendors need a few credentials; 1Password includes guests.
 15. **Approving new sign-ins from our apps, and a CLI release for macOS and Linux scripts.** The extension and web vault already approve sign-ins, and script access has PowerShell only.
 
