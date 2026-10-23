@@ -126,9 +126,10 @@ async function expectVault(page: Page, user: WebUser, want: Expected) {
     expect(byName(vault.items, item.name), `the item "${item.name}"`).toContainEqual(item);
   }
   expect(vault.items).toEqual(want.items);
-  // The vault's own menu agrees.
+  // The vault's own menu agrees; an archived item is in Archive, not All items.
   await page.goto("/#/vault");
-  await expect(menuEntry(page, "All items")).toContainText(String(want.items.length));
+  const archived = want.items.filter((i) => i.archived).length;
+  await expect(menuEntry(page, "All items")).toContainText(String(want.items.length - archived));
 }
 
 test("the committed fake exports are what the generator makes", () => {
@@ -201,12 +202,15 @@ test.describe("importing from a password manager", () => {
     });
   }
 
-  test("1Password 8's CSV, at sign-up with Something else", async ({ page }, testInfo) => {
+  test("1Password 8's CSV, at sign-up with the 1Password step's CSV steps", async ({ page }, testInfo) => {
     const want = expected("1password-csv");
     const user = webUserFor("formats-1password-csv", testInfo.repeatEachIndex);
     await startSignUp(page, user);
-    await setupTile(page, "Something else");
-    await chooseFormat(page, "1Password 6 and 7 Mac (csv)");
+    await setupTile(page, "1Password");
+    // 1PUX is the recommended export; the CSV is a link away, with its own importer.
+    await page.getByRole("button", { name: "Have a CSV from 1Password instead?" }).click();
+    await expect(page.getByRole("listitem").filter({ hasText: "Choose CSV as the format" })).toBeVisible();
+    await expect(page.getByText("1Password 8 (csv) Instructions")).toBeVisible();
     await chooseFile(page, exportFile("1password-csv", want.files[0]));
     await importAndConfirm(page, want.items.length);
     await finishSetup(page);

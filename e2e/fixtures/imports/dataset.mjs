@@ -194,6 +194,8 @@ const handmade = [
     key: "forum-2",
     type: "login",
     name: "Example Forum (second account)",
+    // Archived, in the apps that have an archive.
+    archived: true,
     login: { username: "test.person.alt", password: "Forum-Second-Account-2", uris: ["https://forum.example.com/"] },
   },
   {
@@ -485,6 +487,7 @@ export function dataset() {
       name: base.name,
       folder: base.folder ?? null,
       favorite: base.favorite ?? false,
+      archived: base.archived ?? false,
       notes: base.notes ?? null,
       fields: base.fields ?? [],
       passwordHistory: base.passwordHistory ?? [],

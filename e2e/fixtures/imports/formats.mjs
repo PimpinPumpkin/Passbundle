@@ -123,6 +123,28 @@ function brandOf(number) {
   return null;
 }
 
+/** A card brand from the name another app gives it (base-importer.ts, cardBrandFromName). */
+function brandFromName(name) {
+  if (blank(name)) return null;
+  const brands = {
+    visa: "Visa",
+    visaelectron: "Visa",
+    mastercard: "Mastercard",
+    mc: "Mastercard",
+    amex: "Amex",
+    americanexpress: "Amex",
+    discover: "Discover",
+    diners: "Diners Club",
+    dinersclub: "Diners Club",
+    jcb: "JCB",
+    maestro: "Maestro",
+    unionpay: "UnionPay",
+    chinaunionpay: "UnionPay",
+    rupay: "RuPay",
+  };
+  return brands[name.toLowerCase().replace(/[^a-z]/g, "")] ?? null;
+}
+
 const host = (uri) => new URL(uri).host;
 const withoutWww = (h) => (h.startsWith("www.") ? h.slice(4) : h);
 /** A browser keeps a site, not a path: its origin with the scheme it was saved on. */
@@ -464,7 +486,7 @@ function bitwardenExport(data) {
       revisionDate: it.updated,
       creationDate: it.created,
       deletedDate: null,
-      archivedDate: null,
+      archivedDate: it.archived ? it.updated : null,
       id: it.uuid,
       organizationId: null,
       folderId: it.folder ? folderId(it.folder) : null,
@@ -568,7 +590,7 @@ function onePasswordItems(data) {
       favIndex,
       createdAt: seconds(it.created),
       updatedAt: seconds(it.updated),
-      state: "active",
+      state: it.archived ? "archived" : "active",
     };
     const overview = { subtitle: "", title: it.name, ps: 0, pbe: 0.0, pgrng: false };
     if (it.folder) overview.tags = [it.folder];
@@ -831,6 +853,8 @@ function expectOnePasswordItem(src, folders) {
     it.notes = blank(it.notes) ? plain : `${plain}\n\n${it.notes.trimEnd()}`;
   }
   if (it.type === "login") toNoteIfEmpty(it);
+  // An archived item is archived (the importer stamps the time of the import).
+  if (src.state === "archived") it.archivedDate = "archived";
   return cleanup(it);
 }
 
@@ -884,46 +908,41 @@ function onePasswordCsvRows(data) {
         : otpauth(it.name, it.login.username, it.login.totp)
       : "",
     Favorite: it.favorite ? "true" : "false",
-    Archived: "false",
+    Archived: it.archived ? "true" : "false",
     Tags: it.folder ?? "",
     Notes: it.notes ?? "",
   }));
 }
 
-/** onepassword-mac-csv-importer.ts ("1Password 6 and 7 Mac (csv)"), the closest to 1Password 8's CSV. */
+/** onepassword-8-csv-importer.ts ("1Password 8 (csv)"): standard CSV quoting. */
 function expectOnePasswordCsv(csvRows) {
-  // The importer reads quotes the way 1Password 6 and 7 wrote them, with a
-  // backslash; 1Password 8 doubles them, so a quote comes in twice.
-  const rows = csvRows.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v.replace(/"/g, '""')])));
+  const folders = new Set();
   const items = [];
-  for (const row of rows) {
-    if (blank(row.Title)) continue;
+  for (const row of csvRows) {
+    if (Object.values(row).every(blank)) continue;
     const it = item();
-    it.name = row.Title;
-    it.notes = ((orNull(row.Notes) ?? "") + "\n").trim();
-    for (const column of onePasswordCsvHeader) {
-      const value = row[column];
-      if (blank(value)) continue;
-      const lower = column.toLowerCase();
-      if (lower === "username" && blank(it.login.username)) {
-        it.login.username = value;
-        continue;
-      }
-      if (lower === "password" && blank(it.login.password)) {
-        it.login.password = value;
-        continue;
-      }
-      if (lower === "url") {
-        it.login.uris = it.login.uris.concat(makeUris(value));
-        continue;
-      }
-      if (["title", "notes", "tags"].includes(lower)) continue;
-      kvp(it, column, value, /password|key|secret/.test(lower) ? "hidden" : "text");
+    it.login.uris = blank(row.Url) ? [] : makeUris(row.Url.split(newLine));
+    it.login.username = orNull(row.Username);
+    it.login.password = orNull(row.Password);
+    it.login.totp = orNull(row.OTPAuth?.trim());
+    it.name = orNull(row.Title) ?? (it.login.uris[0] ? withoutWww(host(it.login.uris[0])) : null) ?? "--";
+    it.notes = orNull(row.Notes) ?? "";
+    it.favorite = /^(true|yes|1)$/i.test(row.Favorite.trim());
+    const tags = (row.Tags ?? "")
+      .split(/[,;\n]/)
+      .map((t) => t.trim())
+      .filter((t, i, all) => t !== "" && all.indexOf(t) === i);
+    if (tags.length > 1) {
+      if (it.notes.length > 0 && !it.notes.endsWith("\n")) it.notes += "\n";
+      it.notes += "Tags: " + tags.join(", ");
     }
-    toNoteIfEmpty(it);
-    items.push(cleanup(it));
+    if (blank(it.login.totp)) toNoteIfEmpty(it);
+    cleanup(it);
+    if (tags.length > 0) it.folder = addFolder(folders, tags[0]);
+    if (/^(true|yes|1)$/i.test(row.Archived.trim())) it.archivedDate = "archived";
+    items.push(it);
   }
-  return result(items, new Set());
+  return result(items, folders);
 }
 
 const onePasswordCsv = {
@@ -1068,8 +1087,11 @@ function expectLastPass(rows) {
             Country: "country",
             "Email Address": "email",
             Username: "username",
+            Phone: "phone",
           };
     const mapped = {};
+    // The card's type and start date, for after the rest.
+    const later = {};
     let inNotes = false;
     for (const line of lines) {
       if (inNotes) {
@@ -1080,10 +1102,13 @@ function expectLastPass(rows) {
       const colon = line.indexOf(":");
       const key = colon === -1 ? line : line.substring(0, colon);
       const val = colon === -1 ? null : line.substring(colon + 1);
-      if (blank(key) || blank(val) || key === "NoteType") continue;
+      // LastPass's own Language isn't a field.
+      if (blank(key) || blank(val) || key === "NoteType" || key === "Language") continue;
       if (key === "Notes") {
         it.notes = blank(it.notes) ? val : it.notes + "\n" + val;
         inNotes = true;
+      } else if (sub === "Credit Card" && (key === "Type" || key === "Start Date")) {
+        later[key] = val;
       } else if (key in map) {
         mapped[map[key]] = val;
       } else {
@@ -1096,6 +1121,12 @@ function expectLastPass(rows) {
       const [month, year] = mapped.expMonth.split(",");
       it.card.expMonth = String(monthNames.indexOf(month.trim()) + 1);
       if (!blank(year)) it.card.expYear = year;
+      // The brand from the number, or else the type; a type that isn't the brand, and a
+      // start date, stay fields.
+      const typeBrand = brandFromName(later.Type);
+      it.card.brand = brandOf(it.card.number) ?? typeBrand;
+      if (!blank(later.Type) && typeBrand !== it.card.brand) kvp(it, "Type", later.Type);
+      if (!blank(later["Start Date"]?.replace(/,/g, ""))) kvp(it, "Start Date", later["Start Date"]);
     } else {
       it.type = "identity";
       it.identity = { ...mapped };
@@ -1250,8 +1281,13 @@ const dashlanePersonalHeader = [
 /** dashlane-csv-importer.ts, for each file in turn. */
 function expectDashlane(data) {
   const folders = new Set();
-  const items = [];
   const files = dashlaneFiles(data);
+  const perFile = {};
+  const items = [];
+  const add = (file, it) => {
+    perFile[file] = (perFile[file] ?? 0) + 1;
+    items.push(cleanup(it));
+  };
   for (const row of files["credentials.csv"][1]) {
     const it = item();
     it.folder = addFolder(folders, row.category);
@@ -1263,47 +1299,103 @@ function expectDashlane(data) {
     it.login.uris = makeUris(row.url);
     for (const key of ["username2", "username3"]) kvp(it, key, row[key]);
     toNoteIfEmpty(it);
-    items.push(cleanup(it));
+    add("credentials.csv", it);
   }
   for (const row of files["securenotes.csv"][1]) {
     const it = item("note");
     it.name = row.title;
     it.notes = row.note;
-    items.push(cleanup(it));
+    add("securenotes.csv", it);
   }
   for (const row of files["payments.csv"][1]) {
     const it = item("card");
-    it.name = row.account_name;
+    // No name for the card in the export: its brand and last four digits.
     it.card = {
-      cardholderName: row.account_name,
+      cardholderName: orNull(row.account_name),
       number: row.cc_number,
       brand: brandOf(row.cc_number),
       code: row.code,
     };
+    it.name = `${it.card.brand ?? "Card"} ending ${row.cc_number.replace(/\D/g, "").slice(-4)}`;
     const m = /^0?([1-9]|1[0-2])\/((?:[1-2][0-9])?[0-9]{2})$/.exec(`${row.expiration_month}/${row.expiration_year}`);
     if (m) {
       it.card.expMonth = m[1];
       it.card.expYear = m[2].length === 2 ? `20${m[2]}` : m[2];
     }
-    // Every column it doesn't map is a field, the card's type ("credit_card") too.
-    for (const key of ["type", "routing_number", "account_number", "country", "issuing_bank"]) kvp(it, key, row[key]);
-    items.push(cleanup(it));
+    // Every column it doesn't map is a field; "credit_card" made it a card.
+    for (const key of ["routing_number", "account_number", "country", "issuing_bank"]) kvp(it, key, row[key]);
+    add("payments.csv", it);
   }
-  // More than one person's details: each row is a secure note, its values as fields.
-  const personal = files["personalInfo.csv"][1];
-  if (personal.filter((r) => r.type === "name").length === 1) {
-    throw new Error("The fake data has more than one identity; this model covers that case only.");
+  // An identity for each person: a name row starts one, and the rows after it are
+  // theirs unless they name exactly one other person ("Zoë's email").
+  const people = [];
+  for (const row of files["personalInfo.csv"][1]) {
+    if (row.type === "name") {
+      const first = row.first_name.trim().toLowerCase();
+      const full = [first, row.last_name.trim().toLowerCase()].filter(Boolean).join(" ");
+      people.push({ names: [full, first].filter(Boolean), rows: [row] });
+      continue;
+    }
+    const text = `${row.item_name} ${row.address_recipient}`.toLowerCase();
+    const inWord = (c) => c != null && (c.toLowerCase() !== c.toUpperCase() || /[0-9]/.test(c));
+    const mentions = (name) => {
+      for (let i = text.indexOf(name); i !== -1; i = text.indexOf(name, i + 1)) {
+        const after = text.substring(i + name.length);
+        if (!inWord(text[i - 1]) && (!inWord(after[0]) || (after[0] === "s" && !inWord(after[1])))) return true;
+      }
+      return false;
+    };
+    const named = people.filter((p) => p.names.some(mentions));
+    (named.length === 1 ? named[0] : people[people.length - 1]).rows.push(row);
   }
-  for (const row of personal) {
-    const it = item("note");
-    it.name =
-      row.type === "name"
-        ? `${row.title} ${row.first_name} ${row.middle_name} ${row.last_name}`.replace("  ", " ").trim()
-        : row.item_name;
-    for (const key of dashlanePersonalHeader) kvp(it, key, row[key]);
-    items.push(cleanup(it));
+  const mappedPersonal = new Set([
+    "type",
+    "title",
+    "first_name",
+    "middle_name",
+    "last_name",
+    "login",
+    "email",
+    "phone_number",
+    "address",
+    "country",
+    "state",
+    "city",
+    "zip",
+    "item_name",
+  ]);
+  for (const person of people) {
+    const it = item("identity");
+    const p = it.identity;
+    for (const row of person.rows) {
+      if (row.type === "name") {
+        p.title = orNull(row.title);
+        p.firstName = orNull(row.first_name);
+        p.middleName = orNull(row.middle_name);
+        p.lastName = orNull(row.last_name);
+        p.username = orNull(row.login);
+        it.name = [p.title, p.firstName, p.middleName, p.lastName].filter((x) => !blank(x)).join(" ");
+      } else if (row.type === "email") {
+        if (blank(p.email)) p.email = row.email;
+        else kvp(it, orNull(row.item_name) ?? "email", row.email);
+      } else if (row.type === "number") {
+        if (blank(p.phone)) p.phone = row.phone_number;
+        else kvp(it, orNull(row.item_name) ?? "phone_number", row.phone_number);
+      } else if (row.type === "address") {
+        if (blank(p.address1) && blank(p.city)) {
+          p.address1 = orNull(row.address);
+          p.city = orNull(row.city);
+          p.postalCode = orNull(row.zip);
+          p.state = orNull(row.state);
+          p.country = orNull(row.country);
+        } else {
+          throw new Error("The fake data has one address a person; this model covers that case only.");
+        }
+      }
+      for (const key of dashlanePersonalHeader) if (!mappedPersonal.has(key)) kvp(it, key, row[key]);
+    }
+    add("personalInfo.csv", it);
   }
-  const perFile = Object.fromEntries(Object.entries(files).map(([name, [, rows]]) => [name, rows.length]));
   return result(items, folders, { perFile });
 }
 
@@ -1551,17 +1643,27 @@ function expectKeePass(data) {
       it.folder = folder;
       folders.add(folder);
     }
+    let notes = null;
+    let mainUri = null;
+    const moreUris = [];
     for (const s of e.strings) {
       if (blank(s.value)) continue;
-      if (s.key === "URL") it.login.uris = makeUris(s.value);
+      if (s.key === "URL") mainUri = s.value;
+      else if (/^(KP2A_URL(_\d+)?|URL[ _-]?\(?\d+\)?)$/i.test(s.key)) moreUris.push(s.value);
       else if (s.key === "UserName") it.login.username = s.value;
       else if (s.key === "Password") it.login.password = s.value;
-      else if (s.key === "otp") it.login.totp = s.value.replace("key=", "");
+      // KeePass 2.47's TOTP, with the default period, length, and algorithm: the secret.
+      else if (s.key === "TimeOtp-Secret-Base32") it.login.totp = s.value.replace(/[\s=-]/g, "").toUpperCase();
       else if (s.key === "Title") it.name = s.value;
-      else if (s.key === "Notes") it.notes += s.value + "\n";
+      else if (s.key === "Notes") notes = s.value;
       else if (s.protect) it.fields.push({ name: s.key, value: s.value, type: "hidden" });
       else kvp(it, s.key, s.value);
     }
+    it.login.uris = makeUris([mainUri, ...moreUris].filter((u, i, all) => u != null && all.indexOf(u) === i));
+    // The notes as they were, then what didn't fit in a field.
+    if (notes != null) it.notes = blank(it.notes) ? notes : `${notes}\n${it.notes}`;
+    // Nothing to sign in with: a secure note (KeePass keeps notes and cards as entries).
+    if (blank(it.login.totp)) toNoteIfEmpty(it);
     items.push(cleanup(it));
   }
   // Every group is a folder, even with nothing directly in it.
@@ -1721,11 +1823,12 @@ function protonPassExport(data) {
   return { version: "1.31.0", userId: "fake-user-id-not-real", encrypted: false, vaults };
 }
 
-/** protonpass-json-importer.ts: each vault is a folder. */
+/** protonpass-json-importer.ts: each vault is a folder, when items come from more than one. */
 function expectProtonPass(data) {
   const exported = protonPassExport(data);
   const folders = new Set();
   const items = [];
+  const vaultsAreFolders = Object.values(exported.vaults).filter((v) => v.items.some((i) => i.state !== 2)).length > 1;
   for (const vault of Object.values(exported.vaults)) {
     for (const src of vault.items) {
       if (src.state === 2) continue;
@@ -1772,17 +1875,27 @@ function expectProtonPass(data) {
         const c = d.content;
         it.type = "identity";
         const parts = c.fullName.trim().split(/\s+/);
+        const company = orNull(c.company);
+        const organization = orNull(c.organization);
+        // The street on the first address line, then the organization when it isn't the
+        // company, then the floor and county, with no empty lines between.
+        const [address1, address2, address3] = [
+          c.streetAddress,
+          company != null && organization !== company ? organization : null,
+          `${c.floor ?? ""} ${c.county ?? ""}`,
+        ]
+          .map((line) => orNull(line?.trim()))
+          .filter((line) => line != null);
         it.identity = {
           firstName: parts[0] || orNull(c.firstName),
           lastName: parts.length > 1 ? parts[parts.length - 1] : orNull(c.lastName),
           middleName: parts.length > 2 ? parts.slice(1, -1).join(" ") : orNull(c.middleName),
           email: orNull(c.email),
           phone: orNull(c.phoneNumber),
-          company: orNull(c.company),
-          // Proton Pass's organization is the first address line; the street is the second.
-          address1: orNull(c.organization),
-          address2: orNull(c.streetAddress),
-          address3: orNull(`${c.floor ?? ""} ${c.county ?? ""}`.trim()),
+          company: company ?? organization,
+          address1: address1 ?? null,
+          address2: address2 ?? null,
+          address3: address3 ?? null,
           city: orNull(c.city),
           state: orNull(c.stateOrProvince),
           postalCode: orNull(c.zipOrPostalCode),
@@ -1820,7 +1933,7 @@ function expectProtonPass(data) {
         }
         extraFields();
       }
-      it.folder = addFolder(folders, vault.name);
+      if (vaultsAreFolders) it.folder = addFolder(folders, vault.name);
       items.push(cleanup(it));
     }
   }
