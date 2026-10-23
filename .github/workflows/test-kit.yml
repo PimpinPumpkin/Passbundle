@@ -104,17 +104,14 @@ jobs:
       - name: Apply branding
         working-directory: clients
         run: node brand/apply.mjs
-      - name: Build the web vault and Chrome extension
-        working-directory: clients
-        run: |
-          (cd apps/web && npm run build:oss:selfhost:prod) > "$RUNNER_TEMP/web.log" 2>&1 &
-          web=$!
-          (cd apps/browser && npm run build:prod:chrome) > "$RUNNER_TEMP/chrome.log" 2>&1 &
-          chrome=$!
-          status=0
-          wait "$web" || { echo "::error::The web vault build failed"; cat "$RUNNER_TEMP/web.log"; status=1; }
-          wait "$chrome" || { echo "::error::The Chrome extension build failed"; cat "$RUNNER_TEMP/chrome.log"; status=1; }
-          exit "$status"
+      # One after the other: side by side they need more memory than the
+      # runner has, and the Windows builds this waits for take far longer.
+      - name: Build the web vault
+        working-directory: clients/apps/web
+        run: npm run build:oss:selfhost:prod
+      - name: Build the Chrome extension
+        working-directory: clients/apps/browser
+        run: npm run build:prod:chrome
       - name: Give the kit's extension its fixed ID
         # Chrome derives an unpacked extension's ID from its manifest key.
         run: |

@@ -119,8 +119,14 @@ jobs:
           path: target/debug/vaultwarden
           retention-days: 3
 
+  # The web vault and the Chrome extension build on runners of their own.
+  # Side by side on one runner they needed up to 19 GB, past its 16 GB of
+  # memory and 3 GB of swap, and the runner often shut down mid-build. Alone,
+  # the web vault peaks around 12 GB with nothing in swap, and it finishes
+  # sooner than the pair did together. Capping the Node heap doesn't help:
+  # most of the memory is outside it.
   clients:
-    name: Branded web vault and extension
+    name: Branded web vault
     needs: refs
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -138,29 +144,51 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Apply branding
         run: node brand/apply.mjs
-      - name: Build the web vault and Chrome extension
-        # At the same time; each mostly uses one core.
-        run: |
-          (cd apps/web && npm run build:oss:selfhost:prod) > "$RUNNER_TEMP/web.log" 2>&1 &
-          web=$!
-          (cd apps/browser && npm run build:prod:chrome) > "$RUNNER_TEMP/chrome.log" 2>&1 &
-          chrome=$!
-          status=0
-          wait "$web" || { echo "::error::The web vault build failed"; status=1; }
-          wait "$chrome" || { echo "::error::The Chrome extension build failed"; status=1; }
-          echo "::group::Web vault build" && cat "$RUNNER_TEMP/web.log" && echo "::endgroup::"
-          echo "::group::Chrome extension build" && cat "$RUNNER_TEMP/chrome.log" && echo "::endgroup::"
-          exit "$status"
-      - name: Collect builds
+      - name: Build the web vault
+        working-directory: apps/web
+        run: npm run build:oss:selfhost:prod
+      - name: Collect the build
         run: |
           mkdir -p out
           cp -r apps/web/build out/web-vault
-          cp -r apps/browser/build out/extension-chrome
           cp brand/brand.json out/brand.json
           find out -name '*.map' -delete
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: clients
+          path: out
+          retention-days: 3
+
+  chrome-extension:
+    name: Branded Chrome extension
+    needs: refs
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-clients
+          ref: ${{ needs.refs.outputs.clients }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Apply branding
+        run: node brand/apply.mjs
+      - name: Build the Chrome extension
+        working-directory: apps/browser
+        run: npm run build:prod:chrome
+      - name: Collect the build
+        run: |
+          mkdir -p out
+          cp -r apps/browser/build out/extension-chrome
+          find out -name '*.map' -delete
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: chrome-extension
           path: out
           retention-days: 3
 
@@ -388,7 +416,7 @@ jobs:
 
   e2e:
     name: End-to-end (${{ matrix.part }})
-    needs: [refs, server, clients, agent-test-build, core-interop]
+    needs: [refs, server, clients, chrome-extension, agent-test-build, core-interop]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # Five machines share the suite, each with its own servers: the API
@@ -420,6 +448,10 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: clients
+          path: build/clients
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: chrome-extension
           path: build/clients
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
