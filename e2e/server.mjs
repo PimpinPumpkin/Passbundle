@@ -9,10 +9,12 @@ import { fileURLToPath } from "node:url";
 import { paths, port, smtpPort } from "./paths.mjs";
 
 // KK_MAIL=1 starts the server that sends email to the mail catcher. KK_LIMITS=1
-// starts one with the real login limits, which the others relax. Both always
-// keep their own SQLite file, so they never share a database with the main one.
+// starts one with the real login limits, which the others relax. KK_GROUPS=1
+// starts one with groups turned on. Each always keeps its own SQLite file, so
+// they never share a database with the main one.
 const withMail = process.env.KK_MAIL === "1";
 const withLimits = process.env.KK_LIMITS === "1";
+const withGroups = process.env.KK_GROUPS === "1";
 
 for (const [name, p] of Object.entries({
   server: paths.serverBin,
@@ -67,9 +69,10 @@ const child = spawn(paths.serverBin, [], {
     PATH: process.env.PATH,
     DATA_FOLDER: data,
     // Set KK_DATABASE_URL to use PostgreSQL instead of a fresh SQLite file.
-    ...(process.env.KK_DATABASE_URL && !withMail && !withLimits
+    ...(process.env.KK_DATABASE_URL && !withMail && !withLimits && !withGroups
       ? { DATABASE_URL: process.env.KK_DATABASE_URL }
       : {}),
+    ...(withGroups ? { ORG_GROUPS_ENABLED: "true" } : {}),
     ...(withMail
       ? {
           SMTP_HOST: "127.0.0.1",
@@ -111,7 +114,7 @@ const child = spawn(paths.serverBin, [], {
       ? {
           LOG_FILE: process.env.KK_SERVER_LOG.replace(
             /(\.log)?$/,
-            withMail ? "-mail$1" : withLimits ? "-limits$1" : "$1",
+            withMail ? "-mail$1" : withLimits ? "-limits$1" : withGroups ? "-groups$1" : "$1",
           ),
           LOG_LEVEL: "info",
         }
