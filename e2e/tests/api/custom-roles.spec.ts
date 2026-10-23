@@ -635,16 +635,17 @@ test("a custom role that views event logs reads who's who for the event log: the
   }
 
   // The full member list, with collections and groups, is still for roles
-  // that open the Members page.
+  // that open the Members page. It's behind upstream's manager guard, which
+  // says "not found" to every confirmed member it turns away.
   const full = await api.call(
     viewer,
     "GET",
     `/api/organizations/${orgId}/users?includeCollections=true&includeGroups=true`,
   );
-  expect(full.status, JSON.stringify(full.body)).toBe(403);
+  expect(full.status, JSON.stringify(full.body)).toBe(404);
 });
 
-test("a custom member is refused with 403 where their role doesn't reach, and a logged-out caller still gets 401", async ({
+test("a custom member is refused with 403 where their role doesn't reach, 404 on a folder's manager routes, and a logged-out caller still gets 401", async ({
   request,
 }) => {
   const api = new Api(request);
@@ -660,31 +661,38 @@ test("a custom member is refused with 403 where their role doesn't reach, and a 
   const poc = await api.account("poc");
   await api.addCustomMember(owner, orgId, poc, { manageUsers: true });
 
-  // One endpoint behind each guard a custom member can be turned away by.
-  const uncovered: [string, "GET" | "POST" | "PUT", string, unknown?][] = [
-    ["admin", "GET", `/api/organizations/${orgId}/policies`],
+  // One endpoint behind each guard a custom member can be turned away by. The
+  // manager guards say "not found", as they do to every confirmed member: the
+  // web vault reaches a folder's endpoints for any folder it shows, and it
+  // signs out on 403 as well as 401.
+  const uncovered: [string, "GET" | "POST" | "PUT", string, number, unknown?][] =
     [
-      "manager",
-      "GET",
-      `/api/organizations/${orgId}/collections/${collection.body.id}/details`,
-    ],
-    [
-      "manager, no collection",
-      "POST",
-      `/api/organizations/${orgId}/collections`,
-      { name: encString("Not yours"), groups: [], users: [] },
-    ],
-    [
-      "owner",
-      "PUT",
-      `/api/organizations/${orgId}`,
-      { name: "Renamed", billingEmail: owner.email },
-    ],
-  ];
-  for (const [guard, method, path, data] of uncovered) {
-    const forbidden = await api.call(poc, method, path, data);
-    expect(forbidden.status, `${guard}: ${JSON.stringify(forbidden.body)}`).toBe(
-      403,
+      ["admin", "GET", `/api/organizations/${orgId}/policies`, 403],
+      [
+        "manager",
+        "GET",
+        `/api/organizations/${orgId}/collections/${collection.body.id}/details`,
+        404,
+      ],
+      [
+        "manager, no collection",
+        "POST",
+        `/api/organizations/${orgId}/collections`,
+        404,
+        { name: encString("Not yours"), groups: [], users: [] },
+      ],
+      [
+        "owner",
+        "PUT",
+        `/api/organizations/${orgId}`,
+        403,
+        { name: "Renamed", billingEmail: owner.email },
+      ],
+    ];
+  for (const [guard, method, path, status, data] of uncovered) {
+    const refused = await api.call(poc, method, path, data);
+    expect(refused.status, `${guard}: ${JSON.stringify(refused.body)}`).toBe(
+      status,
     );
     const anonymous = await api.call(null, method, path, data);
     expect(anonymous.status, `${guard}, logged out`).toBe(401);

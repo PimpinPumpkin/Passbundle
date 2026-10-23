@@ -317,6 +317,76 @@ test("a template's source is an item the admin can see and share and never a cli
   expect(seen.collections[dental]).toBeNull();
 });
 
+test("copies are recorded only by an admin who can share the template's source now", async ({
+  request,
+}) => {
+  test.setTimeout(120_000);
+  const api = new Api(request);
+  const admin = await api.account("msp-admin");
+  const mspId = await api.msp(admin, "Northwind IT");
+  const dental = await api.client(admin, mspId, "Acme Dental", "business");
+  const dentalCollection = await api.collection(admin, dental);
+  const copyInDental = await api.orgItem(admin, dental, dentalCollection);
+  // The source is in another organization's folder, where the admin can edit
+  // (and so share) to begin with.
+  const partnerOwner = await api.account("partner-owner");
+  const partner = await api.organization(partnerOwner, "Partner Org");
+  const partnerFolder = await api.collection(partnerOwner, partner);
+  const source = await api.orgItem(partnerOwner, partner, partnerFolder);
+  const adminThere = await api.addMember(partnerOwner, partner, admin, "user");
+  const grant = (readOnly: boolean) =>
+    api.call(
+      partnerOwner,
+      "PUT",
+      `/api/organizations/${partner}/collections/${partnerFolder}`,
+      {
+        name: encString("Partner folder"),
+        users: [
+          { id: adminThere, readOnly, hidePasswords: false, manage: false },
+        ],
+        groups: [],
+      },
+    );
+  expect((await grant(false)).status).toBe(200);
+  const id = randomUUID();
+  expect(
+    (
+      await setTemplate(api, admin, mspId, id, {
+        sourceCipherId: source,
+        allClients: true,
+      })
+    ).status,
+  ).toBe(200);
+  const record = (who: Account, sourceRevision: string) =>
+    api.call(who, "POST", `/api/keykeeper/msp/${mspId}/templates/${id}/copies`, {
+      copies: [{ organizationId: dental, cipherId: copyInDental, sourceRevision }],
+    });
+  const recorded = async () =>
+    (await templates(api, admin, mspId)).copies.map((c) => c.sourceRevision);
+
+  expect((await record(admin, "r1")).status).toBe(200);
+  expect(await recorded()).toEqual(["r1"]);
+
+  // Another MSP admin, who can't see the source, can't record its copies.
+  const second = await api.account("second-admin");
+  await api.addStaff(admin, mspId, second, "admin");
+  const unseen = await record(second, "r2");
+  expect(unseen.status, JSON.stringify(unseen.body)).toBe(400);
+  expect(unseen.body.message).toMatch(/permission to share/);
+
+  // Nor can the admin who chose it, once the partner takes share away.
+  expect((await grant(true)).status).toBe(200);
+  const narrowed = await record(admin, "r2");
+  expect(narrowed.status, JSON.stringify(narrowed.body)).toBe(400);
+  expect(narrowed.body.message).toMatch(/permission to share/);
+  expect(await recorded()).toEqual(["r1"]);
+
+  // Given share back, they can again.
+  expect((await grant(false)).status).toBe(200);
+  expect((await record(admin, "r3")).status).toBe(200);
+  expect(await recorded()).toEqual(["r3"]);
+});
+
 test("a technician limited to chosen clients sees only the templates and copies in their clients, and can't send templates", async ({
   request,
 }) => {

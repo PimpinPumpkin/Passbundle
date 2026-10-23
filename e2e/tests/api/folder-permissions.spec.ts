@@ -1055,6 +1055,81 @@ test.describe("Who can give what in a folder", () => {
     }
   });
 
+  test("a custom role re-saves a member whose grant is wider than its own, and can't change that grant or reach past its folders", async ({
+    request,
+  }) => {
+    const api = new Api(request);
+    const owner = await api.account("owner");
+    const orgId = await api.organization(owner, "Custom Re-save Org");
+    const folder = await api.collection(owner, orgId);
+    const elsewhere = await api.collection(owner, orgId);
+    const poc = await api.account("poc");
+    const pocId = await api.addCustomMember(owner, orgId, poc, { manageUsers: true });
+    const own: Grid = { ...NONE, seePasswords: true, create: true, print: true };
+    const assigned = await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${pocId}`, {
+      type: 4,
+      permissions: { manageUsers: true },
+      collections: [grant(folder, own)],
+      groups: [],
+    });
+    expect(assigned.status, JSON.stringify(assigned.body)).toBe(200);
+    // The owner gave a regular member more in the folder than the role has.
+    const member = await api.account("member");
+    const memberId = await api.addMember(owner, orgId, member, "user");
+    const wider = PRESETS.edit;
+    const given = await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${memberId}`, {
+      type: 2,
+      collections: [grant(folder, wider)],
+      groups: [],
+      permissions: {},
+    });
+    expect(given.status, JSON.stringify(given.body)).toBe(200);
+
+    const edit = (collections: unknown[]) =>
+      api.call(poc, "PUT", `/api/organizations/${orgId}/users/${memberId}`, {
+        type: 2,
+        collections,
+        groups: [],
+        permissions: {},
+      });
+    const grants = async () => {
+      const members = await api.call(owner, "GET", `/api/organizations/${orgId}/users?includeCollections=true`);
+      const listed = members.body.data.find((m: { id: string }) => m.id === memberId);
+      return listed.collections.map((c: { id: string; keykeeper: Grid }) => [c.id, c.keykeeper]);
+    };
+
+    // Re-saving the grant as it is, with our grid or the upstream way, isn't
+    // giving it: it succeeds and changes nothing.
+    for (const [label, collection] of [
+      ["with its grid", grant(folder, wider)],
+      ["the upstream way", { id: folder, readOnly: false, hidePasswords: false, manage: false }],
+    ] as const) {
+      const resaved = await edit([collection]);
+      expect(resaved.status, `${label}: ${JSON.stringify(resaved.body)}`).toBe(200);
+      expect(await grants(), label).toEqual([[folder, wider]]);
+    }
+
+    // Changing it is giving it, so the role can't, wider or narrower.
+    for (const [label, grid, message] of [
+      ["wider still", { ...wider, export: true }, /more access/],
+      ["narrower, but still more than the role has", { ...wider, delete: false }, /more access/],
+      ["another preset the role doesn't have", PRESETS.view, /more access/],
+      ["manage", ALL, /right to manage/],
+    ] as const) {
+      const refused = await edit([grant(folder, grid)]);
+      expect(refused.status, `${label}: ${JSON.stringify(refused.body)}`).toBe(400);
+      expect(refused.body.message, label).toMatch(message);
+    }
+    expect(await grants()).toEqual([[folder, wider]]);
+
+    // Nor can it give a grant in a folder it doesn't reach, even next to the
+    // one it re-saves as it was.
+    const outside = await edit([grant(folder, wider), grant(elsewhere, PRESETS.viewHidden)]);
+    expect(outside.status, JSON.stringify(outside.body)).toBe(400);
+    expect(outside.body.message).toMatch(/collections it can reach/);
+    expect(await grants()).toEqual([[folder, wider]]);
+  });
+
   test("an MSP technician with vault items gives any capability but manage", async ({ request }) => {
     test.setTimeout(120_000);
     const api = new Api(request);
