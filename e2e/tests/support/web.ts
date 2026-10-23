@@ -50,6 +50,26 @@ export async function confirmMember(page: Page, email: string) {
   await expect(row.getByText("Needs confirmation")).toHaveCount(0);
 }
 
+/**
+ * The web vault's one left menu: search, the vault's categories, vaults, and
+ * folders, then the tools (DESIGN.md, "The left menu").
+ */
+export function menu(page: Page) {
+  return page.getByRole("navigation", { name: "Side navigation" });
+}
+
+/** One entry of the left menu, with its count. */
+export function menuEntry(page: Page, name: string) {
+  return menu(page)
+    .locator("bit-nav-item")
+    .filter({ has: page.getByRole("button", { name, exact: true }) });
+}
+
+/** Picks an entry of the left menu, which filters the vault. */
+export async function pick(page: Page, name: string) {
+  await menu(page).getByRole("button", { name, exact: true }).click();
+}
+
 /** Opens the New item picker in the vault (DESIGN.md, "Our own screens"). */
 export async function openNewItem(page: Page) {
   await page.getByRole("button", { name: "New", exact: true }).click();

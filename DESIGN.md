@@ -467,6 +467,17 @@ PassBundle has its own look, not Bitwarden's with a new color: translucent glass
 - **Not glass:** what the extension draws inside websites (the autofill menu, the save bar) follows light or dark only. A desktop window, when there is one, can use the operating system's own translucency (macOS vibrancy, Windows Mica).
 - **Tests:** a unit test for the setting (Glass only for System, light or dark like the device), and an end-to-end test that the web vault starts in Glass, follows the device, switches to solid Light and Dark and keeps the choice across a reload, uses Figtree, and shows none of upstream's drawings on the sign-up page and the vault.
 
+## The left menu
+
+The web vault has one menu on the left, like 1Password's sidebar, instead of upstream's short nav plus a separate filter panel beside the item list. Top to bottom: a search box ("Search all items"), All items, Favorites, Health (the Reports page), then Categories, Vaults (My vault, then each organization with its collections under it), and Folders (with a New folder button beside the heading, then Archive and Trash); a line; then the tools: Generator, Send, Import and export, the MSP console for MSP staff, and Settings. The list gets the page's full width.
+
+- **Same filtering as before:** the menu is upstream's filter panel underneath (`apps/web/src/app/keykeeper/vault-menu/`): the same sections and actions, on the same filter in the address (`type`, `folderId`, `collectionId`, `organizationId`, `search`), so picking an entry shows what picking it in the panel did. A vault is a scope, as it was: a category or folder picked inside it shows only that vault's, the vault outlined and the entry filled. All items clears everything.
+- **Counts:** each entry shows how many items the list will show once it's picked, as things are now (so inside a vault, its categories count that vault's items). Health has none. Empty categories stay hidden, as before; "No folder" shows only next to real folders.
+- **On every page:** off the vault (Send, Settings), the menu is the same, nothing in it is picked, and picking an entry opens the vault with it.
+- **Phone width:** below the width where upstream's icon rail fits, there was no way to open the menu; page headers there get a Menu button that opens it over the page, and picking an entry or another page closes it. The header's product switcher steps aside there (the menu has it). Real phones get the desktop layout, zoomed, as upstream sets it.
+- **The admin console** and organization vault pages keep upstream's nav and filter panel.
+- **Tests:** unit tests for the menu (order, counts, scopes, picks through the routed filter, search, the phone behavior) and the layout's order; tier 1 filters a vault through the menu (categories, a folder made from it, All items, search), checks the tools' order and picking from another page, and the Menu button and checklist at a phone's width.
+
 ## UX we commit to
 
 Fixes for things that annoy users of Bitwarden and 1Password today.
@@ -479,7 +490,7 @@ Fixes for things that annoy users of Bitwarden and 1Password today.
 - **Onboarding day works:** upstream rate-limits logins per IP (a burst of 10, then one per minute) and signup, pre-login, and hint requests per IP (a shared burst of 50, then one per minute). A whole office behind one NAT address would get stuck after ten to twenty-five people. Built: the strict limit is per account now, and an address's limits fit an office (see "Login limits"). Later: allowances for an org's known addresses and enrolled devices.
 - **No nags:** upstream's web vault interrupts every fresh login with an extension page, an "Are you sure?" dialog, and a welcome tour. All three go. Extension setup happens through onboarding instead.
 - **New item picker (built, web vault):** New opens "What are you saving?": Login, Secure note, Card, and Identity as big tiles, and "More categories" for the other item types and every template (built-in, your own, your organizations', your MSP's), with a search and links to make a template. Folder and Collection are buttons at the bottom. Like 1Password's, so what people save most is one click and the rest is one more (`libs/vault/src/keykeeper/new-item-dialog.component.ts`). The admin console keeps upstream's menu for now.
-- **Only categories with items** show in the vault's filter list (Favorites too, once something is one); the one being viewed stays while it's open.
+- **Only categories with items** show in the left menu (Favorites too, once something is one); the one being viewed stays while it's open.
 
 ## Item templates
 
