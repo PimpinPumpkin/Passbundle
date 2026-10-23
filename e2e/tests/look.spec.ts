@@ -1,6 +1,6 @@
 // PassBundle's look (DESIGN.md, "The look"): Glass by default, light or dark
-// like the device; Light and Dark are solid, for legibility; Figtree and our
-// artwork in every theme.
+// like the device; Light and Dark are solid, for legibility; Google Sans Flex
+// and our artwork in every theme.
 import { expect, test, type Page } from "@playwright/test";
 
 import { brand } from "../paths.mjs";
@@ -45,10 +45,10 @@ test("the look is Glass by default, Light and Dark are solid, and the type and a
     await document.fonts.ready;
     return {
       family: getComputedStyle(document.body).fontFamily,
-      loaded: document.fonts.check('16px "Figtree"'),
+      loaded: document.fonts.check('16px "Google Sans Flex"'),
     };
   });
-  expect(font.family).toMatch(/^"?Figtree/);
+  expect(font.family).toMatch(/^"?Google Sans Flex/);
   expect(font.loaded).toBe(true);
 
   // Glass follows the device.

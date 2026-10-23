@@ -33,7 +33,7 @@ async function createOrganization(owner: Page, name: string): Promise<string> {
  */
 async function openMembers(owner: Page, orgId: string) {
   await owner.goto("/#/vault");
-  await expect(owner.getByRole("heading", { name: /vaults/i }).first()).toBeVisible();
+  await expect(owner.getByRole("heading", { name: "All items" })).toBeVisible();
   await owner.goto(`/#/organizations/${orgId}/members`);
   await expect(owner.getByRole("button", { name: "Invite member" })).toBeVisible();
 }

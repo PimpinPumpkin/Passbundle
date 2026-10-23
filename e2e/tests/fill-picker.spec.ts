@@ -67,7 +67,7 @@ async function openWebVault(context: BrowserContext, user: { email: string; pass
   await vault.goto(`${serverUrl}/#/vault`);
   const email = vault.getByRole("textbox", { name: /Email address/ });
   const unlock = vault.getByRole("button", { name: "Unlock" });
-  const vaultTitle = vault.getByRole("heading", { name: "All vaults" }).first();
+  const vaultTitle = vault.getByRole("heading", { name: "All items" }).first();
   await expect(email.or(unlock).or(vaultTitle)).toBeVisible({ timeout: 30_000 });
   if (await email.isVisible()) {
     await email.fill(user.email);
