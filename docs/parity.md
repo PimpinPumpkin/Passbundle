@@ -68,7 +68,7 @@ Checked October 23, 2026. A feature-by-feature look at where PassBundle stands a
 | Shared spaces | Organizations with collections (renamed "shared folders" in the new design); free org: 2 people, 2 collections | Vaults: private, shared, and an Employee vault on Business | **Built** | Inherited organizations and collections. The Business preset makes Everyone and Admins. | [bw-orgs] [bw-sep26] [op-employee] |
 | Permission levels per shared space | Five: view, view without passwords, edit, edit without passwords, manage | Teams: view, edit, manage. Business: 13, see the next row | **Built** | Bitwarden's five, inherited. | [bw-collperm] [op-vaults] |
 | Granular permissions like 1Password Business | No | View, create, edit, archive, delete, view and copy passwords, view item history, import, export, copy and share, move, print, manage vault | **Missing** | | [op-vaults] |
-| Groups | Yes (Teams, Enterprise) | Built-in groups; custom groups (Business) | **Partly** | Inherited, but off unless the server sets `ORG_GROUPS_ENABLED`; one end-to-end test turns them on (the Access page). Custom roles can't manage groups yet. | [bw-plans] [op-groups] |
+| Groups | Yes (Teams, Enterprise) | Built-in groups; custom groups (Business) | **Partly** | Inherited and on for every organization (a server can turn it off with `ORG_GROUPS_ENABLED`); tests cover who can read and change groups, and the Access page. Custom roles that manage members see groups but can't manage them yet. | [bw-plans] [op-groups] |
 | Guests | No guest role | Yes: 5 (Teams, Families), 20 (Business), one vault each | **Missing** | | [bw-roles] [op-guests] |
 | Sending a secret to anyone by link | Send: text (free), files (Premium), up to 31 days, password, view limit, email check | Item sharing, every plan: 1 hour to 30 days, one view, anyone or checked emails | **Partly** | Send is inherited in the web vault and extension, text and files. Not in our apps yet. | [bw-send] [op-share] |
 | Sharing an item as a link | "Share via link" (Premium or paid org), rolling out from 2026.10 | Yes (see the row above); Business sets who may receive, how long, and one-view | **Missing** | Upstream's version is newer than our clients' base. | [bw-sharing] [op-share-admin] |
@@ -120,7 +120,7 @@ Checked October 23, 2026. A feature-by-feature look at where PassBundle stands a
 
 | Feature | Bitwarden | 1Password | PassBundle today | Notes | Sources |
 |---|---|---|---|---|---|
-| Organization event log | Teams, Enterprise; kept indefinitely, CSV | Activity log (Business), 365 days, CSV | **Partly** | Inherited, but off unless the server sets `ORG_EVENTS_ENABLED`. The MSP console's activity log is built and on. | [bw-events] [op-activity] |
+| Organization event log | Teams, Enterprise; kept indefinitely, CSV | Activity log (Business), 365 days, CSV | **Partly** | Inherited and on for every organization (a server can turn it off with `ORG_EVENTS_ENABLED`). Custom roles that view event logs see it, with who acted. A custom role that manages members but can't view event logs is still offered a member's event log on the Members page, and is signed out if they open it. The MSP console's activity log is built and on. | [bw-events] [op-activity] |
 | Sending events to a SIEM | Teams, Enterprise: Splunk, Rapid7, Sentinel, Elastic, Panther, Sumo Logic, Huntress, Blumira, HEC | Events API (Business): Splunk, Datadog, Elastic, Sentinel, CrowdStrike, Huntress, Blumira, Blackpoint, Todyl, and others | **Missing** | | [bw-events] [op-events] |
 | Password health for a person | Exposed, reused, weak, unsecured websites, inactive two-step login, data breach (Premium or paid org; breach report free) | Watchtower, every plan: compromised sites, vulnerable, reused, weak, unsecured, two-step available, expiring, duplicates | **Built** | Inherited reports plus our Expiring items. The data breach report needs an HIBP key on the server. | [bw-reports] [op-watchtower] |
 | Password health across an organization | Org reports; Access Intelligence (Enterprise) flags at-risk apps and asks for changes | Insights and Watchtower report (Business) | **Partly** | Upstream's org reports are inherited. The MSP console shows weak, reused, and expiring per client; exposed isn't there yet. | [bw-reports] [bw-ai] [op-insights] |
@@ -240,12 +240,12 @@ Ranked by how often an MSP will hit them when choosing between the three.
 2. **SSO per organization with Entra, then trusted-device unlock.** Clients on Microsoft 365 expect one sign-in; ours is one OIDC provider per server, and the master password still unlocks.
 3. **iOS AutoFill and passkeys.** Without them our iPhone app is copy and paste, and many client staff carry iPhones.
 4. **MSP billing: pooled seats and one monthly invoice with a line per client.** Both others have it, and MSPs won't resell without it.
-5. **The event log on by default, and events sent to SIEM and MDR tools** (Huntress, Blumira, Sentinel). MSP security stacks expect it, and both others ship connectors.
+5. **Events sent to SIEM and MDR tools** (Huntress, Blumira, Sentinel). MSP security stacks expect it, and both others ship connectors. The event log itself is on.
 6. **Signed, store-listed releases:** extensions in the Chrome, Edge, and Firefox stores, a signed MSI, a notarized Mac app, and a Safari extension. Force-installing needs store IDs, and Mac clients use Safari.
 7. **Linking an existing organization to an MSP, and moving a client between MSPs.** Both others allow it; without it, a client that started on its own can't be taken over.
 8. **Exposed passwords in the MSP health view, and a domain breach report.** "Your client's passwords are in a breach" is how MSPs sell security work, and both others report it.
 9. **A remove-export policy and finer item permissions** (export, print, share). Clients' compliance asks for them, and Vaultwarden doesn't support the export policy.
-10. **Groups on by default, and manageable by custom roles.** Clients' departments map to groups, and ours are off unless a server setting turns them on.
+10. **Groups manageable by custom roles.** Clients' departments map to groups; ours are on, but only owners and admins manage them.
 11. **Filling Windows desktop apps** (Quick Access or auto-type style). Many small businesses run desktop line-of-business apps; 1Password fills them, and Bitwarden is building it.
 12. **Firewall rules per organization** (allowed networks and countries). MSPs like to keep a client's vault to its offices; 1Password offers it.
 13. **Item version history in the extension and our apps.** Technicians editing shared documentation need more undo than password history; the web vault has it, and the rest should show and restore the same versions.
@@ -271,7 +271,7 @@ Ranked by how often an MSP will hit them when choosing between the three.
 
 - **Bitwarden:** the bank account, passport, and driver's license types are only a forum sighting; desktop auto-type and the desktop passkey provider are "coming soon" with no date; the provider event log's contents; MSP discounts; whether Share via link works on phones; any guest role; continuous email breach monitoring.
 - **1Password:** how long item history is kept; file size limits outside Business; the current MSP price (only an undated $5 figure); passkey unlock for existing accounts; Rippling provisioning; whether shared vaults can be exported; any per-person email breach alerts; email forwarders other than Fastmail; a self-hosted option (none found); per-field fill mapping and fixes for problem sites (none found).
-- **PassBundle:** whether the hosted service turns on `ORG_EVENTS_ENABLED`, `ORG_GROUPS_ENABLED`, SSO, an HIBP key, or the new item types flag (that configuration isn't in these repos); whether upstream's direct LastPass import works on our build; Windows Hello on real hardware.
+- **PassBundle:** whether the hosted service turns on SSO, an HIBP key, or the new item types flag (that configuration isn't in these repos); whether upstream's direct LastPass import works on our build; Windows Hello on real hardware.
 
 ## Sources
 
