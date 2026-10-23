@@ -26,7 +26,10 @@ permissions:
 
 concurrency:
   group: tier1-${{ github.repository }}-${{ github.ref }}
-  cancel-in-progress: true
+  # A newer push to a PR replaces its running build. On main, a running build
+  # finishes (the test server and the Mac's extension deploy from main's
+  # newest green build) and only the newest waiting one runs after it.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   refs:
