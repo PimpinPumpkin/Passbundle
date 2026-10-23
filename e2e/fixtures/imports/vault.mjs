@@ -49,6 +49,8 @@ export function normalize(item, folderName = () => null) {
     card: null,
     identity: null,
   };
+  // Archived, only when it is: most formats have no archive.
+  if (item.archived || item.archivedDate) out.archived = true;
   if (type === "login") {
     const login = item.login ?? {};
     out.login = {
