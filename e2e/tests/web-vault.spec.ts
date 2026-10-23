@@ -19,7 +19,7 @@ test.describe.configure({ mode: "serial" });
 async function expectNoNags(page: Page) {
   await page.waitForURL(/#\/(vault|setup-extension)/);
   expect(page.url()).not.toContain("setup-extension");
-  await expect(page).toHaveTitle(/Vaults/);
+  await expect(page).toHaveTitle(/^Items/);
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
@@ -31,7 +31,7 @@ async function logIn(page: Page) {
   await page.getByRole("textbox", { name: /Master password/ }).fill(user.password);
   await page.getByRole("button", { name: "Log in", exact: true }).click();
   await expectNoNags(page);
-  await expect(page).toHaveTitle(/Vaults/);
+  await expect(page).toHaveTitle(/^Items/);
 }
 
 test("server identifies as PassBundle, links its source, and suppresses nags", async ({ request }) => {
@@ -77,12 +77,12 @@ test("create an account", async ({ page }) => {
   }
   await page.getByRole("button", { name: "Skip for now" }).click();
   await expectNoNags(page);
-  await expect(page).toHaveTitle(/Vaults/);
+  await expect(page).toHaveTitle(/^Items/);
   // Skipped means skipped: the vault doesn't send it back.
   await page.goto("/#/sends");
   await page.goto("/#/vault");
   await expect(page).toHaveURL(/#\/vault/);
-  await expect(page).toHaveTitle(/Vaults/);
+  await expect(page).toHaveTitle(/^Items/);
 });
 
 test("vault page carries our brand, including logos", async ({ page }) => {

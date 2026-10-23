@@ -38,7 +38,7 @@ test("the look is Glass by default, Light and Dark are solid, and the type and a
 
   const user = webUserFor("look", testInfo.repeatEachIndex);
   await signUp(page, user);
-  await expect(page.getByText("No items in the vault")).toBeVisible();
+  await expect(page.getByText("No items yet")).toBeVisible();
   expect(await upstreamArt(page)).toBe(0);
   expect(await look(page)).toEqual(["pb-glass", "theme_light"]);
   const font = await page.evaluate(async () => {

@@ -132,7 +132,7 @@ async function openLockedPopup(context: BrowserContext, extensionId: string): Pr
     await expect(
       popup
         .getByRole("heading", { name: "Your vault is locked" })
-        .or(popup.getByRole("heading", { name: /Vault/ }).first()),
+        .or(popup.getByRole("heading", { name: /Items/ }).first()),
     ).toBeVisible({ timeout: 5_000 });
   }).toPass({ timeout: 45_000, intervals: [1_000] });
   return popup!;
@@ -193,7 +193,7 @@ test("biometric unlock through the desktop agent: on with a prompt, unlock with 
   await lockNow(context, popup, extensionId);
   agent.answer("yes");
   const unlocked = await unlockWithBiometrics(context, extensionId, agent.prompts);
-  await expect(unlocked.getByRole("heading", { name: /Vault/ }).first()).toBeVisible({ timeout: 30_000 });
+  await expect(unlocked.getByRole("heading", { name: /Items/ }).first()).toBeVisible({ timeout: 30_000 });
   expect(agent.prompts()).toHaveLength(2);
   expect(agent.prompts()[1]).toBe(`Unlock ${brand.name} in your browser`);
 
@@ -203,7 +203,7 @@ test("biometric unlock through the desktop agent: on with a prompt, unlock with 
   const stillLocked = await unlockWithBiometrics(context, extensionId, agent.prompts);
   expect(agent.prompts()).toHaveLength(3);
   await expect(stillLocked.getByRole("heading", { name: "Your vault is locked" })).toBeVisible();
-  await expect(stillLocked.getByRole("heading", { name: /^Vault/ })).toHaveCount(0);
+  await expect(stillLocked.getByRole("heading", { name: /^Items/ })).toHaveCount(0);
 });
 
 test("turning biometric unlock on stays off when the prompt is canceled", async ({

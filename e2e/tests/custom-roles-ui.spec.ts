@@ -61,7 +61,7 @@ test("an MSP admin gives a client's point of contact a custom role that manages 
   const invite = admin.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(pocUser.email);
   await invite.getByRole("radio", { name: /^Custom/ }).check();
-  const allCollections = invite.getByRole("checkbox", { name: "Manage all collections" });
+  const allCollections = invite.getByRole("checkbox", { name: "Manage all shared folders" });
   await expect(allCollections).toBeVisible();
   await invite.getByRole("checkbox", { name: "Manage users" }).check();
   // Permissions our server doesn't enforce aren't offered, and neither is
@@ -69,7 +69,7 @@ test("an MSP admin gives a client's point of contact a custom role that manages 
   await expect(invite.getByRole("checkbox", { name: "Manage groups" })).toHaveCount(0);
   await expect(allCollections).toHaveCount(0);
   await expect(invite.getByTestId("custom-role-no-collections")).toContainText(
-    "can't also manage all collections",
+    "can't also manage all shared folders",
   );
   await invite.getByRole("button", { name: "Save" }).click();
   await expect(invite).toBeHidden();
@@ -158,7 +158,7 @@ test("upstream's Custom role that only manages all collections still opens the a
   const invite = admin.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(managerUser.email);
   await invite.getByRole("radio", { name: /^Custom/ }).check();
-  await invite.getByRole("checkbox", { name: "Manage all collections" }).check();
+  await invite.getByRole("checkbox", { name: "Manage all shared folders" }).check();
   await invite.getByRole("button", { name: "Save" }).click();
   await expect(invite).toBeHidden();
   await admin.goto("/#/msp");

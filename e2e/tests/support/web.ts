@@ -13,7 +13,7 @@ export const webUserFor = (prefix: string, repeatIndex: number): WebUser => ({
 export async function signUp(page: Page, user: WebUser) {
   await startSignUp(page, user);
   await skipImport(page);
-  await expect(page).toHaveTitle(/Vaults/);
+  await expect(page).toHaveTitle(/^Items/);
 }
 
 /** Creates an account, up to the offer to import that comes first. */
@@ -61,8 +61,9 @@ export async function confirmMember(page: Page, email: string) {
 }
 
 /**
- * The web vault's one left menu: search, the vault's categories, vaults, and
- * folders, then the tools (DESIGN.md, "The left menu").
+ * The web vault's one left menu: search, the categories, and the folders
+ * (Personal's, then each organization's), then the tools (DESIGN.md, "The
+ * left menu").
  */
 export function menu(page: Page) {
   return page.getByRole("navigation", { name: "Side navigation" });

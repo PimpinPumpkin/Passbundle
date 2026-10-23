@@ -81,7 +81,7 @@ async function setupTile(page: Page, tile: string) {
 /** After importing at sign-up: the reminder about the export, then the vault. */
 async function finishSetup(page: Page) {
   await expect(page.getByText("Delete the export now")).toBeVisible();
-  await page.getByRole("button", { name: "Go to my vault" }).click();
+  await page.getByRole("button", { name: "Go to your items" }).click();
   await page.waitForURL(/#\/vault/);
 }
 
@@ -101,7 +101,7 @@ async function readVault(page: Page, user: WebUser) {
   await page.goto("/#/tools/export");
   await page.getByRole("combobox", { name: /File format/ }).selectOption({ label: ".json" });
   await page.getByRole("button", { name: "Export", exact: true }).click();
-  const confirm = page.getByRole("dialog", { name: "Confirm vault export" });
+  const confirm = page.getByRole("dialog", { name: "Confirm export" });
   await confirm.getByRole("textbox", { name: /Master password/ }).fill(user.password);
   const [download] = await Promise.all([
     page.waitForEvent("download"),
