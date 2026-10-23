@@ -1,8 +1,8 @@
 // The web vault's one left menu, like 1Password's: search, All items,
-// Favorites, Health, the categories with items, the folders (Personal's, then
-// each organization's shared folders), Archive, and Trash, then the tools. Picking an
-// entry filters the vault the way the old filter panel did. See DESIGN.md,
-// "The left menu".
+// Favorites, Health, the categories with items, the folders (Personal's,
+// then each organization's shared folders), Archive, and Trash, then the
+// tools. Picking an entry filters the vault the way the old filter panel did.
+// See DESIGN.md, "The left menu".
 import { expect, test, type Page } from "@playwright/test";
 
 import { menu, menuEntry, newItem, pick, signUp, webUserFor } from "./support/web";
@@ -113,7 +113,7 @@ test("on a phone, a Menu button opens the menu, and a pick closes it", async ({
   // The checklist's title gets the card's width, not a narrow column beside
   // its icon and progress (which move out of its way on a phone).
   await page.goto("/#/vault");
-  const title = page.getByText("Get started", { exact: true });
+  const title = page.getByText(/^Get started with /);
   await expect(title).toBeVisible();
   expect((await title.boundingBox())!.width).toBeGreaterThan(150);
   // All of it shows, Dismiss included, rather than scrolling inside its card.
