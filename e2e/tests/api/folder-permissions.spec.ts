@@ -4,7 +4,12 @@
 // capability lets through, on every way an item is written: made, moved in,
 // imported, edited, its attachments, trashed, restored, deleted (one or
 // several), added to or taken out of a folder (one or several), its history
-// read and cleared, and the folder's own name and people.
+// read and cleared, and the folder's own name and people. Then what the
+// security review asked for: adding an item to a folder is sharing it, a
+// grant sent back without its grid keeps it, an item's folders outside sync
+// include read-only ones, history needs both its capabilities in one folder,
+// imports are checked before anything is saved, and refusals don't sign the
+// web vault out.
 import { randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
@@ -350,16 +355,33 @@ const rows: Row[] = [
     },
   },
   {
-    // Edit with passwords showing, and create in the other folder, which
-    // everyone who edits in F has.
+    // Edit with passwords showing and share on the item, and create in the
+    // other folder, which everyone who edits in F has. The editor, without
+    // share, can't: the other folder would let them delete it.
     name: "add an item to another folder too",
-    allowed: ["owner", "editor", "sharer", "manager", "groupEditor"],
+    allowed: ["owner", "sharer", "manager", "groupEditor"],
     request: async (ctx) => {
       const id = await item(ctx);
       return {
         method: "PUT",
         path: `/api/ciphers/${id}/collections_v2`,
         data: { collectionIds: [ctx.folder, ctx.other] },
+        check: async (allowed) =>
+          expect((await asOwner(ctx, id)).collectionIds.includes(ctx.other)).toBe(allowed),
+      };
+    },
+  },
+  {
+    // An organization's item sent through share with another folder: the
+    // same as adding it there.
+    name: "add an item to another folder through share",
+    allowed: ["owner", "sharer", "manager", "groupEditor"],
+    request: async (ctx, _actor, account) => {
+      const id = await item(ctx);
+      return {
+        method: "PUT",
+        path: `/api/ciphers/${id}/share`,
+        data: { cipher: { ...note(ctx.orgId, account, ctx.owner), id }, collectionIds: [ctx.other] },
         check: async (allowed) =>
           expect((await asOwner(ctx, id)).collectionIds.includes(ctx.other)).toBe(allowed),
       };
@@ -396,7 +418,7 @@ const rows: Row[] = [
   },
   {
     name: "add several items to another folder",
-    allowed: ["owner", "editor", "sharer", "manager", "groupEditor"],
+    allowed: ["owner", "sharer", "manager", "groupEditor"],
     request: async (ctx) => {
       const ids = [await item(ctx), await item(ctx)];
       return {
@@ -710,6 +732,244 @@ test.describe("Shared folder grids", () => {
     const result = await api.call(callers.sharer, "PUT", `/api/ciphers/${id}/collections_v2`, { collectionIds: [] });
     expect(result.status).toBe(400);
     expect((await asOwner(ctx, id)).collectionIds).toEqual([ctx.folder]);
+  });
+
+  test("adding an item to another folder is sharing it: without share, no new folder lets someone delete it or read its history", async () => {
+    // The editor can edit in F, without share, delete, or history, and has
+    // Can edit in the other folder.
+    const id = await item(ctx);
+    const editor = callers.editor;
+    for (const [label, method, path, data] of [
+      ["one item", "PUT", `/api/ciphers/${id}/collections_v2`, { collectionIds: [ctx.folder, ctx.other] }],
+      ["through share", "PUT", `/api/ciphers/${id}/share`, {
+        cipher: { ...note(ctx.orgId, editor, ctx.owner), id },
+        collectionIds: [ctx.folder, ctx.other],
+      }],
+      ["several items", "POST", "/api/ciphers/bulk-collections", {
+        organizationId: ctx.orgId,
+        cipherIds: [id],
+        collectionIds: [ctx.other],
+        removeCollections: false,
+      }],
+    ] as const) {
+      const refused = await api.call(editor, method, path, data);
+      expect(refused.status, `${label}: ${JSON.stringify(refused.body)}`).toBe(400);
+      expect(refused.body.message, label).toMatch(/permission to share/);
+    }
+    expect((await asOwner(ctx, id)).collectionIds).toEqual([ctx.folder]);
+    // So it stays out of their reach to delete, or to read its history.
+    expect((await api.call(editor, "PUT", `/api/ciphers/${id}/delete`)).status).toBe(400);
+    expect((await api.call(editor, "GET", `/api/keykeeper/ciphers/${id}/history`)).status).toBe(404);
+    // With share on the item, it goes in.
+    const shared = await api.call(callers.sharer, "PUT", `/api/ciphers/${id}/collections_v2`, {
+      collectionIds: [ctx.folder, ctx.other],
+    });
+    expect(shared.status, JSON.stringify(shared.body)).toBe(200);
+    expect((await asOwner(ctx, id)).collectionIds.sort()).toEqual([ctx.folder, ctx.other].sort());
+  });
+
+  test("a grant sent back without its grid keeps it, on every save that resends grants, until upstream's fields change", async () => {
+    const folder = await copyOfF(ctx);
+    const custom: Grid = { ...NONE, seePasswords: true, edit: true, viewHistory: true };
+    const group = await api.call(ctx.owner, "POST", `/api/organizations/${ctx.orgId}/groups`, {
+      name: "Resaved",
+      accessAll: false,
+      externalId: null,
+      collections: [grant(folder, custom)],
+      users: [],
+    });
+    expect(group.status, JSON.stringify(group.body)).toBe(200);
+    await setAccess(api, ctx.owner, ctx.orgId, folder, [[ctx.memberIds.creator, custom]], [[group.body.id, custom]]);
+    const upstream = (g: { keykeeper?: Grid }) => ({ ...g, keykeeper: undefined });
+    const details = async () =>
+      (await api.call(ctx.owner, "GET", `/api/organizations/${ctx.orgId}/collections/${folder}/details`)).body;
+    const creatorGrid = async () =>
+      (await details()).users.find((u: { id: string }) => u.id === ctx.memberIds.creator).keykeeper;
+    const groupGrid = async () =>
+      (await details()).groups.find((g: { id: string }) => g.id === group.body.id).keykeeper;
+
+    // The folder, saved the upstream way.
+    let before = await details();
+    let saved = await api.call(ctx.owner, "PUT", `/api/organizations/${ctx.orgId}/collections/${folder}`, {
+      name: before.name,
+      users: before.users.filter((u: { id: string }) => Object.values(ctx.memberIds).includes(u.id)).map(upstream),
+      groups: before.groups.map(upstream),
+    });
+    expect(saved.status, JSON.stringify(saved.body)).toBe(200);
+    expect(await creatorGrid()).toEqual(custom);
+    expect(await groupGrid()).toEqual(custom);
+
+    // Bulk access, the upstream way.
+    before = await details();
+    saved = await api.call(ctx.owner, "POST", `/api/organizations/${ctx.orgId}/collections/bulk-access`, {
+      collectionIds: [folder],
+      users: before.users.filter((u: { id: string }) => Object.values(ctx.memberIds).includes(u.id)).map(upstream),
+      groups: before.groups.map(upstream),
+    });
+    expect(saved.status, JSON.stringify(saved.body)).toBe(200);
+    expect(await creatorGrid()).toEqual(custom);
+    expect(await groupGrid()).toEqual(custom);
+
+    // The member, edited the upstream way.
+    const member = await api.call(ctx.owner, "GET", `/api/organizations/${ctx.orgId}/users/${ctx.memberIds.creator}?includeCollections=true&includeGroups=true`);
+    saved = await api.call(ctx.owner, "PUT", `/api/organizations/${ctx.orgId}/users/${ctx.memberIds.creator}`, {
+      type: 2,
+      accessAll: false,
+      permissions: {},
+      collections: member.body.collections.map(upstream),
+      groups: member.body.groups,
+    });
+    expect(saved.status, JSON.stringify(saved.body)).toBe(200);
+    expect(await creatorGrid()).toEqual(custom);
+
+    // The group, edited the upstream way.
+    const groupDetails = await api.call(ctx.owner, "GET", `/api/organizations/${ctx.orgId}/groups/${group.body.id}/details`);
+    saved = await api.call(ctx.owner, "PUT", `/api/organizations/${ctx.orgId}/groups/${group.body.id}`, {
+      name: "Resaved",
+      accessAll: false,
+      externalId: null,
+      collections: groupDetails.body.collections.map(upstream),
+      users: [],
+    });
+    expect(saved.status, JSON.stringify(saved.body)).toBe(200);
+    expect(await groupGrid()).toEqual(custom);
+
+    // Upstream's fields changed: the preset they name.
+    before = await details();
+    saved = await api.call(ctx.owner, "PUT", `/api/organizations/${ctx.orgId}/collections/${folder}`, {
+      name: before.name,
+      users: [{ id: ctx.memberIds.creator, readOnly: true, hidePasswords: false, manage: false }],
+      groups: [],
+    });
+    expect(saved.status, JSON.stringify(saved.body)).toBe(200);
+    expect(await creatorGrid()).toEqual(PRESETS.view);
+  });
+
+  test("an item's folders outside sync include the ones someone can only view, so saving them back changes nothing", async () => {
+    // The viewer has Can view in F; give them Can edit in a second folder.
+    const second = await copyOfF(ctx);
+    await setAccess(api, ctx.owner, ctx.orgId, second, [[ctx.memberIds.viewer, PRESETS.edit]], []);
+    const id = await item(ctx, [ctx.folder, second]);
+    const viewer = callers.viewer;
+    const both = [ctx.folder, second].sort();
+    for (const path of [`/api/ciphers/${id}`, `/api/ciphers/${id}/details`]) {
+      const got = await api.call(viewer, "GET", path);
+      expect(got.status, path).toBe(200);
+      expect(got.body.collectionIds.sort(), path).toEqual(both);
+    }
+    // After a save, and in what the item form posts back.
+    const edited = await api.call(viewer, "PUT", `/api/ciphers/${id}`, note(ctx.orgId, viewer, ctx.owner));
+    expect(edited.status, JSON.stringify(edited.body)).toBe(200);
+    expect(edited.body.collectionIds.sort()).toEqual(both);
+    const posted = await api.call(viewer, "PUT", `/api/ciphers/${id}/collections_v2`, {
+      collectionIds: edited.body.collectionIds,
+    });
+    expect(posted.status, JSON.stringify(posted.body)).toBe(200);
+    expect((await asOwner(ctx, id)).collectionIds.sort()).toEqual(both);
+    // Someone who reaches only one of them sees only that one.
+    const creator = await api.call(callers.creator, "GET", `/api/ciphers/${id}`);
+    expect(creator.body.collectionIds).toEqual([ctx.folder]);
+  });
+
+  test("an item's history needs view item history with see passwords, or with delete, in the same folder", async () => {
+    const a = await copyOfF(ctx);
+    const b = await copyOfF(ctx);
+    const person = await api.account("history-split");
+    const member = await api.addMember(ctx.owner, ctx.orgId, person, "user");
+    await setAccess(api, ctx.owner, ctx.orgId, a, [[member, { ...NONE, viewHistory: true }]], []);
+    await setAccess(api, ctx.owner, ctx.orgId, b, [[member, { ...NONE, seePasswords: true, delete: true }]], []);
+    const id = await item(ctx, [a, b]);
+    const edited = await api.call(ctx.owner, "PUT", `/api/ciphers/${id}`, note(ctx.orgId, ctx.owner, ctx.owner));
+    expect(edited.status).toBe(200);
+    // History from A, passwords and delete from B: dates and authors only,
+    // and no clearing.
+    const history = await api.call(person, "GET", `/api/keykeeper/ciphers/${id}/history`);
+    expect(history.status, JSON.stringify(history.body)).toBe(200);
+    expect(history.body.hidePasswords).toBe(true);
+    expect(history.body.data.length).toBe(1);
+    expect(history.body.data[0].cipher).toBeNull();
+    const cleared = await api.call(person, "DELETE", `/api/keykeeper/ciphers/${id}/history`);
+    expect(cleared.status, JSON.stringify(cleared.body)).toBe(400);
+    expect((await api.call(ctx.owner, "GET", `/api/keykeeper/ciphers/${id}/history`)).body.data.length).toBe(1);
+    // All three in A: contents, and clearing.
+    await setAccess(api, ctx.owner, ctx.orgId, a, [[member, { ...NONE, viewHistory: true, seePasswords: true, delete: true }]], []);
+    const full = await api.call(person, "GET", `/api/keykeeper/ciphers/${id}/history`);
+    expect(full.body.hidePasswords).toBe(false);
+    expect(full.body.data[0].cipher).not.toBeNull();
+    expect((await api.call(person, "DELETE", `/api/keykeeper/ciphers/${id}/history`)).status).toBe(200);
+  });
+
+  test("an import with a broken relationship saves nothing", async () => {
+    const before = await orgItemCount(ctx);
+    const folders = (await api.call(ctx.owner, "GET", `/api/organizations/${ctx.orgId}/collections`)).body.data.length;
+    for (const [who, relationships] of [
+      [ctx.owner, [{ key: 0, value: 0 }, { key: 1, value: 5 }]],
+      [ctx.owner, [{ key: 0, value: 0 }, { key: 7, value: 0 }]],
+      [callers.creator, [{ key: 0, value: 0 }, { key: 1, value: 3 }]],
+    ] as const) {
+      const imported = await api.call(who, "POST", `/api/ciphers/import-organization?organizationId=${ctx.orgId}`, {
+        ciphers: [note(ctx.orgId, who, ctx.owner), note(ctx.orgId, who, ctx.owner)],
+        collections: [{ id: ctx.folder, name: encString("imported") }, { name: encString(`new-${randomUUID()}`) }],
+        collectionRelationships: relationships,
+      });
+      expect(imported.status, JSON.stringify(imported.body)).toBe(400);
+    }
+    expect(await orgItemCount(ctx)).toBe(before);
+    expect((await api.call(ctx.owner, "GET", `/api/organizations/${ctx.orgId}/collections`)).body.data.length).toBe(folders);
+  });
+
+  test("refusals a member's web vault can run into don't sign it out", async () => {
+    // A regular member on a folder's manager routes: 404, not 401.
+    for (const [method, path] of [
+      ["GET", `/api/organizations/${ctx.orgId}/collections/${ctx.folder}/details`],
+      ["GET", `/api/organizations/${ctx.orgId}/collections/${ctx.folder}/users`],
+      ["GET", `/api/organizations/${ctx.orgId}/users/mini-details`],
+    ] as const) {
+      const refused = await api.call(callers.viewer, method, path);
+      expect(refused.status, `${method} ${path}`).toBe(404);
+    }
+    // Clearing history without delete: 400, not 403.
+    const id = await item(ctx);
+    const cleared = await api.call(callers.viewer, "DELETE", `/api/keykeeper/ciphers/${id}/history`);
+    expect(cleared.status).toBe(400);
+    // Logged out is still 401.
+    expect((await api.call(null, "GET", `/api/organizations/${ctx.orgId}/users/mini-details`)).status).toBe(401);
+  });
+
+  test("a folder's manager sees members who joined, and no directory ids", async () => {
+    const invited = `invited-${randomUUID().slice(0, 8)}@api.example.test`;
+    const invite = await api.call(ctx.owner, "POST", `/api/organizations/${ctx.orgId}/users/invite`, {
+      emails: [invited],
+      type: 2,
+      collections: [],
+      groups: [],
+      permissions: {},
+    });
+    expect(invite.status, JSON.stringify(invite.body)).toBe(200);
+    const directory = await api.call(ctx.owner, "POST", `/api/organizations/${ctx.orgId}/groups`, {
+      name: "From the directory",
+      accessAll: false,
+      externalId: `dir-${randomUUID()}`,
+      collections: [],
+      users: [],
+    });
+    expect(directory.status, JSON.stringify(directory.body)).toBe(200);
+
+    const emails = async (who: Account) =>
+      (await api.call(who, "GET", `/api/organizations/${ctx.orgId}/users/mini-details`)).body.data.map(
+        (m: { email: string }) => m.email,
+      );
+    expect(await emails(ctx.owner)).toContain(invited);
+    const managerSees = await emails(callers.manager!);
+    expect(managerSees).not.toContain(invited);
+    expect(managerSees).toContain(callers.viewer!.email);
+
+    const externalId = async (who: Account) =>
+      (await api.call(who, "GET", `/api/organizations/${ctx.orgId}/groups`)).body.data.find(
+        (g: { id: string }) => g.id === directory.body.id,
+      ).externalId;
+    expect(await externalId(ctx.owner)).toMatch(/^dir-/);
+    expect(await externalId(callers.manager!)).toBeNull();
   });
 
   test("a folder's manager changes only their own folders", async () => {

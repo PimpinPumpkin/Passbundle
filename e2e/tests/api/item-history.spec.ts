@@ -504,8 +504,8 @@ test("whoever can delete an item can clear its history or delete a version, and 
     api.call(who, "DELETE", `/api/keykeeper/ciphers/${item}/history`);
 
   // Read-only members can't; people who can't open it get 404.
-  expect((await clear(viewer)).status).toBe(403);
-  expect((await clear(hidden)).status).toBe(403);
+  expect((await clear(viewer)).status).toBe(400);
+  expect((await clear(hidden)).status).toBe(400);
   expect((await clear(outsider)).status).toBe(404);
   expect((await clear(null)).status).toBe(401);
   expect(await versions(api, owner, id)).toHaveLength(2);
@@ -515,7 +515,7 @@ test("whoever can delete an item can clear its history or delete a version, and 
   const other = await orgLogin(api, owner, orgId, collection, "other");
   const deleteVersion = (who: Account, item: string, version: string) =>
     api.call(who, "DELETE", `/api/keykeeper/ciphers/${item}/history/${version}`);
-  expect((await deleteVersion(viewer, id, oldest.id)).status).toBe(403);
+  expect((await deleteVersion(viewer, id, oldest.id)).status).toBe(400);
   expect((await deleteVersion(owner, other, oldest.id)).status).toBe(404);
   expect((await deleteVersion(editor, id, oldest.id)).status).toBe(200);
   expect((await deleteVersion(editor, id, oldest.id)).status).toBe(404);

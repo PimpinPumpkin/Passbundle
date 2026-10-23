@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
 
-import { type Account, Api } from "./support";
+import { type Account, Api, encString } from "./support";
 
 type Templates = {
   templates: {
@@ -159,7 +159,7 @@ test("an MSP admin sends a template to every client, records each client's copy 
   ]);
 });
 
-test("a template's source is an item the admin can see and never a client's copy, and copies must be items in the MSP's own clients", async ({
+test("a template's source is an item the admin can see and share and never a client's copy, and copies must be items in the MSP's own clients", async ({
   request,
 }) => {
   test.setTimeout(120_000);
@@ -210,6 +210,33 @@ test("a template's source is an item the admin can see and never a client's copy
     { sourceCipherId: copyInDental, allClients: true },
     400,
     /copy in one of your clients/,
+  );
+  // An item the admin can see but not share, which a template would copy
+  // into other organizations: someone else's organization gives them Can
+  // view on its folder (DESIGN.md, "Folders and permissions").
+  const partner = await api.organization(other, "Partner Org");
+  const partnerFolder = await api.collection(other, partner);
+  const viewOnly = await api.orgItem(other, partner, partnerFolder);
+  const adminThere = await api.addMember(other, partner, admin, "user");
+  const granted = await api.call(
+    other,
+    "PUT",
+    `/api/organizations/${partner}/collections/${partnerFolder}`,
+    {
+      name: encString("Partner folder"),
+      users: [
+        { id: adminThere, readOnly: true, hidePasswords: false, manage: false },
+      ],
+      groups: [],
+    },
+  );
+  expect(granted.status, JSON.stringify(granted.body)).toBe(200);
+  await refused(
+    "PUT",
+    `${templatePath}/${id}`,
+    { sourceCipherId: viewOnly, allClients: true },
+    400,
+    /permission to share/,
   );
   await refused(
     "PUT",
