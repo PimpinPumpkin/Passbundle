@@ -120,8 +120,8 @@ test("a new MSP's defaults are the Business policies, and a new client starts wi
   const mspId = await api.msp(admin, "Northwind IT");
 
   const start = await overview(api, admin, mspId);
-  // Account recovery is a default too, but only offered when the server
-  // sends email, which this one doesn't.
+  // Account recovery is only offered when the server sends email, which this
+  // one doesn't. Where it's offered, it starts off (the mail tests check).
   expect(start.types).toContain(TWO_STEP);
   expect(start.types).not.toContain(RESET_PASSWORD);
   expect(start.types).not.toContain(REQUIRE_SSO);
@@ -145,8 +145,9 @@ test("a new MSP's defaults are the Business policies, and a new client starts wi
   expect(
     (await clientPolicy(api, admin, dental, MASTER_PASSWORD)).data,
   ).toMatchObject({ minLength: 12, minComplexity: 3 });
+  // Account recovery isn't a Business policy: it's off until someone turns it on.
   expect((await clientPolicy(api, admin, dental, RESET_PASSWORD)).enabled).toBe(
-    true,
+    false,
   );
   expect((await clientPolicy(api, admin, dental, VAULT_LOCK)).data).toMatchObject({
     type: "onSystemLock",

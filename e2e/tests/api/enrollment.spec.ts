@@ -36,8 +36,9 @@ test("someone with the install command's token joins a Business client, gets Eve
     { token },
   );
   expect(info.status, JSON.stringify(info.body)).toBe(200);
-  // This test server sends no email, and the server only offers account
-  // recovery with email. The mail tests cover joining with recovery.
+  // A Business client starts without account recovery, and this test server
+  // couldn't offer it anyway: it sends no email. The mail tests cover joining
+  // with recovery.
   expect(info.body).toMatchObject({
     organizationId: orgId,
     organizationName: "Enroll Co",
