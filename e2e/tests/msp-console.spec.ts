@@ -46,8 +46,9 @@ test("an MSP admin adds a client and a technician, and the technician gets in on
   await expect(client.getByRole("link", { name: "Open" })).toBeVisible();
 
   // The default policies (the Business preset), applied without building
-  // any. Account recovery isn't one of them, and this test server, which
-  // sends no email, doesn't offer it.
+  // any. Account recovery is on too (the API and mail tests check it), but the
+  // server only shows it when it can send email, and this test server sends
+  // none.
   await expect(client.getByTestId("msp-client-policies")).toHaveText("Defaults");
   await client.getByRole("link", { name: "Open" }).click();
   await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
