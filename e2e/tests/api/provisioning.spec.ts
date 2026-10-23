@@ -430,6 +430,34 @@ test("owners, admins, custom roles, and an MSP's staff are matched but never cha
     expectError(off, 403);
     expect(off.body.detail).toContain("doesn't change owners, admins");
     expectError(await scim(request, token, "DELETE", `${base(orgId)}/Users/${id}`), 403);
+    // Read-only: nothing the directory sends about them is kept.
+    expectError(
+      await scim(request, token, "PATCH", `${base(orgId)}/Users/${id}`, {
+        schemas: [PATCH_OP],
+        Operations: [
+          { op: "replace", path: "displayName", value: "Renamed by the directory" },
+          { op: "replace", path: "userName", value: `taken-${randomUUID()}@contoso.onmicrosoft.com` },
+        ],
+      }),
+      403,
+    );
+    expectError(
+      await scim(request, token, "PUT", `${base(orgId)}/Users/${id}`, { schemas: [USER], userName: who.email, displayName: "x" }),
+      403,
+    );
+    const unchanged = await scim(request, token, "GET", `${base(orgId)}/Users/${id}`);
+    expect(unchanged.body.userName, who.email).toBe(who.email);
+    expect(unchanged.body.displayName, who.email).toBeUndefined();
+    // Never linked under a userName the directory chose.
+    const upn = `${randomUUID()}@contoso.onmicrosoft.com`;
+    expectError(await scim(request, token, "POST", `${base(orgId)}/Users`, createUserBody(upn, who.email)), 409, "uniqueness");
+    expect((await scim(request, token, "GET", `${base(orgId)}/Users?filter=userName eq "${upn}"`)).body.totalResults).toBe(0);
+    // Nor can anyone else take their email as a userName.
+    expectError(
+      await scim(request, token, "POST", `${base(orgId)}/Users`, createUserBody(who.email, unique("squatter"))),
+      409,
+      "uniqueness",
+    );
     expect(await memberOf(api, mspAdmin, orgId, who.email), who.email).toEqual(before);
   }
   // The Provisioning page lists whom Entra turned off, for a person to remove.
@@ -460,12 +488,23 @@ test("owners, admins, custom roles, and an MSP's staff are matched but never cha
     Operations: [{ op: "replace", path: "active", value: false }],
   });
   expect(off.status).toBe(200);
-  // Entra turning a protected person back on clears them from the list.
+  // A regular member can't take a protected person's email as a userName.
+  expectError(
+    await scim(request, token, "PATCH", `${base(orgId)}/Users/${regularId}`, {
+      schemas: [PATCH_OP],
+      Operations: [{ op: "replace", path: "userName", value: mspAdmin.email }],
+    }),
+    409,
+    "uniqueness",
+  );
+  // Entra turning a protected person back on clears them from the list,
+  // and still changes nothing about them.
   const admin = await scim(request, token, "GET", `${base(orgId)}/Users?filter=userName eq "${clientAdmin.email}"`);
-  await scim(request, token, "PATCH", `${base(orgId)}/Users/${admin.body.Resources[0].id}`, {
+  const back = await scim(request, token, "PATCH", `${base(orgId)}/Users/${admin.body.Resources[0].id}`, {
     schemas: [PATCH_OP],
     Operations: [{ op: "replace", path: "active", value: true }],
   });
+  expectError(back, 403);
   const after = await api.call(mspAdmin, "GET", `/api/keykeeper/organizations/${orgId}/provisioning`);
   expect(after.body.turnedOff.map((p: { email: string }) => p.email)).not.toContain(clientAdmin.email);
   // The MSP's activity log has the token, never the token itself.
