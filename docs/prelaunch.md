@@ -12,7 +12,7 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 
 1. **Desktop app parity with the web vault**: three panes (menu, list, item), folders, categories and templates, item history, the same icons. Android gets the same pieces in its phone layout.
 2. **Web vault redesign** from the mockups: calm solid ground with depth instead of glass, jewel tiles in the menu and list, site icons, a side panel for the selected item.
-3. **Entra ID provisioning**: people added and removed in Microsoft 365 appear and leave in the client's organization. Designed against Microsoft's public Graph and SCIM docs and tested with a stand-in; checking it for real needs a Microsoft 365 tenant (see "Waiting on you").
+3. **Entra ID provisioning**: built (DESIGN.md, "Provisioning from Entra ID"). People added and removed in Microsoft 365 appear in and leave the client's organization over SCIM 2.0, from a token on the organization's Provisioning page; tested with the requests Microsoft documents for Entra, replayed. Checking it with a real tenant waits on a Microsoft 365 tenant (see "Waiting on you").
 4. **Sign in with Entra (SSO) per organization**, master password still unlocking at first; trusted-device unlock after, as its own design with test vectors.
 5. **Item history and the new folders in the extension and the apps**, so every app shows and restores the same versions.
 6. **Events to security tools** (a webhook and syslog feed for Huntress, Blumira, Sentinel and similar).
@@ -27,7 +27,7 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 
 - **Production hosting**: a storage bucket for backups at a second provider (Backblaze or Cloudflare R2), a backup key made on your own computer (ops/hosting/README.md, "The backup key"), and the go-ahead to point vault.passbundle.com at the hosted stack.
 - **Email**: a sending provider (Postmark, Amazon SES, or Resend) so invitations, verification and account recovery mail go out.
-- **A Microsoft 365 tenant** (a free developer tenant is enough) to check Entra provisioning and SSO for real.
+- **A Microsoft 365 tenant** (a free developer tenant is enough) to check Entra provisioning (built; the checks are in DESIGN.md, "Provisioning from Entra ID", "Status") and SSO for real.
 - **Apple Developer account** for the iPhone app, iPhone AutoFill, and a notarized Mac app.
 - **Store listings** when you want them (you said not yet): Chrome, Edge, Firefox.
 - **Business details for the site and legal pages**: legal name, payment processor, refunds, governing law, prices (marked as placeholders in site/).

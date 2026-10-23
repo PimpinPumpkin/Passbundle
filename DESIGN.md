@@ -175,7 +175,7 @@ The MSP side is where we win, so it gets the most care: one place to run every c
 
 - **Clients:** one row per client org with members (confirmed, waiting, invited), the preset, items expiring soon, password health (weak, reused, exposed), and last activity. Expiring and health figures are computed in the browser, which can decrypt org items because MSP staff are members. The server only sees counts of members.
 - **Add a client:** name it, pick a preset (Business by default). The org, its default collections, and its policies are created in one step, and every staff member is added.
-- **Waiting for approval:** members added by the portal, RMM, or Entra are confirmed automatically by the console. Invite-link joins wait for one click.
+- **Waiting for approval:** members added by the portal or RMM are confirmed automatically by the console. Invite-link joins wait for one click. People Entra adds get in with no click through the install command, or after an admin lets them in once (see "Provisioning from Entra ID").
 - **Per client:** opens the org's admin console (members, groups, collections, policies), which upstream already provides as open source.
 - **Across clients:** expiring credentials, default policies every client follows (see "Default policies"), item templates sent to every client or chosen ones (see "MSP templates"), and the RMM install script for each client.
 - **Staff:** add by email, change role, remove.
@@ -402,7 +402,7 @@ Personal profiles are never imported by default.
 |---|---|
 | Account recovery by admin | On, with automatic enrollment. Disclosed at signup. Turning it on later enrolls users silently at their next unlock. |
 | Single organization | On. A work account belongs to one organization; personal items go in a separate personal account. Account recovery opens a member's whole account, so this keeps a client's admins out of members' family organizations. Owners and admins, including MSP staff, are exempt. |
-| Members added by portal, RMM, or Entra | Auto-approved |
+| Members added by portal, RMM, or Entra | Auto-approved (Entra's: through the install command at the client's domains, or once an admin lets them in; see "Provisioning from Entra ID") |
 | Members joining through an invite link | Approval required |
 | Two-step login | Required for admins, nudged for everyone else |
 | Master password | Minimum strength, plus a breached-password check. If the breach service can't be reached (offline or firewalled), signup continues without it and Health re-checks later. Upstream silently failed the form instead. |
@@ -541,6 +541,115 @@ Shared folders (upstream's collections) belong to the organization, and owners a
 - **In the browser only:** no server changes. It's computed from requests the Members, Groups, and Collections pages already make (members with their folders and groups, groups with their folders, folder details) and the organization's items as the admin console's vault loads them. A custom role is sent only requests its permissions cover: it sees the folders it opens itself (the page says how many it can't see), counts items from its own vault, and shows groups without their names, since listing groups isn't one of its permissions.
 - **Left out:** other items someone could see (notes, cards, identities, SSH keys) aren't listed, and the dialog says so; items in the trash; and anyone never confirmed, who never had the organization's key. Groups with upstream's old "access all" setting aren't detected.
 - **Tests:** unit tests for the computation (direct and group paths, merging, owners, admins, access to all items, item counts, the confirmation's sentence) and for the list (logins only, hidden-password folders left out, every login for someone who saw every item, copied text without secrets). End to end, on a test server with groups turned on: an organization with two shared folders and a group; a member reaches one folder directly and through the group, and the other only through the group with passwords hidden. The Access page shows the merged permissions, and removing the member lists the right logins.
+
+## Provisioning from Entra ID
+
+People join and leave a client's Microsoft 365 every week, and adding and removing them by hand is an MSP's daily chore. With provisioning on, Microsoft Entra ID's provisioning service keeps the client's PassBundle organization in step over SCIM 2.0: someone assigned to the PassBundle app in Entra is invited, someone turned off or unassigned loses access, and someone deleted leaves. Entra's groups can become PassBundle groups with the same members. Built from RFC 7643 (the SCIM schema), RFC 7644 (the protocol), and Microsoft's public documentation for SCIM endpoints, never from another product's code (CLEAN_ROOM.md). Any SCIM 2.0 client should work; Entra is the one we test against.
+
+### Setting it up
+
+- **Where:** the organization's Settings, then Provisioning, for its owners and admins. For an MSP's client, its MSP's admins and the client's own owners and admins, but not technicians, as for script tokens. Anyone else gets "not found", never 403 (upstream's web vault signs out on 403).
+- **What it shows:** the organization's SCIM URL, `https://<server>/scim/v2/<organization id>`, "Create token", and once there is one, when it was made and by whom, when it was last used and from where ("last sync"), Replace token, and Revoke.
+- **In Entra** (the page says this in a few steps): Enterprise applications, New application, Create your own application, "Integrate any other application you don't find in the gallery". Then Provisioning, mode Automatic (or New configuration), Tenant URL = the SCIM URL, Secret Token = the token, Test connection, Save. Assign the users and groups who should be in the organization, and start provisioning. Entra's first cycle takes a while; after that it syncs about every 40 minutes. Adding `?aadOptscim062020` to the Tenant URL turns on Entra's more standard PATCH requests; we accept both.
+
+### The token
+
+- **Made by the server:** 32 bytes from the operating system's random generator (`ring`'s `SystemRandom`), written as `pbscim1_` and 43 base64url characters: 256 bits of entropy. The prefix lets secret scanners and people recognize it, and the version leaves room for a later format.
+- **Shown once:** only in the answer to the request that made it. The page shows it with a copy button and says it won't be shown again.
+- **Kept only as a hash:** the server stores the SHA-256 of the whole token (base64). A 256-bit random secret needs no slow hash: there's nothing to guess.
+- **One per organization.** Create makes one. Replace makes a new one and the old one stops at once (Entra's requests fail until the new one is pasted in, then Entra retries). Revoke deletes it: provisioning stops, and Entra quarantines the job after repeated failures.
+- **Checking a request:** the server reads `Authorization: Bearer <token>`, requires the token's shape, finds the stored hash of the organization named in the URL, and compares the SHA-256 of what was presented with it in constant time (`crypto::ct_eq`, the `subtle` crate). It never looks a token up across organizations: the URL's organization picks the one row a token can match, so a token only ever works at its own organization's URL. Every failure (no header, another scheme, a malformed or wrong token, an organization with no token, an organization that doesn't exist) is the same 401 SCIM error with `WWW-Authenticate: Bearer`, so the answer never says whether an organization exists.
+- **Never in logs:** the server's request log leaves out SCIM query strings (filters carry names and emails) and never logs headers. Event and activity entries say a token was made, replaced, or revoked, and by whom, never its value.
+- **Limits:** 600 requests a minute per organization; 200 new invitations a minute and 2,000 a day (each sends an email, so a stolen token can't make the server a source of spam); and 60 refused tokens a minute per address. Past a limit, 429 with `Retry-After: 60`; Entra retries later. Every 1,024 requests the limiters forget addresses whose limits have filled back up, as the login limiters do, so requests from many addresses can't grow them without bound.
+- **The same work either way:** for an organization with no token, the presented token is still hashed and compared, in constant time, with a stand-in as long as a real hash, so timing doesn't say whether an organization has one.
+- **Last sync:** the time and address of the last accepted request, written at most once a minute.
+
+### What a token can and can't do
+
+This is the whole of what a stolen token is worth, in its own organization only.
+
+**It can:**
+- list the organization's members as SCIM users: their account email, what Entra sent about them (name, emails, externalId, and so on), and whether they're on; and the groups provisioning made, with their members.
+- invite any email address as a regular member, which also lets that address make an account on a server where only invited people can sign up (with email, from the invitation's link). An invitation alone gives nothing in the organization: the organization's key comes only from an owner's or admin's app, which lets in someone only the directory invited only after an owner or admin lets them in, or when they join with the install command at the client's verified email domains (see "Getting in").
+- turn regular members off and back on, and remove them. It turns back on only people provisioning turned off.
+- make, rename, and delete the groups provisioning made, and change which regular members are in them. That changes which shared folders they reach through those groups, which an owner or admin gives each group in PassBundle.
+
+**It can't:**
+- read any vault item, key, or other encrypted data. No SCIM endpoint returns any, and SCIM never gets or gives a key.
+- let anyone in: give the organization's key, confirm anyone, make or read seals, or read the install command or its join secret.
+- make or replace tokens, or change any setting or policy.
+- add, change, turn off, or remove owners, admins, custom roles, anyone with access to every item, or an MSP's staff (refused with 403, below).
+- give a group access to shared folders, give anyone a role, or touch a group made in PassBundle.
+- reach another organization: the token is checked against the URL's organization only.
+
+### Users
+
+| Entra sends | PassBundle does |
+|---|---|
+| `GET /Users?filter=userName eq "..."` | Finds the member Entra knows by that userName, or a member whose account email it is. |
+| `POST /Users` | Invites them as a regular member, or links someone already in the organization. 201, or 409 for a userName already provisioned. |
+| `GET /Users/<id>` | The member, on or off. |
+| `PATCH /Users/<id>` | Keeps the new attributes; `active` false or true turns them off or on. 200 with the user. |
+| `PUT /Users/<id>` | The same, replacing what's kept. |
+| `DELETE /Users/<id>` | Removes them from the organization. 204. |
+
+- **Who SCIM sees:** every member of the organization, so Entra matches people who were there before provisioning instead of inviting them twice. A user's id is their membership's id.
+- **What's kept:** what Entra sent (name, displayName, emails, title, the enterprise extension, and so on) as it sent it, in `scim_users`, returned as sent. Attributes sent as null are left out. Never kept: a password, roles, entitlements, groups. At most 16 KiB per person.
+- **Matching:** filters on userName, externalId, `emails[type eq "work"].value`, and id, with `eq`, `ne`, `co`, `sw`, `ew`, `gt`, `ge`, `lt`, `le`, `pr`, `and`, `or`, `not`, and value paths in brackets. Attribute names and operators in any case; values in any case, except `id` and `externalId`, which RFC 7643 makes case exact. A member Entra hasn't linked shows their account email as their userName.
+- **Who's invited:** the work email Entra sends (`emails[type eq "work"]`, which Entra fills from the user's mailbox), else the primary or first email, else the userName when it's an email address (Entra fills userName from the user principal name). Without any, 400 saying so. An account's email never changes through SCIM; a new userName is kept for matching only.
+- **Someone already in the organization** (that email's account is a member): a regular member is linked, and their membership isn't changed. Linked to two Entra users at once: 409. Someone provisioning never changes (below) isn't linked: 409, saying so; Entra matches them by their account email as userName instead.
+- **A userName is never another member's email:** creating or renaming someone to another member's account email is 409, so the directory can't take the name an owner or anyone else is matched by.
+- **Always a regular member:** roles in the request are ignored; making owners, admins, and custom roles stays in PassBundle.
+- **The Everyone collection:** people provisioning invites get the organization's Everyone collection, if it has one (the Business preset), as people who join with the install command do.
+
+**Getting in.** Joining means getting the organization's key from an owner's or admin's app, which does it on its own only when something the server can't forge vouches for the person (see "Joins a hacked server can't forge"). An admin's browser seals the invitations they send from the Members page; Entra's requests reach only the server, and nothing in them can be checked by an app, so a hacked server could claim Entra invited an address of its own. So invitations from provisioning carry no seal (an earlier seal for that address is removed), and:
+- **With the install command (the MSP way):** someone who joins with the client's command, limited to its email domains, with a verified address there, is let in without a click: the extension's join proof vouches for them, as for anyone who joins with the command. Unlike an admin's invitation, the directory's doesn't exempt the address from the command's domains: otherwise a stolen provisioning token plus a command copied off any machine would let in any address.
+- **By the emailed invitation, or by signing up on a server without email:** they accept as anyone invited does (signing up first if they have no account; without email, upstream's rule lets the invited address sign up and joins them at once), then wait to be let in. The Provisioning page lists everyone the directory invited whom nothing vouches for yet; an owner or admin looks at the list, ticks the people they recognize, and Let them in, and their browser seals those invitations exactly as if they'd sent them from the Members page. Their apps then let them in in the background, before or after the person accepts. The Members page's Confirm, with the fingerprint, still works for one person.
+- **Who hears about it:** the server treats these as waiting for approval (`confirms_automatically`), so the pending list says so and apps don't try them, and the inviter's email (the billing email, since nobody in PassBundle sent it) is upstream's "accepted your invitation", not "joined".
+- **Why not let them in automatically:** sealing the directory's invitations by itself (say, every address at the client's domains) would let a hacked server get the organization's key by making up an address at those domains. An admin looking at the list once, or the install command's secret, is what a hacked server can't fake.
+
+**Turning off and on.**
+- `active` false (Entra sends this when someone is turned off, unassigned, or deleted in Entra, and the string "False" without its compliance flag) is the Members page's Revoke: no access, but the membership, its groups, and its folders stay, so turning them back on restores everything, as Microsoft asks of a soft delete. Their own vault is theirs throughout.
+- `active` true is Restore, with upstream's checks (single organization, two-step login): refused with 409 and upstream's reason if they fail.
+- Provisioning turns back on only people it turned off. Someone an owner or admin revoked in PassBundle stays off until an owner or admin turns them on (403).
+
+**Removing.** `DELETE` (Entra sends it when a user is permanently deleted, 30 days after a soft delete) is the Members page's Remove: the organization's items stay with it, and the person's own vault stays theirs.
+
+**People provisioning never changes:** owners, admins, custom roles, anyone with access to every item, and an MSP's staff. They're listed and matched by their account email, so Entra doesn't invite them again, and they're read-only: every PATCH, PUT, and DELETE for them is refused with 403 and a sentence saying why, nothing Entra sends about them is kept, and group changes leave them out. The one thing noted is whether Entra asked to turn them off, keyed by their own account email, never by a userName the directory chose. When Entra asks to turn one off or remove them, the Provisioning page lists them ("Entra turned these people off; remove them here if they've left"), so someone who left the company doesn't keep an owner's or a technician's access unnoticed.
+
+### Groups
+
+- **Made by Entra:** `POST /Groups` makes an ordinary PassBundle group with no shared folders and no access to every item; an owner or admin gives it folders in PassBundle. Its externalId (Entra's object id) is upstream's group external id.
+- **Names are unique** in the organization, in any case, as Entra matches groups by displayName: a name another group has is 409.
+- **Only groups provisioning made** are visible to SCIM. Groups made in PassBundle are never read, changed, or removed by it.
+- **Members:** `PATCH` adds and removes members in the shapes Entra sends: `add` with `path: "members"` and a list of `{ "value": id }`; `remove` the same way, or with `members[value eq "<id>"]`; `replace` with the whole list. 204, as Microsoft asks. An id that isn't a member of the organization is 400. People provisioning never changes are left out of every change. A regular member the directory puts in a group before they're confirmed gets nothing from it until an owner's or admin's app confirms them and an owner or admin gives the group shared folders.
+- **Rename and externalId:** `replace` on `displayName` or `externalId`. A renamed or changed group in PassBundle is overwritten at Entra's next change to it.
+- **Remove:** `DELETE` removes the group; its members lose what they reached through it.
+- **Reading:** `GET /Groups?filter=displayName eq "..."`, `externalId`, `id`, and member checks (`id eq "..." and members[value eq "..."]`); `excludedAttributes=members` is honored.
+
+### The protocol
+
+- **Discovery:** `ServiceProviderConfig` (PATCH yes; bulk, sort, ETags, and password changes no; filters up to 200 results; the bearer token), `ResourceTypes` (User, Group), and `Schemas` (User, Group, and the enterprise User extension). All need the token.
+- **Lists:** a ListResponse, `startIndex` from 1, `count` 100 unless asked for fewer, at most 200, with `totalResults`; `attributes` and `excludedAttributes`.
+- **Errors:** RFC 7644's error JSON, with the status as a string and `scimType` where one applies (`invalidFilter`, `invalidSyntax`, `invalidPath`, `invalidValue`, `mutability`, `noTarget`, `uniqueness`), as `application/scim+json`.
+- **Entra's quirks:** `op` in any case (Entra sends "Add", "Replace", "Remove"); attribute names in any case; `active` as a boolean or "True"/"False"; replace without a path whose value has paths as keys (`"name.givenName"`, enterprise URNs); `emails[type eq "work"].value` creating the work email when there's none; unknown query parameters such as `aadOptscim062020` ignored; resource names in the path in any case. Bodies up to 1 MiB.
+
+### Events
+
+- **The organization's event log:** invited, revoked, restored, removed, group created, changed, and deleted, and a member's groups changed, with "SCIM" as who acted (upstream's system user 1, which the web vault names) and Entra's address.
+- **An MSP's activity log:** a client's token made, replaced, and revoked, and people let in, with who did it.
+- **Not logged:** the token, request bodies, and filters.
+
+### Tests
+
+- **Unit (server):** the filter parser and matcher (Entra's queries, the rest of the grammar, case rules, refusals), PATCH on Microsoft's documented request bodies with and without its flag, the token's shape and hash, which memberships provisioning may change, choosing the address to invite, what's kept of a user, paging, and attribute selection.
+- **API (`e2e/tests/api/provisioning.spec.ts`):** Microsoft's request shapes replayed in order (Test Connection, create, duplicate, match by userName, externalId, and work email, get, update multi-valued and single-valued, the flag's replace without a path, disable with "False", enable, PUT, delete), the token (shown once, never listed, replaced, revoked, every wrong token the same 401), scope (another organization's token, ids, and groups), people provisioning never changes (owners, admins, a custom role, an MSP's admin and technician), someone already a member, groups (Microsoft's create, find by name, rename, both ways of removing members, groups made in PassBundle out of reach), discovery and paging, the event log, and letting someone in.
+- **Mail (`e2e/tests/mail/provisioning.spec.ts`):** the emailed invitation and the owner's "accepted" email, and the install command's domains for the directory's invitations.
+- **Not yet, needs a real tenant:** Entra itself. See "Status".
+
+### Status
+
+Built: the server (`src/api/core/keykeeper_scim/`, `keykeeper_provisioning.rs`, `db/models/keykeeper_scim.rs`, a migration for SQLite and PostgreSQL), the admin console's Provisioning page, and the MSP console's per-client status. Checking it against a real Entra tenant waits on the owner's Microsoft 365 tenant (docs/prelaunch.md, "Waiting on you"): Test Connection, Provision on demand, a first cycle with groups, turning someone off, a permanent delete, and a revoked token's quarantine. Not built: OAuth client credentials in place of the long-lived token, limiting the endpoint to Microsoft's published address ranges, Entra's on-premises agent, a "From Microsoft Entra ID" badge on the Members page, and other directories (Okta, Google Workspace, JumpCloud speak SCIM 2.0 too, untested).
 
 ## Browser import
 
