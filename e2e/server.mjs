@@ -29,6 +29,11 @@ for (const [name, p] of Object.entries({
 }
 
 const data = fs.mkdtempSync(path.join(os.tmpdir(), "keykeeper-e2e-"));
+// Where this server keeps its data, by port, for the few tests that check
+// what a SQLite database holds after a request (tests/api/support.ts,
+// serverDatabase).
+const dataNote = path.join(os.tmpdir(), `keykeeper-e2e-data-${port}`);
+fs.writeFileSync(dataNote, data);
 
 // Release builds of the clients refuse plain HTTP, so serve HTTPS with a
 // throwaway certificate. Browsers in the tests are told to accept it.
@@ -137,5 +142,6 @@ setInterval(() => {
 }, 1000).unref();
 child.on("exit", (code) => {
   fs.rmSync(data, { recursive: true, force: true });
+  fs.rmSync(dataNote, { force: true });
   process.exit(code ?? 0);
 });

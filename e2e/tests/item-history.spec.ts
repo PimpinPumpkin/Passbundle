@@ -1,7 +1,8 @@
 // Item history in the web vault (DESIGN.md, "Item history"): each save keeps
-// the item as it was; the item's view lists its earlier versions; View puts
-// one next to the item now with what changed marked; and restoring one saves
-// it as a normal edit, which keeps what the item had in its history too.
+// the item as it was; the item's view lists its earlier versions and says who
+// can see them; View puts one next to the item now with what changed marked;
+// restoring one saves it as a normal edit, which keeps what the item had in
+// its history too; and the history can be cleared.
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
 import { newItem, signUp, webUserFor } from "./support/web";
@@ -49,6 +50,10 @@ test("a login's earlier passwords show in its history, and restoring one brings 
 
   const history = view.getByTestId("keykeeper-item-versions");
   await expect(history.getByRole("heading", { name: "Version history" })).toBeVisible();
+  // It says who can see them.
+  await expect(history.getByTestId("keykeeper-versions-who")).toHaveText(
+    "Everyone who can open this item can see its earlier versions, including old passwords.",
+  );
   const versions = history.getByTestId("keykeeper-item-version");
   await expect(versions).toHaveCount(2);
   await expect(versions.first()).toContainText("Saved by you");
@@ -95,4 +100,12 @@ test("a login's earlier passwords show in its history, and restoring one brings 
   await page.getByText("Example mail").first().click();
   await expectPassword(view, "first-password-1");
   await expect(versions).toHaveCount(3);
+
+  // Whoever can delete the item can clear its history, once they confirm.
+  await history.getByRole("button", { name: "Clear history" }).click();
+  const clear = page.getByRole("dialog", { name: "Clear this item's history?" });
+  await clear.getByRole("button", { name: "Clear history" }).click();
+  await expect(page.getByText("History cleared")).toBeVisible();
+  await expect(history).toHaveCount(0);
+  await expectPassword(view, "first-password-1");
 });
