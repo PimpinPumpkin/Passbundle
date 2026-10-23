@@ -111,7 +111,9 @@ test("an MSP admin recovers the account of someone who joined through the instal
   await expect(question).toContainText(
     "Recovery Dental's admins will be able to reset your master password",
   );
-  await expect(prompt!.getByTestId("keykeeper-join-fingerprint")).toHaveText(/^\w+(-\w+){4}$/);
+  // Five words joined by dashes. Some words have a dash of their own ("yo-yo"),
+  // so there can be more than five parts.
+  await expect(prompt!.getByTestId("keykeeper-join-fingerprint")).toHaveText(/^\w+(-\w+){4,}$/);
   // The answer closes the window.
   await answerAndClose(prompt!, prompt!.getByRole("button", { name: "Join", exact: true }));
   expect(await outcome).toBe("joined");
