@@ -128,6 +128,32 @@ async function addClientLogin(page: Page, clientUrl: string, name: string, passw
   await page.getByRole("dialog", { name: "View Login" }).getByRole("button", { name: "Close" }).first().click();
 }
 
+/** A person's logins: one breached, two sharing a password, one weak, one fine. */
+const HEALTH_LOGINS: [string, string][] = [
+  ["Northwind Bank", BREACHED],
+  ["Mail", SHARED],
+  ["Forum", SHARED],
+  ["Old router", WEAK],
+  ["Library", UNIQUE],
+];
+
+/** Imports logins into the person's own vault. */
+async function importLogins(page: Page, logins: [string, string][]) {
+  const items = logins.map(([name, password]) => ({
+    type: 1,
+    name,
+    login: { username: "pat@example.test", password },
+  }));
+  await page.goto("/#/tools/import");
+  await page.getByRole("combobox", { name: /File format/ }).click();
+  await page.getByRole("option", { name: "Bitwarden (json)" }).click();
+  await page
+    .getByRole("textbox", { name: /copy\/paste the import file contents/ })
+    .fill(JSON.stringify({ encrypted: false, folders: [], items }));
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await page.getByRole("dialog", { name: "Data successfully imported" }).getByRole("button", { name: "Ok" }).click();
+}
+
 /** Adds a client from the console and returns its admin console's address. */
 async function addClient(page: Page, name: string): Promise<string> {
   await page.goto("/#/msp");
@@ -231,21 +257,7 @@ test("a person's Health counts the items to fix beside it, and its exposed passw
   const user = webUserFor("exposed-health", testInfo.repeatEachIndex);
   await signUp(page, user);
 
-  const items = [
-    ["Northwind Bank", BREACHED],
-    ["Mail", SHARED],
-    ["Forum", SHARED],
-    ["Old router", WEAK],
-    ["Library", UNIQUE],
-  ].map(([name, password]) => ({ type: 1, name, login: { username: "pat@example.test", password } }));
-  await page.goto("/#/tools/import");
-  await page.getByRole("combobox", { name: /File format/ }).click();
-  await page.getByRole("option", { name: "Bitwarden (json)" }).click();
-  await page
-    .getByRole("textbox", { name: /copy\/paste the import file contents/ })
-    .fill(JSON.stringify({ encrypted: false, folders: [], items }));
-  await page.getByRole("button", { name: "Import", exact: true }).click();
-  await page.getByRole("dialog", { name: "Data successfully imported" }).getByRole("button", { name: "Ok" }).click();
+  await importLogins(page, HEALTH_LOGINS);
 
   // Beside Health: the breached one, the two that share a password, and the
   // weak one. Worked out after unlocking, without holding the vault up.
@@ -281,6 +293,69 @@ test("a person's Health counts the items to fix beside it, and its exposed passw
     "5 passwords couldn't be checked",
   );
   await expect(page.getByText("Good news")).toHaveCount(0);
+
+  await context.close();
+});
+
+test("with checking after unlocking turned off, nothing goes to the breach service until the person asks", async ({
+  browser,
+}, testInfo) => {
+  test.setTimeout(240_000);
+  const context = await browser.newContext();
+  const asked = await pwnedPasswords(context, { [BREACHED]: BREACHED_TIMES });
+  const page = await context.newPage();
+  const user = webUserFor("exposed-off", testInfo.repeatEachIndex);
+  await signUp(page, user);
+
+  // The switch, on by default, per account.
+  await page.goto("/#/settings/appearance");
+  const setting = page.getByRole("checkbox", {
+    name: "Check my passwords against known breaches after unlocking",
+  });
+  await expect(setting).toBeChecked();
+  await setting.uncheck();
+  await expect(setting).not.toBeChecked();
+
+  await importLogins(page, HEALTH_LOGINS);
+  // A new session: the choice is kept, and after unlocking the count is
+  // weak and reused only, without a single request.
+  await reloadAndUnlock(page, user);
+  const sentBefore = asked.length;
+  const count = menu(page).getByTestId("keykeeper-health-count");
+  await expect(count).toHaveText("3", { timeout: 30_000 });
+  // Well past when the count would have asked.
+  await page.waitForTimeout(6_000);
+  await expect(count).toHaveText("3");
+  expect(asked.length).toBe(sentBefore);
+
+  // The MSP console waits for its button, and still counts weak and reused.
+  await page.goto("/#/msp");
+  await page.getByRole("textbox", { name: "Your MSP's name" }).fill("Quiet Cove IT");
+  await page.getByRole("button", { name: "Create MSP" }).click();
+  const client = await addClient(page, "Dune Bakery");
+  await addClientLogin(page, client, "Oven controller", BREACHED);
+  await addClientLogin(page, client, "Point of sale", WEAK);
+  await page.goto("/#/msp");
+  const row = page.getByTestId("msp-client-Dune Bakery");
+  await expect(row.getByTestId("msp-client-weak")).toHaveText("1");
+  await expect(row.getByTestId("msp-client-exposed")).toHaveText("Not checked");
+  const off = page.getByTestId("msp-exposed-off");
+  await expect(off).toContainText("Your settings don't check passwords against known breaches after unlocking");
+  await page.waitForTimeout(6_000);
+  expect(asked.length).toBe(sentBefore);
+
+  // Asked: the console checks, from prefixes only.
+  await off.getByRole("button", { name: "Check exposed passwords" }).click();
+  await expect(row.getByTestId("msp-client-exposed")).toHaveText("1");
+  await expect(off).toHaveCount(0);
+  const sent = asked.slice(sentBefore);
+  expect(sent.length).toBeGreaterThan(0);
+  expectOnlyPrefixes(sent, [BREACHED, WEAK, user.password]);
+
+  // Opening the exposed passwords report checks too, as asked.
+  await page.goto("/#/reports/exposed-passwords-report");
+  await expect(page.locator("bit-table-scroll tr:has(td)").filter({ hasText: "Northwind Bank" })).toBeVisible();
+  expectOnlyPrefixes(asked.slice(sentBefore), [BREACHED, SHARED, WEAK, UNIQUE, user.password]);
 
   await context.close();
 });
