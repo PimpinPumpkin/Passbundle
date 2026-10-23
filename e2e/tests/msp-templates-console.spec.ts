@@ -8,7 +8,7 @@
 // DESIGN.md, "MSP templates".
 import { expect, test, type Page } from "@playwright/test";
 
-import { newTemplate, signUp, templatePicker, webUserFor } from "./support/web";
+import { menu, newTemplate, pick, signUp, templatePicker, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) =>
@@ -152,8 +152,12 @@ test("a template added for every client applies to all of them, a new client inc
   const firewalls = admin.getByRole("row").filter({ hasText: "Firewall" });
   await expect(firewalls.first()).toBeVisible();
   await expect(firewalls.filter({ hasText: "Acme Dental" })).toHaveCount(0);
-  await admin.getByRole("button", { name: "vault: Acme Dental" }).click();
-  await admin.getByRole("button", { name: "Filter: Templates" }).click();
+  // In the left menu: Acme Dental, then its Templates collection under it,
+  // the only one once Acme Dental is picked.
+  await pick(admin, "Acme Dental");
+  await expect(admin).toHaveURL(/(organizationId|vaultId)=/);
+  await expect(menu(admin).getByRole("button", { name: "Templates", exact: true })).toHaveCount(1);
+  await pick(admin, "Templates");
   await firewalls.filter({ hasText: "Acme Dental" }).getByText("Firewall", { exact: true }).click();
   await expect(
     admin
