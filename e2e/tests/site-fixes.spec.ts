@@ -135,7 +135,8 @@ test("the current tab's suggestions link to a report of that site's fields, whic
   // in front, and the popup loads fresh, as when it opens.
   await page.bringToFront();
   await popup.reload();
-  await expect(popup.getByRole("heading", { name: "Autofill suggestions" })).toBeVisible();
+  // The suggestions are titled with the site (DESIGN.md, "The look").
+  await expect(popup.getByRole("heading", { name: `For ${host}` })).toBeVisible();
   await popup.getByTestId("current-tab-site-problem-link").click();
   const report = popup.getByTestId("site-problem");
   await expect(report).toContainText(host);
