@@ -409,7 +409,7 @@ Personal profiles are never imported by default.
 | Vault lock | When the computer locks (`docs/core.md`, "Locking by policy") |
 | Browser password manager on managed devices | Saving and password autofill off. Card and address autofill: optional toggles, default unchanged. |
 | Private items when someone leaves | Stay with the org |
-| Offboarding | Access revoked immediately. Shared passwords the person could see are listed for rotation. |
+| Offboarding | Access revoked immediately. Shared passwords the person could see are listed for rotation: removing or revoking someone says what they can open, then lists the logins whose passwords they could see (built; see "Access and offboarding"). |
 | Collections | "Everyone" and "Admins" created automatically |
 
 The Solo and Family presets have no admin recovery. They use emergency access instead.
@@ -428,6 +428,17 @@ The Solo and Family presets have no admin recovery. They use emergency access in
 
 
 Every setting explains itself in one sentence. Changing a setting needs no action from users.
+
+## Access and offboarding
+
+Shared folders (upstream's collections) belong to the organization, and owners and admins see every item, so nobody leaving strands a vault that no one controls. What was missing was seeing who reaches what, and knowing which passwords to change when someone leaves.
+
+- **Access page (built):** in each organization's admin console, next to Members, for owners, admins, and custom roles that manage members. By person: each member, with their role, MSP staff marked, and whether they're confirmed or revoked, and the shared folders they open, each with the permission in plain words (Can view, Can view but not see passwords, Can edit, Can edit but not see passwords, Can manage) and how they get it, directly or through which group. Owners, admins, and anyone with access to all items (upstream's custom role that manages all collections, MSP staff with vault items) show "Every item". Expanding someone shows each folder's item count. By shared folder: everyone who reaches it, and who sees every item. One search box covers people, groups, and folders.
+- **One folder reached two ways:** the more open permission wins (edit or manage if any way allows it), and passwords stay hidden only if every way hides them, as the server decides for each item.
+- **Removing or revoking someone (built):** the confirmation says what they can open ("Alex can open 3 shared folders with 42 items"). Once it's done, a dialog lists the logins whose passwords they could see: those in folders they opened without "can't see passwords", directly or through a group. A login only in folders where every way hid passwords is left out. Each row has the login, its folders, and Open, which opens it over the list so the list stays while each password is changed. For someone who saw every item, the dialog says so and offers every login in the organization. Copy list copies names and folders only, never a username, password, or anything else in an item. Nothing is stored: the dialog says it won't be shown again and links to the Access page. The same applies from the member dialog's Remove and Revoke; bulk remove and revoke don't show it yet.
+- **In the browser only:** no server changes. It's computed from requests the Members, Groups, and Collections pages already make (members with their folders and groups, groups with their folders, folder details) and the organization's items as the admin console's vault loads them. A custom role is sent only requests its permissions cover: it sees the folders it opens itself (the page says how many it can't see), counts items from its own vault, and shows groups without their names, since listing groups isn't one of its permissions.
+- **Left out:** other items someone could see (notes, cards, identities, SSH keys) aren't listed, and the dialog says so; items in the trash; and anyone never confirmed, who never had the organization's key. Groups with upstream's old "access all" setting aren't detected.
+- **Tests:** unit tests for the computation (direct and group paths, merging, owners, admins, access to all items, item counts, the confirmation's sentence) and for the list (logins only, hidden-password folders left out, every login for someone who saw every item, copied text without secrets). End to end, on a test server with groups turned on: an organization with two shared folders and a group; a member reaches one folder directly and through the group, and the other only through the group with passwords hidden. The Access page shows the merged permissions, and removing the member lists the right logins.
 
 ## Browser import
 

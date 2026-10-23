@@ -38,13 +38,22 @@ export async function skipImport(page: Page) {
 /**
  * An owner or admin approves someone waiting on the Members page they have
  * open, with upstream's Confirm and its fingerprint dialog.
+ *
+ * The list can reload just after the page opens (its background work, or a
+ * sync after the organization changed), and the reload reuses a row's view
+ * under a menu that's already open, so the menu shows another member's
+ * actions. Open the menu again until Confirm opens its dialog.
  */
 export async function confirmMember(page: Page, email: string) {
   const row = page.getByRole("row").filter({ hasText: email });
   await expect(row.getByText("Needs confirmation")).toBeVisible();
-  await row.getByRole("button", { name: "Options" }).click();
-  await page.getByRole("menuitem", { name: "Confirm" }).click();
   const dialog = page.getByRole("dialog", { name: /Confirm user/ });
+  await expect(async () => {
+    await page.keyboard.press("Escape");
+    await row.getByRole("button", { name: "Options" }).click();
+    await page.getByRole("menuitem", { name: "Confirm" }).click({ timeout: 2_000 });
+    await expect(dialog).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
   await dialog.getByRole("button", { name: "Confirm" }).click();
   await expect(dialog).toBeHidden();
   await expect(row.getByText("Needs confirmation")).toHaveCount(0);

@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 import {
   fixturePort,
+  groupsServerPort,
   hostResolverRules,
   limitsServerPort,
   mailHttpPort,
@@ -55,6 +56,14 @@ export default defineConfig({
       command: "node server.mjs",
       env: { KK_LIMITS: "1", KK_PORT: limitsServerPort },
       url: `https://127.0.0.1:${limitsServerPort}/alive`,
+      ignoreHTTPSErrors: true,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
+      command: "node server.mjs",
+      env: { KK_GROUPS: "1", KK_PORT: groupsServerPort },
+      url: `https://127.0.0.1:${groupsServerPort}/alive`,
       ignoreHTTPSErrors: true,
       reuseExistingServer: false,
       timeout: 60_000,
