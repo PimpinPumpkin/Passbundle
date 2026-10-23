@@ -1,9 +1,10 @@
 // A client's point of contact with a custom role, through the web vault: the
 // MSP gives them "Manage users" only; they see the Members page but not
-// Policies, can invite a regular member, and can't invite an admin. Custom
-// roles with our permissions can't also manage all collections, whose admin
-// console tools would refuse them and sign them out, while upstream's Custom
-// with only those still opens the admin console's Vault tab.
+// Policies, can invite a regular member and open their edit dialog, and can't
+// invite an admin. Custom roles with our permissions can't also manage all
+// collections, whose admin console tools would refuse them and sign them out,
+// while upstream's Custom with only those still opens the admin console's
+// Vault tab.
 import { expect, test, type Page } from "@playwright/test";
 
 import { signUp, webUserFor, type WebUser } from "./support/web";
@@ -90,7 +91,16 @@ test("an MSP admin gives a client's point of contact a custom role that manages 
   await pocInvite.getByRole("button", { name: "Save" }).click();
   await expect(pocInvite).toBeHidden();
   // A row, since the first text match is the avatar's hidden title.
-  await expect(poc.getByRole("row").filter({ hasText: newHire })).toBeVisible();
+  const newHireRow = poc.getByRole("row").filter({ hasText: newHire });
+  await expect(newHireRow).toBeVisible();
+
+  // Their edit dialog loads the member, the organization's groups, and the
+  // collections, all within the role.
+  await newHireRow.getByRole("button", { name: newHire }).click();
+  const edit = poc.getByRole("dialog", { name: /Edit member/ });
+  await expect(edit.getByRole("tab", { name: "Groups" })).toBeVisible();
+  await edit.getByRole("button", { name: "Cancel" }).click();
+  await expect(edit).toBeHidden();
 
   // The server refuses anything beyond a regular member, whatever the dialog offers.
   await poc.getByRole("button", { name: "Invite member" }).click();

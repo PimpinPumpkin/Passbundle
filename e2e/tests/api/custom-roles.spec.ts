@@ -40,6 +40,38 @@ async function regularMember(ctx: Context) {
   );
 }
 
+/** The organization's groups, as its owner sees them. */
+async function groups(ctx: Context): Promise<{ id: string; name: string }[]> {
+  const listed = await ctx.api.call(
+    ctx.owner,
+    "GET",
+    `/api/organizations/${ctx.orgId}/groups`,
+  );
+  expect(listed.status, JSON.stringify(listed.body)).toBe(200);
+  return listed.body.data;
+}
+
+/** A group to act on, made by the owner, fresh for each call. */
+async function group(
+  ctx: Context,
+  data: { collections?: unknown[]; users?: string[]; externalId?: string } = {},
+): Promise<string> {
+  const created = await ctx.api.call(
+    ctx.owner,
+    "POST",
+    `/api/organizations/${ctx.orgId}/groups`,
+    {
+      name: `group-${randomUUID().slice(0, 8)}`,
+      accessAll: false,
+      collections: [],
+      users: [],
+      ...data,
+    },
+  );
+  expect(created.status, JSON.stringify(created.body)).toBe(200);
+  return created.body.id;
+}
+
 const rows: Row[] = [
   {
     name: "list members",
@@ -214,12 +246,108 @@ const rows: Row[] = [
     }),
   },
   {
+    // The Members page loads it for its Groups column, so whoever can open
+    // that page can read it.
     name: "list groups",
-    allowed: ADMINS,
+    allowed: [...ADMINS, "manageUsers", "manageResetPassword"],
     request: async ({ orgId }) => ({
       method: "GET",
       path: `/api/organizations/${orgId}/groups`,
     }),
+  },
+  {
+    // The member dialogs load it. For a member without access to all items,
+    // each group lists only the collections they reach.
+    name: "list groups with their collections",
+    allowed: [...ADMINS, "manageUsers"],
+    request: async ({ orgId }) => ({
+      method: "GET",
+      path: `/api/organizations/${orgId}/groups/details`,
+    }),
+  },
+  {
+    name: "create a group",
+    allowed: ADMINS,
+    request: async (ctx) => {
+      const name = `group-${randomUUID().slice(0, 8)}`;
+      return {
+        method: "POST",
+        path: `/api/organizations/${ctx.orgId}/groups`,
+        data: { name, accessAll: false, collections: [], users: [] },
+        check: async (allowed) =>
+          expect((await groups(ctx)).some((g) => g.name === name)).toBe(
+            allowed,
+          ),
+      };
+    },
+  },
+  {
+    name: "read a group",
+    allowed: ADMINS,
+    request: async (ctx) => ({
+      method: "GET",
+      path: `/api/organizations/${ctx.orgId}/groups/${await group(ctx)}/details`,
+    }),
+  },
+  {
+    name: "list a group's members",
+    allowed: ADMINS,
+    request: async (ctx) => ({
+      method: "GET",
+      path: `/api/organizations/${ctx.orgId}/groups/${await group(ctx)}/users`,
+    }),
+  },
+  {
+    name: "rename a group and change its members",
+    allowed: ADMINS,
+    request: async (ctx) => {
+      const id = await group(ctx);
+      const memberId = await regularMember(ctx);
+      const name = `renamed-${randomUUID().slice(0, 8)}`;
+      return {
+        method: "PUT",
+        path: `/api/organizations/${ctx.orgId}/groups/${id}`,
+        data: { name, accessAll: false, collections: [], users: [memberId] },
+        check: async (allowed) => {
+          expect((await groups(ctx)).find((g) => g.id === id)?.name === name).toBe(
+            allowed,
+          );
+          const users = await ctx.api.call(
+            ctx.owner,
+            "GET",
+            `/api/organizations/${ctx.orgId}/groups/${id}/users`,
+          );
+          expect(users.body.includes(memberId)).toBe(allowed);
+        },
+      };
+    },
+  },
+  {
+    name: "delete a group",
+    allowed: ADMINS,
+    request: async (ctx) => {
+      const id = await group(ctx);
+      return {
+        method: "DELETE",
+        path: `/api/organizations/${ctx.orgId}/groups/${id}`,
+        check: async (allowed) =>
+          expect((await groups(ctx)).some((g) => g.id === id)).toBe(!allowed),
+      };
+    },
+  },
+  {
+    name: "delete groups in bulk",
+    allowed: ADMINS,
+    request: async (ctx) => {
+      const id = await group(ctx);
+      return {
+        method: "DELETE",
+        path: `/api/organizations/${ctx.orgId}/groups`,
+        data: { ids: [id] },
+        check: async (allowed) =>
+          expect((await groups(ctx)).some((g) => g.id === id)).toBe(!allowed),
+      };
+    },
   },
   {
     // Not covered by any custom permission: still admins only.
@@ -317,6 +445,162 @@ test("a manage-users member can read the collection lists the Members page and m
   expect(
     ownerDetails.body.data.map((c: { id: string }) => c.id),
   ).toContain(created.body.id);
+});
+
+test("a manage-users member reads the groups the Members page and member dialogs load, and can't change them or anyone's groups", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const owner = await api.account("owner");
+  const orgId = await api.organization(owner, "Groups Org");
+  const ctx = { api, orgId, owner };
+  const mine = await api.collection(owner, orgId);
+  const notMine = await api.collection(owner, orgId);
+  const poc = await api.account("poc");
+  const pocId = await api.addCustomMember(owner, orgId, poc, {
+    manageUsers: true,
+  });
+  const assigned = await api.call(
+    owner,
+    "PUT",
+    `/api/organizations/${orgId}/users/${pocId}`,
+    {
+      type: 4,
+      permissions: { manageUsers: true },
+      collections: [
+        { id: mine, readOnly: false, hidePasswords: false, manage: false },
+      ],
+      groups: [],
+    },
+  );
+  expect(assigned.status, JSON.stringify(assigned.body)).toBe(200);
+  const inGroup = await regularMember(ctx);
+  const outside = await regularMember(ctx);
+  const access = { readOnly: false, hidePasswords: false, manage: false };
+  const groupId = await group(ctx, {
+    collections: [
+      { id: mine, ...access },
+      { id: notMine, ...access },
+    ],
+    users: [inGroup],
+    externalId: "directory-front-desk",
+  });
+
+  // The Members page's list: names, without the directory's id.
+  const listed = await api.call(poc, "GET", `/api/organizations/${orgId}/groups`);
+  expect(listed.status, JSON.stringify(listed.body)).toBe(200);
+  const shown = listed.body.data.find((g: { id: string }) => g.id === groupId);
+  expect(shown.name).toMatch(/^group-/);
+  expect(shown.externalId).toBeNull();
+
+  // The dialogs' list: each group with only the collections they reach.
+  const details = await api.call(
+    poc,
+    "GET",
+    `/api/organizations/${orgId}/groups/details`,
+  );
+  expect(details.status, JSON.stringify(details.body)).toBe(200);
+  const detailed = details.body.data.find(
+    (g: { id: string }) => g.id === groupId,
+  );
+  expect(detailed.externalId).toBeNull();
+  expect(detailed.collections.map((c: { id: string }) => c.id)).toEqual([
+    mine,
+  ]);
+  const ownerDetails = await api.call(
+    owner,
+    "GET",
+    `/api/organizations/${orgId}/groups/details`,
+  );
+  const ownerGroup = ownerDetails.body.data.find(
+    (g: { id: string }) => g.id === groupId,
+  );
+  expect(ownerGroup.externalId).toBe("directory-front-desk");
+  expect(
+    ownerGroup.collections.map((c: { id: string }) => c.id).sort(),
+  ).toEqual([mine, notMine].sort());
+
+  // Everything else about groups is for owners and admins.
+  const groupData = {
+    name: "Taken over",
+    accessAll: true,
+    collections: [{ id: notMine, ...access }],
+    users: [pocId],
+  };
+  const forbidden: ["GET" | "POST" | "PUT" | "DELETE", string, unknown?][] = [
+    ["POST", `/api/organizations/${orgId}/groups`, groupData],
+    ["PUT", `/api/organizations/${orgId}/groups/${groupId}`, groupData],
+    ["DELETE", `/api/organizations/${orgId}/groups/${groupId}`],
+    ["DELETE", `/api/organizations/${orgId}/groups`, { ids: [groupId] }],
+    ["GET", `/api/organizations/${orgId}/groups/${groupId}`],
+    ["GET", `/api/organizations/${orgId}/groups/${groupId}/details`],
+    ["GET", `/api/organizations/${orgId}/groups/${groupId}/users`],
+  ];
+  for (const [method, path, data] of forbidden) {
+    const refused = await api.call(poc, method, path, data);
+    expect(
+      refused.status,
+      `${method} ${path}: ${JSON.stringify(refused.body)}`,
+    ).toBe(403);
+  }
+
+  // Nor do they add anyone to a group or take anyone out, inviting or editing.
+  const invited = await api.call(
+    poc,
+    "POST",
+    `/api/organizations/${orgId}/users/invite`,
+    {
+      emails: [`grouped-${randomUUID().slice(0, 8)}@api.example.test`],
+      type: 2,
+      collections: [],
+      groups: [groupId],
+      permissions: {},
+    },
+  );
+  expect(invited.status, JSON.stringify(invited.body)).toBe(400);
+  expect(invited.body.message).toMatch(/can't add people to groups/);
+  const edit = (id: string, groupIds: string[]) =>
+    api.call(poc, "PUT", `/api/organizations/${orgId}/users/${id}`, {
+      type: 2,
+      collections: [],
+      groups: groupIds,
+      permissions: {},
+    });
+  for (const [id, groupIds] of [
+    [outside, [groupId]],
+    [inGroup, []],
+    [pocId, [groupId]],
+  ] as const) {
+    const refused = await edit(id, [...groupIds]);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.message).toMatch(
+      /can't change someone's groups|own membership/,
+    );
+  }
+  // Editing someone with their groups as they were is fine: the edit
+  // dialog sends them back.
+  const kept = await edit(inGroup, [groupId]);
+  expect(kept.status, JSON.stringify(kept.body)).toBe(200);
+
+  // The group is as the owner made it.
+  const members = await api.call(
+    owner,
+    "GET",
+    `/api/organizations/${orgId}/groups/${groupId}/users`,
+  );
+  expect(members.body).toEqual([inGroup]);
+  const after = (
+    await api.call(owner, "GET", `/api/organizations/${orgId}/groups/details`)
+  ).body.data.find((g: { id: string }) => g.id === groupId);
+  const byId = (a: { id: string }, b: { id: string }) =>
+    a.id.localeCompare(b.id);
+  expect(after.name).toBe(ownerGroup.name);
+  expect(after.collections.sort(byId)).toEqual(
+    ownerGroup.collections.sort(byId),
+  );
+  expect(
+    (await groups(ctx)).filter((g) => g.name === "Taken over"),
+  ).toEqual([]);
 });
 
 test("a custom member is refused with 403 where their role doesn't reach, and a logged-out caller still gets 401", async ({
