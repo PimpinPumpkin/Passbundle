@@ -1,6 +1,7 @@
 // The whole path from an MSP's install command to account recovery, with real
-// keys: the extension asks someone whether to join a Business client, saying
-// its admins could then reset their master password; they join, and the
+// keys: an MSP admin turns on account recovery, which starts off, in the
+// default policies; the extension asks someone whether to join a Business
+// client, saying its admins could then reset their master password; they join, and the
 // extension encrypts their user key to the client's public key; an MSP admin
 // approves them and recovers their account; and they sign in with the new
 // password to an intact vault. If the extension's recovery key were wrong in any way,
@@ -32,7 +33,8 @@ test("an MSP admin recovers the account of someone who joined through the instal
 }, testInfo) => {
   test.setTimeout(240_000);
 
-  // The MSP admin sets up a Business client and copies its install command.
+  // The MSP admin sets up a Business client, turns on account recovery, and
+  // copies the client's install command.
   const adminContext = await browser.newContext({
     baseURL: mailServer,
     ignoreHTTPSErrors: true,
@@ -49,6 +51,34 @@ test("an MSP admin recovers the account of someone who joined through the instal
     .fill("Recovery Dental");
   await admin.getByRole("button", { name: "Add client" }).click();
   const client = admin.getByTestId("msp-client-Recovery Dental");
+  await expect(client.getByRole("link", { name: "Open" })).toBeVisible();
+
+  // Account recovery starts off. The MSP admin turns it on in the default
+  // policies, with automatic enrollment, which reaches the client.
+  const recovery = admin
+    .getByTestId("msp-default-policies")
+    .getByTestId("msp-policy-Account recovery administration");
+  await expect(recovery.getByTestId("msp-policy-default")).toHaveText("Off");
+  await recovery
+    .getByRole("button", {
+      name: "Edit the default Account recovery administration",
+    })
+    .click();
+  const policy = admin.getByRole("dialog");
+  await policy.getByRole("checkbox", { name: "Turn on" }).check();
+  await policy
+    .getByRole("checkbox", {
+      name: "Automatically enroll new members in account recovery",
+    })
+    .check();
+  await policy.getByRole("button", { name: "Save default" }).click();
+  await expect(
+    admin.getByText("Saved the default. Changed in Recovery Dental.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(recovery.getByTestId("msp-policy-default")).toHaveText("On");
+
   await client.getByRole("button", { name: "Install command" }).click();
   const command = await admin.getByTestId("msp-install-command").textContent();
   const part = (name: string) =>

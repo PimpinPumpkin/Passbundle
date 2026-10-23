@@ -1,10 +1,14 @@
 // Joining a Business client through the install command on a server that
-// sends email, where account recovery is on: enrollment is part of the join.
+// sends email. Account recovery starts off, in an MSP's defaults and so in its
+// clients; once an MSP admin turns it on with automatic enrollment,
+// enrollment is part of the join.
 import { expect, test } from "@playwright/test";
 
 import { Api, encString } from "../api/support";
 
-test("joining a Business client through the install command enrolls the person in account recovery", async ({
+const RESET_PASSWORD = 8;
+
+test("account recovery starts off, and once an MSP admin turns it on, joining through the install command enrolls the person", async ({
   request,
 }) => {
   const api = new Api(request);
@@ -19,14 +23,47 @@ test("joining a Business client through the install command enrolls the person i
     )
   ).body.token;
 
+  // This server sends email, so the MSP can turn account recovery on, but a
+  // new MSP's default has it off, and so does a new client that follows it.
+  const policies = async () =>
+    (await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}/policies`))
+      .body;
+  const before = await policies();
+  expect(before.types).toContain(RESET_PASSWORD);
+  expect(
+    before.defaults.find((p: { type: number }) => p.type === RESET_PASSWORD),
+  ).toMatchObject({ enabled: false });
+  expect(
+    before.clients.find((c: { id: string }) => c.id === orgId).own,
+  ).toEqual([]);
+
   const person = await api.account("person");
-  const info = await api.call(
-    person,
-    "POST",
-    "/api/keykeeper/enrollment/info",
-    { token },
+  const info = async () =>
+    (
+      await api.call(person, "POST", "/api/keykeeper/enrollment/info", {
+        token,
+      })
+    ).body;
+  expect(await info()).toMatchObject({
+    organizationId: orgId,
+    accountRecovery: false,
+  });
+
+  // The MSP admin turns it on as a default, with automatic enrollment, and
+  // the client, which follows the default, gets it.
+  const turnedOn = await api.call(
+    admin,
+    "PUT",
+    `/api/keykeeper/msp/${mspId}/policies/${RESET_PASSWORD}`,
+    { enabled: true, data: { autoEnrollEnabled: true } },
   );
-  expect(info.body).toMatchObject({
+  expect(turnedOn.status, JSON.stringify(turnedOn.body)).toBe(200);
+  expect(turnedOn.body).toMatchObject({
+    changed: [{ id: orgId }],
+    kept: [],
+    refused: [],
+  });
+  expect(await info()).toMatchObject({
     organizationId: orgId,
     accountRecovery: true,
   });
