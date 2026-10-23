@@ -362,7 +362,7 @@ test("a client's single-organization policy doesn't lock its MSP out, and its tw
   expect(confirm.body.message).toMatch(/policy|2FA/);
 });
 
-test("a client with Business defaults starts with a strong master password and two collections, and without account recovery", async ({
+test("a client with Business defaults starts with account recovery, a strong master password, and two collections", async ({
   request,
 }) => {
   const api = new Api(request);
@@ -383,10 +383,11 @@ test("a client with Business defaults starts with a strong master password and t
         .map((p: { type: number; data: unknown }) => [p.type, p.data]),
     );
   };
-  // Single organization (3), the master password policy (1), and vault lock
-  // (9). Account recovery (8) is off until someone turns it on.
+  // Account recovery (8) with automatic enrollment, single organization (3),
+  // the master password policy (1), and vault lock (9).
   expect(await policies(business)).toEqual({
     9: { type: "onSystemLock", minutes: null, action: "lock" },
+    8: { autoEnrollEnabled: true },
     3: null,
     1: {
       minComplexity: 3,
@@ -406,7 +407,7 @@ test("a client with Business defaults starts with a strong master password and t
   expect(await collections(business)).toBe(2);
   expect(await collections(plain)).toBe(1);
 
-  // With account recovery off, nobody is enrolled.
+  // The policy is on, but nobody is enrolled yet: members enroll as they join.
   const profile = await api.call(admin, "GET", "/api/accounts/profile");
   const org = profile.body.organizations.find(
     (o: { id: string }) => o.id === business,

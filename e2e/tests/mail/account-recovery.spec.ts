@@ -1,6 +1,4 @@
 // Account recovery on a server that sends email (it's off without email).
-// Each test turns it on first, since organizations start without it, Business
-// ones included.
 // MSP staff are never part of a client's account recovery: recovery lets the
 // client's admins take over the staff member's account, which can see every
 // other client. Regular members invited by email are enrolled, as upstream does.
@@ -19,17 +17,6 @@ test("MSP staff can't join a client's account recovery or be recovered by it; in
   const member = await api.account("member");
   const mspId = await api.msp(admin, "Recovery IT");
   const orgId = await api.client(admin, mspId, "Recovery Client", "business");
-  // The MSP admin turns on account recovery for this client in its admin
-  // console, with automatic enrollment.
-  const policy = await api.call(
-    admin,
-    "PUT",
-    `/api/organizations/${orgId}/policies/8`,
-    {
-      policy: { enabled: true, data: { autoEnrollEnabled: true } },
-    },
-  );
-  expect(policy.status, JSON.stringify(policy.body)).toBe(200);
   // Where the server sends email, a staff invitation needs a verified address.
   await verifyEmail(api, tech);
   await api.addStaff(admin, mspId, tech, "technician");
