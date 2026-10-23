@@ -23,6 +23,9 @@ export const limitsServerPort = process.env.KK_LIMITS_SERVER_PORT ?? "8097";
 // A fourth with groups turned on explicitly (ORG_GROUPS_ENABLED), so the
 // Access page's tests don't depend on the server's default.
 export const groupsServerPort = process.env.KK_GROUPS_SERVER_PORT ?? "8098";
+// Where the main test server sends Sentinel destinations' sign-in, for the
+// stand-in in tests/api/siem.ts (event streaming).
+export const siemPort = process.env.KK_SIEM_PORT ?? "8099";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??

@@ -102,6 +102,17 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential libssl-dev pkg-config libpq-dev
       - name: Install the pinned Rust toolchain
         run: rustup toolchain install
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/Passbundle
+          ref: ${{ needs.refs.outputs.meta }}
+          path: meta
+          sparse-checkout: docs/vectors
+          persist-credentials: false
+      # The unit tests check event streaming's secrets against the server's
+      # copy of these vectors; this keeps that copy the meta repo's.
+      - name: The server's event streaming test vectors are the meta repo's
+        run: cmp meta/docs/vectors/event-streaming-secrets-v1.json src/keykeeper_streaming/vectors/event-streaming-secrets-v1.json
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       # One binary for both supported databases (SQLite and PostgreSQL); the
       # database URL picks which one at startup.
