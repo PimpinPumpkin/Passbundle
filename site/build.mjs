@@ -24,6 +24,11 @@ const site = JSON.parse(fs.readFileSync(path.join(here, "site.json"), "utf8"));
 
 const MARK =
   "M4.5 13V8.5a8.5 8.5 0 0 1 17 0V13h-4V8.5a4.5 4.5 0 0 0-9 0V13ZM4.5 13h17a4.5 4.5 0 0 1 4.5 4.5V18H0v-.5A4.5 4.5 0 0 1 4.5 13ZM0 20h26v5H0ZM0 27h26v.5a4.5 4.5 0 0 1-4.5 4.5h-17A4.5 4.5 0 0 1 0 27.5Z";
+// The logo: the jewel tile with the lock, and the name in lower case, two-tone
+// (styles.css, .brand). Its accessible name is the link's, "PassBundle home".
+const brandMark = `
+      <span class="brand-tile" aria-hidden="true"><svg viewBox="0 0 26 32"><path fill-rule="evenodd" d="${MARK}"/></svg></span>
+      <span class="brand-word" aria-hidden="true"><b>pass</b>bundle</span>`;
 const GITHUB = "https://github.com/PimpinPumpkin/Passbundle";
 const YEAR = 2026;
 
@@ -129,7 +134,7 @@ function layout({ meta, body, file }, route) {
 <meta name="theme-color" content="#1F6F5C">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="preload" href="/fonts/figtree-latin-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/google-sans-flex-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/styles.css">
 <link rel="canonical" href="https://passbundle.com${route}">
 </head>
@@ -137,9 +142,7 @@ function layout({ meta, body, file }, route) {
 <a class="skip" href="#main">Skip to content</a>
 <header class="site-header">
   <div class="bar">
-    <a class="brand" href="/" aria-label="PassBundle home">
-      <svg viewBox="0 0 26 32" width="22" height="27" aria-hidden="true"><path fill-rule="evenodd" d="${MARK}"/></svg>
-      <span>PassBundle</span>
+    <a class="brand" href="/" aria-label="PassBundle home">${brandMark}
     </a>
     <nav class="nav" aria-label="Main">
         ${links}
@@ -163,9 +166,7 @@ ${kind === "doc" ? `<div class="paper">\n${expand(body.trim(), file)}\n</div>` :
 <footer class="site-footer">
   <div class="bar">
     <div class="footer-brand">
-      <a class="brand" href="/" aria-label="PassBundle home">
-        <svg viewBox="0 0 26 32" width="18" height="22" aria-hidden="true"><path fill-rule="evenodd" d="${MARK}"/></svg>
-        <span>PassBundle</span>
+      <a class="brand" href="/" aria-label="PassBundle home">${brandMark}
       </a>
       <p>The password manager for you, your family, your business, and every client you look after.</p>
     </div>

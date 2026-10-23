@@ -1,6 +1,6 @@
 # passbundle.com
 
-The PassBundle website: the home page (for people and families), Business, For MSPs, Pricing, Switch to PassBundle, Security, Help, Download, the privacy policy and terms, and the pages the apps link to (`/download/`, `/contact/`, and `/browser-start/`, which the extension opens after it's installed). Plain HTML, one stylesheet, and the Figtree font: no scripts, no cookies, nothing loaded from anyone else, which the privacy policy promises. It has the apps' look: Glass, light or dark like the visitor's device.
+The PassBundle website: the home page (for people and families), Business, For MSPs, Pricing, Switch to PassBundle, Security, Help, Download, the privacy policy and terms, and the pages the apps link to (`/download/`, `/contact/`, and `/browser-start/`, which the extension opens after it's installed). Plain HTML, one stylesheet, and the apps' typeface, Google Sans Flex (self-hosted, under the SIL Open Font License, `static/fonts/OFL.txt`): no scripts, no cookies, nothing loaded from anyone else, which the privacy policy promises. It has the apps' look: Glass, light or dark like the visitor's device.
 
 - `pages/`: one file per page, with a title and description at the top. `index.html` is `/`, `help.html` is `/help/`. `layout: wide` is for marketing pages built from sections; the rest are reading pages on a solid panel.
 - `site.json`: prices and links, used in pages as `{{prices.premium}}` or `{{links.vault}}`, so a price changes in one place. An empty link isn't live yet: pages fall back to `/download/` until it's filled in.

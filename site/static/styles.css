@@ -1,22 +1,23 @@
 /* passbundle.com. One stylesheet, light and dark, the apps' Glass look:
-   translucent panels over a soft color field, Figtree, and the apps' drawings. */
+   translucent panels over a soft color field, the apps' typeface (Google Sans
+   Flex, self-hosted, its license in fonts/OFL.txt), and the apps' drawings. */
 
 @font-face {
-  font-family: "Figtree";
+  font-family: "Google Sans Flex";
   font-style: normal;
-  font-weight: 300 900;
+  font-weight: 1 1000;
   font-display: swap;
-  src: url("/fonts/figtree-latin-normal.woff2") format("woff2");
+  src: url("/fonts/google-sans-flex-latin.woff2") format("woff2");
   unicode-range:
     U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
     U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: "Figtree";
+  font-family: "Google Sans Flex";
   font-style: normal;
-  font-weight: 300 900;
+  font-weight: 1 1000;
   font-display: swap;
-  src: url("/fonts/figtree-latin-ext-normal.woff2") format("woff2");
+  src: url("/fonts/google-sans-flex-latin-ext.woff2") format("woff2");
   unicode-range:
     U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
     U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F,
@@ -24,7 +25,7 @@
 }
 
 :root {
-  --font: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font: "Google Sans Flex", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --ink: #12201c;
   --muted: #4a5f58;
   --brand: #1f6f5c;
@@ -203,28 +204,65 @@ main.doc > .paper,
   min-height: 68px;
 }
 
+/* The logo, as in the apps: a jewel tile with the lock in white, and the
+   name in lower case, "pass" bold and "bundle" lighter. Sized by font-size:
+   the tile is 42 to the name's 31. */
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  color: var(--ink);
-  font-weight: 700;
-  font-size: 20px;
-  letter-spacing: -0.01em;
+  gap: 0.39em;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: -0.02em;
   text-decoration: none;
 }
 
-.brand:hover {
-  color: var(--ink);
+.brand-tile {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.355em;
+  height: 1.355em;
+  border-radius: 0.387em;
+  background:
+    radial-gradient(120% 90% at 28% 18%, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0) 58%),
+    #0e7a5a;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.2),
+    0 2px 6px rgba(16, 32, 27, 0.25);
 }
 
-.brand svg {
-  fill: var(--brand);
+.brand-tile svg {
+  width: 0.58em;
+  height: 0.71em;
+  fill: #ffffff;
+}
+
+.brand-word {
+  color: #0e7a5a;
+  font-weight: 450;
+}
+
+.brand-word b {
+  color: #1b3a33;
+  font-weight: 700;
 }
 
 @media (prefers-color-scheme: dark) {
-  .brand svg {
-    fill: var(--art-mint);
+  .brand-tile {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      inset 0 -2px 3px rgba(0, 0, 0, 0.2);
+  }
+
+  .brand-word {
+    color: #6fd4b4;
+  }
+
+  .brand-word b {
+    color: #e7efec;
   }
 }
 
@@ -1075,6 +1113,10 @@ main.doc .lead {
   display: grid;
   grid-template-columns: 1.6fr repeat(3, 1fr);
   gap: 32px;
+}
+
+.site-footer .brand {
+  font-size: 18px;
 }
 
 .site-footer .footer-brand p {

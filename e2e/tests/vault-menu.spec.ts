@@ -26,6 +26,9 @@ test("the menu filters the vault: categories with counts, folders, and search", 
 }, testInfo) => {
   await signUp(page, webUserFor("vault-menu", testInfo.repeatEachIndex));
   const nav = menu(page);
+  // The page's title is the name of what's picked in the menu.
+  const title = page.getByRole("heading", { level: 1 });
+  await expect(title).toHaveText("All items");
 
   // No items, no categories. The filter panel is gone; the menu has the search.
   await expect(nav.getByRole("button", { name: "All items", exact: true })).toBeVisible();
@@ -43,6 +46,7 @@ test("the menu filters the vault: categories with counts, folders, and search", 
   // A category: only its items, in the address the way the panel put it.
   await pick(page, "Card");
   await expect(page).toHaveURL(/type=card/);
+  await expect(title).toHaveText("Card");
   await expect(row(page, "Visa ending 4242")).toBeVisible();
   await expect(row(page, "Northwind Bank")).toHaveCount(0);
 
@@ -55,10 +59,12 @@ test("the menu filters the vault: categories with counts, folders, and search", 
   await expect(menuEntry(page, "Bills")).toContainText("0");
   await pick(page, "Bills");
   await expect(page).toHaveURL(/folderId=/);
+  await expect(title).toHaveText("Bills");
   await expect(row(page, "Visa ending 4242")).toHaveCount(0);
 
   // All items shows everything again, and the menu's search narrows it.
   await pick(page, "All items");
+  await expect(title).toHaveText("All items");
   await expect(row(page, "Northwind Bank")).toBeVisible();
   await expect(row(page, "Visa ending 4242")).toBeVisible();
   await nav.getByPlaceholder("Search all items").fill("visa");
@@ -105,6 +111,9 @@ test("on a phone, a Menu button opens the menu, and a pick closes it", async ({
   const title = page.getByText("Get started with your vault", { exact: true });
   await expect(title).toBeVisible();
   expect((await title.boundingBox())!.width).toBeGreaterThan(150);
+  // All of it shows, Dismiss included, rather than scrolling inside its card.
+  const checklist = page.locator("app-vault-onboarding [data-accordion-content] > div");
+  expect(await checklist.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1);
 
   // Wider, the side nav has room, and the button goes.
   await page.setViewportSize({ width: 1280, height: 800 });
