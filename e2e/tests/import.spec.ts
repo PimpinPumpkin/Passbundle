@@ -75,7 +75,7 @@ test("a new account brings a Bitwarden export over before its vault opens", asyn
 
   // Then a reminder about the export, and on to the vault, with the items.
   await expect(page.getByText("Delete the export now")).toBeVisible();
-  await page.getByRole("button", { name: "Go to my vault" }).click();
+  await page.getByRole("button", { name: "Go to your items" }).click();
   await page.waitForURL(/#\/vault/);
   await expect(page.getByText("Example Git host").first()).toBeVisible();
   await expect(page.getByText("Test Visa").first()).toBeVisible();
@@ -96,7 +96,7 @@ test("a password-protected export moves everything to another account, with no p
   await page.getByRole("textbox", { name: /^File password/ }).fill("file-password-123");
   await page.getByRole("textbox", { name: /^Confirm file password/ }).fill("file-password-123");
   await page.getByRole("button", { name: "Export", exact: true }).click();
-  const confirm = page.getByRole("dialog", { name: "Confirm vault export" });
+  const confirm = page.getByRole("dialog", { name: "Confirm export" });
   await confirm.getByRole("textbox", { name: /Master password/ }).fill(alice.password);
   const [download] = await Promise.all([
     page.waitForEvent("download"),

@@ -156,7 +156,7 @@ test("the Access page shows who reaches each shared folder and how, and removing
     person(email).locator(`[data-testid="access-folder"][data-folder="${name}"]`);
   await expect(folder(alex.email, "Everyone").getByTestId("access-level")).toHaveText("Can edit");
   await expect(folder(alex.email, "Everyone").getByTestId("access-how")).toHaveText(
-    "Directly (Can edit), Through Front office (Can view but not see passwords)",
+    "Directly (Can edit); Through Front office (Can view but not see passwords)",
   );
   await expect(folder(alex.email, "Admins").getByTestId("access-level")).toHaveText(
     "Can view but not see passwords",
@@ -282,7 +282,7 @@ test("a custom role that manages members sees the shared folders it opens itself
   const alexEveryone = alexRow.locator('[data-testid="access-folder"][data-folder="Everyone"]');
   // Groups aren't theirs to list, so the group goes unnamed.
   await expect(alexEveryone.getByTestId("access-how")).toHaveText(
-    "Directly (Can edit), Through a group (Can view but not see passwords)",
+    "Directly (Can edit); Through a group (Can view but not see passwords)",
   );
   await expect(alexRow.locator('[data-testid="access-folder"][data-folder="Admins"]')).toHaveCount(0);
   await expect(poc.getByTestId("access-hidden-folders")).toContainText(

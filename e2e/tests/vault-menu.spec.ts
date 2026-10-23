@@ -1,8 +1,8 @@
 // The web vault's one left menu, like 1Password's: search, All items,
-// Favorites, Health, the categories with items, the vaults with their
-// collections, the folders, Archive, and Trash, then the tools. Picking an
-// entry filters the vault the way the old filter panel did. See DESIGN.md,
-// "The left menu".
+// Favorites, Health, the categories with items, the folders (Personal's,
+// then each organization's shared folders), Archive, and Trash, then the
+// tools. Picking an entry filters the vault the way the old filter panel did.
+// See DESIGN.md, "The left menu".
 import { expect, test, type Page } from "@playwright/test";
 
 import { menu, menuEntry, newItem, pick, signUp, webUserFor } from "./support/web";
@@ -50,13 +50,18 @@ test("the menu filters the vault: categories with counts, folders, and search", 
   await expect(row(page, "Visa ending 4242")).toBeVisible();
   await expect(row(page, "Northwind Bank")).toHaveCount(0);
 
-  // A folder, made from the button beside Folders: empty so far.
+  // A folder in Personal, made from the button beside Folders, which asks
+  // where it goes: empty so far, and under Personal.
   await nav.getByRole("button", { name: "New folder" }).click();
+  await page.getByRole("menuitem", { name: "Personal" }).click();
   const folder = page.getByRole("dialog", { name: /New folder|Add folder/ });
   await folder.getByRole("textbox", { name: /Folder name/ }).fill("Bills");
   await folder.getByRole("button", { name: "Save" }).click();
   await expect(folder).toBeHidden();
   await expect(menuEntry(page, "Bills")).toContainText("0");
+  const folders = nav.getByRole("group", { name: "Folders" });
+  await expect(folders.getByRole("button", { name: "Personal", exact: true })).toBeVisible();
+  await expect(folders.getByRole("button", { name: "Bills", exact: true })).toBeVisible();
   await pick(page, "Bills");
   await expect(page).toHaveURL(/folderId=/);
   await expect(title).toHaveText("Bills");
@@ -108,7 +113,7 @@ test("on a phone, a Menu button opens the menu, and a pick closes it", async ({
   // The checklist's title gets the card's width, not a narrow column beside
   // its icon and progress (which move out of its way on a phone).
   await page.goto("/#/vault");
-  const title = page.getByText("Get started with your vault", { exact: true });
+  const title = page.getByText(/^Get started with /);
   await expect(title).toBeVisible();
   expect((await title.boundingBox())!.width).toBeGreaterThan(150);
   // All of it shows, Dismiss included, rather than scrolling inside its card.

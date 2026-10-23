@@ -81,7 +81,7 @@ webTest("the web vault walks someone through importing from their browser", asyn
   await guided.getByTestId("browser-import-file").setInputFiles(file("Chrome Passwords.csv", chromeExport));
   await guided.getByRole("button", { name: "Import", exact: true }).click();
   await expect(guided.getByTestId("browser-import-summary")).toHaveText(
-    'Imported 2 logins. 2 were already in your vault. 1 has a different password from a login you have for the same site, so it\'s in the folder "Check these: from Google Chrome" for you to compare. 1 had no password and was skipped.',
+    'Imported 2 logins. 2 were already here. 1 has a different password from a login you have for the same site, so it\'s in the folder "Check these: from Google Chrome" for you to compare. 1 had no password and was skipped.',
   );
   await expect(guided).toContainText("Delete the export now");
   await expect(guided).toContainText("Chrome Passwords.csv");
@@ -126,7 +126,7 @@ extensionTest("the extension walks someone through importing from the browser it
 
   await guided.getByTestId("browser-import-file").setInputFiles(file("Chrome Passwords.csv", chromeExport));
   await guided.getByRole("button", { name: "Import", exact: true }).click();
-  await expect(guided.getByTestId("browser-import-summary")).toContainText("Imported 2 logins. 2 were already in your vault.");
+  await expect(guided.getByTestId("browser-import-summary")).toContainText("Imported 2 logins. 2 were already here.");
   await guided.getByRole("button", { name: "Done" }).click();
   await expect(popup).toHaveURL(/#\/tabs\/vault/);
 });

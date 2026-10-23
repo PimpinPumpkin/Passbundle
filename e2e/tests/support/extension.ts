@@ -132,7 +132,7 @@ export async function logInPopup(popup: Page, user: User, server = serverUrl) {
   await popup.getByRole("button", { name: "Log in", exact: true }).click();
   // Key derivation and the first sync take a while on slow CI runners.
   await expect(
-    popup.getByRole("heading", { name: /Vault/ }).first(),
+    popup.getByRole("heading", { name: /Items/ }).first(),
   ).toBeVisible({
     timeout: 30_000,
   });
