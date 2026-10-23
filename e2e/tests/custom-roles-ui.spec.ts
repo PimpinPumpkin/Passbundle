@@ -1,9 +1,10 @@
 // A client's point of contact with a custom role, through the web vault: the
 // MSP gives them "Manage users" only; they see the Members page but not
 // Policies, can invite a regular member and open their edit dialog, and can't
-// invite an admin. Custom roles with our permissions can't also manage all
-// collections, whose admin console tools would refuse them and sign them out,
-// while upstream's Custom with only those still opens the admin console's
+// invite an admin. A custom role that only views event logs opens the event
+// log and sees who acted. Custom roles with our permissions can't also manage
+// all collections, whose admin console tools would refuse them and sign them
+// out, while upstream's Custom with only those still opens the admin console's
 // Vault tab.
 import { expect, test, type Page } from "@playwright/test";
 
@@ -161,5 +162,57 @@ test("upstream's Custom role that only manages all collections still opens the a
   expect(refused).toEqual([]);
 
   await managerContext.close();
+  await adminContext.close();
+});
+
+test("a client's custom role that only views event logs opens the event log and sees who acted", async ({
+  browser,
+}, testInfo) => {
+  test.setTimeout(150_000);
+  const viewerContext = await browser.newContext();
+  const viewer = await viewerContext.newPage();
+  const viewerUser = webUserFor("log-viewer", testInfo.repeatEachIndex);
+  await signUp(viewer, viewerUser);
+
+  const adminContext = await browser.newContext();
+  const admin = await adminContext.newPage();
+  const adminUser = webUserFor("events-admin", testInfo.repeatEachIndex);
+  await signUp(admin, adminUser);
+  await admin.goto("/#/msp");
+  await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Events IT");
+  await admin.getByRole("button", { name: "Create MSP" }).click();
+  await admin.getByRole("textbox", { name: "New client's name" }).fill("Northwind Dental");
+  await admin.getByRole("button", { name: "Add client" }).click();
+  await admin.getByTestId("msp-client-Northwind Dental").getByRole("link", { name: "Open" }).click();
+  await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
+  const orgUrl = admin.url().replace(/\/members.*$/, "");
+
+  // The MSP admin invites them with a Custom role: view event logs only.
+  await admin.getByRole("button", { name: "Invite member" }).click();
+  const invite = admin.getByRole("dialog", { name: /Invite member/ });
+  await invite.getByRole("textbox", { name: /Email/ }).fill(viewerUser.email);
+  await invite.getByRole("radio", { name: /^Custom/ }).check();
+  await invite.getByRole("checkbox", { name: /event logs/i }).check();
+  await invite.getByRole("button", { name: "Save" }).click();
+  await expect(invite).toBeHidden();
+  await admin.goto("/#/msp");
+  await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
+
+  // They open the organization and land on its event log, which names the
+  // MSP admin who invited them.
+  await unlock(viewer, viewerUser);
+  const refused = refusedCalls(viewer);
+  await viewer.goto(orgUrl);
+  await expect(viewer).toHaveURL(/#\/organizations\/[^/]+\/reporting\/events/);
+  await expect(
+    viewer.getByRole("row").filter({ hasText: adminUser.name }).first(),
+  ).toBeVisible();
+  await expect(viewer.getByRole("link", { name: "Members" })).toHaveCount(0);
+
+  // Nothing they opened was refused, so they were never signed out.
+  await expect(viewer).toHaveURL(/#\/organizations\/[^/]+\/reporting\/events/);
+  expect(refused).toEqual([]);
+
+  await viewerContext.close();
   await adminContext.close();
 });

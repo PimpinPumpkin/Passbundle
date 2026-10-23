@@ -225,6 +225,15 @@ const rows: Row[] = [
     }),
   },
   {
+    // The event log loads it to name who acted.
+    name: "list members' names for the event log",
+    allowed: [...ADMINS, "accessEventLogs"],
+    request: async ({ orgId }) => ({
+      method: "GET",
+      path: `/api/organizations/${orgId}/users/mini-details`,
+    }),
+  },
+  {
     // The export holds every item, and a client's own custom roles can't
     // have access to all items yet.
     name: "export the organization's vault",
@@ -601,6 +610,38 @@ test("a manage-users member reads the groups the Members page and member dialogs
   expect(
     (await groups(ctx)).filter((g) => g.name === "Taken over"),
   ).toEqual([]);
+});
+
+test("a custom role that views event logs reads who's who for the event log: the same short list an admin gets, and no more", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const owner = await api.account("owner");
+  const orgId = await api.organization(owner, "Event Log Org");
+  const viewer = await api.account("viewer");
+  await api.addCustomMember(owner, orgId, viewer, { accessEventLogs: true });
+  await api.addMember(owner, orgId, await api.account("regular"), "user");
+
+  const path = `/api/organizations/${orgId}/users/mini-details`;
+  const theirs = await api.call(viewer, "GET", path);
+  expect(theirs.status, JSON.stringify(theirs.body)).toBe(200);
+  const owners = await api.call(owner, "GET", path);
+  expect(theirs.body).toEqual(owners.body);
+  expect(theirs.body.data).toHaveLength(3);
+  for (const member of theirs.body.data) {
+    expect(Object.keys(member).sort()).toEqual(
+      ["email", "id", "name", "object", "status", "type", "userId"].sort(),
+    );
+  }
+
+  // The full member list, with collections and groups, is still for roles
+  // that open the Members page.
+  const full = await api.call(
+    viewer,
+    "GET",
+    `/api/organizations/${orgId}/users?includeCollections=true&includeGroups=true`,
+  );
+  expect(full.status, JSON.stringify(full.body)).toBe(403);
 });
 
 test("a custom member is refused with 403 where their role doesn't reach, and a logged-out caller still gets 401", async ({
