@@ -533,7 +533,7 @@ Upstream gives us about 70 importers. They include 1Password, LastPass (with dir
 - **Direct import** where the source allows it, as upstream already does for LastPass.
 - **Business:** the admin bulk-imports shared vaults into collections, mapping source folders and shared folders. Each member's private items go through the same guided import during their onboarding.
 - **Bitwarden (built and tested):** its JSON export imports with every item, folder, TOTP secret, custom field, note, and password history intact. A password-protected export moves to another account with no plaintext in the file. Both are tier 1 tests. Our own exports use the same format, so the importer calls it "PassBundle or Bitwarden (json)" (and "(csv)").
-- **Tests:** upstream importer specs, plus round-trip fixtures for the top formats in tier 1.
+- **Tests (built):** upstream importer specs, plus one fake vault written out the way each app exports it: Chrome, Edge, Brave, Firefox, Apple Passwords, 1Password (1PUX and CSV), Bitwarden, LastPass, Dashlane, KeePass 2, and Proton Pass (`e2e/fixtures/imports/`, made by a seeded generator and committed, so they can be tried by hand). Tier 1 imports each file into a new account through the screen people use, reads the vault back with its own export, and compares it item by item with what should be there, including what each importer leaves out (listed in that folder's README). Bugs these found are fixed in our importers with unit tests.
 
 ## Generator settings
 

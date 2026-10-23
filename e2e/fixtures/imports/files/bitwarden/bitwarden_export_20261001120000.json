@@ -1,0 +1,2166 @@
+{
+  "encrypted": false,
+  "folders": [
+    {
+      "id": "f01de000-0000-4000-8000-000000000001",
+      "name": "Finance"
+    },
+    {
+      "id": "f01de000-0000-4000-8000-000000000002",
+      "name": "Personal"
+    },
+    {
+      "id": "f01de000-0000-4000-8000-000000000003",
+      "name": "Shopping"
+    },
+    {
+      "id": "f01de000-0000-4000-8000-000000000004",
+      "name": "Work"
+    },
+    {
+      "id": "f01de000-0000-4000-8000-000000000005",
+      "name": "Work/Servers"
+    }
+  ],
+  "items": [
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-01-02T00:00:00.000Z",
+      "creationDate": "2025-01-01T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000001",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000002",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Example Mail",
+      "notes": "Recovery codes are in the fake safe.",
+      "favorite": true,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://mail.example.com/login"
+          }
+        ],
+        "username": "test.person@example.com",
+        "password": "Fake-Mail-Pass-01",
+        "totp": "otpauth://totp/Example%20Mail:test.person%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example%20Mail"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-01-05T00:00:00.000Z",
+      "creationDate": "2025-01-04T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000002",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000002",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Example Mail",
+      "notes": "Recovery codes are in the fake safe.",
+      "favorite": true,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://mail.example.com/login"
+          }
+        ],
+        "username": "test.person@example.com",
+        "password": "Fake-Mail-Pass-01",
+        "totp": "otpauth://totp/Example%20Mail:test.person%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example%20Mail"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-01-08T00:00:00.000Z",
+      "creationDate": "2025-01-07T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000003",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000004",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Example Account (three sites)",
+      "notes": null,
+      "favorite": false,
+      "fields": [
+        {
+          "name": "Employee ID",
+          "value": "E-0042",
+          "type": 0,
+          "linkedId": null
+        },
+        {
+          "name": "Security answer",
+          "value": "Blue Fake Penguin",
+          "type": 1,
+          "linkedId": null
+        },
+        {
+          "name": "Remember device",
+          "value": "true",
+          "type": 2,
+          "linkedId": null
+        }
+      ],
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://account.example.com/signin"
+          },
+          {
+            "match": null,
+            "uri": "https://login.example.org/"
+          },
+          {
+            "match": null,
+            "uri": "https://app.example.net/start"
+          }
+        ],
+        "username": "test.person",
+        "password": "One-Login-Three-Sites-22",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-01-11T00:00:00.000Z",
+      "creationDate": "2025-01-10T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000004",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000004",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Office printer admin",
+      "notes": "No website: it's on the office network.",
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [],
+        "username": "admin",
+        "password": "printer-admin-0000",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-01-14T00:00:00.000Z",
+      "creationDate": "2025-01-13T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000005",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000002",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Home router",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "http://192.168.1.1:8080/"
+          }
+        ],
+        "username": "admin",
+        "password": "router,admin,2026",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-01-17T00:00:00.000Z",
+      "creationDate": "2025-01-16T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000006",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000005",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Test NAS",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://10.0.0.5:5001/"
+          }
+        ],
+        "username": "nasadmin",
+        "password": "quote\"inside'and'apostrophes\"",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-01-20T00:00:00.000Z",
+      "creationDate": "2025-01-19T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000007",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000005",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Build server",
+      "notes": null,
+      "favorite": false,
+      "fields": [
+        {
+          "name": "API token",
+          "value": "fake-token-0123456789abcdef",
+          "type": 1,
+          "linkedId": null
+        }
+      ],
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://203.0.113.10:8443/login"
+          }
+        ],
+        "username": "deploy",
+        "password": "Build-Server-Pass-77",
+        "totp": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-01-23T00:00:00.000Z",
+      "creationDate": "2025-01-22T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000008",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000005",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Staging database",
+      "notes": "The password starts and ends with two spaces.",
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://db.staging.example.com:5432/"
+          }
+        ],
+        "username": "dbuser",
+        "password": "  spaced out password  ",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-01-26T00:00:00.000Z",
+      "creationDate": "2025-01-25T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000009",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Example Notes app",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "androidapp://com.example.notes"
+          }
+        ],
+        "username": "test.person",
+        "password": "App-Only-Pass-31",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-01-29T00:00:00.000Z",
+      "creationDate": "2025-01-28T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000000a",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000002",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Café Ünïcode 日本語 🔑",
+      "notes": "Ünïcode notes: 你好, привет, مرحبا, 🎉",
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://unicode.example.com/"
+          }
+        ],
+        "username": "tëst.pérson",
+        "password": "pässwörd-日本語-🔑-Ωμέγα",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-02-01T00:00:00.000Z",
+      "creationDate": "2025-01-31T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000000b",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Long notes login",
+      "notes": "This is a long note, the kind people paste whole emails into.\n\nLine 01: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 02: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 03: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 04: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 05: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 06: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 07: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 08: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 09: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 10: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 11: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 12: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 13: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 14: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 15: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 16: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 17: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 18: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 19: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 20: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 21: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 22: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 23: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 24: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 25: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 26: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 27: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 28: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 29: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 30: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 31: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 32: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 33: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 34: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 35: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 36: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 37: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 38: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 39: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 40: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\n\nThe end.",
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://notes.example.org/"
+          }
+        ],
+        "username": "test.person",
+        "password": "Long-Notes-Pass-15",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-02-04T00:00:00.000Z",
+      "creationDate": "2025-02-03T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000000c",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Two-line password",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://multiline.example.net/"
+          }
+        ],
+        "username": "test.person",
+        "password": "line one\nline two",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-02-07T00:00:00.000Z",
+      "creationDate": "2025-02-06T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000000d",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Commas and quotes",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://csv.example.com/"
+          }
+        ],
+        "username": "test.person",
+        "password": "a,b\"c\"\"d,",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-02-10T00:00:00.000Z",
+      "creationDate": "2025-02-09T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000000e",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000003",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Markup-looking password",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://markup.example.com/"
+          }
+        ],
+        "username": "test.person",
+        "password": "<b>&amp;</b>\\n %s {0} $1",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-02-13T00:00:00.000Z",
+      "creationDate": "2025-02-12T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000000f",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "No password yet",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://nopass.example.com/"
+          }
+        ],
+        "username": "test.person",
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-02-16T00:00:00.000Z",
+      "creationDate": "2025-02-15T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000010",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Username only",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [],
+        "username": "just-a-username",
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-02-19T00:00:00.000Z",
+      "creationDate": "2025-02-18T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000011",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Example Forum",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://forum.example.com/"
+          }
+        ],
+        "username": "test.person",
+        "password": "Forum-First-Account-1",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-02-22T00:00:00.000Z",
+      "creationDate": "2025-02-21T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000012",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Example Forum (second account)",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://forum.example.com/"
+          }
+        ],
+        "username": "test.person.alt",
+        "password": "Forum-Second-Account-2",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-02-25T00:00:00.000Z",
+      "creationDate": "2025-02-24T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000013",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000004",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Intranet (browser sign-in box)",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://intranet.example.com/"
+          }
+        ],
+        "username": "tperson",
+        "password": "Intranet-Basic-Auth-9",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-02-28T00:00:00.000Z",
+      "creationDate": "2025-02-27T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000014",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Mixed-case address",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.mixedcase.example.com/Account/Login?next=%2Fhome&x=1"
+          }
+        ],
+        "username": "test.person",
+        "password": "Mixed-Case-Url-44",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-03-03T00:00:00.000Z",
+      "creationDate": "2025-03-02T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000015",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000003",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Address with no https",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "shop.example.com/account"
+          }
+        ],
+        "username": "test.person",
+        "password": "No-Scheme-Url-12",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": [
+        {
+          "lastUsedDate": "2026-03-01T10:00:00.000Z",
+          "password": "Bank-Older-Pass-02"
+        },
+        {
+          "lastUsedDate": "2025-11-01T10:00:00.000Z",
+          "password": "Bank-Oldest-Pass-01"
+        }
+      ],
+      "revisionDate": "2025-03-06T00:00:00.000Z",
+      "creationDate": "2025-03-05T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000016",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000001",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Example Bank",
+      "notes": null,
+      "favorite": true,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://bank.example.com/"
+          }
+        ],
+        "username": "test.person",
+        "password": "Bank-Current-Pass-03",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-03-09T00:00:00.000Z",
+      "creationDate": "2025-03-08T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000017",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000001",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Example Credit Union",
+      "notes": "Branch: Example Street.",
+      "favorite": true,
+      "fields": [
+        {
+          "name": "Backup codes",
+          "value": "11111-fake\n22222-fake\n33333-fake",
+          "type": 0,
+          "linkedId": null
+        }
+      ],
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://cu.example.com/"
+          }
+        ],
+        "username": "tperson",
+        "password": "Credit-Union-Pass-88",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-03-12T00:00:00.000Z",
+      "creationDate": "2025-03-11T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000018",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000003",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Example Shop",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://shop.example.net/"
+          }
+        ],
+        "username": "test.person+shopping@example.com",
+        "password": "Shop-Plus-Address-5",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-03-15T00:00:00.000Z",
+      "creationDate": "2025-03-14T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000019",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Backslashes and emoji",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://legacy.example.org/"
+          }
+        ],
+        "username": "DOMAIN\\tperson",
+        "password": "back\\slash\\\\double-😀",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-03-18T00:00:00.000Z",
+      "creationDate": "2025-03-17T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000001a",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000002",
+      "type": 2,
+      "reprompt": 0,
+      "name": "Home Wi-Fi",
+      "notes": "Network: Fake-Home-5G\nPassword: not-a-real-wifi-pass",
+      "favorite": false,
+      "secureNote": {
+        "type": 0
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-03-21T00:00:00.000Z",
+      "creationDate": "2025-03-20T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000001b",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000004",
+      "type": 2,
+      "reprompt": 0,
+      "name": "Software license (fake)",
+      "notes": "License key: FAKE-1234-ABCD-5678\nSeats: 3",
+      "favorite": false,
+      "secureNote": {
+        "type": 0
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-03-24T00:00:00.000Z",
+      "creationDate": "2025-03-23T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000001c",
+      "organizationId": null,
+      "folderId": null,
+      "type": 2,
+      "reprompt": 0,
+      "name": "Recovery codes (fake)",
+      "notes": "fake-1000-code\nfake-1037-code\nfake-1074-code\nfake-1111-code\nfake-1148-code\nfake-1185-code\nfake-1222-code\nfake-1259-code\nfake-1296-code\nfake-1333-code",
+      "favorite": true,
+      "secureNote": {
+        "type": 0
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-03-27T00:00:00.000Z",
+      "creationDate": "2025-03-26T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000001d",
+      "organizationId": null,
+      "folderId": null,
+      "type": 2,
+      "reprompt": 0,
+      "name": "Notizen 🗒️ Ünïcode",
+      "notes": "Grüße aus Köln. Ça va? 東京. 🚀",
+      "favorite": false,
+      "secureNote": {
+        "type": 0
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-03-30T00:00:00.000Z",
+      "creationDate": "2025-03-29T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000001e",
+      "organizationId": null,
+      "folderId": null,
+      "type": 2,
+      "reprompt": 0,
+      "name": "Long note",
+      "notes": "This is a long note, the kind people paste whole emails into.\n\nLine 01: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 02: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 03: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 04: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 05: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 06: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 07: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 08: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 09: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 10: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 11: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 12: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 13: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 14: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 15: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 16: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 17: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 18: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 19: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 20: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 21: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 22: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 23: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 24: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 25: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 26: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 27: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 28: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 29: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 30: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 31: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 32: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 33: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 34: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 35: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 36: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 37: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 38: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 39: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\nLine 40: the fake account's terms, \"quoted\", with commas, semicolons; and a tab\there. Nothing here is real.\n\nThe end.",
+      "favorite": false,
+      "secureNote": {
+        "type": 0
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-04-02T00:00:00.000Z",
+      "creationDate": "2025-04-01T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000001f",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000002",
+      "type": 2,
+      "reprompt": 0,
+      "name": "Locker combination",
+      "notes": "Gym locker.",
+      "favorite": false,
+      "fields": [
+        {
+          "name": "Locker number",
+          "value": "0042",
+          "type": 0,
+          "linkedId": null
+        },
+        {
+          "name": "Combination",
+          "value": "12-34-56",
+          "type": 1,
+          "linkedId": null
+        }
+      ],
+      "secureNote": {
+        "type": 0
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-04-05T00:00:00.000Z",
+      "creationDate": "2025-04-04T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000020",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000001",
+      "type": 3,
+      "reprompt": 0,
+      "name": "Test Visa",
+      "notes": "Not a real card.",
+      "favorite": true,
+      "card": {
+        "cardholderName": "Test Person",
+        "brand": "Visa",
+        "number": "4111111111111111",
+        "expMonth": "12",
+        "expYear": "2030",
+        "code": "123"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-04-08T00:00:00.000Z",
+      "creationDate": "2025-04-07T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000021",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000001",
+      "type": 3,
+      "reprompt": 0,
+      "name": "Test Mastercard",
+      "notes": null,
+      "favorite": false,
+      "card": {
+        "cardholderName": "Test Person",
+        "brand": "Mastercard",
+        "number": "5555555555554444",
+        "expMonth": "1",
+        "expYear": "2029",
+        "code": "321"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-04-11T00:00:00.000Z",
+      "creationDate": "2025-04-10T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000022",
+      "organizationId": null,
+      "folderId": null,
+      "type": 3,
+      "reprompt": 0,
+      "name": "Test Amex",
+      "notes": null,
+      "favorite": false,
+      "card": {
+        "cardholderName": "Test Person",
+        "brand": "Amex",
+        "number": "378282246310005",
+        "expMonth": "7",
+        "expYear": "2031",
+        "code": "1234"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-04-14T00:00:00.000Z",
+      "creationDate": "2025-04-13T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000023",
+      "organizationId": null,
+      "folderId": null,
+      "type": 3,
+      "reprompt": 0,
+      "name": "Test Discover",
+      "notes": null,
+      "favorite": false,
+      "card": {
+        "cardholderName": "Tëst Pérsön",
+        "brand": "Discover",
+        "number": "6011111111111117",
+        "expMonth": "3",
+        "expYear": "2028",
+        "code": "456"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-04-17T00:00:00.000Z",
+      "creationDate": "2025-04-16T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000024",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000002",
+      "type": 4,
+      "reprompt": 0,
+      "name": "Test Person",
+      "notes": null,
+      "favorite": false,
+      "identity": {
+        "title": "Mx",
+        "firstName": "Test",
+        "middleName": "Q",
+        "lastName": "Person",
+        "address1": "1 Example Street",
+        "address2": null,
+        "address3": null,
+        "city": "Exampleville",
+        "state": "CA",
+        "postalCode": "90000",
+        "country": "US",
+        "company": null,
+        "email": "test.person@example.com",
+        "phone": "+1 555 0100",
+        "ssn": null,
+        "username": "tperson",
+        "passportNumber": null,
+        "licenseNumber": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-04-20T00:00:00.000Z",
+      "creationDate": "2025-04-19T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000025",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000004",
+      "type": 4,
+      "reprompt": 0,
+      "name": "Test Person (work)",
+      "notes": null,
+      "favorite": false,
+      "identity": {
+        "title": null,
+        "firstName": "Test",
+        "middleName": null,
+        "lastName": "Person",
+        "address1": null,
+        "address2": null,
+        "address3": null,
+        "city": null,
+        "state": null,
+        "postalCode": null,
+        "country": null,
+        "company": "Example Corp",
+        "email": "t.person@corp.example.com",
+        "phone": "+1 555 0199",
+        "ssn": null,
+        "username": null,
+        "passportNumber": null,
+        "licenseNumber": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-04-23T00:00:00.000Z",
+      "creationDate": "2025-04-22T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000026",
+      "organizationId": null,
+      "folderId": null,
+      "type": 4,
+      "reprompt": 0,
+      "name": "Zoë Ångström-Ñúñez",
+      "notes": null,
+      "favorite": false,
+      "identity": {
+        "title": null,
+        "firstName": "Zoë",
+        "middleName": null,
+        "lastName": "Ångström-Ñúñez",
+        "address1": null,
+        "address2": null,
+        "address3": null,
+        "city": "Malmö",
+        "state": null,
+        "postalCode": null,
+        "country": "SE",
+        "company": null,
+        "email": "zoe@unicode.example.com",
+        "phone": null,
+        "ssn": null,
+        "username": null,
+        "passportNumber": null,
+        "licenseNumber": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-04-26T00:00:00.000Z",
+      "creationDate": "2025-04-25T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000027",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000004",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Granite Fitness",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.granitefitness.example.org/login"
+          }
+        ],
+        "username": "test_person",
+        "password": "iBr4AA4HRCrhUer-87",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-04-29T00:00:00.000Z",
+      "creationDate": "2025-04-28T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000028",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cobalt Forum",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.cobaltforum.example.org/"
+          }
+        ],
+        "username": "test.person@example.com",
+        "password": "sS%zo&ABRaMW4gh=T=2F%mh",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-05-02T00:00:00.000Z",
+      "creationDate": "2025-05-01T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000029",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Granite Books",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.granitebooks.example.net/account/sign-in"
+          }
+        ],
+        "username": "test_person",
+        "password": "T-^Fgj6HxM$2Q9a6#enm",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-05-05T00:00:00.000Z",
+      "creationDate": "2025-05-04T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000002a",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000004",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Lantern Studio",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.lanternstudio.example.net/login"
+          }
+        ],
+        "username": "test.person@example.com",
+        "password": "7GQ^&v%NXtjw_rAq6?",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-05-08T00:00:00.000Z",
+      "creationDate": "2025-05-07T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000002b",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Lantern Fitness",
+      "notes": "Signed up for Lantern Fitness in a test.",
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.lanternfitness.test/login"
+          }
+        ],
+        "username": "test.person@example.com",
+        "password": "ZWB-BfAW4YpjN2",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-05-11T00:00:00.000Z",
+      "creationDate": "2025-05-10T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000002c",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000004",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Granite Cloud",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.granitecloud.example.net/users/sign_in"
+          }
+        ],
+        "username": "test.person",
+        "password": "UJjS5&h8AgZ7hXd#bWF",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-05-14T00:00:00.000Z",
+      "creationDate": "2025-05-13T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000002d",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Indigo Cloud",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://indigocloud.example.org/users/sign_in"
+          }
+        ],
+        "username": "test.person@example.com",
+        "password": "H53iA65CicbaCSt-2cJ=h",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-05-17T00:00:00.000Z",
+      "creationDate": "2025-05-16T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000002e",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000003",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Indigo Radio",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.indigoradio.test/login"
+          }
+        ],
+        "username": "test.person@example.com",
+        "password": "8hVux$EmbNMuU#D6ts",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-05-20T00:00:00.000Z",
+      "creationDate": "2025-05-19T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000002f",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000001",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Fern Library",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://fernlibrary.example.com/login"
+          }
+        ],
+        "username": "test.person@example.com",
+        "password": "rAY9P_EYWwM%us#X",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-05-23T00:00:00.000Z",
+      "creationDate": "2025-05-22T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000030",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000003",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Juniper Travel",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.junipertravel.example.net/account/sign-in"
+          }
+        ],
+        "username": "test_person",
+        "password": "t^LTk8L*y9K=Hn@aV83C5",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-05-26T00:00:00.000Z",
+      "creationDate": "2025-05-25T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000031",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Copper Radio",
+      "notes": "Signed up for Copper Radio in a test.",
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://copperradio.example.com/account/sign-in"
+          }
+        ],
+        "username": "tperson",
+        "password": "hUDSiS!vXhdRyP5v^5HU3",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-05-29T00:00:00.000Z",
+      "creationDate": "2025-05-28T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000032",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000002",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Indigo Books",
+      "notes": "Signed up for Indigo Books in a test.",
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.indigobooks.example.org/users/sign_in"
+          }
+        ],
+        "username": "test_person",
+        "password": "J2g%*SDtsc&X9jJprF",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-06-01T00:00:00.000Z",
+      "creationDate": "2025-05-31T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000033",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000003",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Fern Books",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.fernbooks.example.org/users/sign_in"
+          }
+        ],
+        "username": "tperson",
+        "password": "Cb%J?mmUrGQt3e",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-06-04T00:00:00.000Z",
+      "creationDate": "2025-06-03T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000034",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Granite Forum",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.graniteforum.example.org/login"
+          }
+        ],
+        "username": "test.person@example.com",
+        "password": "dFe?yo5i&A*GJev67o",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-06-07T00:00:00.000Z",
+      "creationDate": "2025-06-06T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000035",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000003",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Indigo Travel",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://indigotravel.example.org/login"
+          }
+        ],
+        "username": "tperson",
+        "password": "k8KU#z@5XCe-7!y",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-06-10T00:00:00.000Z",
+      "creationDate": "2025-06-09T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000036",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000001",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Fern Garden",
+      "notes": "Signed up for Fern Garden in a test.",
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.ferngarden.example.org/users/sign_in"
+          }
+        ],
+        "username": "tperson",
+        "password": "YGKCq6mM+T&+DQ?HkS%B=",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-06-13T00:00:00.000Z",
+      "creationDate": "2025-06-12T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000037",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Juniper Radio",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.juniperradio.test/users/sign_in"
+          }
+        ],
+        "username": "test.person",
+        "password": "@%Bf#%%rrunmz739FF=$8JQE",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-06-16T00:00:00.000Z",
+      "creationDate": "2025-06-15T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000038",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cobalt Library",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://cobaltlibrary.example.org/"
+          }
+        ],
+        "username": "test.person@example.com",
+        "password": "SMzWVj*hm4n*+KGdz=uE9",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-06-19T00:00:00.000Z",
+      "creationDate": "2025-06-18T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000039",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000003",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Indigo Garden",
+      "notes": "Signed up for Indigo Garden in a test.",
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.indigogarden.example/users/sign_in"
+          }
+        ],
+        "username": "TestPerson42",
+        "password": "!rtgN$7C5k$2tt",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-06-22T00:00:00.000Z",
+      "creationDate": "2025-06-21T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000003a",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000002",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Juniper Books",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.juniperbooks.example.org/users/sign_in"
+          }
+        ],
+        "username": "TestPerson42",
+        "password": "sX=uwRF?M39%Vz!jgh!58c",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-06-25T00:00:00.000Z",
+      "creationDate": "2025-06-24T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000003b",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Meadow Travel",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.meadowtravel.test/users/sign_in"
+          }
+        ],
+        "username": "test.person",
+        "password": "Nz+_4#E^79AXys_M",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-06-28T00:00:00.000Z",
+      "creationDate": "2025-06-27T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000003c",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000004",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Lantern Market",
+      "notes": "Signed up for Lantern Market in a test.",
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.lanternmarket.example.net/account/sign-in"
+          }
+        ],
+        "username": "test_person",
+        "password": "vsFYxGF2Wp3%q=*KYw2t",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-07-01T00:00:00.000Z",
+      "creationDate": "2025-06-30T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000003d",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000002",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Indigo Studio",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.indigostudio.example.net/account/sign-in"
+          }
+        ],
+        "username": "TestPerson42",
+        "password": "G24ZCWhzFSM5DC_CBC6UMn",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-07-04T00:00:00.000Z",
+      "creationDate": "2025-07-03T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000003e",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000001",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Fern Travel",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://ferntravel.example/"
+          }
+        ],
+        "username": "test.person@example.com",
+        "password": "%YYiYaxCWw95hycySo",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-07-07T00:00:00.000Z",
+      "creationDate": "2025-07-06T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000003f",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000002",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Birch Studio",
+      "notes": "Signed up for Birch Studio in a test.",
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.birchstudio.example.net/login"
+          }
+        ],
+        "username": "tperson",
+        "password": "L&mfG^+i#Z#T*G",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-07-10T00:00:00.000Z",
+      "creationDate": "2025-07-09T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000040",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Copper Travel",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.coppertravel.example.org/users/sign_in"
+          }
+        ],
+        "username": "test.person",
+        "password": "FzhG9E*Qjx+de+T7",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-07-13T00:00:00.000Z",
+      "creationDate": "2025-07-12T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000041",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000002",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cobalt Fitness",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://cobaltfitness.example.net/"
+          }
+        ],
+        "username": "test.person@example.com",
+        "password": "uZAefb6KWdDhNpA",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-07-16T00:00:00.000Z",
+      "creationDate": "2025-07-15T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000042",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000002",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Dune Garden",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://dunegarden.example.com/users/sign_in"
+          }
+        ],
+        "username": "test_person",
+        "password": "$o#-zDvN3?+@@T",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-07-19T00:00:00.000Z",
+      "creationDate": "2025-07-18T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000043",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000001",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Birch Radio",
+      "notes": "Signed up for Birch Radio in a test.",
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://birchradio.example.com/users/sign_in"
+          }
+        ],
+        "username": "test_person",
+        "password": "VmpZJ$CGdcc?MT@=z",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-07-22T00:00:00.000Z",
+      "creationDate": "2025-07-21T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000044",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Meadow Forum",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.meadowforum.example.org/login"
+          }
+        ],
+        "username": "TestPerson42",
+        "password": "LpzQsp^JJX2MiSw",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-07-25T00:00:00.000Z",
+      "creationDate": "2025-07-24T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000045",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000003",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cobalt Studio",
+      "notes": "Signed up for Cobalt Studio in a test.",
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.cobaltstudio.example.com/"
+          }
+        ],
+        "username": "tperson",
+        "password": "J&mwxU9kuLGa8bzsMCx!",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-07-28T00:00:00.000Z",
+      "creationDate": "2025-07-27T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000046",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Meadow Cloud",
+      "notes": "Signed up for Meadow Cloud in a test.",
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.meadowcloud.example.org/"
+          }
+        ],
+        "username": "test_person",
+        "password": "Qs9gLBEJ$Z5#QgmPcmY-d",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-07-31T00:00:00.000Z",
+      "creationDate": "2025-07-30T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000047",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000002",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Juniper Market",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://app.junipermarket.example.org/users/sign_in"
+          }
+        ],
+        "username": "test.person",
+        "password": "4%Zqz+?yc?CfX2=UsRJ#",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-08-03T00:00:00.000Z",
+      "creationDate": "2025-08-02T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000048",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000003",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Indigo Forum",
+      "notes": "Signed up for Indigo Forum in a test.",
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.indigoforum.example.net/login"
+          }
+        ],
+        "username": "test.person",
+        "password": "g!S4-xZxG-Z-*$ULk",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-08-06T00:00:00.000Z",
+      "creationDate": "2025-08-05T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000049",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000002",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Lantern Radio",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.lanternradio.example.org/login"
+          }
+        ],
+        "username": "test.person",
+        "password": "cLFc&s_NwCZHXa9YSyjsV",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-08-09T00:00:00.000Z",
+      "creationDate": "2025-08-08T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000004a",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Harbor Library",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://harborlibrary.test/"
+          }
+        ],
+        "username": "test_person",
+        "password": "fyYWNery3_c_7gyhVkXFQ&",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-08-12T00:00:00.000Z",
+      "creationDate": "2025-08-11T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000004b",
+      "organizationId": null,
+      "folderId": "f01de000-0000-4000-8000-000000000004",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Granite Market",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://granitemarket.example/account/sign-in"
+          }
+        ],
+        "username": "test.person",
+        "password": "m6NGcsFw@?D3jeo3vGckS",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-08-15T00:00:00.000Z",
+      "creationDate": "2025-08-14T00:00:00.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-00000000004c",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Juniper Studio",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://juniperstudio.example.com/"
+          }
+        ],
+        "username": "test.person@example.com",
+        "password": "Hffwa$kX_vg&k5T4e",
+        "totp": null
+      },
+      "collectionIds": null
+    }
+  ]
+}

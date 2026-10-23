@@ -1,0 +1,3787 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<KeePassFile>
+	<Meta>
+		<Generator>KeePass</Generator>
+		<DatabaseName>Fake vault</DatabaseName>
+		<DatabaseNameChanged>2025-01-01T00:00:00Z</DatabaseNameChanged>
+		<DatabaseDescription />
+		<DatabaseDescriptionChanged>2025-01-01T00:00:00Z</DatabaseDescriptionChanged>
+		<DefaultUserName />
+		<DefaultUserNameChanged>2025-01-01T00:00:00Z</DefaultUserNameChanged>
+		<MaintenanceHistoryDays>365</MaintenanceHistoryDays>
+		<Color />
+		<MasterKeyChanged>2025-01-01T00:00:00Z</MasterKeyChanged>
+		<MasterKeyChangeRec>-1</MasterKeyChangeRec>
+		<MasterKeyChangeForce>-1</MasterKeyChangeForce>
+		<MemoryProtection>
+			<ProtectTitle>False</ProtectTitle>
+			<ProtectUserName>False</ProtectUserName>
+			<ProtectPassword>True</ProtectPassword>
+			<ProtectURL>False</ProtectURL>
+			<ProtectNotes>False</ProtectNotes>
+		</MemoryProtection>
+		<RecycleBinEnabled>True</RecycleBinEnabled>
+		<RecycleBinUUID>JFav/rQYyVShzU1/GGVHZA==</RecycleBinUUID>
+		<RecycleBinChanged>2026-09-01T00:00:00Z</RecycleBinChanged>
+		<EntryTemplatesGroup>AAAAAAAAAAAAAAAAAAAAAA==</EntryTemplatesGroup>
+		<EntryTemplatesGroupChanged>2025-01-01T00:00:00Z</EntryTemplatesGroupChanged>
+		<HistoryMaxItems>10</HistoryMaxItems>
+		<HistoryMaxSize>6291456</HistoryMaxSize>
+		<LastSelectedGroup>AAAAAAAAAAAAAAAAAAAAAA==</LastSelectedGroup>
+		<LastTopVisibleGroup>AAAAAAAAAAAAAAAAAAAAAA==</LastTopVisibleGroup>
+		<Binaries />
+		<CustomData />
+	</Meta>
+	<Root>
+		<Group>
+			<UUID>Y55lzTRi/3Rw84/deMa2FA==</UUID>
+			<Name>Fake vault</Name>
+			<Notes />
+			<IconID>48</IconID>
+			<Times>
+				<CreationTime>2025-01-01T00:00:00Z</CreationTime>
+				<LastModificationTime>2025-01-01T00:00:00Z</LastModificationTime>
+				<LastAccessTime>2025-01-01T00:00:00Z</LastAccessTime>
+				<ExpiryTime>2025-01-01T00:00:00Z</ExpiryTime>
+				<Expires>False</Expires>
+				<UsageCount>0</UsageCount>
+				<LocationChanged>2025-01-01T00:00:00Z</LocationChanged>
+			</Times>
+			<IsExpanded>True</IsExpanded>
+			<DefaultAutoTypeSequence />
+			<EnableAutoType>null</EnableAutoType>
+			<EnableSearching>null</EnableSearching>
+			<LastTopVisibleEntry>AAAAAAAAAAAAAAAAAAAAAA==</LastTopVisibleEntry>
+			<Entry>
+				<UUID>wnVrX8MakJ0AuBDP+kzTKQ==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-01-26T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-01-26T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-01-26T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-01-26T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-01-26T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">App-Only-Pass-31</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Example Notes app</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>androidapp://com.example.notes</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>S150RQ1LUl4FJkHrxBKzlw==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-02-01T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-02-01T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-02-01T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-02-01T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-02-01T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value>This is a long note, the kind people paste whole emails into.
+
+Line 01: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 02: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 03: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 04: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 05: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 06: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 07: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 08: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 09: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 10: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 11: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 12: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 13: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 14: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 15: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 16: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 17: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 18: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 19: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 20: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 21: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 22: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 23: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 24: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 25: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 26: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 27: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 28: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 29: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 30: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 31: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 32: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 33: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 34: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 35: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 36: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 37: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 38: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 39: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 40: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+
+The end.</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">Long-Notes-Pass-15</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Long notes login</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://notes.example.org/</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>IT9dr96u6xdbeDEW/7cALQ==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-02-04T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-02-04T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-02-04T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-02-04T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-02-04T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">line one
+line two</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Two-line password</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://multiline.example.net/</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>pZG5RKHpimsjDSwMJCyzCw==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-02-07T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-02-07T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-02-07T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-02-07T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-02-07T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">a,b&quot;c&quot;&quot;d,</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Commas and quotes</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://csv.example.com/</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>+4+AuExCx91f3s8DM92/Vg==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-02-13T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-02-13T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-02-13T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-02-13T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-02-13T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True" />
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>No password yet</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://nopass.example.com/</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>pEOpZiWC/YIrrPLkxhxr6Q==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-02-16T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-02-16T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-02-16T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-02-16T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-02-16T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True" />
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Username only</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>just-a-username</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>siI0HBtSK7OeLDlXT9HizQ==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-02-19T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-02-19T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-02-19T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-02-19T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-02-19T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">Forum-First-Account-1</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Example Forum</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://forum.example.com/</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>IZtpAbCzfi1dHs7c6y0OaQ==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-02-22T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-02-22T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-02-22T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-02-22T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-02-22T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">Forum-Second-Account-2</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Example Forum (second account)</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://forum.example.com/</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person.alt</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>6Og0qVPNKKfvjfrolUNNMg==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-02-28T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-02-28T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-02-28T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-02-28T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-02-28T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">Mixed-Case-Url-44</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Mixed-case address</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://www.mixedcase.example.com/Account/Login?next=%2Fhome&amp;x=1</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>3rIz+VFNcdK7t0QMclAImA==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-03-15T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-03-15T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-03-15T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-03-15T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-03-15T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">back\slash\\double-😀</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Backslashes and emoji</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://legacy.example.org/</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>DOMAIN\tperson</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>gadIaVStRFueNPeh6mzZ4g==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-03-24T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-03-24T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-03-24T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-03-24T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-03-24T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value>fake-1000-code
+fake-1037-code
+fake-1074-code
+fake-1111-code
+fake-1148-code
+fake-1185-code
+fake-1222-code
+fake-1259-code
+fake-1296-code
+fake-1333-code</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True" />
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Recovery codes (fake)</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value />
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>bVUk35H2hUuozTJgcTrNSA==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-03-27T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-03-27T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-03-27T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-03-27T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-03-27T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value>Grüße aus Köln. Ça va? 東京. 🚀</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True" />
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Notizen 🗒️ Ünïcode</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value />
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>Wv3iKtt00uTzQmV4M9Y+oQ==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-03-30T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-03-30T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-03-30T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-03-30T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-03-30T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value>This is a long note, the kind people paste whole emails into.
+
+Line 01: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 02: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 03: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 04: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 05: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 06: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 07: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 08: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 09: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 10: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 11: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 12: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 13: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 14: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 15: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 16: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 17: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 18: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 19: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 20: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 21: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 22: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 23: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 24: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 25: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 26: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 27: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 28: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 29: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 30: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 31: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 32: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 33: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 34: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 35: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 36: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 37: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 38: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 39: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+Line 40: the fake account's terms, &quot;quoted&quot;, with commas, semicolons; and a tab	here. Nothing here is real.
+
+The end.</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True" />
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Long note</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value />
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>lBK55R4Vq9EviPfy8i3QhQ==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-04-11T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-04-11T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-04-11T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-04-11T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-04-11T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Card number</Key>
+					<Value ProtectInMemory="True">378282246310005</Value>
+				</String>
+				<String>
+					<Key>Cardholder</Key>
+					<Value>Test Person</Value>
+				</String>
+				<String>
+					<Key>CVV</Key>
+					<Value ProtectInMemory="True">1234</Value>
+				</String>
+				<String>
+					<Key>Expires</Key>
+					<Value>07/2031</Value>
+				</String>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True" />
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Test Amex</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value />
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>7ltFXmEfmdEI/DNK1yhK0g==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-04-14T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-04-14T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-04-14T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-04-14T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-04-14T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Card number</Key>
+					<Value ProtectInMemory="True">6011111111111117</Value>
+				</String>
+				<String>
+					<Key>Cardholder</Key>
+					<Value>Tëst Pérsön</Value>
+				</String>
+				<String>
+					<Key>CVV</Key>
+					<Value ProtectInMemory="True">456</Value>
+				</String>
+				<String>
+					<Key>Expires</Key>
+					<Value>03/2028</Value>
+				</String>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True" />
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Test Discover</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value />
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>T+lGSmK/d48H4xgGNau2GA==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-04-23T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-04-23T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-04-23T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-04-23T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-04-23T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>City</Key>
+					<Value>Malmö</Value>
+				</String>
+				<String>
+					<Key>Country</Key>
+					<Value>SE</Value>
+				</String>
+				<String>
+					<Key>Email</Key>
+					<Value>zoe@unicode.example.com</Value>
+				</String>
+				<String>
+					<Key>First name</Key>
+					<Value>Zoë</Value>
+				</String>
+				<String>
+					<Key>Last name</Key>
+					<Value>Ångström-Ñúñez</Value>
+				</String>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True" />
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Zoë Ångström-Ñúñez</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value />
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>SLLgCwJ5oLb5sR6ZFKJiVw==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-04-29T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-04-29T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-04-29T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-04-29T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-04-29T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">sS%zo&amp;ABRaMW4gh=T=2F%mh</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Cobalt Forum</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://www.cobaltforum.example.org/</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person@example.com</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>teh2UMb0sklNrpmhk8mGhw==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-05-02T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-05-02T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-05-02T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-05-02T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-05-02T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">T-^Fgj6HxM$2Q9a6#enm</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Granite Books</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://app.granitebooks.example.net/account/sign-in</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test_person</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>/nEBmoukRF5zsLFsrDWxVA==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-05-08T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-05-08T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-05-08T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-05-08T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-05-08T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value>Signed up for Lantern Fitness in a test.</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">ZWB-BfAW4YpjN2</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Lantern Fitness</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://app.lanternfitness.test/login</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person@example.com</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>VB3z1JjDKvuSV+fm3zLxVg==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-05-14T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-05-14T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-05-14T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-05-14T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-05-14T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">H53iA65CicbaCSt-2cJ=h</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Indigo Cloud</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://indigocloud.example.org/users/sign_in</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person@example.com</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>RQ6te8fxs0x+TxK+uCFliw==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-05-26T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-05-26T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-05-26T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-05-26T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-05-26T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value>Signed up for Copper Radio in a test.</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">hUDSiS!vXhdRyP5v^5HU3</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Copper Radio</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://copperradio.example.com/account/sign-in</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>tperson</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>BxhII1+cHPCJ7nTROMIq8g==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-06-04T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-06-04T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-06-04T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-06-04T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-06-04T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">dFe?yo5i&amp;A*GJev67o</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Granite Forum</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://app.graniteforum.example.org/login</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person@example.com</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>K8NcY4ISXVRrYCjnjufeLw==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-06-13T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-06-13T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-06-13T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-06-13T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-06-13T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">@%Bf#%%rrunmz739FF=$8JQE</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Juniper Radio</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://app.juniperradio.test/users/sign_in</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>szflQ1hymTpGpo6/3+k8Hg==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-06-16T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-06-16T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-06-16T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-06-16T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-06-16T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">SMzWVj*hm4n*+KGdz=uE9</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Cobalt Library</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://cobaltlibrary.example.org/</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person@example.com</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>zEgry71wDOlEOBWSKIJsRQ==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-06-25T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-06-25T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-06-25T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-06-25T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-06-25T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">Nz+_4#E^79AXys_M</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Meadow Travel</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://app.meadowtravel.test/users/sign_in</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>mlL/mjlbuvHDYciWDiuoCg==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-07-10T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-07-10T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-07-10T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-07-10T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-07-10T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FzhG9E*Qjx+de+T7</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Copper Travel</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://www.coppertravel.example.org/users/sign_in</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>PjXGsi0Lntfnd+wCwj1jsA==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-07-22T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-07-22T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-07-22T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-07-22T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-07-22T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">LpzQsp^JJX2MiSw</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Meadow Forum</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://www.meadowforum.example.org/login</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>TestPerson42</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>VWEwKR/LBkt4Kut2JI/2JA==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-07-28T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-07-28T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-07-28T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-07-28T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-07-28T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value>Signed up for Meadow Cloud in a test.</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">Qs9gLBEJ$Z5#QgmPcmY-d</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Meadow Cloud</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://www.meadowcloud.example.org/</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test_person</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>p55RLPX16jlOKR3SjN3B0w==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-08-09T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-08-09T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-08-09T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-08-09T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-08-09T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">fyYWNery3_c_7gyhVkXFQ&amp;</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Harbor Library</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://harborlibrary.test/</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test_person</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Entry>
+				<UUID>xOyZbfQzn1xVk8HmDUho/w==</UUID>
+				<IconID>0</IconID>
+				<ForegroundColor />
+				<BackgroundColor />
+				<OverrideURL />
+				<Tags />
+				<Times>
+					<CreationTime>2025-08-15T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-08-15T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-08-15T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-08-15T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-08-15T00:00:00Z</LocationChanged>
+				</Times>
+				<String>
+					<Key>Notes</Key>
+					<Value />
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">Hffwa$kX_vg&amp;k5T4e</Value>
+				</String>
+				<String>
+					<Key>Title</Key>
+					<Value>Juniper Studio</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://juniperstudio.example.com/</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>test.person@example.com</Value>
+				</String>
+				<AutoType>
+					<Enabled>True</Enabled>
+					<DataTransferObfuscation>0</DataTransferObfuscation>
+				</AutoType>
+				<History />
+			</Entry>
+			<Group>
+				<UUID>31PsZBqZiT8wqL46EJ8iyQ==</UUID>
+				<Name>Finance</Name>
+				<Notes />
+				<IconID>48</IconID>
+				<Times>
+					<CreationTime>2025-01-01T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-01-01T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-01-01T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-01-01T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-01-01T00:00:00Z</LocationChanged>
+				</Times>
+				<IsExpanded>True</IsExpanded>
+				<DefaultAutoTypeSequence />
+				<EnableAutoType>null</EnableAutoType>
+				<EnableSearching>null</EnableSearching>
+				<LastTopVisibleEntry>AAAAAAAAAAAAAAAAAAAAAA==</LastTopVisibleEntry>
+				<Entry>
+					<UUID>yiSqpO1zrZuTe1ILn0WXXg==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-03-06T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-03-06T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-03-06T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-03-06T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-03-06T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">Bank-Current-Pass-03</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Example Bank</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://bank.example.com/</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History>
+						<Entry>
+							<UUID>yiSqpO1zrZuTe1ILn0WXXg==</UUID>
+							<IconID>0</IconID>
+							<ForegroundColor />
+							<BackgroundColor />
+							<OverrideURL />
+							<Tags />
+							<Times>
+								<CreationTime>2026-03-01T10:00:00Z</CreationTime>
+								<LastModificationTime>2026-03-01T10:00:00Z</LastModificationTime>
+								<LastAccessTime>2026-03-01T10:00:00Z</LastAccessTime>
+								<ExpiryTime>2026-03-01T10:00:00Z</ExpiryTime>
+								<Expires>False</Expires>
+								<UsageCount>0</UsageCount>
+								<LocationChanged>2026-03-01T10:00:00Z</LocationChanged>
+							</Times>
+							<String>
+								<Key>Notes</Key>
+								<Value />
+							</String>
+							<String>
+								<Key>Password</Key>
+								<Value ProtectInMemory="True">Bank-Older-Pass-02</Value>
+							</String>
+							<String>
+								<Key>Title</Key>
+								<Value>Example Bank</Value>
+							</String>
+							<String>
+								<Key>URL</Key>
+								<Value>https://bank.example.com/</Value>
+							</String>
+							<String>
+								<Key>UserName</Key>
+								<Value>test.person</Value>
+							</String>
+							<AutoType>
+								<Enabled>True</Enabled>
+								<DataTransferObfuscation>0</DataTransferObfuscation>
+							</AutoType>
+						</Entry>
+						<Entry>
+							<UUID>yiSqpO1zrZuTe1ILn0WXXg==</UUID>
+							<IconID>0</IconID>
+							<ForegroundColor />
+							<BackgroundColor />
+							<OverrideURL />
+							<Tags />
+							<Times>
+								<CreationTime>2025-11-01T10:00:00Z</CreationTime>
+								<LastModificationTime>2025-11-01T10:00:00Z</LastModificationTime>
+								<LastAccessTime>2025-11-01T10:00:00Z</LastAccessTime>
+								<ExpiryTime>2025-11-01T10:00:00Z</ExpiryTime>
+								<Expires>False</Expires>
+								<UsageCount>0</UsageCount>
+								<LocationChanged>2025-11-01T10:00:00Z</LocationChanged>
+							</Times>
+							<String>
+								<Key>Notes</Key>
+								<Value />
+							</String>
+							<String>
+								<Key>Password</Key>
+								<Value ProtectInMemory="True">Bank-Oldest-Pass-01</Value>
+							</String>
+							<String>
+								<Key>Title</Key>
+								<Value>Example Bank</Value>
+							</String>
+							<String>
+								<Key>URL</Key>
+								<Value>https://bank.example.com/</Value>
+							</String>
+							<String>
+								<Key>UserName</Key>
+								<Value>test.person</Value>
+							</String>
+							<AutoType>
+								<Enabled>True</Enabled>
+								<DataTransferObfuscation>0</DataTransferObfuscation>
+							</AutoType>
+						</Entry>
+					</History>
+				</Entry>
+				<Entry>
+					<UUID>4yd4cNThuUp3lguKsgHuFg==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-03-09T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-03-09T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-03-09T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-03-09T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-03-09T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Backup codes</Key>
+						<Value>11111-fake
+22222-fake
+33333-fake</Value>
+					</String>
+					<String>
+						<Key>Notes</Key>
+						<Value>Branch: Example Street.</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">Credit-Union-Pass-88</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Example Credit Union</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://cu.example.com/</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>tperson</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>80yB5ytHxSE1/My+WMQaDg==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-04-05T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-04-05T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-04-05T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-04-05T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-04-05T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Card number</Key>
+						<Value ProtectInMemory="True">4111111111111111</Value>
+					</String>
+					<String>
+						<Key>Cardholder</Key>
+						<Value>Test Person</Value>
+					</String>
+					<String>
+						<Key>CVV</Key>
+						<Value ProtectInMemory="True">123</Value>
+					</String>
+					<String>
+						<Key>Expires</Key>
+						<Value>12/2030</Value>
+					</String>
+					<String>
+						<Key>Notes</Key>
+						<Value>Not a real card.</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True" />
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Test Visa</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value />
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>suOYsHIsLJaRWRhECMUqBw==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-04-08T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-04-08T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-04-08T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-04-08T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-04-08T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Card number</Key>
+						<Value ProtectInMemory="True">5555555555554444</Value>
+					</String>
+					<String>
+						<Key>Cardholder</Key>
+						<Value>Test Person</Value>
+					</String>
+					<String>
+						<Key>CVV</Key>
+						<Value ProtectInMemory="True">321</Value>
+					</String>
+					<String>
+						<Key>Expires</Key>
+						<Value>01/2029</Value>
+					</String>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True" />
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Test Mastercard</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value />
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>VlSc8rslz4RxwPf1Z2jUDw==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-05-20T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-05-20T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-05-20T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-05-20T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-05-20T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">rAY9P_EYWwM%us#X</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Fern Library</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://fernlibrary.example.com/login</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person@example.com</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>AtJO9MwNjs2HM3y97o/faw==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-06-10T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-06-10T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-06-10T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-06-10T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-06-10T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value>Signed up for Fern Garden in a test.</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">YGKCq6mM+T&amp;+DQ?HkS%B=</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Fern Garden</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://www.ferngarden.example.org/users/sign_in</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>tperson</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>ovUsmCVESEePW4/DJabnOg==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-07-04T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-07-04T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-07-04T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-07-04T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-07-04T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">%YYiYaxCWw95hycySo</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Fern Travel</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://ferntravel.example/</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person@example.com</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>cOcj3iom45fItkTLu50NNA==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-07-19T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-07-19T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-07-19T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-07-19T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-07-19T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value>Signed up for Birch Radio in a test.</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">VmpZJ$CGdcc?MT@=z</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Birch Radio</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://birchradio.example.com/users/sign_in</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test_person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+			</Group>
+			<Group>
+				<UUID>PEVxm20koU77PSq8w+avjQ==</UUID>
+				<Name>Personal</Name>
+				<Notes />
+				<IconID>48</IconID>
+				<Times>
+					<CreationTime>2025-01-01T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-01-01T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-01-01T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-01-01T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-01-01T00:00:00Z</LocationChanged>
+				</Times>
+				<IsExpanded>True</IsExpanded>
+				<DefaultAutoTypeSequence />
+				<EnableAutoType>null</EnableAutoType>
+				<EnableSearching>null</EnableSearching>
+				<LastTopVisibleEntry>AAAAAAAAAAAAAAAAAAAAAA==</LastTopVisibleEntry>
+				<Entry>
+					<UUID>SImid+KZi428iYVsjOs40Q==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-01-02T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-01-02T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-01-02T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-01-02T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-01-02T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value>Recovery codes are in the fake safe.</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">Fake-Mail-Pass-01</Value>
+					</String>
+					<String>
+						<Key>TimeOtp-Secret-Base32</Key>
+						<Value ProtectInMemory="True">JBSWY3DPEHPK3PXP</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Example Mail</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://mail.example.com/login</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person@example.com</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>r5KgkvQJhvWfbBt3d7TOlA==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-01-05T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-01-05T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-01-05T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-01-05T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-01-05T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value>Recovery codes are in the fake safe.</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">Fake-Mail-Pass-01</Value>
+					</String>
+					<String>
+						<Key>TimeOtp-Secret-Base32</Key>
+						<Value ProtectInMemory="True">JBSWY3DPEHPK3PXP</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Example Mail</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://mail.example.com/login</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person@example.com</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>zBRgQmCrJuBwf+GXTFVCTw==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-01-14T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-01-14T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-01-14T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-01-14T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-01-14T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">router,admin,2026</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Home router</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>http://192.168.1.1:8080/</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>admin</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>8oQJ+gYzyDKUG5wBwWkjng==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-01-29T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-01-29T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-01-29T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-01-29T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-01-29T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value>Ünïcode notes: 你好, привет, مرحبا, 🎉</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">pässwörd-日本語-🔑-Ωμέγα</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Café Ünïcode 日本語 🔑</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://unicode.example.com/</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>tëst.pérson</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>tohClcYOJFRBJ3Lo4cjNNg==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-03-18T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-03-18T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-03-18T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-03-18T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-03-18T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value>Network: Fake-Home-5G
+Password: not-a-real-wifi-pass</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True" />
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Home Wi-Fi</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value />
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>mpWxYvbcXV9S3zf41yp6pg==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-04-02T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-04-02T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-04-02T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-04-02T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-04-02T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Combination</Key>
+						<Value ProtectInMemory="True">12-34-56</Value>
+					</String>
+					<String>
+						<Key>Locker number</Key>
+						<Value>0042</Value>
+					</String>
+					<String>
+						<Key>Notes</Key>
+						<Value>Gym locker.</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True" />
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Locker combination</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value />
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>2HOElvxawXt+gp7QX2uNZA==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-04-17T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-04-17T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-04-17T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-04-17T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-04-17T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Address</Key>
+						<Value>1 Example Street</Value>
+					</String>
+					<String>
+						<Key>City</Key>
+						<Value>Exampleville</Value>
+					</String>
+					<String>
+						<Key>Country</Key>
+						<Value>US</Value>
+					</String>
+					<String>
+						<Key>Email</Key>
+						<Value>test.person@example.com</Value>
+					</String>
+					<String>
+						<Key>First name</Key>
+						<Value>Test</Value>
+					</String>
+					<String>
+						<Key>Last name</Key>
+						<Value>Person</Value>
+					</String>
+					<String>
+						<Key>Middle name</Key>
+						<Value>Q</Value>
+					</String>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True" />
+					</String>
+					<String>
+						<Key>Phone</Key>
+						<Value>+1 555 0100</Value>
+					</String>
+					<String>
+						<Key>Postal code</Key>
+						<Value>90000</Value>
+					</String>
+					<String>
+						<Key>State</Key>
+						<Value>CA</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Test Person</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>tperson</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>6O23Xd9ul3v9xLP7o5qyRA==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-05-29T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-05-29T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-05-29T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-05-29T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-05-29T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value>Signed up for Indigo Books in a test.</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">J2g%*SDtsc&amp;X9jJprF</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Indigo Books</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://app.indigobooks.example.org/users/sign_in</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test_person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>pSuYR2LAmhYcOk+1117H9Q==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-06-22T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-06-22T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-06-22T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-06-22T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-06-22T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">sX=uwRF?M39%Vz!jgh!58c</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Juniper Books</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://app.juniperbooks.example.org/users/sign_in</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>TestPerson42</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>9pGy1hb24NbBkxbqTZuuQw==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-07-01T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-07-01T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-07-01T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-07-01T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-07-01T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">G24ZCWhzFSM5DC_CBC6UMn</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Indigo Studio</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://app.indigostudio.example.net/account/sign-in</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>TestPerson42</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>6vDwJbTCsCOV6vs/crJ0YA==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-07-07T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-07-07T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-07-07T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-07-07T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-07-07T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value>Signed up for Birch Studio in a test.</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">L&amp;mfG^+i#Z#T*G</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Birch Studio</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://www.birchstudio.example.net/login</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>tperson</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>+K93/Eo+VpEI4HQPa8x06Q==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-07-13T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-07-13T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-07-13T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-07-13T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-07-13T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">uZAefb6KWdDhNpA</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Cobalt Fitness</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://cobaltfitness.example.net/</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person@example.com</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>ti3daTnsr9TGAcM+EoZpwQ==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-07-16T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-07-16T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-07-16T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-07-16T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-07-16T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">$o#-zDvN3?+@@T</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Dune Garden</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://dunegarden.example.com/users/sign_in</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test_person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>mQGjdxANvylL1gA0hqT4Aw==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-07-31T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-07-31T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-07-31T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-07-31T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-07-31T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">4%Zqz+?yc?CfX2=UsRJ#</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Juniper Market</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://app.junipermarket.example.org/users/sign_in</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>vyVoGzattITnaiuiB6n/WA==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-08-06T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-08-06T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-08-06T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-08-06T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-08-06T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">cLFc&amp;s_NwCZHXa9YSyjsV</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Lantern Radio</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://www.lanternradio.example.org/login</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+			</Group>
+			<Group>
+				<UUID>rK0INueABUZ3SNLwrBAa8w==</UUID>
+				<Name>Shopping</Name>
+				<Notes />
+				<IconID>48</IconID>
+				<Times>
+					<CreationTime>2025-01-01T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-01-01T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-01-01T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-01-01T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-01-01T00:00:00Z</LocationChanged>
+				</Times>
+				<IsExpanded>True</IsExpanded>
+				<DefaultAutoTypeSequence />
+				<EnableAutoType>null</EnableAutoType>
+				<EnableSearching>null</EnableSearching>
+				<LastTopVisibleEntry>AAAAAAAAAAAAAAAAAAAAAA==</LastTopVisibleEntry>
+				<Entry>
+					<UUID>us86OeflmRgynWEbleJScQ==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-02-10T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-02-10T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-02-10T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-02-10T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-02-10T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">&lt;b&gt;&amp;amp;&lt;/b&gt;\n %s {0} $1</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Markup-looking password</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://markup.example.com/</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>qiiaTBTTqDIH22Hff72qPA==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-03-03T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-03-03T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-03-03T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-03-03T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-03-03T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">No-Scheme-Url-12</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Address with no https</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>shop.example.com/account</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>N8EOWxvbek5UbG4zDFQpsw==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-03-12T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-03-12T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-03-12T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-03-12T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-03-12T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">Shop-Plus-Address-5</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Example Shop</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://shop.example.net/</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person+shopping@example.com</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>nO0SnY9Px3xC3EFKG8/trA==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-05-17T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-05-17T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-05-17T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-05-17T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-05-17T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">8hVux$EmbNMuU#D6ts</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Indigo Radio</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://app.indigoradio.test/login</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person@example.com</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>okwagMtuSD/d/o2xFbNavg==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-05-23T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-05-23T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-05-23T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-05-23T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-05-23T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">t^LTk8L*y9K=Hn@aV83C5</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Juniper Travel</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://app.junipertravel.example.net/account/sign-in</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test_person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>jLutnmacXUdW5/mrAFnnYQ==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-06-01T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-06-01T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-06-01T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-06-01T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-06-01T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">Cb%J?mmUrGQt3e</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Fern Books</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://www.fernbooks.example.org/users/sign_in</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>tperson</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>ioPvt+hWNl1RlaDHj/R8Aw==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-06-07T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-06-07T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-06-07T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-06-07T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-06-07T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">k8KU#z@5XCe-7!y</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Indigo Travel</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://indigotravel.example.org/login</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>tperson</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>VQqFXom1hEJrzItI51rBpQ==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-06-19T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-06-19T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-06-19T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-06-19T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-06-19T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value>Signed up for Indigo Garden in a test.</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">!rtgN$7C5k$2tt</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Indigo Garden</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://app.indigogarden.example/users/sign_in</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>TestPerson42</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>ltXua6yATP65QYnI4oK0Hw==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-07-25T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-07-25T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-07-25T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-07-25T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-07-25T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value>Signed up for Cobalt Studio in a test.</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">J&amp;mwxU9kuLGa8bzsMCx!</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Cobalt Studio</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://app.cobaltstudio.example.com/</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>tperson</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>vwsPZIP33R/rf4sWR6MJaw==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-08-03T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-08-03T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-08-03T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-08-03T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-08-03T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value>Signed up for Indigo Forum in a test.</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">g!S4-xZxG-Z-*$ULk</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Indigo Forum</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://www.indigoforum.example.net/login</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+			</Group>
+			<Group>
+				<UUID>HbZcuLrvPz9i3l2z6GbD9g==</UUID>
+				<Name>Work</Name>
+				<Notes />
+				<IconID>48</IconID>
+				<Times>
+					<CreationTime>2025-01-01T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-01-01T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-01-01T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-01-01T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-01-01T00:00:00Z</LocationChanged>
+				</Times>
+				<IsExpanded>True</IsExpanded>
+				<DefaultAutoTypeSequence />
+				<EnableAutoType>null</EnableAutoType>
+				<EnableSearching>null</EnableSearching>
+				<LastTopVisibleEntry>AAAAAAAAAAAAAAAAAAAAAA==</LastTopVisibleEntry>
+				<Entry>
+					<UUID>3foDCfohxqIL3EGVvZq82w==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-01-08T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-01-08T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-01-08T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-01-08T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-01-08T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Employee ID</Key>
+						<Value>E-0042</Value>
+					</String>
+					<String>
+						<Key>KP2A_URL_1</Key>
+						<Value>https://login.example.org/</Value>
+					</String>
+					<String>
+						<Key>KP2A_URL_2</Key>
+						<Value>https://app.example.net/start</Value>
+					</String>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">One-Login-Three-Sites-22</Value>
+					</String>
+					<String>
+						<Key>Remember device</Key>
+						<Value>true</Value>
+					</String>
+					<String>
+						<Key>Security answer</Key>
+						<Value ProtectInMemory="True">Blue Fake Penguin</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Example Account (three sites)</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://account.example.com/signin</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>5eLXGs4FSgRyhFi7W5UEhQ==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-01-11T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-01-11T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-01-11T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-01-11T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-01-11T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value>No website: it's on the office network.</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">printer-admin-0000</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Office printer admin</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>admin</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>52Hj5vZikpc8f1nyB+j7Pw==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-02-25T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-02-25T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-02-25T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-02-25T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-02-25T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">Intranet-Basic-Auth-9</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Intranet (browser sign-in box)</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://intranet.example.com/</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>tperson</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>Qp6uM5cptAocALwxrKHw8g==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-03-21T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-03-21T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-03-21T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-03-21T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-03-21T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value>License key: FAKE-1234-ABCD-5678
+Seats: 3</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True" />
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Software license (fake)</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value />
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>GVxztqwgI6jghPN0wtZ6HQ==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-04-20T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-04-20T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-04-20T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-04-20T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-04-20T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Company</Key>
+						<Value>Example Corp</Value>
+					</String>
+					<String>
+						<Key>Email</Key>
+						<Value>t.person@corp.example.com</Value>
+					</String>
+					<String>
+						<Key>First name</Key>
+						<Value>Test</Value>
+					</String>
+					<String>
+						<Key>Last name</Key>
+						<Value>Person</Value>
+					</String>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True" />
+					</String>
+					<String>
+						<Key>Phone</Key>
+						<Value>+1 555 0199</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Test Person (work)</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value />
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>75Tyvav8oIYn6xdxTIpTUQ==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-04-26T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-04-26T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-04-26T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-04-26T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-04-26T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">iBr4AA4HRCrhUer-87</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Granite Fitness</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://app.granitefitness.example.org/login</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test_person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>FNEfa+b6qUdviC/eltOgQw==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-05-05T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-05-05T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-05-05T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-05-05T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-05-05T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">7GQ^&amp;v%NXtjw_rAq6?</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Lantern Studio</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://app.lanternstudio.example.net/login</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person@example.com</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>ZDL1TOwaphRhT9sStE4XdA==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-05-11T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-05-11T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-05-11T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-05-11T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-05-11T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">UJjS5&amp;h8AgZ7hXd#bWF</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Granite Cloud</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://www.granitecloud.example.net/users/sign_in</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>QMQO61WrTWMqmBQPzdzTuA==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-06-28T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-06-28T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-06-28T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-06-28T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-06-28T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value>Signed up for Lantern Market in a test.</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">vsFYxGF2Wp3%q=*KYw2t</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Lantern Market</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://app.lanternmarket.example.net/account/sign-in</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test_person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Entry>
+					<UUID>JSyoJ7zJC2n//9Y1k+1qBg==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2025-08-12T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-08-12T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-08-12T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-08-12T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-08-12T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value />
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">m6NGcsFw@?D3jeo3vGckS</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Granite Market</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://granitemarket.example/account/sign-in</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+				<Group>
+					<UUID>0uhdJI6GogYKCHUTGplV9g==</UUID>
+					<Name>Servers</Name>
+					<Notes />
+					<IconID>48</IconID>
+					<Times>
+						<CreationTime>2025-01-01T00:00:00Z</CreationTime>
+						<LastModificationTime>2025-01-01T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2025-01-01T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2025-01-01T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2025-01-01T00:00:00Z</LocationChanged>
+					</Times>
+					<IsExpanded>True</IsExpanded>
+					<DefaultAutoTypeSequence />
+					<EnableAutoType>null</EnableAutoType>
+					<EnableSearching>null</EnableSearching>
+					<LastTopVisibleEntry>AAAAAAAAAAAAAAAAAAAAAA==</LastTopVisibleEntry>
+					<Entry>
+						<UUID>ZEoeriRTympmFpXaRqAKOw==</UUID>
+						<IconID>0</IconID>
+						<ForegroundColor />
+						<BackgroundColor />
+						<OverrideURL />
+						<Tags />
+						<Times>
+							<CreationTime>2025-01-17T00:00:00Z</CreationTime>
+							<LastModificationTime>2025-01-17T00:00:00Z</LastModificationTime>
+							<LastAccessTime>2025-01-17T00:00:00Z</LastAccessTime>
+							<ExpiryTime>2025-01-17T00:00:00Z</ExpiryTime>
+							<Expires>False</Expires>
+							<UsageCount>0</UsageCount>
+							<LocationChanged>2025-01-17T00:00:00Z</LocationChanged>
+						</Times>
+						<String>
+							<Key>Notes</Key>
+							<Value />
+						</String>
+						<String>
+							<Key>Password</Key>
+							<Value ProtectInMemory="True">quote&quot;inside'and'apostrophes&quot;</Value>
+						</String>
+						<String>
+							<Key>Title</Key>
+							<Value>Test NAS</Value>
+						</String>
+						<String>
+							<Key>URL</Key>
+							<Value>https://10.0.0.5:5001/</Value>
+						</String>
+						<String>
+							<Key>UserName</Key>
+							<Value>nasadmin</Value>
+						</String>
+						<AutoType>
+							<Enabled>True</Enabled>
+							<DataTransferObfuscation>0</DataTransferObfuscation>
+						</AutoType>
+						<History />
+					</Entry>
+					<Entry>
+						<UUID>U8jzooLUb0/zPnvNJfEC0A==</UUID>
+						<IconID>0</IconID>
+						<ForegroundColor />
+						<BackgroundColor />
+						<OverrideURL />
+						<Tags />
+						<Times>
+							<CreationTime>2025-01-20T00:00:00Z</CreationTime>
+							<LastModificationTime>2025-01-20T00:00:00Z</LastModificationTime>
+							<LastAccessTime>2025-01-20T00:00:00Z</LastAccessTime>
+							<ExpiryTime>2025-01-20T00:00:00Z</ExpiryTime>
+							<Expires>False</Expires>
+							<UsageCount>0</UsageCount>
+							<LocationChanged>2025-01-20T00:00:00Z</LocationChanged>
+						</Times>
+						<String>
+							<Key>API token</Key>
+							<Value ProtectInMemory="True">fake-token-0123456789abcdef</Value>
+						</String>
+						<String>
+							<Key>Notes</Key>
+							<Value />
+						</String>
+						<String>
+							<Key>Password</Key>
+							<Value ProtectInMemory="True">Build-Server-Pass-77</Value>
+						</String>
+						<String>
+							<Key>TimeOtp-Secret-Base32</Key>
+							<Value ProtectInMemory="True">GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ</Value>
+						</String>
+						<String>
+							<Key>Title</Key>
+							<Value>Build server</Value>
+						</String>
+						<String>
+							<Key>URL</Key>
+							<Value>https://203.0.113.10:8443/login</Value>
+						</String>
+						<String>
+							<Key>UserName</Key>
+							<Value>deploy</Value>
+						</String>
+						<AutoType>
+							<Enabled>True</Enabled>
+							<DataTransferObfuscation>0</DataTransferObfuscation>
+						</AutoType>
+						<History />
+					</Entry>
+					<Entry>
+						<UUID>s2rLrDByZTLi8OXLOYCRlQ==</UUID>
+						<IconID>0</IconID>
+						<ForegroundColor />
+						<BackgroundColor />
+						<OverrideURL />
+						<Tags />
+						<Times>
+							<CreationTime>2025-01-23T00:00:00Z</CreationTime>
+							<LastModificationTime>2025-01-23T00:00:00Z</LastModificationTime>
+							<LastAccessTime>2025-01-23T00:00:00Z</LastAccessTime>
+							<ExpiryTime>2025-01-23T00:00:00Z</ExpiryTime>
+							<Expires>False</Expires>
+							<UsageCount>0</UsageCount>
+							<LocationChanged>2025-01-23T00:00:00Z</LocationChanged>
+						</Times>
+						<String>
+							<Key>Notes</Key>
+							<Value>The password starts and ends with two spaces.</Value>
+						</String>
+						<String>
+							<Key>Password</Key>
+							<Value ProtectInMemory="True">  spaced out password  </Value>
+						</String>
+						<String>
+							<Key>Title</Key>
+							<Value>Staging database</Value>
+						</String>
+						<String>
+							<Key>URL</Key>
+							<Value>https://db.staging.example.com:5432/</Value>
+						</String>
+						<String>
+							<Key>UserName</Key>
+							<Value>dbuser</Value>
+						</String>
+						<AutoType>
+							<Enabled>True</Enabled>
+							<DataTransferObfuscation>0</DataTransferObfuscation>
+						</AutoType>
+						<History />
+					</Entry>
+				</Group>
+			</Group>
+			<Group>
+				<UUID>JFav/rQYyVShzU1/GGVHZA==</UUID>
+				<Name>Recycle Bin</Name>
+				<Notes />
+				<IconID>43</IconID>
+				<Times>
+					<CreationTime>2025-01-01T00:00:00Z</CreationTime>
+					<LastModificationTime>2025-01-01T00:00:00Z</LastModificationTime>
+					<LastAccessTime>2025-01-01T00:00:00Z</LastAccessTime>
+					<ExpiryTime>2025-01-01T00:00:00Z</ExpiryTime>
+					<Expires>False</Expires>
+					<UsageCount>0</UsageCount>
+					<LocationChanged>2025-01-01T00:00:00Z</LocationChanged>
+				</Times>
+				<IsExpanded>True</IsExpanded>
+				<DefaultAutoTypeSequence />
+				<EnableAutoType>null</EnableAutoType>
+				<EnableSearching>False</EnableSearching>
+				<LastTopVisibleEntry>AAAAAAAAAAAAAAAAAAAAAA==</LastTopVisibleEntry>
+				<Entry>
+					<UUID>ZGVsZXRlZC1lbnRyeS0wMQ==</UUID>
+					<IconID>0</IconID>
+					<ForegroundColor />
+					<BackgroundColor />
+					<OverrideURL />
+					<Tags />
+					<Times>
+						<CreationTime>2026-09-01T00:00:00Z</CreationTime>
+						<LastModificationTime>2026-09-01T00:00:00Z</LastModificationTime>
+						<LastAccessTime>2026-09-01T00:00:00Z</LastAccessTime>
+						<ExpiryTime>2026-09-01T00:00:00Z</ExpiryTime>
+						<Expires>False</Expires>
+						<UsageCount>0</UsageCount>
+						<LocationChanged>2026-09-01T00:00:00Z</LocationChanged>
+					</Times>
+					<String>
+						<Key>Notes</Key>
+						<Value>Deleted in KeePass; it shouldn't come back.</Value>
+					</String>
+					<String>
+						<Key>Password</Key>
+						<Value ProtectInMemory="True">Old-Deleted-Pass-00</Value>
+					</String>
+					<String>
+						<Key>Title</Key>
+						<Value>Old forum account (deleted)</Value>
+					</String>
+					<String>
+						<Key>URL</Key>
+						<Value>https://oldforum.example.com/</Value>
+					</String>
+					<String>
+						<Key>UserName</Key>
+						<Value>test.person</Value>
+					</String>
+					<AutoType>
+						<Enabled>True</Enabled>
+						<DataTransferObfuscation>0</DataTransferObfuscation>
+					</AutoType>
+					<History />
+				</Entry>
+			</Group>
+		</Group>
+		<DeletedObjects />
+	</Root>
+</KeePassFile>
