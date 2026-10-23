@@ -20,7 +20,7 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 8. **Approving a new sign-in from our apps**, and a CLI build for macOS and Linux scripts.
 9. **Self-updating Windows and Linux apps**, like the Mac and Android ones.
 10. **A full security pass over the whole stack** before the first company: server, web vault, extension, apps, CI and releases.
-11. **Hands-on test checklist** for the owner: every platform, sign-in, autofill on common sites, import, sharing, recovery, offboarding.
+11. **Hands-on test checklist** for the owner: written, docs/hands-on-testing.md.
 12. **Website redesign** in the new look.
 
 ## Waiting on you
