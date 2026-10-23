@@ -40,9 +40,10 @@ export async function skipImport(page: Page) {
  * open, with upstream's Confirm and its fingerprint dialog.
  *
  * The list can reload just after the page opens (its background work, or a
- * sync after the organization changed), and the reload reuses a row's view
- * under a menu that's already open, so the menu shows another member's
- * actions. Open the menu again until Confirm opens its dialog.
+ * sync after the organization changed). A reload used to hand the row whose
+ * menu was open to another member, so the menu showed their actions; rows
+ * keep their member now (members-menu.spec.ts). Opening the menu again until
+ * Confirm opens its dialog stays, as a harmless guard.
  */
 export async function confirmMember(page: Page, email: string) {
   const row = page.getByRole("row").filter({ hasText: email });
