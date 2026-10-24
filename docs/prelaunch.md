@@ -2,26 +2,30 @@
 
 The work queue between now and selling PassBundle to MSPs and their clients. Background jobs take items from the top of "Next"; each lands as a pull request that merges when CI is green, after a security review when it touches permissions, keys, sign-in, or updates. The gap ranking comes from docs/parity.md.
 
+## Done
+
+- **Folders and per-folder permissions**: Personal plus each organization's shared folders, with presets and a grid of ten permissions, enforced by the server and the apps.
+- **Entra ID provisioning** over SCIM 2.0 (DESIGN.md, "Provisioning from Entra ID"). Checking it with a real tenant waits on a Microsoft 365 tenant.
+- **Phone app polish**: settings layout, offering fingerprint or Face ID unlock after sign-in, and a Mac window large enough for its sidebar.
+- **The apps' logo and icons**, and Windows and Linux windows that remember their size and place.
+- **Hands-on test checklist** for the owner: docs/hands-on-testing.md.
+
 ## In progress
 
-- **Extension redesign** from the approved mockups: jewel-tone categories, site icons, the "Where's your vault?" sign-in, the items list with a suggested-for-this-site section, and an item view with big copy buttons.
-- **Folders and per-folder permissions**: "vault" becomes "folder" (Personal, then each organization's shared folders), with presets plus a grid of ten permissions. Security review fixes in progress.
-- **Phone app polish**: settings layout, offering fingerprint or Face ID unlock after sign-in, the shared design pieces (category tiles, site icons, depth) for phone and desktop, and the desktop window opening large enough to show its sidebar.
+- **Desktop and phone parity with the web vault**: folders and their permissions, templates, site icons, item history, password health, and a Generator tab on phones. Security review fixes in progress.
+- **Extension redesign** from the approved mockups: jewel-tone categories, site icons, the "Where's your vault?" sign-in, and an item view with big copy buttons. Rebasing.
+- **Exposed passwords in the MSP health view**, using the k-anonymity range check, with an off switch for the check after unlocking. Security review fixes in progress.
+- **Events to security tools**: a signed webhook, syslog over TLS (JSON or CEF), and Microsoft Sentinel, per organization or one feed for an MSP. Security review fixes in progress.
 
 ## Next
 
-1. **Desktop app parity with the web vault**: three panes (menu, list, item), folders, categories and templates, item history, the same icons. Android gets the same pieces in its phone layout.
-2. **Web vault redesign** from the mockups: calm solid ground with depth instead of glass, jewel tiles in the menu and list, site icons, a side panel for the selected item.
-3. **Entra ID provisioning**: built (DESIGN.md, "Provisioning from Entra ID"). People added and removed in Microsoft 365 appear in and leave the client's organization over SCIM 2.0, from a token on the organization's Provisioning page; tested with the requests Microsoft documents for Entra, replayed. Checking it with a real tenant waits on a Microsoft 365 tenant (see "Waiting on you").
-4. **Sign in with Entra (SSO) per organization**, master password still unlocking at first; trusted-device unlock after, as its own design with test vectors.
-5. **Item history and the new folders in the extension and the apps**, so every app shows and restores the same versions.
-6. **Events to security tools** (a webhook and syslog feed for Huntress, Blumira, Sentinel and similar).
-7. **Exposed passwords in the MSP health view**, using the k-anonymity range check (no passwords leave the browser).
-8. **Approving a new sign-in from our apps**, and a CLI build for macOS and Linux scripts.
-9. **Self-updating Windows and Linux apps**, like the Mac and Android ones.
-10. **A full security pass over the whole stack** before the first company: server, web vault, extension, apps, CI and releases.
-11. **Hands-on test checklist** for the owner: written, docs/hands-on-testing.md.
-12. **Website redesign** in the new look.
+1. **Web vault redesign** from the mockups: calm solid ground with depth instead of glass, jewel tiles in the menu and list, site icons, a side panel for the selected item. Starts when the extension redesign lands, since both change brand/look.css.
+2. **Self-updating Windows and Linux apps**, like the Mac and Android ones.
+3. **Sign in with Entra (SSO) per organization**, master password still unlocking at first; trusted-device unlock after, as its own design with test vectors.
+4. **Item history and the new folders in the extension**, so every app shows and restores the same versions.
+5. **Approving a new sign-in from our apps**, and a CLI build for macOS and Linux scripts.
+6. **A full security pass over the whole stack** before the first company: server, web vault, extension, apps, CI and releases.
+7. **Website redesign** in the new look.
 
 ## Waiting on you
 
@@ -31,4 +35,5 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 - **Apple Developer account** for the iPhone app, iPhone AutoFill, and a notarized Mac app.
 - **Store listings** when you want them (you said not yet): Chrome, Edge, Firefox.
 - **Business details for the site and legal pages**: legal name, payment processor, refunds, governing law, prices (marked as placeholders in site/).
+- **A paid Have I Been Pwned key** for the report of breached accounts at a client's email domain.
 - **MSP billing**: Stripe and the pricing model.
