@@ -222,7 +222,7 @@ An MSP sets its policies once, and every client follows them. A client that need
 - **Editing:** the console edits a default with upstream's own form for that policy, so options, wording, and checks match the admin console. Only policies the server supports are offered; account recovery only when the server sends email.
 - **Audit log:** each default change, with how many clients changed and kept their own setting, and each client moved back to the default.
 - **Tests:** API tests for following and own settings (a changed default reaches followers and skips others; changing a client's policy makes it its own; using the default brings it back), side effects through a default (two-step login revoking a member), the legacy MSP defaults, and the permission matrix. A console e2e test changes a default, sees which clients took it, and uses the default for a client with its own setting.
-- **Status:** built (`keykeeper_msp_policies.rs`, a migration for SQLite and PostgreSQL, the console's Default policies section, and a note on each client's Policies page that names its own settings). The server compares what each policy does: an off policy's options don't count, and missing, empty, and null options are the same. A changed default goes only to clients whose policy matched the old default, so a client's own setting is never overwritten by accident. The edit dialog lists the clients that follow the default, all checked; unchecked ones keep what they have, which then counts as their own setting (`keep` in the request). Not yet: policies Vaultwarden doesn't support (such as requiring single sign-on).
+- **Status:** built (`keykeeper_msp_policies.rs`, a migration for SQLite and PostgreSQL, the console's Default policies section, and a note on each client's Policies page that names its own settings). The server compares what each policy does: an off policy's options don't count, and missing, empty, and null options are the same. A changed default goes only to clients whose policy matched the old default, so a client's own setting is never overwritten by accident. The edit dialog lists the clients that follow the default, all checked; unchecked ones keep what they have, which then counts as their own setting (`keep` in the request). Not offered as defaults: Require single sign-on, since each client's sign-in is its own (see "Sign in with Microsoft Entra ID").
 
 ### Joining
 
@@ -650,6 +650,101 @@ This is the whole of what a stolen token is worth, in its own organization only.
 ### Status
 
 Built: the server (`src/api/core/keykeeper_scim/`, `keykeeper_provisioning.rs`, `db/models/keykeeper_scim.rs`, a migration for SQLite and PostgreSQL), the admin console's Provisioning page, and the MSP console's per-client status. Checking it against a real Entra tenant waits on the owner's Microsoft 365 tenant (docs/prelaunch.md, "Waiting on you"): Test Connection, Provision on demand, a first cycle with groups, turning someone off, a permanent delete, and a revoked token's quarantine. Not built: OAuth client credentials in place of the long-lived token, limiting the endpoint to Microsoft's published address ranges, Entra's on-premises agent, a "From Microsoft Entra ID" badge on the Members page, and other directories (Okta, Google Workspace, JumpCloud speak SCIM 2.0 too, untested).
+
+## Sign in with Microsoft Entra ID
+
+Each organization, and so each of an MSP's clients, can let its people sign in with their Microsoft 365 work account. Each one connects its own Entra tenant: there's no PassBundle-wide identity provider, and one organization's sign-in never signs anyone in to another's. Single sign-on proves who someone is; their master password still unlocks their vault, so nothing about keys changes (upstream's "SSO with master password"). Built from the OpenID Connect Core 1.0 and Discovery specs, RFC 7636 (PKCE), and Microsoft's public documentation ("OpenID Connect on the Microsoft identity platform", "ID token claims reference", "Optional claims reference", "Signing key rollover", "Register an application"), never from another product's code (CLEAN_ROOM.md). Vaultwarden's own OpenID Connect code (one provider for the whole server, accounts matched by email) stays in the server for merges, but the server refuses `SSO_ENABLED`.
+
+### Setting it up
+
+- **Where:** the organization's Settings, Single sign-on, for its owners and admins, and for an MSP's client its MSP's admins (not technicians), as for provisioning. Anyone else gets "not found", never 403 (upstream's web vault signs out on 403).
+- **What it asks for:** turn it on; the SSO identifier people type (3 to 40 lowercase letters, digits, and hyphens, unique on the server); the Directory (tenant) ID and the Application (client) ID, both GUIDs; and the app's client secret. The page shows the redirect URI to paste into Entra (`https://<server>/identity/connect/oidc-signin`), a link that starts the sign-in, the setup steps (docs/sso-entra.md has them in full), the email domains, and the accounts linked so far.
+- **Turning it on checks the tenant:** the server fetches the tenant's OpenID configuration and refuses a tenant Microsoft doesn't know, and the personal-accounts tenant (`9188040d-...`).
+- **The secret is write-only:** sent once with Save, never in any answer. The page says when it was saved; saving with the field empty keeps it.
+- **Changing the tenant** removes the links to the old tenant's people, who can't sign in here anymore.
+
+### How a sign-in works
+
+The server is the OpenID client of the organization's tenant: it holds the app's secret, redeems the code, and checks the ID token. The web vault is the server's client, with its own state and PKCE challenge, as upstream's apps already expect, so upstream's sign-in pages work unchanged.
+
+1. The person types their email and chooses Use single sign-on. If the email's domain is verified (below), the web vault finds the organization's identifier by itself (`POST /api/organizations/domain/sso/verified`); otherwise they type it. `GET /identity/sso/prevalidate` checks it.
+2. `GET /identity/connect/authorize` (web vault and browser extension only, back to the web vault's `sso-connector.html` only): the server keeps the app's state, client, redirect URI, and PKCE challenge, makes its own state, nonce, and PKCE verifier (32 random bytes each), sets a cookie tying the answer to this browser (HttpOnly, Secure, SameSite=Lax, path `/identity/connect/`, ten minutes), and sends the browser to the tenant's authorization endpoint with `response_type=code`, `scope=openid profile email`, `response_mode=query`, the state, nonce, and S256 challenge.
+3. Microsoft sends the browser back to `/identity/connect/oidc-signin`. The server takes the sign-in by its state, once, from the browser with the cookie, and right away redeems Microsoft's code at the tenant's token endpoint with the client secret, its PKCE verifier, and the redirect URI, then checks the ID token (below). Whatever that comes to, the browser goes back to the web vault with a one-time code of the server's own and the app's state; the outcome is told when the code is redeemed, so the person sees why.
+4. The web vault redeems that code at `/identity/connect/token` (`grant_type=authorization_code`) with its PKCE verifier, the same client, and the same redirect URI. The server decides which account it is (below), runs two-step login as for a password, and answers as a password sign-in does: the account key wrapped by the master key, which the person's master password unwraps. Someone invited who has no account yet is asked to set a master password, upstream's first single sign-on.
+5. The session is PassBundle's own, refreshed as a password session is. Microsoft's tokens aren't kept.
+
+### What's validated
+
+The ID token (`api/core/keykeeper_sso/token.rs`, a pure function with a unit test per check):
+- **Signature:** RS256 only (never `none`, never an HMAC keyed with a public key), with a key the tenant publishes at its own `jwks_uri`, by `kid`. An unknown `kid` fetches the keys again, at most every five minutes per tenant, as Microsoft's key rollover guidance says.
+- **`iss`** is exactly `https://login.microsoftonline.com/<tenant id>/v2.0`, the tenant's own issuer (the discovery document must name the same issuer, and its endpoints must be on the same host).
+- **`tid`** is the organization's tenant, and **`ver`** is `2.0`.
+- **`aud`** is exactly the app's client id, one audience; `azp`, if present, agrees.
+- **`exp`**, **`nbf`**, and **`iat`** are in range, with five minutes of clock skew, and `iat` no older than ten minutes.
+- **`nonce`** is the one this sign-in sent (constant-time compare); a missing one fails.
+- **`oid`** is there and is a GUID.
+
+And around it: the state is single use (taken before anything else happens) and expires in ten minutes; the cookie must match (so Microsoft's answer can't be replayed into another browser, and a sign-in started elsewhere can't be finished here); the server's one-time code is single use, expires with the sign-in, and needs the app's PKCE verifier, client, and redirect URI; states, codes, and the cookie are kept only as SHA-256 hashes; the server follows no redirects from Microsoft and reads at most 256 KiB; the request log leaves out the identity routes' queries.
+
+### How accounts link
+
+People are identified by Entra's immutable tenant id and object id (`tid` + `oid`), per organization (`keykeeper_sso_links`), never by email. Entra's `email` claim isn't verified (Microsoft: "never use it for authorization"), and an Entra admin can set a user's mail to anything; matching accounts by it is how the nOAuth class of account takeover happens. The rules (`link.rs`, a pure decision with a unit test per rule):
+
+- **Already linked:** the person signs in to that account, whatever email Entra sends now, while the account is still within the rules below. A spoofed email never moves a link.
+- **First sign-in:** the email Entra sends is only a suggestion for which account to link, and only when something vouches for it: its domain is one this organization verified with DNS, or Entra's `xms_edov` claim says the email's domain owner is verified. Then the account with exactly that email links if it's a member of this organization (invited, joined, or confirmed, not turned off), or if it's in no organization at all, has an account (not just an invitation elsewhere), and its email is at one of this organization's verified domains.
+- **Never:** an account on any MSP's staff (their account reaches every client, so one client's directory could otherwise sign in to all of them; they sign in with their master password); an account already linked to another Entra person here; a member of another organization who isn't a member of this one; a disabled account. Nobody is made an account: someone with no account and no invitation is told to ask for one.
+- **Each refusal says why** on the sign-in page ("isn't a member of Acme Dental", "is already linked to a different Microsoft account") and in the event log.
+- **Unlinking:** the settings page lists linked accounts; unlinking one (say, after the person's Entra account was recreated) lets their next sign-in link again, under the same rules.
+
+### Email domains
+
+- **Proving one:** add the domain, and the page shows a TXT record for the domain itself, `passbundle-verification=<43 random characters>`. Verify asks the DNS (no cache) and verifies the domain when the exact value is there. Domains are exact (a subdomain is its own) and at most 20 per organization.
+- **One organization each:** any organization may add a domain, but only one can verify it (a unique index decides a race), and a domain verified elsewhere can't be added.
+- **What it does:** typing an email there finds this organization's sign-in, and emails there are vouched for when linking. Removing it stops both; accounts already linked keep signing in.
+
+### Require single sign-on
+
+Upstream's policy (type 4), enforced by the server:
+- **Who:** members who joined (accepted or confirmed) as anything but an owner: regular members, custom roles, and the organization's own admins. **Never:** owners, and anyone on an MSP's staff (who, per person, can't sign in with a client's single sign-on at all). So an organization always has someone who can sign in with a password and fix its settings.
+- **How:** a password sign-in (including a sign-in approved from another device) that checks out answers `SsoOrganizationIdentifier`, and the apps send the person to that sign-in; a wrong password says nothing about it. A password session ends at its next refresh. API key sign-ins (the CLI) still work, as upstream's do.
+- **Prerequisites:** single sign-on on, and the Single organization policy (so a regular member belongs to one organization). Turning off Single organization, or single sign-on, while it's on is refused. It isn't an MSP default policy: each client's sign-in is its own.
+- **Account recovery keeps working:** an owner or admin resets a member's master password as before; the member signs in with single sign-on and the new master password unlocks.
+
+### The client secret
+
+The server must use the secret, so it can't be hashed. It's kept sealed with the event-streaming change's sealed-secrets module (AES-256-GCM under a key derived from the server's RSA key, kept outside the database, each ciphertext bound to its organization), so a copy of the database alone doesn't reveal it. **Not yet:** until that change merges, the secret is stored as typed behind the two functions that will call it (`keykeeper_sso::secret`), and this work doesn't merge before then. A certificate credential instead of a secret is later.
+
+### Events
+
+In the organization's event log: single sign-on turned on and off (upstream's 1604 and 1605) and its settings changed (1694, ours, naming what changed: identifier, tenant, app, client secret), high severity; a domain added, verified, not found, and removed (upstream's 2000 to 2003, with the domain); someone's first sign-in, which links them (upstream's 1510); every sign-in (1590, ours); every refusal, with why (1591, ours: "ana@acme.test isn't a member", "the ID token was for another tenant", "Microsoft refused: access_denied ..."); and an unlink (upstream's 1505). An MSP's activity log has the settings, domain, and unlink changes in its clients, with who made them. Never logged: the secret, tokens, codes, or states.
+
+### Threat model
+
+- **Another tenant's users** (the nOAuth case): can't sign in, because the issuer and `tid` must be the organization's tenant, and email never identifies anyone.
+- **People in the organization's own tenant:** a user who can't change their own mail can't claim another's account; one whose mail an admin changed can claim only what the rules allow, and never an account already linked or outside the organization. The organization's Entra admins can already sign in as any of their users, so for that organization's sign-in they're trusted, as with any SSO; single sign-on still only authenticates, and the master password is needed to read anything.
+- **One organization against another, or an MSP's clients against each other:** a client's sign-in never signs in a member of another organization who isn't its member, never MSP staff, and the policy never applies to them.
+- **A stolen browser code or callback URL:** useless without the browser's cookie, the app's PKCE verifier, and within ten minutes, once.
+- **Login CSRF and sign-in mix-ups:** the state, the browser cookie, PKCE on both legs, and the one-time code.
+- **A copy of the database:** holds no secret usable alone once sealed, only hashes of states and codes, and no key that opens a vault.
+- **A hacked server:** gains nothing from single sign-on: it already issues sessions, and it still can't decrypt vaults.
+- **DNS:** domain checks trust the server's resolver; DNSSEC isn't checked. A forged answer could verify a domain for the wrong organization, which matters only for finding the sign-in and for linking accounts at that domain that are in no organization (who still need a vouched-for email from that organization's tenant). Checked once, not again later.
+- **Sessions outlive Entra:** turning someone off in Entra doesn't end a PassBundle session already open; provisioning's revoke does (it revokes their membership), and the next single sign-on is refused.
+
+### Out of scope (for now)
+
+Trusted-device unlock and anything else that changes how keys are held (its own design, with test vectors, first); making accounts on first sign-in without an invitation; single sign-on from the desktop and phone apps and the CLI (the web vault and the browser extension use it; the extension hands off to the web vault, upstream's way, untested); other identity providers (Okta, Google) and SAML; a certificate credential; single sign-out; checking domains again later; an MSP's own staff signing in with single sign-on.
+
+### Tests
+
+- **Unit (server):** every ID token check (wrong issuer, tenant, audience, an extra audience, expired, not yet valid, issue time, a bad signature, a spliced payload, `none` and HMAC, an unknown key, missing and wrong nonce, v1, no object id), `xms_edov`, an email claim that changes nothing, JWKS parsing; every linking rule (a spoofed email on a linked person, an unvouched member's email, an account linked to someone else, non-members, a member of another organization, a no-organization account at a verified domain, MSP staff, turned off, disabled, no account, no email); identifiers, GUIDs, domains, PKCE (RFC 7636's example), and TXT matching.
+- **API (`e2e/tests/api/sso.spec.ts`), against a stand-in for Entra (`e2e/entra-standin.mjs`, an OpenID provider at Entra's per-tenant paths with keys made at start, and a DNS server):** setup and who may do it, domain verification and discovery, linking by object id with a spoofed email, refusals, MSP staff, each token check end to end, single-use states and codes, PKCE, redirect URI, the browser cookie, Require single sign-on and its prerequisites, someone invited without an account, and the event log.
+- **Mail (`e2e/tests/mail/sso-recovery.spec.ts`):** account recovery with single sign-on required.
+- **Web vault (`e2e/tests/sso.spec.ts`):** an owner sets it up on the page and verifies a domain; a member types their email, picks their account, and unlocks with their master password; someone outside the organization is told why; with the policy on, a member's password sends them to it and the owner's still works.
+- **Not yet, needs a real tenant:** Microsoft itself (docs/sso-entra.md, "Checking it with a real tenant").
+
+### Status
+
+Built: the server (`src/api/core/keykeeper_sso/`, `db/models/keykeeper_sso.rs`, a migration for SQLite and PostgreSQL), the admin console's Single sign-on page, the sign-in page saying why a sign-in was refused, the policy's wording, and the event log's and MSP activity's sentences. Waiting: the sealed secret (on the event-streaming change), and checking it with a real Microsoft 365 tenant (docs/prelaunch.md, "Waiting on you").
 
 ## Browser import
 

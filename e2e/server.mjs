@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { paths, port, smtpPort } from "./paths.mjs";
+import { dnsPort, entraPort, paths, port, smtpPort } from "./paths.mjs";
 
 // KK_MAIL=1 starts the server that sends email to the mail catcher. KK_LIMITS=1
 // starts one with the real login limits, which the others relax. KK_GROUPS=1
@@ -97,6 +97,10 @@ const child = spawn(paths.serverBin, [], {
     SIGNUPS_VERIFY: "false",
     MSP_SIGNUPS_ALLOWED: "true",
     DISABLE_ICON_DOWNLOAD: "true",
+    // Single sign-on goes to the local stand-in for Microsoft Entra ID, and
+    // domain checks ask its DNS server (entra-standin.mjs).
+    SSO_ENTRA_AUTHORITY: `http://127.0.0.1:${entraPort}`,
+    SSO_DOMAIN_DNS_SERVER: `127.0.0.1:${dnsPort}`,
     // Every test logs in from 127.0.0.1, and some accounts many times. The
     // real limits (tests/api/login-limits.spec.ts) would fail tests depending
     // on how many ran before.

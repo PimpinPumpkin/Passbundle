@@ -1,0 +1,85 @@
+# Set up sign in with Microsoft Entra ID
+
+For an organization's owners and admins, or its IT provider's admins. About 15 minutes. You need an Entra role that can register applications (Application Developer or higher) and, to grant consent for everyone, Cloud Application Administrator or higher. How it works and what it checks: DESIGN.md, "Sign in with Microsoft Entra ID".
+
+Single sign-on proves who someone is. Their master password still unlocks their items, so PassBundle can't open them without it.
+
+## 1. Register an app in Entra
+
+From Microsoft's "Register an application in Microsoft Entra ID":
+
+1. Sign in to the [Microsoft Entra admin center](https://entra.microsoft.com). If you manage several tenants, switch to the organization's own with the Settings icon in the top menu.
+2. Go to **Entra ID**, **App registrations**, and choose **New registration**.
+3. **Name:** PassBundle (people may see it when they sign in).
+4. **Supported account types:** single tenant (accounts in this organizational directory only).
+5. **Redirect URI:** choose **Web**, and paste the redirect URI from PassBundle's Single sign-on page (the organization's Settings, Single sign-on). It looks like `https://vault.passbundle.com/identity/connect/oidc-signin`.
+6. Choose **Register**.
+7. On the app's **Overview** page, copy the **Application (client) ID** and the **Directory (tenant) ID**.
+
+## 2. Make a client secret
+
+1. In the app, open **Certificates & secrets**, **Client secrets**, and choose **New client secret**.
+2. Describe it ("PassBundle sign-in") and choose when it expires. Microsoft recommends less than 12 months.
+3. Copy its **Value** right away (Entra shows it once). Not the Secret ID.
+4. Put a reminder in your calendar a few weeks before it expires: make a new secret, paste it into PassBundle, then delete the old one. Sign-in stops when the secret expires.
+
+## 3. Ask for the email claim and xms_edov
+
+PassBundle recognizes people by their Entra object ID, never their email. The first time someone signs in, it links their PassBundle account by email only when the email is vouched for: at a domain you verify in PassBundle (step 5), or with Microsoft's `xms_edov` claim saying the email's domain is verified.
+
+1. In the app, open **Token configuration** and choose **Add optional claim**.
+2. Choose **ID**, tick **email**, and add it. If Entra offers to add the Microsoft Graph email permission, accept.
+3. Add **xms_edov** the same way. If it isn't in the list, open **Manifest** and add `{ "name": "xms_edov", "essential": false }` to `optionalClaims`, `idToken`, then save. (The portal may warn that it doesn't recognize the claim; Microsoft lists it in its "Optional claims reference".)
+
+## 4. Grant consent, and choose who may sign in
+
+1. In the app, open **API permissions**. Microsoft Graph's **User.Read** is there by default; `openid`, `profile`, and `email` are what PassBundle asks for. Choose **Grant admin consent for** your organization, so people aren't asked to consent the first time.
+2. Optional, recommended: go to **Entra ID**, **Enterprise apps**, open PassBundle, and in **Properties** set **Assignment required?** to **Yes**. Then in **Users and groups**, add the people or groups who may sign in. Everyone else is refused by Microsoft before they reach PassBundle.
+
+## 5. Turn it on in PassBundle
+
+1. On the organization's **Settings**, **Single sign-on** page, paste the Directory (tenant) ID, the Application (client) ID, and the client secret's Value.
+2. Choose an **SSO identifier**: what people type to find this sign-in, such as `acme-dental`.
+3. Tick **Turn on single sign-on** and **Save**. PassBundle checks that Microsoft knows the tenant.
+4. Under **Email domains**, add each domain your people's emails are at. PassBundle shows a TXT record for each one; add it to the domain's DNS (at the domain itself, often written `@`, alongside Microsoft 365's own `MS=` record), then choose **Verify**. DNS changes can take a while to show. A domain belongs to one organization.
+
+Now people can sign in: on the sign-in page, they type their email and choose **Use single sign-on**. With a verified domain, they go straight to Microsoft; otherwise they type the SSO identifier. The page also shows a link that starts the sign-in, for an intranet page or a bookmark.
+
+## 6. Optional: require it
+
+Policies, **Require single sign-on**, makes members sign in with it. It needs single sign-on on and the **Single organization** policy. Owners and your IT provider's staff can always sign in with their passwords, so nobody is locked out, and account recovery keeps working.
+
+## Who can sign in
+
+- **Members of the organization** (invited, joined, or confirmed), when their email is vouched for (step 3 or 5) the first time. After that, their Microsoft account is linked and their email doesn't matter.
+- **Someone invited who has no account yet**: they sign in with Microsoft, then choose a master password.
+- **Accounts in no organization at a verified domain**: they sign in to their own vault.
+- **Never:** people who aren't members (they're told so), your IT provider's staff (they use their master password), or an account already linked to a different Microsoft account. To relink someone whose Microsoft account was recreated, unlink them under **Linked accounts**.
+
+## When something goes wrong
+
+The sign-in page says what PassBundle refused, and the organization's event log (Reporting, Event logs) has every sign-in and refusal with the reason. Microsoft's own errors (AADSTS codes, from its "Microsoft Entra authentication and authorization error codes"):
+
+| What you see | Usually means |
+|---|---|
+| AADSTS50011, the redirect URI doesn't match | The redirect URI in Entra isn't exactly the one on PassBundle's page (step 1.5). |
+| AADSTS700016, application not found in the directory | The client ID is wrong, or the app is in another tenant than the tenant ID. |
+| AADSTS7000215, invalid client secret | You pasted the Secret ID, or the secret expired. Make a new one (step 2). |
+| AADSTS50105, not assigned to a role for the application | Assignment is required and this person isn't assigned (step 4.2). |
+| AADSTS65001, the user or administrator hasn't consented | Grant admin consent (step 4.1). |
+| "Microsoft didn't confirm that ... is yours" | Their email's domain isn't verified in PassBundle and the token has no `xms_edov` (steps 3 and 5). |
+| "... isn't a member of ..." | Invite them first (Members, or provisioning from Entra). |
+
+## Checking it with a real tenant
+
+Not done yet: PassBundle's tests use a stand-in for Entra. With a Microsoft 365 developer tenant, check:
+
+- [ ] Steps 1 to 5 as written; the setup page's steps match what Entra shows.
+- [ ] A member signs in and unlocks with their master password; their first sign-in links them (event log).
+- [ ] The ID token carries `email` and `xms_edov` after step 3 (the event log says "not vouched for" when it doesn't).
+- [ ] A user not assigned to the app (with Assignment required) is refused by Microsoft with AADSTS50105, and PassBundle shows it.
+- [ ] A wrong secret is refused with AADSTS7000215; an expired or deleted one too.
+- [ ] Require single sign-on: a member's password sign-in goes to Microsoft; the owner's doesn't.
+- [ ] Account recovery: reset a member's master password; they sign in with Microsoft and unlock with the new one.
+- [ ] Conditional Access (for example, requiring MFA for the app) applies at Microsoft's sign-in, with nothing to change here.
+- [ ] A guest (B2B) user in the tenant, invited to the organization: links only by their own invited email.

@@ -23,6 +23,11 @@ export const limitsServerPort = process.env.KK_LIMITS_SERVER_PORT ?? "8097";
 // A fourth with groups turned on explicitly (ORG_GROUPS_ENABLED), so the
 // Access page's tests don't depend on the server's default.
 export const groupsServerPort = process.env.KK_GROUPS_SERVER_PORT ?? "8098";
+// A stand-in for Microsoft Entra ID's sign-in (entra-standin.mjs), which
+// every test server uses for single sign-on, and its DNS server (UDP) for
+// domain checks.
+export const entraPort = process.env.KK_ENTRA_PORT ?? "8099";
+export const dnsPort = process.env.KK_DNS_PORT ?? "8100";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??
