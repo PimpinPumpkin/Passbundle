@@ -42,6 +42,7 @@ On a real computer and the Pixel, with logins saved for each:
 - [ ] **Account recovery:** as the organization's admin, reset your second person's master password; they sign in with the new one.
 - [ ] **MSP console:** add a client, look at its health numbers, push a template, check the activity log.
 - [ ] **Event log** shows what you just did.
+- [ ] **Event streaming** (Reporting > Event streaming, and the MSP console's section): send events to a real SIEM you have (Huntress, Blumira, or a Sentinel workspace, set up as docs/event-streaming.md says), press Test, do something in the organization, and find both in the SIEM.
 
 ## When Microsoft 365 is ready
 
