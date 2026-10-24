@@ -41,10 +41,10 @@ const file = (version, platform, size) => ({
 });
 
 /** A manifest as the release workflows write it (jq's compact output, in this key order). */
-const manifest = (os, version, files, tag = `${os}-v${version}`) =>
+const manifest = (os, version, files, tag = `${os}-v${version}`, { format = 1, app = "com.passbundle.app" } = {}) =>
   JSON.stringify({
-    format: 1,
-    app: "com.passbundle.app",
+    format,
+    app,
     tag,
     version,
     commit: "0123456789abcdef0123456789abcdef01234567",
@@ -59,6 +59,11 @@ const forWindows = { tag: "windows-v0.1.5", os: "windows", platform: "windows-x6
 const tooLarge = manifest("windows", "0.1.5", [file("0.1.5", "windows-x64", 200 * 1024 * 1024 + 1)]);
 const otherTag = manifest("windows", "0.1.6", [file("0.1.6", "windows-x64", 15728640)]);
 const otherVersion = manifest("windows", "0.1.6", [file("0.1.6", "windows-x64", 15728640)], "windows-v0.1.5");
+const paddedVersion = manifest("windows", "0.1.05", [file("0.1.05", "windows-x64", 15728640)], "windows-v0.1.5");
+const linuxX64Only = manifest("linux", "0.1.5", [file("0.1.5", "linux-x64", 11534336)]);
+const otherApp = manifest("windows", "0.1.5", [file("0.1.5", "windows-x64", 15728640)], undefined, { app: "com.example.other" });
+const otherFormat = manifest("windows", "0.1.5", [file("0.1.5", "windows-x64", 15728640)], undefined, { format: 2 });
+const otherName = manifest("windows", "0.1.5", [{ ...file("0.1.5", "windows-x64", 15728640), name: "PassBundle-0.1.4-windows-x64.zip" }]);
 
 const vectors = {
   version: 1,
@@ -68,7 +73,8 @@ const vectors = {
   // Each: a manifest, a signature, what the app expects (the tag it found it
   // on, its OS and platform, and its own build number), and either the file
   // it takes or why it refuses: "signature" (not the key's, over the prefix
-  // and these bytes), "tag", "version", "notNewer", or "tooLarge".
+  // and these bytes), "tag", "version", "notNewer", "tooLarge", "noFile"
+  // (nothing for its platform), "app", "malformed", or "name".
   cases: [
     {
       name: "Windows, as signed",
@@ -139,6 +145,48 @@ const vectors = {
       signature: signWith(key, tooLarge),
       expect: forWindows,
       refused: "tooLarge",
+    },
+    {
+      name: "signed, but its version is written with a leading zero (0.1.05 for 0.1.5)",
+      manifest: paddedVersion,
+      signature: signWith(key, paddedVersion),
+      expect: forWindows,
+      refused: "version",
+    },
+    {
+      name: "a Windows manifest, read by a Linux copy",
+      manifest: windows,
+      signature: signWith(key, windows),
+      expect: { tag: "linux-v0.1.5", os: "linux", platform: "linux-x64", runningBuild: 4 },
+      refused: "tag",
+    },
+    {
+      name: "a Linux manifest with only the x64 file, read by an arm64 copy",
+      manifest: linuxX64Only,
+      signature: signWith(key, linuxX64Only),
+      expect: { tag: "linux-v0.1.5", os: "linux", platform: "linux-arm64", runningBuild: 4 },
+      refused: "noFile",
+    },
+    {
+      name: "signed, but for another app",
+      manifest: otherApp,
+      signature: signWith(key, otherApp),
+      expect: forWindows,
+      refused: "app",
+    },
+    {
+      name: "signed, but in a format this app doesn't read",
+      manifest: otherFormat,
+      signature: signWith(key, otherFormat),
+      expect: forWindows,
+      refused: "malformed",
+    },
+    {
+      name: "signed, but naming another release's file",
+      manifest: otherName,
+      signature: signWith(key, otherName),
+      expect: forWindows,
+      refused: "name",
     },
   ],
 };
