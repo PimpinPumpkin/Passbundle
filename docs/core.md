@@ -121,6 +121,20 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 - **Refused:** editing an SSH key (the web vault edits them for now), changing an item into another kind (a login into a note, say), and moving an item to another owner, which the web vault does by re-encrypting it.
 - **Tested** on the vectors' item with its own key, changed as the web vault would leave it: the edit keeps each of these, what the server keeps opens again under the same key, and the history reads back newest first (`core/tests/editing.rs`).
 
+## Folders and permissions
+
+The apps keep to the same rules as the web vault and the server (DESIGN.md, "Folders and permissions"). The server enforces each one again; the apps never offer more than it allows.
+
+- **What the core reads:** with each shared folder, the person's grid there, as PassBundle's server sends it (`keykeeper`: see passwords, create, edit, delete, export, share, print, view item history, manage), or, from a server that sends no grid, the closest preset of upstream's `readOnly`, `hidePasswords`, and `manage`. With each item, upstream's `edit`, `viewPassword`, and `permissions.delete`.
+- **What a server leaves out counts as the least access:** a shared folder with no grid and none of upstream's fields is read only with its passwords hidden, and an organization's item without `edit`, `viewPassword`, or `permissions.delete` can't be edited, shown, or deleted. The person's own items aren't held back: they're theirs.
+- **An item's grid** (`Vault::grid`) is the most open of its shared folders the person has, held to what the server says of the item itself, as the server decides. The app shows only what that grid allows: Edit, Move to trash, Reveal, Copy, and Version history.
+- **Hidden passwords** ("can view, except passwords"): the core never hands out an item's secrets, for revealing, copying (on computers, and through the phones' own clipboard code), or one-time codes. Only values known to be plain are given: the username, the notes, the plain details of a card, an identity, an SSH key, or a newer kind, and plain text or yes-or-no custom fields. Anything else, a name added later included, is a secret. Android's autofill still fills them, as upstream's apps do, without showing them.
+- **Editing** needs edit and see passwords: the editor would otherwise save blanks over secrets it couldn't show (`App::save` refuses it too). The web vault edits those items.
+- **Moving between shared folders** (the editor's Folder picker) is checked first, as the server's `change_item_folders` checks it: edit and share on the item, share in each shared folder it leaves, and create in each it joins. A refused move saves nothing. The core saves the item, then `PUT /api/ciphers/<id>/collections_v2`, keeping the shared folders it's in that the picker doesn't show.
+- **Custom templates' hidden defaults** aren't given to someone the template's shared folder hides passwords from, nor while the template note asks for the master password again and it hasn't been given.
+- **Version history** shows where the person has view item history; its contents need see passwords too, and clearing it needs view item history and delete in the same shared folder (or their own item), as the server decides (DESIGN.md, "Item history").
+- **Tests:** against a real server (`core/tests/server.rs`, `a_shared_folders_permissions_hold_in_the_app`): a member with hidden passwords in one shared folder and edit in another gets no secrets, copies a username, can't edit or delete, gets a template's plain default but not its hidden one, and has a move into a folder they can't add to refused before anything is saved. On the vectors (`core/tests/editing.rs`): a server that leaves the fields out gives the least access, and a template that asks for the master password keeps its hidden default back until it's given.
+
 ## Making an account
 
 The apps make an account the way upstream's apps do, so it opens in the web vault, the browser extension, and upstream's apps too (`core/src/signup.rs`, `App::sign_up`, `pb_sign_up`). On the sign-in screen, "Create account".
@@ -143,9 +157,12 @@ The apps make an account the way upstream's apps do, so it opens in the web vaul
 | Access token | memory only |
 | (Where) | the OS's local app data folder, in `PassBundle`: `AppData\Local` on Windows, `Application Support` on macOS, `~/.local/share` on Linux. Files are readable only by the person (mode 600 where the OS has modes). The secret store entry is service `PassBundle`, account `<email> on <server>`. |
 | Master password, master key, user key, private key, organization keys, anything decrypted | memory only, while unlocked; never on disk |
+| Websites' icons, and which sites had none | memory only, while unlocked, at most 1,000 sites and 8 MB; never on disk, since they say which sites the vault has logins for. An `icons` folder an earlier build kept is deleted when the app opens. |
+| An item's version history, as the server sent it and opened | memory only, the last item's, while unlocked |
+| How the app looks (website icons on or off) | the app's data folder |
 
 - **No secret store** (a Linux desktop without a keyring running): nothing is kept. The vault still unlocks from this device, and the app asks to sign in again to sync.
-- **Signing out** forgets the kept sync and the refresh token; the server and email stay, to sign in again.
+- **Signing out** forgets the kept sync and the refresh token; the server and email stay, to sign in again. Locking and signing out forget the icons and the history too.
 - **Unlock with Windows Hello or Touch ID:** through the desktop agent, with the extension's enrollment (below).
 - **"Never lock"** (keeping the user key on disk) isn't offered.
 
@@ -153,7 +170,8 @@ The apps make an account the way upstream's apps do, so it opens in the web vaul
 
 - Keys and decrypted secrets live in types that wipe themselves when dropped (`zeroize`).
 - Locking drops them all, along with every decrypted item. The app also locks by itself (below).
-- **Secrets stay out of Dart.** The screens get what they draw: names, usernames, websites, folders. A password, a one-time code secret, or a hidden field reaches Dart only while the person has it revealed on screen. Copying never passes through Dart: the core puts the value on the clipboard itself, and clears it after 30 seconds if it's still there (never something copied since). It's marked to stay out of clipboard history, the cloud clipboard, and clipboard monitors on Windows, and out of clipboard managers on macOS (`org.nspasteboard.ConcealedType`); Linux under X11 has no such mark. Dart's strings can't be wiped, so this keeps secrets in Rust's memory, which can. The exceptions are what the person types or edits: the master password passes through Dart once (the field is cleared as soon as the core has it), and an item's secrets pass through Dart while its editor is open, as typing them would.
+- **Secrets stay out of Dart.** The screens get what they draw: names, usernames, websites, folders. A password, a one-time code secret, or a hidden field reaches Dart only while the person has it revealed on screen. Copying never passes through Dart: the core puts the value on the clipboard itself, and clears it after 30 seconds if it's still there (never something copied since). It's marked to stay out of clipboard history, the cloud clipboard, and clipboard monitors on Windows, and out of clipboard managers on macOS (`org.nspasteboard.ConcealedType`); Linux under X11 has no such mark. Dart's strings can't be wiped, so this keeps secrets in Rust's memory, which can. The exceptions are what the person types or edits: the master password passes through Dart once (the field is cleared as soon as the core has it), and an item's secrets pass through Dart while its editor is open, as typing them would. The generator's password or passphrase passes through Dart too, to show it; its Copy hands what's shown back to the core, which copies it as any secret.
+- **Revealed secrets aren't selectable** (an item's, a version's, the generator's): the system's own Copy would put one on the clipboard without the 30 seconds, the sensitive mark, or keeping it out of clipboard history. Their Copy buttons copy them.
 
 ## Locking by itself
 
@@ -242,7 +260,9 @@ Where the apps sign in, so nobody types a server address who doesn't have to:
 - HTTPS only, to the server the person set, with the OS's own certificate checks (rustls with `rustls-platform-verifier`), so an office's own root certificate works as it does in their browser.
 - The one exception is plain HTTP to this computer (`localhost`, `127.0.0.1`, `::1`), which browsers treat as secure too: a server running on the same machine, and the core's tests.
 - No other hosts (except, on Android, a site's own Digital Asset Links file when an app asks for its sign-ins: `docs/phones.md`), no analytics.
-- Website icons come from the person's server (`/icons`), as in the other apps.
+- A server reached over HTTPS is never left for plain HTTP: no redirect or link it gives goes there.
+- **Website icons** come from the person's server, as in the other apps: `GET /icons/<host>/icon.png`, with no session, at most 512 KB and 10 seconds, four at a time, only while the vault is open, and not at all when Settings turns them off. A redirect is no icon (it isn't followed), and so are the server's 19 by 19 fallback globe and an image whose header says it's larger than 256 pixels a side or isn't a PNG, GIF, JPEG, WebP, ICO, or BMP (`core/src/icons.rs`), so a small file that unpacks to a huge picture never reaches the screens. The app checks the header again and draws icons no larger than 128 pixels a side. The server sees which sites the vault has logins for, as it does for the web vault and the extension; icons are on by default, as there.
+- **Items' own calls** beyond saving: `PUT /api/ciphers/<id>/partial` (the favorite star, nothing encrypted again), `PUT /api/ciphers/<id>/collections_v2` (moving between shared folders, above), and `GET /api/keykeeper/ciphers/<id>/history` and `DELETE /api/keykeeper/ciphers/<id>/history[/<version>]` (version history, below).
 - **Which format it reads:** every call to the server says which upstream client version's vault format the core reads (`Bitwarden-Client-Version`, upstream's wire name: 2026.8.0, the web vault and extension PassBundle ships). A server holds back what an older client can't read, so a client that doesn't say gets no SSH keys. A real-server test saves an SSH key as upstream's apps do and checks it comes through the core's sync.
 
 ## Tests
@@ -322,6 +342,16 @@ A login can hold a passkey (upstream's `fido2Credentials`), made by the browser 
 - **Making one:** the attestation object is read back with an independent CBOR reader, its COSE key matching the private key.
 - **Both ways with the browser extension** (`e2e/tests/passkeys-interop.spec.ts`, through the app's own calls in the core's interop tool): the extension makes a passkey on the test page, and the core signs in with it, its signature checked with the public key the page kept, for the site's ID and the account; the core makes one, and the extension signs in with it on the test page, which checks it with its own WebAuthn verifier.
 - **Phones:** the emulator and simulator tests sign in to a test app and a test page with a passkey, and make one.
+
+## Version history
+
+The server's item history (DESIGN.md, "Item history"), in the apps (`core/src/history.rs`):
+
+- **The list:** newest first, with when each version was saved and who saved it; versions that look the same as the one before are left out, as the web vault's are. Someone whose shared folder hides passwords gets when and by whom only.
+- **A version** opens like the item, under its own key or its owner's, and shows beside the item now, field by field, what differs marked. Its secrets stay in the core until the person shows them.
+- **Restoring** is a normal edit, sent with the revision it was made from: the version's contents, and the item as it is now for the rest (folder, favorite, owner, shared folders, attachments, key). A passkey the item still has is kept as it is now, with the higher of its counters (signing in raises it, and a site refuses one that goes back); before restoring a version without a passkey the item has now, the app says that passkey goes. Refused for a version of another kind, owner, or key, which the web vault restores.
+- **Deleting a version, and clearing,** where the server allows them.
+- **Tests:** against a real server, a login edited twice, compared, restored, and cleared; on the vectors, a second passkey shows as a change, and restoring keeps the raised counter and names the passkey it would take away.
 
 ## Speed
 
