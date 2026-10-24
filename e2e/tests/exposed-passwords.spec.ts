@@ -47,7 +47,8 @@ async function pwnedPasswords(context: BrowserContext, breached: Record<string, 
       headers: await request.allHeaders(),
     });
     const prefix = url.pathname.slice("/range/".length);
-    const lines = Array.from({ length: 30 }, (_, i) => `${sha1(`decoy ${prefix} ${i}`).slice(5)}:0`);
+    // The real service pads to hundreds of lines; the apps refuse fewer.
+    const lines = Array.from({ length: 400 }, (_, i) => `${sha1(`decoy ${prefix} ${i}`).slice(5)}:0`);
     for (const [hash, times] of known) {
       if (hash.startsWith(prefix)) {
         lines.push(`${hash.slice(5)}:${times}`);
@@ -165,7 +166,7 @@ async function addClient(page: Page, name: string): Promise<string> {
   return page.url().replace(/\/members.*$/, "");
 }
 
-test("the MSP console counts each client's exposed passwords from hash prefixes, asks once per password across clients, and lists them by name", async ({
+test("the MSP console counts each client's exposed passwords from hash prefixes, remembers them by item, and lists them by name", async ({
   browser,
 }, testInfo) => {
   // Several clients and items through the UI; CI machines are slower.
@@ -200,11 +201,17 @@ test("the MSP console counts each client's exposed passwords from hash prefixes,
   await expect(page.getByTestId("msp-exposed-progress")).toHaveCount(0);
   await expect(page.getByTestId("msp-exposed-unchecked")).toHaveCount(0);
 
-  // Only prefixes went out, and the breached password, in two clients and
-  // the menu's count too, was asked about once.
+  // Only prefixes went out.
   expectOnlyPrefixes(asked, [BREACHED, UNIQUE, user.password]);
-  expect(askedFor(asked, BREACHED)).toBe(1);
-  expect(askedFor(asked, UNIQUE)).toBe(1);
+  expect(askedFor(asked, BREACHED)).toBeGreaterThan(0);
+  // What the console found is remembered by item version, so working it out
+  // again (it does after every action) asks nothing more.
+  const sentSoFar = asked.length;
+  await page.goto("/#/vault");
+  await page.goto("/#/msp");
+  await expect(acmeRow.getByTestId("msp-client-exposed")).toHaveText("1");
+  await expect(bakerRow.getByTestId("msp-client-exposed")).toHaveText("1");
+  expect(asked.length).toBe(sentSoFar);
 
   // A count with something to fix opens the client's list of what to fix,
   // by name; a count of 0 doesn't.
@@ -231,7 +238,8 @@ test("the MSP console counts each client's exposed passwords from hash prefixes,
   await page.goto("/#/msp");
   const unchecked = page.getByTestId("msp-exposed-unchecked");
   await expect(unchecked).toContainText("Couldn't check for exposed passwords");
-  await expect(unchecked).toContainText("2 passwords couldn't be checked");
+  // Counted in items: Router admin, Front desk PC, and Copier.
+  await expect(unchecked).toContainText("3 items couldn't be checked");
   await expect(acmeRow.getByTestId("msp-client-exposed")).toHaveText("Couldn't check");
   await expect(acmeRow.getByTestId("msp-client-weak")).toHaveText("0");
 
@@ -278,19 +286,25 @@ test("a person's Health counts the items to fix beside it, and its exposed passw
   await expect(rows.first()).toContainText("Northwind Bank");
   await expect(rows.first()).toContainText("Exposed 4,821 time(s)");
   expectOnlyPrefixes(asked, [BREACHED, SHARED, WEAK, UNIQUE, user.password]);
-  // Asked once each, though the report and the count both checked.
+  // The count asked about each once; the report, opened by hand, asks again,
+  // since nothing about a password is kept.
   for (const password of [BREACHED, SHARED, WEAK, UNIQUE]) {
-    expect(askedFor(asked, password)).toBe(1);
+    expect(askedFor(asked, password)).toBe(2);
   }
 
-  // Firewalled: the report says what it couldn't check, never "good news",
-  // and the count keeps weak and reused.
+  // Firewalled: the count keeps weak and reused and says it couldn't check,
+  // and the report says what it couldn't check, never "good news".
   await cutOff(context);
   await reloadAndUnlock(page, user);
   await expect(count).toHaveText("3", { timeout: 30_000 });
+  await expect(count.getByTestId("keykeeper-health-unchecked")).toBeVisible({ timeout: 30_000 });
+  await expect(count).toHaveAttribute(
+    "aria-label",
+    "3 items to fix: weak, reused, or exposed passwords. Couldn't check for breaches",
+  );
   await page.goto("/#/reports/exposed-passwords-report");
   await expect(page.getByTestId("keykeeper-exposed-unchecked")).toContainText(
-    "5 passwords couldn't be checked",
+    "5 items couldn't be checked for breaches",
   );
   await expect(page.getByText("Good news")).toHaveCount(0);
 
@@ -326,6 +340,8 @@ test("with checking after unlocking turned off, nothing goes to the breach servi
   // Well past when the count would have asked.
   await page.waitForTimeout(6_000);
   await expect(count).toHaveText("3");
+  // Not a failed check, so no sign that it couldn't check.
+  await expect(count.getByTestId("keykeeper-health-unchecked")).toHaveCount(0);
   expect(asked.length).toBe(sentBefore);
 
   // The MSP console waits for its button, and still counts weak and reused.
@@ -356,6 +372,32 @@ test("with checking after unlocking turned off, nothing goes to the breach servi
   await page.goto("/#/reports/exposed-passwords-report");
   await expect(page.locator("bit-table-scroll tr:has(td)").filter({ hasText: "Northwind Bank" })).toBeVisible();
   expectOnlyPrefixes(asked.slice(sentBefore), [BREACHED, SHARED, WEAK, UNIQUE, user.password]);
+
+  // Turned back on in another tab: this tab follows without a reload, and
+  // the console checks on its own again.
+  // Opened from this one, as a person does, so it's the same signed-in session.
+  const [other] = await Promise.all([
+    context.waitForEvent("page"),
+    page.evaluate(() => window.open(`${location.origin}/#/settings/appearance`)),
+  ]);
+  const masterPassword = other.getByRole("textbox", { name: /^Master password/ });
+  const otherSetting = other.getByRole("checkbox", {
+    name: "Check my passwords against known breaches after unlocking",
+  });
+  await expect(masterPassword.or(otherSetting)).toBeVisible();
+  if (await masterPassword.isVisible()) {
+    await masterPassword.fill(user.password);
+    await other.getByRole("button", { name: "Unlock", exact: true }).click();
+    await expect(masterPassword).toBeHidden();
+    await other.goto("/#/settings/appearance");
+  }
+  await expect(otherSetting).not.toBeChecked();
+  await otherSetting.check();
+  await expect(otherSetting).toBeChecked();
+  await other.close();
+  await page.goto("/#/msp");
+  await expect(row.getByTestId("msp-client-exposed")).toHaveText("1");
+  await expect(page.getByTestId("msp-exposed-off")).toHaveCount(0);
 
   await context.close();
 });
