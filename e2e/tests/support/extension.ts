@@ -11,7 +11,7 @@ import {
   type Page,
 } from "@playwright/test";
 
-import { brand, hostResolverRules, paths, port } from "../../paths.mjs";
+import { hostResolverRules, paths, port } from "../../paths.mjs";
 import { skipImport } from "./web";
 
 const chromeUserAgent =
@@ -118,12 +118,9 @@ export async function logInPopup(popup: Page, user: User, server = serverUrl) {
     await popup.getByRole("button", { name: "Log in" }).click();
     await expect(popup).toHaveURL(/#\/login/, { timeout: 1000 });
   }).toPass();
-  await popup
-    .getByRole("button", { name: new RegExp(brand.domain.replace(".", "\\.")) })
-    .click();
-  await popup.getByRole("menuitem", { name: /self-hosted/i }).click();
-  await popup.getByRole("textbox", { name: /Server URL/ }).fill(server);
-  await popup.getByRole("button", { name: "Save" }).click();
+  // "Where's your vault?" (DESIGN.md, "The look"): our own server, typed in place.
+  await popup.getByRole("button", { name: "My own server" }).click();
+  await popup.getByRole("textbox", { name: "Server address" }).fill(server);
   await popup.getByLabel(/Email address/).fill(user.email);
   await popup.getByRole("button", { name: "Continue" }).click();
   await popup
