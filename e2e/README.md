@@ -32,6 +32,8 @@ npm ci && npx playwright install chromium && npx playwright test
 
 Override any build location with `KK_SERVER_BIN`, `KK_WEB_VAULT`, `KK_EXTENSION`, or `KK_BRAND`, and the port with `KK_PORT` (default 8091).
 
+Single sign-on tests use `entra-standin.mjs`, a local stand-in for Microsoft Entra ID's sign-in (an OpenID provider at Entra's per-tenant paths, with keys made when it starts) and a DNS server for domain checks, on `KK_ENTRA_PORT` (default 8099) and `KK_DNS_PORT` (UDP, default 8100). Every test server points at it.
+
 ## Website screenshots
 
 `site-shots/` makes the website's screenshots from the real apps (`npx playwright test -c playwright.site.config.ts`). It isn't a test and CI doesn't run it. See `site/README.md`.

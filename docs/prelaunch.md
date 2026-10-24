@@ -16,22 +16,22 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 - **Extension redesign** from the approved mockups: jewel-tone categories, site icons, the "Where's your vault?" sign-in, and an item view with big copy buttons. Rebasing.
 - **Exposed passwords in the MSP health view**, using the k-anonymity range check, with an off switch for the check after unlocking. Security review fixes in progress.
 - **Events to security tools**: a signed webhook, syslog over TLS (JSON or CEF), and Microsoft Sentinel, per organization or one feed for an MSP. Security review fixes in progress.
+- **Sign in with Entra (SSO) per organization**: built and tested against a stand-in for Entra (DESIGN.md, "Sign in with Microsoft Entra ID"; setup in docs/sso-entra.md): each client's own tenant, domain verification, Require single sign-on, the master password still unlocking. Its client secret moves to sealed storage when event streaming lands; then a security review. Trusted-device unlock after, as its own design with test vectors.
 
 ## Next
 
 1. **Web vault redesign** from the mockups: calm solid ground with depth instead of glass, jewel tiles in the menu and list, site icons, a side panel for the selected item. Starts when the extension redesign lands, since both change brand/look.css.
 2. **Self-updating Windows and Linux apps**, like the Mac and Android ones.
-3. **Sign in with Entra (SSO) per organization**, master password still unlocking at first; trusted-device unlock after, as its own design with test vectors.
-4. **Item history and the new folders in the extension**, so every app shows and restores the same versions.
-5. **Approving a new sign-in from our apps**, and a CLI build for macOS and Linux scripts.
-6. **A full security pass over the whole stack** before the first company: server, web vault, extension, apps, CI and releases.
-7. **Website redesign** in the new look.
+3. **Item history and the new folders in the extension**, so every app shows and restores the same versions.
+4. **Approving a new sign-in from our apps**, and a CLI build for macOS and Linux scripts.
+5. **A full security pass over the whole stack** before the first company: server, web vault, extension, apps, CI and releases.
+6. **Website redesign** in the new look.
 
 ## Waiting on you
 
 - **Production hosting**: a storage bucket for backups at a second provider (Backblaze or Cloudflare R2), a backup key made on your own computer (ops/hosting/README.md, "The backup key"), and the go-ahead to point vault.passbundle.com at the hosted stack.
 - **Email**: a sending provider (Postmark, Amazon SES, or Resend) so invitations, verification and account recovery mail go out.
-- **A Microsoft 365 tenant** (a free developer tenant is enough) to check Entra provisioning (built; the checks are in DESIGN.md, "Provisioning from Entra ID", "Status") and SSO for real.
+- **A Microsoft 365 tenant** (a free developer tenant is enough) to check Entra provisioning (built; the checks are in DESIGN.md, "Provisioning from Entra ID", "Status") and single sign-on (built; the checks are in docs/sso-entra.md, "Checking it with a real tenant") for real.
 - **Apple Developer account** for the iPhone app, iPhone AutoFill, and a notarized Mac app.
 - **Store listings** when you want them (you said not yet): Chrome, Edge, Firefox.
 - **Business details for the site and legal pages**: legal name, payment processor, refunds, governing law, prices (marked as placeholders in site/).

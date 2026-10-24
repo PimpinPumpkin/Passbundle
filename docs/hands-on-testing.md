@@ -46,6 +46,7 @@ On a real computer and the Pixel, with logins saved for each:
 ## When Microsoft 365 is ready
 
 - [ ] Provisioning: a client's Settings > Provisioning; paste the URL and token into an Entra enterprise app; add a test user in Entra, see them appear waiting; "Let them in"; turn them off in Entra and see them revoked.
+- [ ] Single sign-on: register the app and set up a client's Settings > Single sign-on with docs/sso-entra.md, verify your domain, then work through its "Checking it with a real tenant" list (sign in and unlock, Require single sign-on, recovery, a refused user).
 
 ## How it feels
 
