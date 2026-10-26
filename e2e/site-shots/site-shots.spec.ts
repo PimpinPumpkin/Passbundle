@@ -83,7 +83,7 @@ async function shoot(target: Page | Locator, name: string) {
 }
 
 /** A part of a page, with a margin of the page around it, so it reads as a panel. */
-async function shootPanel(target: Locator, name: string, margin = 24) {
+async function shootPanel(target: Locator, name: string, margin = 16) {
   const page = target.page();
   await target.scrollIntoViewIfNeeded();
   await settle(page);
