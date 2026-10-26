@@ -229,6 +229,8 @@ jobs:
           persist-credentials: false
       - name: The core's test vectors, checked with upstream's own crypto
         run: node meta/docs/vectors/check-core-vectors.mjs meta/docs/vectors/core-v1.json .
+      - name: The desktop updater's test vectors, as their generator makes them
+        run: node meta/docs/vectors/make-desktop-update-v1.mjs | cmp - meta/docs/vectors/desktop-update-v1.json
       - name: Upstream unit tests for every file we changed
         run: |
           base=$(cat .keykeeper-base)
