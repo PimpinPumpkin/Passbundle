@@ -24,7 +24,7 @@ import {
   verifyDomain,
 } from "../support/entra";
 
-import { Api, encString, publicKey, type Account } from "./support";
+import { Api, encString, publicKey, serverDatabase, type Account } from "./support";
 
 const origin = `https://127.0.0.1:${port}`;
 const CONFIRMED = 2;
@@ -80,7 +80,12 @@ test("owners and admins set it up; the secret never comes back; the tenant must 
 
   const empty = await api.call(owner, "GET", url);
   expect(empty.status).toBe(200);
-  expect(empty.body).toMatchObject({ enabled: false, identifier: null, callbackUrl: `${origin}/identity/connect/oidc-signin` });
+  expect(empty.body).toMatchObject({
+    enabled: false,
+    identifier: null,
+    secretReadable: null,
+    callbackUrl: `${origin}/identity/connect/oidc-signin`,
+  });
 
   const tenant = new Tenant();
   const identifier = newIdentifier("setup");
@@ -112,12 +117,20 @@ test("owners and admins set it up; the secret never comes back; the tenant must 
     signInUrl: `${origin}/#/sso?identifier=${identifier}`,
   });
   expect(saved.body.secretSavedAt).toBeTruthy();
+  expect(saved.body.secretReadable).toBe(true);
   expect(JSON.stringify(saved.body)).not.toContain(tenant.clientSecret);
   expect(JSON.stringify((await api.call(owner, "GET", url)).body)).not.toContain(tenant.clientSecret);
+  // The database keeps it sealed, never as typed (on SQLite, where the test can look).
+  const db = await serverDatabase();
+  if (db) {
+    expect(db("SELECT COUNT(*) FROM keykeeper_sso WHERE org_uuid = ? AND client_secret LIKE 'v1.%'", orgId)).toBe(1);
+    expect(db("SELECT COUNT(*) FROM keykeeper_sso WHERE instr(client_secret, ?) > 0", tenant.clientSecret)).toBe(0);
+  }
 
   // Saving again without a secret keeps it.
   const kept = await api.call(owner, "PUT", url, settings(tenant, identifier, true, false));
   expect(kept.status, JSON.stringify(kept.body)).toBe(200);
+  expect(kept.body.secretReadable).toBe(true);
 
   // An identifier belongs to one organization.
   const other = await api.account("sso-setup-other");

@@ -16,7 +16,7 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 - **Extension redesign** from the approved mockups: jewel-tone categories, site icons, the "Where's your vault?" sign-in, and an item view with big copy buttons. Rebasing.
 - **Exposed passwords in the MSP health view**, using the k-anonymity range check, with an off switch for the check after unlocking. Security review fixes in progress.
 - **Events to security tools**: a signed webhook, syslog over TLS (JSON or CEF), and Microsoft Sentinel, per organization or one feed for an MSP. Security review fixes in progress.
-- **Sign in with Entra (SSO) per organization**: built and tested against a stand-in for Entra (DESIGN.md, "Sign in with Microsoft Entra ID"; setup in docs/sso-entra.md): each client's own tenant, domain verification, Require single sign-on, the master password still unlocking. Its client secret moves to sealed storage when event streaming lands; then a security review. Trusted-device unlock after, as its own design with test vectors.
+- **Sign in with Entra (SSO) per organization**: built and tested against a stand-in for Entra (DESIGN.md, "Sign in with Microsoft Entra ID"; setup in docs/sso-entra.md): each client's own tenant, domain verification, Require single sign-on, the master password still unlocking. Its client secret is sealed with event streaming's module under a key of its own; a verification review next. Trusted-device unlock after, as its own design with test vectors.
 
 ## Next
 

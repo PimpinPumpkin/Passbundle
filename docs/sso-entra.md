@@ -67,6 +67,7 @@ The sign-in page says what PassBundle refused, and the organization's event log 
 | AADSTS50011, the redirect URI doesn't match | The redirect URI in Entra isn't exactly the one on PassBundle's page (step 1.5). |
 | AADSTS700016, application not found in the directory | The client ID is wrong, or the app is in another tenant than the tenant ID. |
 | AADSTS7000215, invalid client secret | You pasted the Secret ID, or the secret expired. Make a new one (step 2). |
+| "This server can't read the organization's single sign-on client secret anymore" | The server's RSA key (`rsa_key.pem`) changed since the secret was saved. Paste the secret again on the Single sign-on page (or make a new one, step 2). |
 | AADSTS50105, not assigned to a role for the application | Assignment is required and this person isn't assigned (step 4.2). |
 | AADSTS65001, the user or administrator hasn't consented | Grant admin consent (step 4.1). |
 | "Microsoft didn't confirm that ... is yours" | Their email's domain isn't verified in PassBundle and the token has no `xms_edov`, or `xms_edov` is false, or they're a guest without `xms_edov` (steps 3 and 5). |
