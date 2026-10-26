@@ -1,12 +1,15 @@
 # Hands-on testing before launch
 
-What CI can't check: real devices, real sites, and how it feels. Work through it on test.passbundle.com with the newest builds (the web vault and the Mac's extension update themselves; Android and the Mac app offer each release in Settings, Updates). When something's off, note the platform, what you did, what you expected, and a screenshot; "it feels clunky" is useful too.
+What CI can't check: real devices, real sites, and how it feels. Work through it on test.passbundle.com with the newest builds (the web vault and the Mac's extension update themselves; the Android, Mac, Windows, and Linux apps offer each release in Settings, Updates). When something's off, note the platform, what you did, what you expected, and a screenshot; "it feels clunky" is useful too.
 
 ## Set up once
 
 - [ ] **Brave or Chrome:** remove the old PassBundle, then Load unpacked from `~/Library/Application Support/PassBundle/extension-chrome` (Cmd+Shift+G to paste the path). Sign in with `test.passbundle.com`.
 - [ ] **Pixel:** uninstall the old app, install the newest `passbundle-...-arm64-v8a.apk` from https://github.com/PimpinPumpkin/passbundle-apps/releases, sign in.
 - [ ] **Mac app:** the newest "PassBundle ... for Mac" zip from the same page into Applications; first open needs System Settings > Privacy & Security > Open Anyway.
+- [ ] **Windows app:** the newest "PassBundle ... for Windows" zip from the same page. Unzip it, move the `PassBundle` folder to `%LOCALAPPDATA%\Programs` (paste that into File Explorer's address bar), and open `passbundle.exe` in it; pin it to Start if you like. SmartScreen stops the first open (it isn't code-signed yet): More info, then Run anyway.
+- [ ] **Linux app:** the newest "PassBundle ... for Linux" tarball for your computer (`linux-x64`, or `linux-arm64` for ARM), then `mkdir -p ~/.local/opt && tar -xzf PassBundle-*-linux-x64.tar.gz -C ~/.local/opt` and open `~/.local/opt/PassBundle/passbundle` (it needs GTK 3).
+- [ ] **Updating a computer's app:** when a new release is out, Settings > Updates > Check for updates, then "Update to ...": the Mac, Windows, and Linux apps restart as the new version (locked). Once, try it with the app's folder somewhere you can't change (Program Files, `/opt`): it should only say there's a new version.
 - [ ] **A second person** (or a second email of yours): invite them from an organization's Members page so you can test sharing and offboarding. The test server is invite only.
 
 ## Every day things
