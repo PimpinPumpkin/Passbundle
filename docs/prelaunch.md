@@ -9,23 +9,23 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 - **Phone app polish**: settings layout, offering fingerprint or Face ID unlock after sign-in, and a Mac window large enough for its sidebar.
 - **The apps' logo and icons**, and Windows and Linux windows that remember their size and place.
 - **Hands-on test checklist** for the owner: docs/hands-on-testing.md.
+- **Extension redesign** from the approved mockups: jewel-tone categories, site icons, the "Where's your vault?" sign-in, and an item view with big copy buttons.
 
 ## In progress
 
 - **Desktop and phone parity with the web vault**: folders and their permissions, templates, site icons, item history, password health, and a Generator tab on phones. Security review fixes in progress.
-- **Extension redesign** from the approved mockups: jewel-tone categories, site icons, the "Where's your vault?" sign-in, and an item view with big copy buttons. Rebasing.
+- **Web vault redesign** from the approved mockups: the menu as a card with jewel tiles, rows of site icons and tiles, the selected item in a side panel beside the list, and graphite glass, a neutral dark mode, for the web vault and the extension. Pull requests open.
 - **Exposed passwords in the MSP health view**, using the k-anonymity range check, with an off switch for the check after unlocking. Security review fixes in progress.
 - **Events to security tools**: a signed webhook, syslog over TLS (JSON or CEF), and Microsoft Sentinel, per organization or one feed for an MSP. Security review fixes in progress.
 
 ## Next
 
-1. **Web vault redesign** from the mockups: calm solid ground with depth instead of glass, jewel tiles in the menu and list, site icons, a side panel for the selected item. Starts when the extension redesign lands, since both change brand/look.css.
-2. **Self-updating Windows and Linux apps**, like the Mac and Android ones.
-3. **Sign in with Entra (SSO) per organization**, master password still unlocking at first; trusted-device unlock after, as its own design with test vectors.
-4. **Item history and the new folders in the extension**, so every app shows and restores the same versions.
-5. **Approving a new sign-in from our apps**, and a CLI build for macOS and Linux scripts.
-6. **A full security pass over the whole stack** before the first company: server, web vault, extension, apps, CI and releases.
-7. **Website redesign** in the new look.
+1. **Self-updating Windows and Linux apps**, like the Mac and Android ones.
+2. **Sign in with Entra (SSO) per organization**, master password still unlocking at first; trusted-device unlock after, as its own design with test vectors.
+3. **Item history and the new folders in the extension**, so every app shows and restores the same versions.
+4. **Approving a new sign-in from our apps**, and a CLI build for macOS and Linux scripts.
+5. **A full security pass over the whole stack** before the first company: server, web vault, extension, apps, CI and releases.
+6. **Website redesign** in the new look.
 
 ## Waiting on you
 
