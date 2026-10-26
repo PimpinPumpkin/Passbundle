@@ -6,7 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { brand } from "../paths.mjs";
 
-import { signUp, webUserFor } from "./support/web";
+import { reloadVault, signUp, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) =>
@@ -161,13 +161,9 @@ test("an MSP admin adds a client and a technician, and the technician gets in on
     "Technician",
   );
 
-  // The technician sees the console in their nav and can open the client.
-  // Reloading locks the web vault, so unlock it again.
-  await tech.reload();
-  await tech
-    .getByRole("textbox", { name: /^Master password/ })
-    .fill(techUser.password);
-  await tech.getByRole("button", { name: "Unlock", exact: true }).click();
+  // The technician sees the console in their nav and can open the client,
+  // once a reload syncs their vault.
+  await reloadVault(tech);
   await tech.getByRole("link", { name: "MSP console" }).click();
   await expect(tech.getByTestId("msp-name")).toContainText("Technician");
   const techClient = tech.getByTestId("msp-client-Acme Dental");
@@ -224,10 +220,7 @@ test("a client's own owner sees its MSP on the Members page and removes it; the 
   await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
 
   // The client's owner removes the MSP from their own Members page.
-  await owner.reload();
-  await owner.getByRole("textbox", { name: /^Master password/ }).fill(ownerUser.password);
-  await owner.getByRole("button", { name: "Unlock", exact: true }).click();
-  await owner.waitForURL(/#\/vault/);
+  await reloadVault(owner);
   await owner.goto(membersUrl);
   const ownerBanner = owner.getByTestId("client-msp");
   await expect(ownerBanner).toContainText("Contoso IT manages this organization");

@@ -449,7 +449,7 @@ Personal profiles are never imported by default.
 | Members joining through an invite link | Approval required |
 | Two-step login | Required for admins, nudged for everyone else |
 | Master password | Minimum strength, plus a breached-password check. If the breach service can't be reached (offline or firewalled), signup continues without it and Health re-checks later. Upstream silently failed the form instead. |
-| Vault lock | When the computer locks (`docs/core.md`, "Locking by policy") |
+| Vault lock | When the computer locks; in the web vault, which can't see that, after 15 minutes without use (`docs/core.md`, "Locking by policy") |
 | Browser password manager on managed devices | Saving and password autofill off. Card and address autofill: optional toggles, default unchanged. |
 | Private items when someone leaves | Stay with the org |
 | Offboarding | Access revoked immediately. Shared passwords the person could see are listed for rotation: removing or revoking someone says what they can open, then lists the logins whose passwords they could see (built; see "Access and offboarding"). |
@@ -852,6 +852,46 @@ The setting people reach for is the generator's: how long, which kinds of charac
 - **Conflicts:** last save wins. A change on this device that isn't saved yet (offline, or made just before closing) wins over the server's copy at the next sync; each app keeps what the server had, as far as it knows, across sign-outs to tell the two apart. A document that isn't PassBundle's settings (something else encrypted with the account's key) is replaced with this device's.
 - **A server handing back an old copy** (security review, October 2026): each save numbers the document (`rev`: after every number the app has seen, and the time in milliseconds), and an app refuses a copy numbered lower than one it has seen, saving its own again. A server could otherwise bring back settings someone chose before, say a short one for a picky site, without their noticing. What it can't do is make settings up: they're encrypted and authenticated with the account's key.
 - **Tests:** unit tests for the mapping, limits, numbering, and each sync case (the server has none, has some, has an older copy, has something else; a change here first, during a sync, before closing; after signing out and in; other apps' settings kept); the core's against a real server, from one device to another and back; API tests (per account, only encrypted, no vault download, forgotten when the key changes); and an end-to-end test that a length chosen in the web vault is the extension's.
+
+## Staying unlocked across a reload
+
+Upstream's web vault locks on every reload, whatever the vault timeout: it keeps the user key only in the page's memory. The owner found that wearing ("I press refresh and type my master password again"), and chose (2026-10-26) to keep a tab unlocked across a reload, within its timeout, with a key the server holds.
+
+**What upstream does** (checked against our build, 2026-10-26, before building this):
+
+- The user key is `USER_KEY` in `CRYPTO_MEMORY` (`libs/common/src/key-management/state-definitions.ts`): on the web, the page's memory, plus the SDK's copy in WebAssembly memory. A reload, closing the tab, locking, and signing out all clear it.
+- The only key upstream ever keeps is the "auto" key for a timeout of Never, in `SECURE_STORAGE`, which production web builds keep in memory too, and which offer Never only in development builds.
+- The tab's sessionStorage (the web's "disk": per tab, kept across a reload, not shared with a new tab, gone when the tab closes, though Chrome's session restore can bring it back) holds the access and refresh tokens (with the Lock action) and the user key encrypted with the master key, so a reload shows the unlock screen. With Log out, the tokens are in memory too, so a reload signs out.
+- So the Business preset's Vault lock wasn't the cause: someone with no policy locked on every reload too. Our own end-to-end tests had relied on it since 2026-10-14.
+
+**What ours does:**
+
+- **At a real unlock** (signing in, the master password, any way but this one): the tab makes a random key R (`PureCrypto.make_aes256_cbc_hmac_key`, as upstream makes keys), wraps the user key with it using upstream's key wrap (`EncryptService.wrapSymmetricKey`, an EncString of type 2), and keeps only that wrapped key and a random tab id (16 bytes) in its own sessionStorage. It sends R and the tab id to the server over the signed-in session (`POST /api/keykeeper/reload-key`).
+- **After a reload**, before anything reads the key, the tab asks for R with its tab id (`POST /api/keykeeper/reload-key/release`), unwraps the user key, and puts it in memory the way upstream does for its Never timeout (`KeyService.setUserKey`). A key unlocked this way never makes a new R: only the next real unlock does. The page then syncs, as it does after any unlock.
+- **Only for a timeout in minutes with the Lock action.** "On browser refresh", Log out, and Vault lock policies of "immediately" or upstream's "on app restart" keep upstream's behavior: no R is made, and a reload asks.
+- **While open**, the tab checks in every 30 seconds (`POST /api/keykeeper/reload-key/check-in`) with how long since the person last used it (upstream's own activity record) and their timeout now. Browsers run a hidden tab's timers about once a minute, inside the server's 2 minutes.
+- **The server keeps R in its process memory only**: never in the database, a file, or a log. Each entry belongs to one account, one device (the session its access token is for), and one tab id, and only a request with all three gets R back. Anything else gets the same "Not found". The entry ends:
+  - when the tab hasn't been used for its timeout, as the tab reports it, capped by the strictest Vault lock policy of the organizations the account has joined, except those it owns (owners aren't bound, as in the web vault): a longest wait's minutes, or "when the computer locks"'s `webMinutes` (15 when it's missing);
+  - 2 minutes after the tab stops checking in: the browser closed, or the computer slept;
+  - when the tab locks, signs out, or changes its timeout to one this doesn't cover, and asks the server to forget it (`POST /api/keykeeper/reload-key/forget`; the lock waits for it, and the request outlives the page);
+  - when the account's security stamp changes (a new master password, key rotation, "Deauthorize sessions", an admin's deauthorization, a KDF or email change) or its devices are removed;
+  - when the server restarts, so the next reload asks.
+- **Limits:** 20 tabs per account (a new one replaces the stalest), and each account's calls here limited to 30 at once, then one every 2 seconds. The body that carries R is read by hand, so no parse error can log it, and R is wiped from memory when an entry ends (`zeroize`). Responses aren't cached.
+- **Files:** server `src/api/core/keykeeper_reload_keys.rs` (with the hooks in `User::reset_security_stamp` and `Device::delete_all_by_user`); web vault `apps/web/src/app/keykeeper/reload-key/`, started from `InitService`; the state is `KEYKEEPER_RELOAD_KEY_DISK`, which must stay the tab's sessionStorage.
+
+**Threat model.** What someone needs to get the user key out of a reload key:
+
+- **A breached server alone** has R but not the wrapped key, which stays in the tab: nothing. It gains nothing new anyway: the web vault already trusts the server for its code, so a breached server could serve a web vault that sends it the key at the next unlock.
+- **A copy of the tab's storage while its entry lasts** is enough, without the server: the copy holds the tab's tokens and tab id, so its holder can ask for R as the tab would, and unwrap the user key. That's what this adds. Today such a copy (the tab's sessionStorage, which Chrome also writes to the profile on disk for session restore; a backup or sync of the profile; malware that reads files but not memory) gives the tokens and the user key encrypted with the master key, so it still needs the master password. With a reload key it doesn't, until the entry ends: while the tab is open and used within the timeout, and for 2 minutes after it closes. After that, the copy is as useless as before. (A breached server plus a copy of the storage is the same case.)
+- **Script running in the page** (cross-site scripting, a malicious extension that can read the page) and **malware that reads memory** could already take the user key from memory while the vault is unlocked; this changes nothing for them.
+- **The time limit** is the server's own clock counting from the tab's report of how long it's been unused. The server trusts that report: whoever can send it holds the tab's storage, which is the case above. A tab whose clock moves forward reports more and ends sooner.
+- **Known gaps:** a browser that restarts within 2 minutes (an update) and restores its tabs restores this one unlocked. Duplicating a tab, or a window the vault opens itself, copies its sessionStorage: both tabs share one entry, and locking either ends it for both. A web page can't see the computer lock or sleep, so "when the computer locks" is a wait in the web vault (`docs/core.md`, "Locking by policy").
+
+**The wrap's test vectors** are `docs/vectors/reload-key-v1.json`, made by `make-reload-key-v1.mjs` with Node's own crypto: R, a user key, and the EncString, with refusals (another R, a changed MAC, a changed ciphertext). Tier 1 opens them with upstream's own crypto (`check-reload-key-vectors.mjs`), and the web vault's unit test opens them through upstream's `EncryptService` from a copy (`apps/web/src/app/keykeeper/reload-key/reload-key-v1.json`; Tier 1 checks the copy matches).
+
+**Tests:** the server's unit tests for who gets R back, the 2 minutes, the timeout, the tab's report, forgetting, the tab limit, the policy cap, and reading the body; API tests for the same over HTTP, refusals that never echo R, a new master password and "Deauthorize sessions" forgetting it, the policy cap for members and not owners, "immediately" refusing it, and the rate limit (`e2e/tests/api/reload-key.spec.ts`); the web vault's unit tests for the wrap against the vectors, when it applies, and each step (`reload-key.spec.ts`); and end-to-end tests (`e2e/tests/reload-key.spec.ts`): a reload stays unlocked with no prompt and the tab's storage never holds R; locking then reloading asks; a new browser asks; "On browser refresh" keeps asking; Log out signs out at a reload; a member under the Business preset signs in, reloads, and stays unlocked, with Settings explaining the wait; with the web vault's wait at 1 minute and the clock moved, it locks; and a server that restarts asks at the next reload.
+
+**Status:** built, waiting for its security review.
 
 ## Health (better than Watchtower)
 

@@ -26,6 +26,9 @@ export const groupsServerPort = process.env.KK_GROUPS_SERVER_PORT ?? "8098";
 // Where the main test server sends Sentinel destinations' sign-in, for the
 // stand-in in tests/api/siem.ts (event streaming).
 export const siemPort = process.env.KK_SIEM_PORT ?? "8099";
+// A server a test starts and stops itself, keeping its data, to show what a
+// restart forgets (tests/reload-key.spec.ts).
+export const restartServerPort = process.env.KK_RESTART_SERVER_PORT ?? "8100";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??

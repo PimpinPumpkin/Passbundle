@@ -45,6 +45,8 @@ test("an organization sets the vault lock policy, and each sync sends it", async
     { type: "custom", minutes: 15, action: "lock" },
     { type: "immediately", minutes: null, action: "logOut" },
     { type: "onSystemLock", minutes: null, action: null },
+    // The web vault's wait under "when the computer locks".
+    { type: "onSystemLock", minutes: null, webMinutes: 30, action: "lock" },
     { minutes: 240 },
   ]) {
     const set = await setVaultLock(api, owner, orgId, true, data);
@@ -103,6 +105,11 @@ test("the vault lock policy refuses what a client couldn't read, and keeps what 
     { minutes: 1441 },
     { minutes: 2.5 },
     { minutes: 15, action: "delete" },
+    // The web vault's wait: 1 minute to a day, only for "when the computer locks".
+    { type: "onSystemLock", webMinutes: 0 },
+    { type: "onSystemLock", webMinutes: 1441 },
+    { type: "onSystemLock", webMinutes: "15" },
+    { type: "custom", minutes: 15, webMinutes: 5 },
   ]) {
     const refused = await setVaultLock(api, owner, orgId, true, data);
     expect(refused.status, JSON.stringify(data)).toBe(400);
