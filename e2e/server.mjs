@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { dnsPort, entraPort, paths, port, smtpPort } from "./paths.mjs";
+import { dnsPort, entraPort, paths, port, siemPort, smtpPort } from "./paths.mjs";
 
 // KK_MAIL=1 starts the server that sends email to the mail catcher. KK_LIMITS=1
 // starts one with the real login limits, which the others relax. KK_GROUPS=1
@@ -68,6 +68,43 @@ execFileSync(
   ],
   { stdio: "ignore" },
 );
+// The Sentinel stand-in's certificate (tests/api/siem.ts reads it from the
+// same place), for the main server only: Sentinel destinations can't choose
+// a certificate authority, so the server is told to trust this one.
+const siemDir = path.join(os.tmpdir(), `keykeeper-e2e-siem-${siemPort}`);
+let siemCert = null;
+if (!withMail && !withLimits && !withGroups) {
+  fs.mkdirSync(siemDir, { recursive: true });
+  siemCert = path.join(siemDir, "cert.pem");
+  execFileSync(
+    "openssl",
+    [
+      "req",
+      "-x509",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-days",
+      "2",
+      "-keyout",
+      path.join(siemDir, "key.pem"),
+      "-out",
+      siemCert,
+      "-subj",
+      "/CN=127.0.0.1",
+      "-addext",
+      "subjectAltName=IP:127.0.0.1",
+      "-addext",
+      "basicConstraints=critical,CA:FALSE",
+      "-addext",
+      "keyUsage=critical,digitalSignature,keyEncipherment",
+      "-addext",
+      "extendedKeyUsage=serverAuth",
+    ],
+    { stdio: "ignore" },
+  );
+}
+
 const child = spawn(paths.serverBin, [], {
   stdio: "inherit",
   env: {
@@ -78,6 +115,22 @@ const child = spawn(paths.serverBin, [], {
       ? { DATABASE_URL: process.env.KK_DATABASE_URL }
       : {}),
     ...(withGroups ? { ORG_GROUPS_ENABLED: "true" } : {}),
+    // Event streaming (tests/api/event-streaming.spec.ts): the main and
+    // mail servers may send to receivers on 127.0.0.1 (and nothing else
+    // private), and the main one sends Sentinel's sign-in and uploads to the
+    // stand-in there, trusting its certificate. The others keep the
+    // defaults, so the refusal of private addresses is tested too.
+    ...(!withLimits && !withGroups ? { EVENT_STREAMING_ALLOWED_NETWORKS: "127.0.0.1" } : {}),
+    ...(siemCert
+      ? {
+          // A test stand-in, which only this setting allows: any https
+          // host for Sentinel, and a certificate authority of its own.
+          EVENT_STREAMING_AZURE_TEST: "true",
+          EVENT_STREAMING_AZURE_LOGIN_URL: `https://127.0.0.1:${siemPort}`,
+          EVENT_STREAMING_AZURE_INGEST_SUFFIX: "127.0.0.1",
+          EVENT_STREAMING_AZURE_CA_FILE: siemCert,
+        }
+      : {}),
     ...(withMail
       ? {
           SMTP_HOST: "127.0.0.1",
@@ -146,6 +199,9 @@ setInterval(() => {
 }, 1000).unref();
 child.on("exit", (code) => {
   fs.rmSync(data, { recursive: true, force: true });
+  if (siemCert) {
+    fs.rmSync(siemDir, { recursive: true, force: true });
+  }
   fs.rmSync(dataNote, { force: true });
   process.exit(code ?? 0);
 });
