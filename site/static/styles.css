@@ -1225,7 +1225,7 @@ a.card .more {
 /* ----- Platforms ----- */
 .platforms {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
   gap: 12px;
 }
 
@@ -1355,6 +1355,14 @@ a.card .more {
 
 .plan .checks li::after {
   top: 5px;
+}
+
+.narrow-only {
+  display: none;
+}
+
+.head .narrow-only {
+  margin-top: 8px;
 }
 
 .plans-note {
@@ -1939,6 +1947,10 @@ main.doc > .paper {
 @media (max-width: 640px) {
   body {
     font-size: 16px;
+  }
+
+  .narrow-only {
+    display: block;
   }
 
   .bar {
