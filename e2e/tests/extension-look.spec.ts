@@ -1,7 +1,8 @@
 // The extension's popup has PassBundle's own look (DESIGN.md, "The look"): a
-// calm, solid ground in every theme and never Glass, a sign-in that asks where
-// the vault is, category chips over the vault, and a tile for every item: the
-// site's icon, the login's first letter, or the category's jewel tile.
+// calm ground in every theme (graphite glass in dark mode) and never Glass, a
+// sign-in that asks where the vault is, category chips over the vault, and a
+// tile for every item: the site's icon, the login's first letter, or the
+// category's jewel tile.
 import type { Page } from "@playwright/test";
 
 import { brand, port } from "../paths.mjs";
@@ -35,7 +36,7 @@ const lookClasses = (popup: Page) =>
       .sort(),
   );
 
-test("the popup's own look: where the vault is, a solid ground, category chips, and item tiles", async ({
+test("the popup's own look: where the vault is, a calm ground, category chips, and item tiles", async ({
   context,
   extensionId,
 }, testInfo) => {
@@ -126,10 +127,16 @@ test("the popup's own look: where the vault is, a solid ground, category chips, 
     popup.locator("#favorites").locator("bit-item").filter({ hasText: "Contoso Mail" }),
   ).toBeVisible();
 
-  // Dark like the device, and still no Glass.
+  // Dark like the device, and still no Glass: graphite, not green, with its
+  // faint washes, and a card of rows that's translucent white over them.
   await popup.emulateMedia({ colorScheme: "dark" });
   await expect.poll(() => lookClasses(popup)).toEqual(["pb-popup", "theme_dark"]);
-  await expect(popup.locator("body")).toHaveCSS("background-color", "rgb(14, 21, 19)");
+  await expect(popup.locator("body")).toHaveCSS("background-color", "rgb(17, 19, 24)");
+  await expect(popup.locator("body")).toHaveCSS("background-image", /radial-gradient/);
+  await expect(popup.locator("#allItems bit-item-group").first()).toHaveCSS(
+    "background-color",
+    "rgba(255, 255, 255, 0.055)",
+  );
 });
 
 test("sign-in goes only to the server shown: not with a blank or refused address, and the password step names it", async ({
