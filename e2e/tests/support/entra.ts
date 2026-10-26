@@ -141,6 +141,48 @@ export async function ssoSignIn(
   return result;
 }
 
+/**
+ * Links a signed-in account to an organization's single sign-on, as the web
+ * vault's Link SSO does: a ticket from the session, then authorize with it as
+ * `user_identifier`, Microsoft (the stand-in, whose next sign-in the caller
+ * queued), and the callback, which finishes the link. Returns the callback's
+ * status (307 when linked) and its body when refused.
+ */
+export async function linkFromSession(
+  request: APIRequestContext,
+  origin: string,
+  token: string,
+  identifier: string,
+): Promise<{ status: number; body: any }> {
+  const ticket = await request.get(`${origin}/api/accounts/sso/user-identifier`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  expect(ticket.status(), await ticket.text()).toBe(200);
+  const userIdentifier = (await ticket.json()) as string;
+  const { challenge } = pkce();
+  const state = `${b64url(randomBytes(24))}_returnUri='/vault'_identifier=${identifier}`;
+  const authorize = await request.get(
+    `${origin}/identity/connect/authorize?client_id=web&redirect_uri=${encodeURIComponent(`${origin}/sso-connector.html`)}` +
+      `&response_type=code&scope=api%20offline_access&state=${encodeURIComponent(state)}&code_challenge=${challenge}` +
+      `&code_challenge_method=S256&response_mode=query&domain_hint=${encodeURIComponent(identifier)}&ssoToken=` +
+      `&user_identifier=${encodeURIComponent(userIdentifier)}`,
+    { maxRedirects: 0 },
+  );
+  if (authorize.status() !== 307) {
+    return { status: authorize.status(), body: await authorize.json().catch(() => null) };
+  }
+  const atEntra = await request.get(authorize.headers()["location"], { maxRedirects: 0 });
+  expect(atEntra.status(), await atEntra.text()).toBe(302);
+  const callback = await request.get(atEntra.headers()["location"], { maxRedirects: 0 });
+  if (callback.status() === 307) {
+    const back = new URL(callback.headers()["location"]);
+    expect(back.origin + back.pathname).toBe(`${origin}/sso-connector.html`);
+    expect(back.searchParams.get("state")).toBe(state);
+    return { status: 307, body: null };
+  }
+  return { status: callback.status(), body: await callback.json().catch(() => null) };
+}
+
 /** The web vault's token request for a sign-in's code. */
 export async function redeem(
   request: APIRequestContext,

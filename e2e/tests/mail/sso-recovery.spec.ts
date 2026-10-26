@@ -10,7 +10,7 @@ import { expect, test } from "@playwright/test";
 
 import { mailServerPort } from "../../paths.mjs";
 import { Api, encString } from "../api/support";
-import { message, ssoOrg, ssoSignIn } from "../support/entra";
+import { linkFromSession, message, ssoOrg, ssoSignIn } from "../support/entra";
 
 import { joinByEmail, waitForMessage } from "./mailbox";
 
@@ -37,6 +37,13 @@ test("an owner recovers a member who must sign in with single sign-on, and the n
   const member = await api.account("recovered", `gus-${randomUUID().slice(0, 8)}@${domain}`);
   const memberId = await joinByEmail(api, owner, orgId, orgName, member, { type: 2 });
   const gus = await tenant.person(member.email);
+
+  // They link their account from their signed-in session (it has keys, so an
+  // email never links it), and the account hears about it.
+  await tenant.next(gus);
+  expect((await linkFromSession(request, origin, member.token, identifier)).status).toBe(307);
+  const linked = await waitForMessage(member.email, /linked to .* single sign-on/);
+  expect(linked.text).toContain("If you didn't do this");
 
   // They forget their master password; the owner sets a new one.
   const newHash = Buffer.from(`new-hash-${member.email}`).toString("base64");

@@ -1,11 +1,13 @@
 // Sign in with Microsoft Entra ID, in the web vault (DESIGN.md, "Sign in with
 // Microsoft Entra ID"), against the local stand-in for Entra
 // (e2e/entra-standin.mjs): an owner sets it up on the organization's Single
-// sign-on page and verifies a domain; a member types their email, is sent to
-// the organization's sign-in, picks their Microsoft account, and unlocks with
-// their master password; someone outside the organization is told why not;
-// and with "Require single sign-on" on, a member's password sends them to it
-// while the owner's still works. Real keys throughout.
+// sign-on page and verifies a domain; a member with an account links it from
+// their own session (Link SSO in the organization's menu), then types their
+// email, is sent to the organization's sign-in, picks their Microsoft
+// account, and unlocks with their master password; someone outside the
+// organization is told why not; and with "Require single sign-on" on, a
+// member's password sends them to it while the owner's still works. Real
+// keys throughout.
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
 import { port } from "../paths.mjs";
@@ -96,6 +98,46 @@ async function setUp(browser: Browser, index: number, name: string) {
   return { owner, ownerUser, orgId, tenant, identifier, domain };
 }
 
+/**
+ * An account with keys links itself to the organization's single sign-on
+ * from its own signed-in session: Link SSO in the organization's menu, then
+ * Microsoft (the stand-in's account picker), and back to the vault, which
+ * unlocks with the master password. Its owner's web vault confirms it first.
+ */
+async function linkSso(owner: Page, orgId: string, orgName: string, user: WebUser, page: Page) {
+  // The organization's menu shows when its entry in the side menu is hovered.
+  const orgEntry = page.getByRole("navigation", { name: "Side navigation" }).getByText(orgName, { exact: true });
+  const openOrgMenu = async () => {
+    await orgEntry.hover();
+    await page.getByRole("button", { name: "Toggle Organization Menu" }).click();
+  };
+  // The owner's web vault lets the new member in when the Members page opens.
+  await owner.goto("/#/vault");
+  await owner.goto(`/#/organizations/${orgId}/members`);
+  await expect(owner.getByRole("row").filter({ hasText: user.email })).toBeVisible();
+  await expect(async () => {
+    await page.goto("/#/vault");
+    await page.reload();
+    if (page.url().includes("lock")) {
+      await page.getByLabel(/Master password/).fill(user.password);
+      await page.getByRole("button", { name: "Unlock", exact: true }).click();
+    }
+    await expect(orgEntry).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout: 60_000 });
+  await openOrgMenu();
+  await page.getByRole("menuitem", { name: "Link SSO" }).click();
+  await page.getByRole("link", { name: `Sign in as ${user.email}` }).click();
+  // Back in the vault, which reloaded, so it's locked.
+  await expect(page.getByRole("button", { name: "Unlock", exact: true })).toBeVisible();
+  await page.getByLabel(/Master password/).fill(user.password);
+  await page.getByRole("button", { name: "Unlock", exact: true }).click();
+  await expect(orgEntry).toBeVisible();
+  // The organization's menu now offers Unlink SSO.
+  await openOrgMenu();
+  await expect(page.getByRole("menuitem", { name: "Unlink SSO" })).toBeVisible();
+  await page.keyboard.press("Escape");
+}
+
 /** Types an email on the sign-in page and chooses single sign-on. */
 async function startSso(page: Page, email: string) {
   await page.goto("/#/login");
@@ -110,13 +152,15 @@ test("an owner sets up single sign-on and a member signs in with it, then unlock
   const index = testInfo.repeatEachIndex;
   const { owner, orgId, tenant, domain } = await setUp(browser, index, "Lakeside Dental");
 
-  // A member, invited by email (this server sends no email, so they join at once).
+  // A member, invited by email (this server sends no email, so they join at
+  // once). Her account has keys, so she links it herself, signed in.
   const ana: WebUser = { email: `ana-${index}@${domain}`, name: "Ana", password };
-  const anaSignUp = await newPage(browser);
-  await signUp(anaSignUp, ana);
-  await anaSignUp.context().close();
+  const anaVault = await newPage(browser);
+  await signUp(anaVault, ana);
   await invite(owner, orgId, ana.email);
   await tenant.person(ana.email, undefined, "Ana Lima");
+  await linkSso(owner, orgId, "Lakeside Dental", ana, anaVault);
+  await anaVault.context().close();
 
   // In a fresh browser: their email's domain finds the organization's sign-in,
   // they pick their Microsoft account, and their master password unlocks.
@@ -165,11 +209,12 @@ test("with Require single sign-on, a member's password sends them to it, and the
   const index = testInfo.repeatEachIndex;
   const { owner, ownerUser, orgId, tenant, domain } = await setUp(browser, index, "Pine Street Law");
   const cy: WebUser = { email: `cy-${index}@${domain}`, name: "Cy", password };
-  const cySignUp = await newPage(browser);
-  await signUp(cySignUp, cy);
-  await cySignUp.context().close();
+  const cyVault = await newPage(browser);
+  await signUp(cyVault, cy);
   await invite(owner, orgId, cy.email);
   await tenant.person(cy.email);
+  await linkSso(owner, orgId, "Pine Street Law", cy, cyVault);
+  await cyVault.context().close();
 
   // The policy, turned on from the Policies page (the Business preset has Single organization on).
   await owner.goto("/#/vault");

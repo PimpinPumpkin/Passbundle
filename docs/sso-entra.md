@@ -25,7 +25,7 @@ From Microsoft's "Register an application in Microsoft Entra ID":
 
 ## 3. Ask for the email claim and xms_edov
 
-PassBundle recognizes people by their Entra object ID, never their email. The first time someone signs in, it links their PassBundle account by email only when the email is vouched for: at a domain you verify in PassBundle (step 5), or with Microsoft's `xms_edov` claim saying the email's domain is verified.
+PassBundle recognizes people by their Entra object ID, never their email. The email is used once, for someone you invited who has no PassBundle account yet, and only when it's vouched for: Microsoft's `xms_edov` claim says the email's domain is verified, or, when it doesn't say, the email is at a domain you verify in PassBundle (step 5) and the person isn't a guest in your tenant.
 
 1. In the app, open **Token configuration** and choose **Add optional claim**.
 2. Choose **ID**, tick **email**, and add it. If Entra offers to add the Microsoft Graph email permission, accept.
@@ -49,12 +49,14 @@ Now people can sign in: on the sign-in page, they type their email and choose **
 
 Policies, **Require single sign-on**, makes members sign in with it. It needs single sign-on on and the **Single organization** policy. Owners and your IT provider's staff can always sign in with their passwords, so nobody is locked out, and account recovery keeps working.
 
+An API key (the command-line tool's) still signs in without single sign-on. With the policy on, the Single sign-on page offers **Replace members' API keys**, so members' old keys stop working; they get a new one from their account settings after signing in with single sign-on.
+
 ## Who can sign in
 
-- **Members of the organization** (invited, joined, or confirmed), when their email is vouched for (step 3 or 5) the first time. After that, their Microsoft account is linked and their email doesn't matter.
-- **Someone invited who has no account yet**: they sign in with Microsoft, then choose a master password.
-- **Accounts in no organization at a verified domain**: they sign in to their own vault.
-- **Never:** people who aren't members (they're told so), your IT provider's staff (they use their master password), or an account already linked to a different Microsoft account. To relink someone whose Microsoft account was recreated, unlink them under **Linked accounts**.
+- **Someone invited who has no account yet** (by email, or by provisioning from Entra): they sign in with Microsoft, then choose a master password. Their email must be vouched for (step 3 or 5).
+- **Members who already have an account**: they sign in with their master password once, open the organization's menu in their vault, and choose **Link SSO**. After that, Microsoft signs them in and their email doesn't matter. Their account is emailed whenever it's linked.
+- **Accounts in no organization at a verified domain**: the same way, with Link SSO; they sign in to their own vault.
+- **Never:** people who aren't members (they're told so), your IT provider's staff (they use their master password), or an account already linked to a different Microsoft account. To relink someone whose Microsoft account was recreated, unlink them under **Linked accounts**; they're signed out everywhere and link again the same way.
 
 ## When something goes wrong
 
@@ -67,7 +69,8 @@ The sign-in page says what PassBundle refused, and the organization's event log 
 | AADSTS7000215, invalid client secret | You pasted the Secret ID, or the secret expired. Make a new one (step 2). |
 | AADSTS50105, not assigned to a role for the application | Assignment is required and this person isn't assigned (step 4.2). |
 | AADSTS65001, the user or administrator hasn't consented | Grant admin consent (step 4.1). |
-| "Microsoft didn't confirm that ... is yours" | Their email's domain isn't verified in PassBundle and the token has no `xms_edov` (steps 3 and 5). |
+| "Microsoft didn't confirm that ... is yours" | Their email's domain isn't verified in PassBundle and the token has no `xms_edov`, or `xms_edov` is false, or they're a guest without `xms_edov` (steps 3 and 5). |
+| "... already has a PassBundle account" | They link it themselves: sign in with the master password, then Link SSO in the organization's menu. |
 | "... isn't a member of ..." | Invite them first (Members, or provisioning from Entra). |
 
 ## Checking it with a real tenant
@@ -75,7 +78,8 @@ The sign-in page says what PassBundle refused, and the organization's event log 
 Not done yet: PassBundle's tests use a stand-in for Entra. With a Microsoft 365 developer tenant, check:
 
 - [ ] Steps 1 to 5 as written; the setup page's steps match what Entra shows.
-- [ ] A member signs in and unlocks with their master password; their first sign-in links them (event log).
+- [ ] A member with an account uses Link SSO, gets the email, then signs in with Microsoft and unlocks with their master password.
+- [ ] Someone invited without an account signs in with Microsoft and sets a master password.
 - [ ] The ID token carries `email` and `xms_edov` after step 3 (the event log says "not vouched for" when it doesn't).
 - [ ] A user not assigned to the app (with Assignment required) is refused by Microsoft with AADSTS50105, and PassBundle shows it.
 - [ ] A wrong secret is refused with AADSTS7000215; an expired or deleted one too.
