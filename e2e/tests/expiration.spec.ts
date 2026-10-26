@@ -134,6 +134,11 @@ test("the expiring items report lists what has expired or expires soon, soonest 
   await signUp(page, webUserFor("expires-report", testInfo.repeatEachIndex));
 
   const now = new Date();
+  // The card expires at the end of this month. Payments API expires in 5
+  // days, or 6 when that's the same day as the card: a tie has no order.
+  const lastDayOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
+  const daysToMonthEnd = lastDayOfMonth.getUTCDate() - now.getUTCDate();
+  const paymentsDays = daysToMonthEnd === 5 ? 6 : 5;
   const note = (name: string, expires?: string) => ({
     type: 2,
     name,
@@ -142,7 +147,7 @@ test("the expiring items report lists what has expired or expires soon, soonest 
   });
   const items = [
     note("Old certificate", isoInDays(-5)),
-    note("Payments API", isoInDays(5)),
+    note("Payments API", isoInDays(paymentsDays)),
     note("Domain renewal", isoInDays(90)),
     note("Office door code"),
     {
@@ -172,9 +177,10 @@ test("the expiring items report lists what has expired or expires soon, soonest 
   await expect(page).toHaveURL(/expiring-items-report/);
 
   // Expired first, then by date; nothing that expires later or never.
-  const lastDayOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
-  const daysToMonthEnd = lastDayOfMonth.getUTCDate() - now.getUTCDate();
-  const expected = ["Old certificate", ...(daysToMonthEnd < 5 ? ["Expiring card", "Payments API"] : ["Payments API", "Expiring card"])];
+  const expected = [
+    "Old certificate",
+    ...(daysToMonthEnd < paymentsDays ? ["Expiring card", "Payments API"] : ["Payments API", "Expiring card"]),
+  ];
   await expect(page.getByTestId("keykeeper-report-expires")).toHaveCount(3);
   await expect(page.locator("bit-table-scroll tr td:nth-child(2) a")).toHaveText(expected);
   await expect(page.getByText("Domain renewal")).toHaveCount(0);
