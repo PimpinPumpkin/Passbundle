@@ -1,47 +1,115 @@
 <!--
 title: PassBundle for MSPs and IT providers
-description: Run every client's password manager from one console. Default policies and templates for all of them, rollout from your RMM, no confirm step, free staff seats, and one pool of seats across every client.
+description: Run every client's password manager from one console. Account recovery on by default, provisioning from Entra ID, each client's passwords to fix, folders with permissions, item history, rollout from your RMM, free staff seats, and one pool of seats across every client.
 layout: wide
 -->
 <section class="hero">
-  <div>
-    <span class="eyebrow">For MSPs and IT providers</span>
-    <h1>Every client's passwords, run from one console.</h1>
-    <p class="lead">
-      Add a client in one step, set your policies and templates once for all of them, and roll out
-      from your RMM. Your staff are free, and every user in every client shares one pool of seats.
-    </p>
-    <div class="actions">
-      <a class="button primary" href="mailto:hello@passbundle.com?subject=PassBundle%20demo">Book a demo</a>
-      <a class="button" href="/pricing/#msp">MSP pricing</a>
-    </div>
-    <p class="fine">Running IT for several companies or locations in one group? The console works for you too.</p>
+  <span class="eyebrow">For MSPs and IT providers</span>
+  <h1>Every client's passwords, run from one console.</h1>
+  <p class="lead">
+    Add a client in one step, set your policies and templates once for all of them, and roll out
+    from your RMM. Your staff are free, and every user in every client shares one pool of seats.
+  </p>
+  <div class="actions">
+    <a class="button primary" href="mailto:hello@passbundle.com?subject=PassBundle%20demo">Book a demo</a>
+    <a class="button" href="/pricing/#msp">MSP pricing</a>
   </div>
-  <x-shot name="msp-console" class="framed" alt="The PassBundle MSP console: five clients with their members, expiring items, and weak and reused passwords" eager></x-shot>
+  <p class="fine">Running IT for several companies or locations in one group? The console works for you too.</p>
+  <div class="showcase">
+    <div class="window">
+      <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span>vault.passbundle.com</span></div>
+      <x-shot name="msp-console" frame="desktop" alt="The PassBundle MSP console: five clients with their members, expiring items, and weak, reused, and exposed passwords" eager></x-shot>
+    </div>
+  </div>
 </section>
 
 <section class="tight">
-  <div class="cards">
-    <div class="card">
-      <x-art name="SpotReport"></x-art>
-      <h3>Every client at a glance</h3>
-      <p>Members, people waiting to join, expiring credentials, and weak or reused passwords for every client, side by side. Open any client's admin console in one click, with the same sign-in.</p>
+  <div class="facts">
+    <div><strong>Free staff seats</strong><span>Your own technicians never count.</span></div>
+    <div><strong>One pool of seats</strong><span>Every client's people, billed together.</span></div>
+    <div><strong>No minimums</strong><span>A client of five costs the same per seat as your biggest.</span></div>
+    <div><strong>Open source</strong><span>Every line public, for you and your clients' auditors.</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="head center">
+    <h2>Built for how you look after clients</h2>
+    <p class="lead">The jobs that eat an MSP's week, done once for every client.</p>
+  </div>
+  <div class="features">
+    <div class="feature">
+      <x-tile icon="console" tone="brand"></x-tile>
+      <h3>One console for every client</h3>
+      <p>Members, people waiting to join, expiring credentials, and passwords to fix for every client, side by side. Open any client's admin console in one click, with the same sign-in.</p>
     </div>
-    <div class="card">
-      <x-art name="AutoConfirmSvg"></x-art>
-      <h3>No confirm step</h3>
-      <p>People join a client the moment they accept or sign in from a managed computer. Your staff's apps hand them the keys in the background, so nobody chases a Confirm button.</p>
+    <div class="feature">
+      <x-tile icon="lifebuoy" tone="turquoise"></x-tile>
+      <h3>Account recovery, on by default</h3>
+      <p>Every new client starts with it, and people are enrolled as they join. Nobody chases a team to opt in after a migration.</p>
     </div>
-    <div class="card">
-      <x-art name="LockIcon"></x-art>
-      <h3>Private, even from you</h3>
-      <p>Each client's vault is end-to-end encrypted, and your staff are never part of a client's account recovery, so a technician can't take over a client's accounts.</p>
+    <div class="feature">
+      <x-tile icon="people" tone="sapphire"></x-tile>
+      <h3>Provisioning from Entra ID</h3>
+      <p>Connect a client's Microsoft Entra ID, and the people and groups assigned there join, change, and leave its organization on their own.</p>
+    </div>
+    <div class="feature">
+      <x-tile icon="signin" tone="aquamarine"></x-tile>
+      <h3>Sign in with Entra <span class="chip soon">Coming soon</span></h3>
+      <p>Each client's people sign in with their own Microsoft 365 account, set up per client.</p>
+    </div>
+    <div class="feature">
+      <x-tile icon="pulse" tone="onyx"></x-tile>
+      <h3>Events to your security tools <span class="chip soon">Coming soon</span></h3>
+      <p>Send a client's events, or every client's in one feed, to Microsoft Sentinel, to syslog over TLS, or to a signed webhook.</p>
+    </div>
+    <div class="feature">
+      <x-tile icon="shield" tone="emerald"></x-tile>
+      <h3>Exposed, weak, and reused, per client</h3>
+      <p>Each client's passwords to fix, with a list by name, most exposed first. No password leaves your browser to be checked.</p>
+    </div>
+    <div class="feature">
+      <x-tile icon="folder" tone="topaz"></x-tile>
+      <h3>Folders with fine-grained permissions</h3>
+      <p>For each shared folder, choose what each person or group can do: see items, see passwords, create, edit, delete, share, export, print, see history, or manage.</p>
+    </div>
+    <div class="feature">
+      <x-tile icon="history" tone="amethyst"></x-tile>
+      <h3>Item history</h3>
+      <p>Every edit keeps the version before, with who saved it and when. Compare, restore, or clear it, by the folder's permissions.</p>
+    </div>
+    <div class="feature">
+      <x-tile icon="server" tone="garnet"></x-tile>
+      <h3>Self-hosting</h3>
+      <p>Use our hosted service, or run the open-source server yourself, with SQLite or PostgreSQL, in one container.</p>
+    </div>
+  </div>
+</section>
+
+<section class="tight">
+  <div class="split">
+    <div>
+      <span class="eyebrow">Password health</span>
+      <h2>See which clients need you</h2>
+      <p class="lead">
+        The console counts each client's weak, reused, and exposed passwords. Open a count to see
+        exactly which items to fix, by name, never by password.
+      </p>
+      <ul class="checks">
+        <li>Exposed passwords are checked against known breaches with only five characters of a hash</li>
+        <li>Expiring certificates, domains, and API keys, counted per client</li>
+        <li>Members, people waiting to join, and last activity at a glance</li>
+      </ul>
+    </div>
+    <div class="window">
+      <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span>vault.passbundle.com</span></div>
+      <x-shot name="msp-health" frame="desktop" alt="A client's passwords to fix in the MSP console: each item by name, with what's wrong with it"></x-shot>
     </div>
   </div>
 </section>
 
 <section>
-  <div class="split">
+  <div class="split flip">
     <div>
       <span class="eyebrow">Default policies</span>
       <h2>Set your policies once</h2>
@@ -50,13 +118,36 @@ layout: wide
         client needs something different, change it in that client's console, and it keeps its own
         setting.
       </p>
-      <ul>
+      <ul class="checks">
         <li>New clients start with account recovery, strong master passwords, and one work account per person</li>
         <li>Change a default, and every client that follows it changes too</li>
         <li>See at a glance which clients have their own settings</li>
       </ul>
     </div>
-    <x-shot name="msp-policies" class="framed" alt="Default policies in the MSP console, with the clients that have their own setting"></x-shot>
+    <x-shot name="msp-policies" frame="panel" alt="Default policies in the MSP console, with the clients that have their own setting"></x-shot>
+  </div>
+</section>
+
+<section>
+  <div class="split">
+    <div>
+      <span class="eyebrow">Microsoft Entra ID</span>
+      <h2>People join and leave with Microsoft 365</h2>
+      <p class="lead">
+        Turn on provisioning in a client's settings, paste its address and token into Entra, and
+        Entra keeps the client's organization in step: new people are invited, people turned off
+        lose access, and groups come along.
+      </p>
+      <ul class="checks">
+        <li>One token per client, shown once, replaceable at any time</li>
+        <li>The console shows when each client last synced</li>
+        <li>People Entra adds get in through the client's install command, with no click from you</li>
+      </ul>
+    </div>
+    <div class="window">
+      <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span>vault.passbundle.com</span></div>
+      <x-shot name="admin-provisioning" frame="desktop" alt="A client's Provisioning page, with its SCIM address and token for Microsoft Entra ID"></x-shot>
+    </div>
   </div>
 </section>
 
@@ -69,58 +160,117 @@ layout: wide
         Each client has its own install command. Run it on the client's Windows computers from your
         RMM, and people land in the right client when they sign in.
       </p>
-      <ul>
+      <ul class="checks">
         <li>Installs the extension in Chrome and Edge, with the server filled in</li>
         <li>Turns off the browsers' own password managers</li>
-        <li>Limit it to the client's email domains</li>
+        <li>Limit it to the client's email domains, and people join with no click from you</li>
         <li>The client's owners get an email for each person who joins</li>
         <li>A whole office can sign up at once without tripping login limits</li>
       </ul>
     </div>
-    <x-shot name="msp-install" class="framed" alt="A client's install command in the MSP console"></x-shot>
+    <x-shot name="msp-install" frame="panel" alt="A client's install command in the MSP console"></x-shot>
   </div>
 </section>
 
 <section>
-  <div class="center">
-    <h2>Built for how your team works</h2>
+  <div class="split">
+    <div>
+      <span class="eyebrow">Folders and permissions</span>
+      <h2>Exactly who can do what, folder by folder</h2>
+      <p class="lead">
+        Each client keeps its shared passwords in folders. For each one, pick a preset, or open the
+        grid and choose capability by capability, for a person or a whole group.
+      </p>
+      <ul class="checks">
+        <li>Can view, Can view but not see passwords, Can edit, Can manage, or Custom</li>
+        <li>The Access page shows who reaches each folder, and how</li>
+        <li>When someone leaves, see the passwords they could see, ready to change</li>
+      </ul>
+    </div>
+    <div class="window">
+      <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span>vault.passbundle.com</span></div>
+      <x-shot name="folder-permissions" frame="desktop" alt="A shared folder's access, with a group's capabilities chosen one by one"></x-shot>
+    </div>
   </div>
-  <div class="cards">
-    <div class="card">
-      <x-art name="ItemTypes"></x-art>
+</section>
+
+<section>
+  <div class="split flip">
+    <div>
+      <span class="eyebrow">Item history</span>
+      <h2>Every version, kept</h2>
+      <p class="lead">
+        Someone changed the firewall's password and nobody wrote down the old one? Every edit keeps
+        the version before, with who saved it. See what changed, side by side, and restore it.
+      </p>
+      <ul class="checks">
+        <li>The newest 20 versions, then one a day, up to 100 per item</li>
+        <li>Whoever can't see an item's passwords sees only who changed it and when</li>
+        <li>In the web vault and the desktop and phone apps</li>
+      </ul>
+    </div>
+    <div class="window">
+      <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span>vault.passbundle.com</span></div>
+      <x-shot name="item-history" frame="desktop" alt="An item's version history in the web vault, with who saved each version"></x-shot>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head center">
+    <h2>And the rest of the day job</h2>
+  </div>
+  <div class="features">
+    <div class="feature">
+      <x-tile icon="layers" tone="topaz"></x-tile>
       <h3>Templates for every client</h3>
       <p>Make an item template once, for a firewall or a Microsoft 365 tenant, and every client has it. Edit it, and every copy updates. Clients' people can use it without changing it.</p>
     </div>
-    <div class="card">
-      <x-art name="UserLockIcon"></x-art>
+    <div class="feature">
+      <x-tile icon="usershield" tone="turquoise"></x-tile>
       <h3>Access that fits each technician</h3>
       <p>Limit a technician to chosen clients or to a helpdesk role, choose whether they see vault items, and hide install commands from anyone who doesn't need them.</p>
     </div>
-    <div class="card">
-      <x-art name="RegistrationUserAddIcon"></x-art>
+    <div class="feature">
+      <x-tile icon="identity" tone="turquoise"></x-tile>
       <h3>Your client's point of contact</h3>
       <p>Give someone at the client just enough to manage their own people with a custom role, and keep the rest with your team.</p>
     </div>
-    <div class="card">
-      <x-art name="RegistrationCheckEmailIcon"></x-art>
+    <div class="feature">
+      <x-tile icon="bolt" tone="gold"></x-tile>
+      <h3>No confirm step</h3>
+      <p>People join a client the moment they accept or sign in from a managed computer. Your staff's apps hand them the keys in the background, so nobody chases a Confirm button.</p>
+    </div>
+    <div class="feature">
+      <x-tile icon="list" tone="onyx"></x-tile>
       <h3>A record of everything</h3>
       <p>Every MSP action is logged with who did it, from where, and in which client. Each client sees which of your staff can reach it.</p>
     </div>
-    <div class="card">
-      <x-art name="TwoFactorTimeoutIcon"></x-art>
+    <div class="feature">
+      <x-tile icon="eyeoff" tone="sapphire"></x-tile>
+      <h3>Private, even from you</h3>
+      <p>Each client's vault is end-to-end encrypted, and your staff are never part of a client's account recovery, so a technician can't take over a client's accounts.</p>
+    </div>
+    <div class="feature">
+      <x-tile icon="clock" tone="onyx"></x-tile>
       <h3>Expiring credentials, everywhere</h3>
       <p>Certificates, domains, and API keys carry their expiration date, and the console counts what's expiring in each client.</p>
     </div>
-    <div class="card">
-      <x-art name="Security"></x-art>
+    <div class="feature">
+      <x-tile icon="import" tone="ruby"></x-tile>
+      <h3>Bring clients over</h3>
+      <p>Import a client's shared passwords from about 70 password managers into its folders. Moving from Passportal or IT Glue? We'll help you plan it.</p>
+    </div>
+    <div class="feature">
+      <x-tile icon="code" tone="emerald"></x-tile>
       <h3>Open source</h3>
       <p>Every line of PassBundle is public, so you and your clients' auditors can read exactly what it does.</p>
     </div>
   </div>
 </section>
 
-<section>
-  <div class="center">
+<section id="seats">
+  <div class="head center">
     <h2>One pool of seats</h2>
     <p class="lead">
       Every user in every client counts toward one pool, billed monthly on the seats in use. The
@@ -139,23 +289,25 @@ layout: wide
       </tbody>
     </table>
   </div>
-  <p class="fine center">Resell it at your own price. A new client's first five people cost the same as your five hundredth.</p>
+  <p class="plans-note center">Resell it at your own price. A new client's first five people cost the same as your five hundredth.</p>
 </section>
 
 <section>
-  <div class="panel cta">
-    <div>
-      <h2>Be one of our first MSPs</h2>
-      <p>We're working closely with a handful of MSPs as we launch. You get six months free and a direct line to us; we get to hear what your clients need.</p>
+  <div class="cta">
+    <div class="jewels" aria-hidden="true">
+      <x-tile icon="console" tone="brand" class="large"></x-tile>
     </div>
+    <h2>Be one of our first MSPs</h2>
+    <p>We're working closely with a handful of MSPs as we launch. You get six months free and a direct line to us; we get to hear what your clients need.</p>
     <div class="actions">
       <a class="button primary" href="mailto:hello@passbundle.com?subject=PassBundle%20design%20partner">Talk to us</a>
+      <a class="button" href="/pricing/#compare">Compare plans</a>
     </div>
   </div>
 </section>
 
 <section>
-  <div class="center">
+  <div class="head center">
     <h2>Questions</h2>
   </div>
   <div class="faq">
@@ -172,8 +324,20 @@ layout: wide
       <p>Any RMM that can run a PowerShell command as an administrator on Windows, such as NinjaOne, ConnectWise Automate, Datto RMM, and N-able. Intune and group policy work too.</p>
     </details>
     <details>
+      <summary>Do you work with Microsoft Entra ID?</summary>
+      <p>Yes. Provisioning from Entra ID keeps each client's people and groups in step over SCIM, set up per client. Signing in with Entra, per client, is coming soon; at first, the master password still unlocks the vault.</p>
+    </details>
+    <details>
+      <summary>Can we send events to our SIEM?</summary>
+      <p>Coming soon: a client's events, or one feed for every client, to Microsoft Sentinel, syslog over TLS (JSON or CEF), or a signed webhook. Until then, every client's event log and your MSP's audit log are in the web vault.</p>
+    </details>
+    <details>
       <summary>Can a client take its data with it?</summary>
-      <p>Yes. A client's admins can export the organization's vault at any time, in a format other password managers import.</p>
+      <p>Yes. A client's admins can export the organization's vault at any time, in a format other password managers import, and remove its MSP, which removes all of the MSP's staff at once.</p>
+    </details>
+    <details>
+      <summary>Can we host it ourselves?</summary>
+      <p>Yes. The server is open source and runs on your own hardware, with SQLite or PostgreSQL. What you pay us for is the hosted service: we run it, back it up, keep it updated, and answer when you need help.</p>
     </details>
     <details>
       <summary>Is there an API or PSA integration?</summary>
