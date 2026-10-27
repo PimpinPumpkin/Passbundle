@@ -10,7 +10,12 @@ import { createHash, hkdfSync, randomBytes, randomUUID } from "node:crypto";
 import { type APIRequestContext, expect, test } from "@playwright/test";
 
 import { type Cert, httpsReceiver, throwawayCert } from "./siem";
-import { type Account, Api, encString, serverDatabase } from "./support";
+import { type Account, Api, encString, serverDatabase, withMasterPassword } from "./support";
+
+// The master password these changes need is checked the way a sign-in is
+// (600,000 rounds of PBKDF2 on the server, slow in its debug build), so tests
+// that make several get more time.
+test.describe.configure({ timeout: 120_000 });
 
 const REVOKED = -1;
 const CONFIRMED = 2;
@@ -41,22 +46,27 @@ async function revisionOf(api: Api, who: Account, itemId: string): Promise<strin
 /** A script token for one item, made by `who`. */
 async function scriptToken(api: Api, who: Account, orgId: string, itemId: string, name: string) {
   const token = newScriptToken();
-  const created = await api.call(who, "POST", `/api/keykeeper/organizations/${orgId}/script-tokens`, {
-    id: token.id,
-    name,
-    expiresAt: new Date(Date.now() + 90 * 86_400_000).toISOString(),
-    networks: [],
-    authHash: token.authHash,
-    sealedKey: encString(`sealed-key-${token.id}`),
-    grants: [
-      {
-        itemId,
-        copy: encString(`copy-${itemId}`),
-        revision: await revisionOf(api, who, itemId),
-        sealedSpec: encString(`spec-${itemId}`),
-      },
-    ],
-  });
+  const created = await api.call(
+    who,
+    "POST",
+    `/api/keykeeper/organizations/${orgId}/script-tokens`,
+    withMasterPassword(who, {
+      id: token.id,
+      name,
+      expiresAt: new Date(Date.now() + 90 * 86_400_000).toISOString(),
+      networks: [],
+      authHash: token.authHash,
+      sealedKey: encString(`sealed-key-${token.id}`),
+      grants: [
+        {
+          itemId,
+          copy: encString(`copy-${itemId}`),
+          revision: await revisionOf(api, who, itemId),
+          sealedSpec: encString(`spec-${itemId}`),
+        },
+      ],
+    }),
+  );
   expect(created.status, JSON.stringify(created.body)).toBe(200);
   return token;
 }
@@ -68,7 +78,12 @@ async function scriptRead(request: APIRequestContext, authorization: string): Pr
 
 /** A provisioning token, made by `who`. */
 async function provisioningToken(api: Api, who: Account, orgId: string): Promise<string> {
-  const made = await api.call(who, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`);
+  const made = await api.call(
+    who,
+    "POST",
+    `/api/keykeeper/organizations/${orgId}/provisioning/token`,
+    withMasterPassword(who),
+  );
   expect(made.status, JSON.stringify(made.body)).toBe(200);
   return made.body.newToken;
 }
@@ -151,11 +166,16 @@ test("removing an MSP revokes the script and provisioning tokens and event desti
     const scimToken = await provisioningToken(api, admin, orgId);
     expect(await scimRead(request, orgId, scimToken)).toBe(200);
     const destination = (who: Account, name: string) =>
-      api.call(who, "POST", `/api/keykeeper/organizations/${orgId}/event-streaming`, {
-        name,
-        kind: "webhook",
-        webhook: { url: receiver.url(`/${name}`), caCertificate: cert.cert },
-      });
+      api.call(
+        who,
+        "POST",
+        `/api/keykeeper/organizations/${orgId}/event-streaming`,
+        withMasterPassword(who, {
+          name,
+          kind: "webhook",
+          webhook: { url: receiver.url(`/${name}`), caCertificate: cert.cert },
+        }),
+      );
     expect((await destination(admin, "MSP SIEM")).status).toBe(200);
     expect((await destination(owner, "Own SIEM")).status).toBe(200);
 
@@ -210,13 +230,18 @@ test("removing an MSP names the single sign-on settings for the owner to review,
   const api = new Api(request);
   const { admin, orgId, owner } = await mspWithClient(api, "Bayside Law");
   const identifier = `offboard-${randomBytes(3).toString("hex")}`;
-  const saved = await api.call(admin, "PUT", `/api/keykeeper/organizations/${orgId}/sso`, {
-    enabled: false,
-    identifier,
-    tenantId: randomUUID(),
-    clientId: randomUUID(),
-    clientSecret: null,
-  });
+  const saved = await api.call(
+    admin,
+    "PUT",
+    `/api/keykeeper/organizations/${orgId}/sso`,
+    withMasterPassword(admin, {
+      enabled: false,
+      identifier,
+      tenantId: randomUUID(),
+      clientId: randomUUID(),
+      clientSecret: null,
+    }),
+  );
   expect(saved.status, JSON.stringify(saved.body)).toBe(200);
   const removed = await api.call(owner, "DELETE", `/api/keykeeper/organizations/${orgId}/msp`);
   expect(removed.status, JSON.stringify(removed.body)).toBe(200);

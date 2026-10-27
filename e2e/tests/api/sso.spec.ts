@@ -26,7 +26,12 @@ import {
   verifyDomain,
 } from "../support/entra";
 
-import { Api, encString, publicKey, serverDatabase, type Account } from "./support";
+import { Api, withMasterPassword, encString, publicKey, serverDatabase, type Account } from "./support";
+
+// The master password these changes need is checked the way a sign-in is
+// (600,000 rounds of PBKDF2 on the server, slow in its debug build), so tests
+// that make several get more time.
+test.describe.configure({ timeout: 120_000 });
 
 const origin = `https://127.0.0.1:${port}`;
 const CONFIRMED = 2;
@@ -130,19 +135,19 @@ test("owners and admins set it up; the secret never comes back; the tenant must 
     [{ tenantId: "9188040d-6c67-4c5b-b112-36a304b66dad" }, /personal Microsoft accounts/],
     [{ clientId: "not-a-guid" }, /client ID/],
   ] as const) {
-    const refused = await api.call(owner, "PUT", url, { ...settings(tenant, identifier), ...bad });
+    const refused = await api.call(owner, "PUT", url, withMasterPassword(owner, { ...settings(tenant, identifier), ...bad }));
     expect(refused.status, JSON.stringify(bad)).toBe(400);
     expect(message(refused.body)).toMatch(why);
   }
   // On needs a secret, and a tenant Microsoft knows.
-  const noSecret = await api.call(owner, "PUT", url, settings(tenant, identifier, true, false));
+  const noSecret = await api.call(owner, "PUT", url, withMasterPassword(owner, settings(tenant, identifier, true, false)));
   expect(message(noSecret.body)).toMatch(/client secret/);
-  const unknown = await api.call(owner, "PUT", url, settings(tenant, identifier));
+  const unknown = await api.call(owner, "PUT", url, withMasterPassword(owner, settings(tenant, identifier)));
   expect(unknown.status).toBe(400);
   expect(message(unknown.body)).toMatch(/didn't recognize the tenant/);
 
   await tenant.register();
-  const saved = await api.call(owner, "PUT", url, settings(tenant, identifier));
+  const saved = await api.call(owner, "PUT", url, withMasterPassword(owner, settings(tenant, identifier)));
   expect(saved.status, JSON.stringify(saved.body)).toBe(200);
   expect(saved.body).toMatchObject({
     enabled: true,
@@ -163,14 +168,19 @@ test("owners and admins set it up; the secret never comes back; the tenant must 
   }
 
   // Saving again without a secret keeps it.
-  const kept = await api.call(owner, "PUT", url, settings(tenant, identifier, true, false));
+  const kept = await api.call(owner, "PUT", url, withMasterPassword(owner, settings(tenant, identifier, true, false)));
   expect(kept.status, JSON.stringify(kept.body)).toBe(200);
   expect(kept.body.secretReadable).toBe(true);
 
   // An identifier belongs to one organization.
   const other = await api.account("sso-setup-other");
   const otherOrg = await api.organization(other, `SSO Other ${Date.now()}`);
-  const taken = await api.call(other, "PUT", `/api/keykeeper/organizations/${otherOrg}/sso`, settings(tenant, identifier));
+  const taken = await api.call(
+    other,
+    "PUT",
+    `/api/keykeeper/organizations/${otherOrg}/sso`,
+    withMasterPassword(other, settings(tenant, identifier)),
+  );
   expect(message(taken.body)).toMatch(/Another organization uses that SSO identifier/);
 
   // Members and outsiders get "not found", never 403 (the web vault signs out on 403).
@@ -180,7 +190,7 @@ test("owners and admins set it up; the secret never comes back; the tenant must 
   await api.addMember(owner, orgId, admin, "admin");
   for (const who of [member, other]) {
     expect((await api.call(who, "GET", url)).status).toBe(404);
-    expect((await api.call(who, "PUT", url, settings(tenant, identifier))).status).toBe(404);
+    expect((await api.call(who, "PUT", url, withMasterPassword(who, settings(tenant, identifier)))).status).toBe(404);
   }
   expect((await api.call(null, "GET", url)).status).toBe(401);
   expect((await api.call(admin, "GET", url)).status).toBe(200);
@@ -579,7 +589,12 @@ test("MSP staff are never signed in by a client's single sign-on; the managing M
   // the staff's own domain verified and their emails vouched for.
   const tenant = await new Tenant().register();
   const identifier = newIdentifier("staff");
-  const saved = await api.call(mspAdmin, "PUT", `/api/keykeeper/organizations/${orgId}/sso`, settings(tenant, identifier));
+  const saved = await api.call(
+    mspAdmin,
+    "PUT",
+    `/api/keykeeper/organizations/${orgId}/sso`,
+    withMasterPassword(mspAdmin, settings(tenant, identifier)),
+  );
   expect(saved.status, JSON.stringify(saved.body)).toBe(200);
   await verifyDomain(api, mspAdmin, orgId, domain);
   // A technician (an admin in the client through the MSP) can't open the settings.
@@ -746,7 +761,16 @@ test("Require single sign-on: members are sent to it, owners aren't, another org
   const otherOrg = await api.organization(admin, `Admin's Other ${Date.now()}`);
   const otherTenant = await new Tenant().register();
   const otherIdentifier = newIdentifier("other");
-  expect((await api.call(admin, "PUT", `/api/keykeeper/organizations/${otherOrg}/sso`, settings(otherTenant, otherIdentifier))).status).toBe(200);
+  expect(
+    (
+      await api.call(
+        admin,
+        "PUT",
+        `/api/keykeeper/organizations/${otherOrg}/sso`,
+        withMasterPassword(admin, settings(otherTenant, otherIdentifier)),
+      )
+    ).status,
+  ).toBe(200);
   const adminElsewhere = await otherTenant.person(admin.email);
   await otherTenant.next(adminElsewhere);
   expect((await linkFromSession(request, origin, admin, otherIdentifier)).status).toBe(200);
@@ -828,7 +852,12 @@ test("Require single sign-on: members are sent to it, owners aren't, another org
   // Its prerequisites can't be turned off under it.
   const singleOff = await setPolicy(api, owner, orgId, 3, false);
   expect(message(singleOff.body)).toMatch(/Turn off Require single sign-on before/);
-  const ssoOff = await api.call(owner, "PUT", `/api/keykeeper/organizations/${orgId}/sso`, settings(tenant, identifier, false, false));
+  const ssoOff = await api.call(
+    owner,
+    "PUT",
+    `/api/keykeeper/organizations/${orgId}/sso`,
+    withMasterPassword(owner, settings(tenant, identifier, false, false)),
+  );
   expect(message(ssoOff.body)).toMatch(/Turn off the Require single sign-on policy first/);
 
   // Off again: passwords work. Turning single sign-on off ends the sessions
@@ -837,7 +866,16 @@ test("Require single sign-on: members are sent to it, owners aren't, another org
   expect((await passwordLogin(request, member)).status).toBe(200);
   const view = await api.call(owner, "GET", `/api/keykeeper/organizations/${orgId}/sso`);
   expect(view.body).toMatchObject({ requireSso: false, singleOrg: true });
-  expect((await api.call(owner, "PUT", `/api/keykeeper/organizations/${orgId}/sso`, settings(tenant, identifier, false, false))).status).toBe(200);
+  expect(
+    (
+      await api.call(
+        owner,
+        "PUT",
+        `/api/keykeeper/organizations/${orgId}/sso`,
+        withMasterPassword(owner, settings(tenant, identifier, false, false)),
+      )
+    ).status,
+  ).toBe(200);
   const afterOff = await request.post("/identity/connect/token", {
     form: { grant_type: "refresh_token", refresh_token: signedIn.token!.body.refresh_token, client_id: "web" },
   });
@@ -924,7 +962,7 @@ test("Require single sign-on with members not linked yet: their password and two
 
   // The tenant can't change under it: that would unlink everyone at once.
   const otherTenant = await new Tenant().register();
-  const moved = await api.call(owner, "PUT", base, settings(otherTenant, identifier, true, true));
+  const moved = await api.call(owner, "PUT", base, withMasterPassword(owner, settings(otherTenant, identifier, true, true)));
   expect(moved.status).toBe(400);
   expect(message(moved.body)).toMatch(/Turn off the Require single sign-on policy before changing the tenant/);
 

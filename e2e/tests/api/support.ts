@@ -32,6 +32,17 @@ export type Account = {
 
 export type Result = { status: number; body: any };
 
+/**
+ * A change's body with the caller's master password hash, as the web vault
+ * sends it after asking: making a provisioning token, saving single sign-on,
+ * adding or changing an event destination or its signing secret, and making
+ * a script token need it (DESIGN.md, "Confirming sensitive changes").
+ */
+export const withMasterPassword = (
+  who: { password?: string } | null,
+  data: Record<string, unknown> = {},
+): Record<string, unknown> => ({ ...data, ...(who?.password ? { masterPasswordHash: who.password } : {}) });
+
 async function result(response: APIResponse): Promise<Result> {
   const text = await response.text();
   let body: unknown = text;

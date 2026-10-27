@@ -115,6 +115,8 @@ jobs:
         run: cmp meta/docs/vectors/event-streaming-secrets-v1.json src/keykeeper_streaming/vectors/event-streaming-secrets-v1.json
       - name: The server's single sign-on client secret test vectors are the meta repo's
         run: cmp meta/docs/vectors/sso-client-secret-v1.json src/api/core/keykeeper_sso/vectors/sso-client-secret-v1.json
+      - name: The server's site fix and install token key test vectors are the meta repo's
+        run: cmp meta/docs/vectors/server-derived-keys-v1.json src/db/models/vectors/server-derived-keys-v1.json
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       # One binary for both supported databases (SQLite and PostgreSQL); the
       # database URL picks which one at startup.
@@ -263,6 +265,8 @@ jobs:
           cmp meta/docs/vectors/reload-key-v1.json apps/web/src/app/keykeeper/reload-key/reload-key-v1.json
       - name: Single sign-on's client secret test vectors, as their generator makes them
         run: node meta/docs/vectors/make-sso-client-secret-v1.mjs | cmp - meta/docs/vectors/sso-client-secret-v1.json
+      - name: Site fix and install token key test vectors, as their generator makes them
+        run: node meta/docs/vectors/make-server-derived-keys-v1.mjs | cmp - meta/docs/vectors/server-derived-keys-v1.json
       - name: Upstream unit tests for every file we changed
         run: |
           base=$(cat .keykeeper-base)

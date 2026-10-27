@@ -8,9 +8,14 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
 
-import { Api, encString } from "../api/support";
+import { Api, withMasterPassword, encString } from "../api/support";
 
 import { inviteParams, verifyEmail, waitForMessage } from "./mailbox";
+
+// The master password these changes need is checked the way a sign-in is
+// (600,000 rounds of PBKDF2 on the server, slow in its debug build), so tests
+// that make several get more time.
+test.describe.configure({ timeout: 120_000 });
 
 const USER = "urn:ietf:params:scim:schemas:core:2.0:User";
 
@@ -35,7 +40,7 @@ test("someone the directory adds is invited by email, accepts, and waits to be l
   const owner = await api.account("mail-prov-owner");
   const orgName = `Mail Provisioning ${randomUUID().slice(0, 6)}`;
   const orgId = await api.organization(owner, orgName);
-  const made = await api.call(owner, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`);
+  const made = await api.call(owner, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`, withMasterPassword(owner));
   expect(made.status, JSON.stringify(made.body)).toBe(200);
   expect(made.body.mailEnabled).toBe(true);
 
@@ -70,7 +75,7 @@ test("the install command's email domains apply to the directory's invitations",
     domains: ["api.example.test"],
   });
   expect(domains.status, JSON.stringify(domains.body)).toBe(200);
-  const made = await api.call(admin, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`);
+  const made = await api.call(admin, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`, withMasterPassword(admin));
   const token = made.body.newToken as string;
   const join = (who: import("../api/support").Account) =>
     api.call(who, "POST", "/api/keykeeper/enrollment/join", {

@@ -9,7 +9,12 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test, type APIRequestContext } from "@playwright/test";
 
-import { Api, type Account, type Result } from "./support";
+import { Api, withMasterPassword, type Account, type Result } from "./support";
+
+// The master password these changes need is checked the way a sign-in is
+// (600,000 rounds of PBKDF2 on the server, slow in its debug build), so tests
+// that make several get more time.
+test.describe.configure({ timeout: 120_000 });
 
 const ERROR = "urn:ietf:params:scim:api:messages:2.0:Error";
 const LIST = "urn:ietf:params:scim:api:messages:2.0:ListResponse";
@@ -68,7 +73,7 @@ function expectError(result: Scim, status: number, scimType?: string) {
 }
 
 async function makeToken(api: Api, who: Account, orgId: string): Promise<string> {
-  const made = await api.call(who, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`);
+  const made = await api.call(who, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`, withMasterPassword(who));
   expect(made.status, JSON.stringify(made.body)).toBe(200);
   expect(made.body.newToken).toMatch(/^pbscim1_[A-Za-z0-9_-]{43}$/);
   return made.body.newToken;
@@ -362,6 +367,66 @@ test("Entra's requests for a person: create, match, update, turn off and on, rem
   await api.logIn(email, Buffer.from(`hash-${email}`).toString("base64"));
 });
 
+test("once an owner or admin revokes someone, the directory can't undo it, even someone it turned off first", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const owner = await api.account("RevokeOwner");
+  const orgId = await api.organization(owner, `Revoke ${randomUUID().slice(0, 6)}`);
+  const token = await makeToken(api, owner, orgId);
+  const email = unique("revoked");
+  const created = await scim(request, token, "POST", `${base(orgId)}/Users`, createUserBody(`rev-${randomUUID()}`, email));
+  expect(created.status, JSON.stringify(created.body)).toBe(201);
+  const id = created.body.id;
+  await api.account("Revoked", email);
+  const active = (value: boolean) =>
+    scim(request, token, "PATCH", `${base(orgId)}/Users/${id}`, {
+      schemas: [PATCH_OP],
+      Operations: [{ op: "replace", path: "active", value }],
+    });
+
+  // The directory turns them off; an admin turns them back on, then off.
+  expect((await active(false)).status).toBe(200);
+  expect((await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${id}/restore`)).status).toBe(200);
+  expect((await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${id}/revoke`)).status).toBe(200);
+  // The admin's word is the last: the directory can't turn them on again.
+  expectError(await active(true), 403);
+  expect((await memberOf(api, owner, orgId, email))?.status).toBe(REVOKED);
+  // The admin can, and then the directory may turn them off and on again.
+  expect((await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${id}/restore`)).status).toBe(200);
+  expect((await active(false)).status).toBe(200);
+  expect((await active(true)).status).toBe(200);
+  expect((await memberOf(api, owner, orgId, email))?.status).toBe(ACCEPTED);
+});
+
+test("an attribute whose name starts with characters of several bytes is kept, and lists still work", async ({
+  request,
+}) => {
+  // Its name was once cut at byte 4, which isn't a character boundary: every
+  // later list of users failed, and a server built with panic = abort stopped.
+  const api = new Api(request);
+  const owner = await api.account("BytesOwner");
+  const orgId = await api.organization(owner, `Bytes ${randomUUID().slice(0, 6)}`);
+  const token = await makeToken(api, owner, orgId);
+  const body = { ...createUserBody(`bytes-${randomUUID()}`, unique("bytes")), "€€x": "kept", "é": "too" };
+  const created = await scim(request, token, "POST", `${base(orgId)}/Users`, body);
+  expect(created.status, JSON.stringify(created.body)).toBe(201);
+  const listed = await scim(request, token, "GET", `${base(orgId)}/Users`);
+  expect(listed.status, JSON.stringify(listed.body)).toBe(200);
+  const mine = listed.body.Resources.find((r: { id: string }) => r.id === created.body.id);
+  expect(mine).toMatchObject({ "€€x": "kept", "é": "too", schemas: [USER] });
+  // In a filter or a path, such a name is refused like any that isn't one.
+  expectError(await scim(request, token, "GET", `${base(orgId)}/Users?filter=${encodeURIComponent('€€x eq "kept"')}`), 400);
+  expectError(
+    await scim(request, token, "PATCH", `${base(orgId)}/Users/${created.body.id}`, {
+      schemas: [PATCH_OP],
+      Operations: [{ op: "replace", path: "€€x", value: "changed" }],
+    }),
+    400,
+  );
+  expect((await scim(request, token, "GET", `${base(orgId)}/Users`)).status).toBe(200);
+});
+
 test("someone already in the organization is matched, not invited again", async ({ request }) => {
   const api = new Api(request);
   const owner = await api.account("MatchOwner");
@@ -414,7 +479,9 @@ test("owners, admins, custom roles, and an MSP's staff are matched but never cha
   const regularId = await api.addMember(mspAdmin, orgId, regular, "user");
 
   // A technician can't make the client's token: an MSP's admins can.
-  expect((await api.call(tech, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`)).status).toBe(404);
+  expect(
+    (await api.call(tech, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`, withMasterPassword(tech))).status,
+  ).toBe(404);
   const token = await makeToken(api, mspAdmin, orgId);
 
   const protectedPeople = [mspAdmin, tech, clientAdmin, poc];

@@ -6,7 +6,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 
 import { type APIRequestContext, expect } from "@playwright/test";
 
-import type { Account, Api } from "../api/support";
+import { type Account, type Api, withMasterPassword } from "../api/support";
 
 import { entraPort } from "../../paths.mjs";
 
@@ -282,7 +282,12 @@ export async function ssoOrg(api: Api, name: string, options: { domain?: boolean
   const orgId = await api.organization(owner, `${name} ${Date.now()}`);
   const tenant = await new Tenant().register();
   const identifier = newIdentifier(name);
-  const saved = await api.call(owner, "PUT", `/api/keykeeper/organizations/${orgId}/sso`, settings(tenant, identifier));
+  const saved = await api.call(
+    owner,
+    "PUT",
+    `/api/keykeeper/organizations/${orgId}/sso`,
+    withMasterPassword(owner, settings(tenant, identifier)),
+  );
   expect(saved.status, JSON.stringify(saved.body)).toBe(200);
   if (options.domain !== false) {
     await verifyDomain(api, owner, orgId, domain);

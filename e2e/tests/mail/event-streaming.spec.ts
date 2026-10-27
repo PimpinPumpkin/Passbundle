@@ -4,9 +4,14 @@
 import { expect, test } from "@playwright/test";
 
 import { httpsReceiver, throwawayCert, waitFor } from "../api/siem";
-import { Api } from "../api/support";
+import { Api, withMasterPassword } from "../api/support";
 
 import { joinByEmail, waitForMessage } from "./mailbox";
+
+// The master password these changes need is checked the way a sign-in is
+// (600,000 rounds of PBKDF2 on the server, slow in its debug build), so tests
+// that make several get more time.
+test.describe.configure({ timeout: 120_000 });
 
 test("owners and admins hear by email when the server stops sending to a destination", async ({ request }) => {
   const api = new Api(request);
@@ -17,11 +22,16 @@ test("owners and admins hear by email when the server stops sending to a destina
     const orgId = await api.organization(owner, "Adatum");
     const admin = await api.account("paused-admin");
     await joinByEmail(api, owner, orgId, "Adatum", admin, { type: 1 });
-    const created = await api.call(owner, "POST", `/api/keykeeper/organizations/${orgId}/event-streaming`, {
-      name: "Old SIEM",
-      kind: "webhook",
-      webhook: { url: receiver.url("/hook"), caCertificate: cert.cert },
-    });
+    const created = await api.call(
+      owner,
+      "POST",
+      `/api/keykeeper/organizations/${orgId}/event-streaming`,
+      withMasterPassword(owner, {
+        name: "Old SIEM",
+        kind: "webhook",
+        webhook: { url: receiver.url("/hook"), caCertificate: cert.cert },
+      }),
+    );
     expect(created.status, JSON.stringify(created.body)).toBe(200);
     await waitFor(receiver.received, (all) => (all.length > 0 ? all : undefined), "an attempt");
 
