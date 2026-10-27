@@ -7,6 +7,7 @@
 // and Microsoft is the local stand-in (e2e/entra-standin.mjs).
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 
@@ -117,10 +118,13 @@ test("a member signs in from the command-line tool with her organization's singl
 
   // The tool prints the address it opens, on stderr, and waits for the answer.
   await tenant.next(ana);
+  // Something else already has the first port: the tool takes the next.
+  const busy = net.createServer();
+  await new Promise<void>((resolve) => busy.listen(8065, "localhost", resolve));
   const signIn = start(["login", "--sso", identifier]);
   const address = await signIn.url;
   expect(address).toContain(
-    `${server}/#/sso?clientId=cli&redirectUri=${encodeURIComponent("http://localhost:")}`,
+    `${server}/#/sso?clientId=cli&redirectUri=${encodeURIComponent("http://localhost:8066")}&`,
   );
   expect(address).toContain(`&identifier=${identifier}`);
 
@@ -144,7 +148,7 @@ test("a member signs in from the command-line tool with her organization's singl
     await expect(page.getByRole("textbox", { name: "SSO identifier" })).toHaveValue(identifier);
     expect(page.url()).toContain("/#/sso?clientId=cli");
     await page.getByRole("button", { name: "Continue" }).click();
-    await page.waitForURL(/^http:\/\/localhost:80(6[5-9]|70)\//);
+    await page.waitForURL(/^http:\/\/localhost:8066\//);
     await expect(page.getByRole("heading")).toHaveText(
       `Successfully authenticated with the ${brand.name} CLI`,
     );
@@ -153,6 +157,7 @@ test("a member signs in from the command-line tool with her organization's singl
   }
 
   const done = await signIn.done;
+  busy.close();
   expect(done.status, done.stdout + done.stderr).toBe(0);
   expect(done.stdout).toContain("You are logged in!");
   expect(done.stdout).toContain(`$ ${command} unlock`);
