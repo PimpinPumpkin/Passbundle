@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 import {
+  entraPort,
   fixturePort,
   groupsServerPort,
   hostResolverRules,
@@ -67,6 +68,12 @@ export default defineConfig({
       ignoreHTTPSErrors: true,
       reuseExistingServer: false,
       timeout: 60_000,
+    },
+    {
+      command: "node entra-standin.mjs",
+      url: `http://127.0.0.1:${entraPort}/alive`,
+      reuseExistingServer: false,
+      timeout: 30_000,
     },
     {
       command: "node fixture-server.mjs",

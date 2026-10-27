@@ -29,6 +29,11 @@ export const siemPort = process.env.KK_SIEM_PORT ?? "8099";
 // A server a test starts and stops itself, keeping its data, to show what a
 // restart forgets (tests/reload-key.spec.ts).
 export const restartServerPort = process.env.KK_RESTART_SERVER_PORT ?? "8100";
+// A stand-in for Microsoft Entra ID's sign-in (entra-standin.mjs), which
+// every test server uses for single sign-on, and its DNS server (UDP) for
+// domain checks.
+export const entraPort = process.env.KK_ENTRA_PORT ?? "8101";
+export const dnsPort = process.env.KK_DNS_PORT ?? "8102";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??
