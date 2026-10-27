@@ -12,6 +12,11 @@ import { Api, withMasterPassword, encString } from "../api/support";
 
 import { inviteParams, verifyEmail, waitForMessage } from "./mailbox";
 
+// The master password these changes need is checked the way a sign-in is
+// (600,000 rounds of PBKDF2 on the server, slow in its debug build), so tests
+// that make several get more time.
+test.describe.configure({ timeout: 120_000 });
+
 const USER = "urn:ietf:params:scim:schemas:core:2.0:User";
 
 async function provision(request: import("@playwright/test").APIRequestContext, token: string, orgId: string, email: string) {

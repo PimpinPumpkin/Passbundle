@@ -11,6 +11,11 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 
 import { Api, withMasterPassword, type Account, type Result } from "./support";
 
+// The master password these changes need is checked the way a sign-in is
+// (600,000 rounds of PBKDF2 on the server, slow in its debug build), so tests
+// that make several get more time.
+test.describe.configure({ timeout: 120_000 });
+
 const ERROR = "urn:ietf:params:scim:api:messages:2.0:Error";
 const LIST = "urn:ietf:params:scim:api:messages:2.0:ListResponse";
 const PATCH_OP = "urn:ietf:params:scim:api:messages:2.0:PatchOp";

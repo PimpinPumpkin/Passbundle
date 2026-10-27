@@ -28,6 +28,11 @@ import {
 
 import { Api, withMasterPassword, encString, publicKey, serverDatabase, type Account } from "./support";
 
+// The master password these changes need is checked the way a sign-in is
+// (600,000 rounds of PBKDF2 on the server, slow in its debug build), so tests
+// that make several get more time.
+test.describe.configure({ timeout: 120_000 });
+
 const origin = `https://127.0.0.1:${port}`;
 const CONFIRMED = 2;
 

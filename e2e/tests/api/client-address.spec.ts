@@ -18,6 +18,11 @@ import { limitsServerPort, paths } from "../../paths.mjs";
 
 import { Api, withMasterPassword, encString } from "./support";
 
+// The master password these changes need is checked the way a sign-in is
+// (600,000 rounds of PBKDF2 on the server, slow in its debug build), so tests
+// that make several get more time.
+test.describe.configure({ timeout: 120_000 });
+
 test.use({ baseURL: `https://127.0.0.1:${limitsServerPort}` });
 
 test("a forged address header doesn't get a script token past its networks", async ({ request }) => {

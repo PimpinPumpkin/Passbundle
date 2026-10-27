@@ -8,6 +8,11 @@ import { Api, withMasterPassword } from "../api/support";
 
 import { joinByEmail, waitForMessage } from "./mailbox";
 
+// The master password these changes need is checked the way a sign-in is
+// (600,000 rounds of PBKDF2 on the server, slow in its debug build), so tests
+// that make several get more time.
+test.describe.configure({ timeout: 120_000 });
+
 test("owners and admins hear by email when the server stops sending to a destination", async ({ request }) => {
   const api = new Api(request);
   const cert = throwawayCert();
