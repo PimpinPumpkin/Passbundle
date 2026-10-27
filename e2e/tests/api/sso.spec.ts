@@ -130,19 +130,19 @@ test("owners and admins set it up; the secret never comes back; the tenant must 
     [{ tenantId: "9188040d-6c67-4c5b-b112-36a304b66dad" }, /personal Microsoft accounts/],
     [{ clientId: "not-a-guid" }, /client ID/],
   ] as const) {
-    const refused = await api.call(owner, "PUT", url, { ...settings(tenant, identifier), ...bad });
+    const refused = await api.call(owner, "PUT", url, withMasterPassword(owner, { ...settings(tenant, identifier), ...bad }));
     expect(refused.status, JSON.stringify(bad)).toBe(400);
     expect(message(refused.body)).toMatch(why);
   }
   // On needs a secret, and a tenant Microsoft knows.
-  const noSecret = await api.call(owner, "PUT", url, settings(tenant, identifier, true, false));
+  const noSecret = await api.call(owner, "PUT", url, withMasterPassword(owner, settings(tenant, identifier, true, false)));
   expect(message(noSecret.body)).toMatch(/client secret/);
-  const unknown = await api.call(owner, "PUT", url, settings(tenant, identifier));
+  const unknown = await api.call(owner, "PUT", url, withMasterPassword(owner, settings(tenant, identifier)));
   expect(unknown.status).toBe(400);
   expect(message(unknown.body)).toMatch(/didn't recognize the tenant/);
 
   await tenant.register();
-  const saved = await api.call(owner, "PUT", url, settings(tenant, identifier));
+  const saved = await api.call(owner, "PUT", url, withMasterPassword(owner, settings(tenant, identifier)));
   expect(saved.status, JSON.stringify(saved.body)).toBe(200);
   expect(saved.body).toMatchObject({
     enabled: true,
@@ -163,7 +163,7 @@ test("owners and admins set it up; the secret never comes back; the tenant must 
   }
 
   // Saving again without a secret keeps it.
-  const kept = await api.call(owner, "PUT", url, settings(tenant, identifier, true, false));
+  const kept = await api.call(owner, "PUT", url, withMasterPassword(owner, settings(tenant, identifier, true, false)));
   expect(kept.status, JSON.stringify(kept.body)).toBe(200);
   expect(kept.body.secretReadable).toBe(true);
 
@@ -185,7 +185,7 @@ test("owners and admins set it up; the secret never comes back; the tenant must 
   await api.addMember(owner, orgId, admin, "admin");
   for (const who of [member, other]) {
     expect((await api.call(who, "GET", url)).status).toBe(404);
-    expect((await api.call(who, "PUT", url, settings(tenant, identifier))).status).toBe(404);
+    expect((await api.call(who, "PUT", url, withMasterPassword(who, settings(tenant, identifier)))).status).toBe(404);
   }
   expect((await api.call(null, "GET", url)).status).toBe(401);
   expect((await api.call(admin, "GET", url)).status).toBe(200);
@@ -957,7 +957,7 @@ test("Require single sign-on with members not linked yet: their password and two
 
   // The tenant can't change under it: that would unlink everyone at once.
   const otherTenant = await new Tenant().register();
-  const moved = await api.call(owner, "PUT", base, settings(otherTenant, identifier, true, true));
+  const moved = await api.call(owner, "PUT", base, withMasterPassword(owner, settings(otherTenant, identifier, true, true)));
   expect(moved.status).toBe(400);
   expect(message(moved.body)).toMatch(/Turn off the Require single sign-on policy before changing the tenant/);
 
