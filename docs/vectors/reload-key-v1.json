@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "label": "passbundle reload key v1",
+  "wrap": {
+    "wrappingKey": "hY8d6YrFeenTOqzPSURYoP9Joq0AYRBWk8Fk6a6XkC413ilglr6BbVuimrAhfJ0vVikKc8dolqDSTV9h3gm2lA==",
+    "userKey": "nSdDzDbN8wNH+zEn8QHBDAHWD96Nqv1SHZ4X8eAkGs1yfcv25TQwSh2LBKcgsb2c67zjAtBeSpcSG75EWVIKLQ==",
+    "wrappedUserKey": "2.AiciqFVCtUxSfydEq6fJnw==|fpdzb9SJ1wYbExWMn2/HhZYwxG0FUdj9H0pDdVRnb8gDxmx+ZV8Y30F1l9ObwzEXEzfhEDZSfwy6l+V/tFQZcQcVpw2iFm58Kys8RNaA00g=|idtO7zMUcwHWC2TTkEhe8BMh+gX8BizsKh+Kva88+eg="
+  },
+  "refused": {
+    "otherWrappingKey": "P+XPbsdazKb+hyzbybudVDRZ4MhjgQdeQw47pTInd/8gqitctpHD+A8AXdi+RrsFh3O1yqAiCwhpWonhCRphtA==",
+    "badMac": "2.AiciqFVCtUxSfydEq6fJnw==|fpdzb9SJ1wYbExWMn2/HhZYwxG0FUdj9H0pDdVRnb8gDxmx+ZV8Y30F1l9ObwzEXEzfhEDZSfwy6l+V/tFQZcQcVpw2iFm58Kys8RNaA00g=|idtO7zMUcwHWC2TTkEhe8BMh+gX8BizsKh+Kva88+ek=",
+    "badCiphertext": "2.AiciqFVCtUxSfydEq6fJnw==|f5dzb9SJ1wYbExWMn2/HhZYwxG0FUdj9H0pDdVRnb8gDxmx+ZV8Y30F1l9ObwzEXEzfhEDZSfwy6l+V/tFQZcQcVpw2iFm58Kys8RNaA00g=|idtO7zMUcwHWC2TTkEhe8BMh+gX8BizsKh+Kva88+eg="
+  }
+}

@@ -15,6 +15,11 @@ import { dnsPort, entraPort, paths, port, siemPort, smtpPort } from "./paths.mjs
 const withMail = process.env.KK_MAIL === "1";
 const withLimits = process.env.KK_LIMITS === "1";
 const withGroups = process.env.KK_GROUPS === "1";
+// KK_DATA_DIR keeps the data in that folder, and keeps it when the server
+// stops, so a test can start the same server again (reload-key.spec.ts: the
+// server forgets reload keys when it restarts). Such a server is a side one.
+const keptData = process.env.KK_DATA_DIR;
+const side = withMail || withLimits || withGroups || !!keptData;
 
 for (const [name, p] of Object.entries({
   server: paths.serverBin,
@@ -28,7 +33,9 @@ for (const [name, p] of Object.entries({
   }
 }
 
-const data = fs.mkdtempSync(path.join(os.tmpdir(), "keykeeper-e2e-"));
+const data = keptData
+  ? (fs.mkdirSync(keptData, { recursive: true }), keptData)
+  : fs.mkdtempSync(path.join(os.tmpdir(), "keykeeper-e2e-"));
 // Where this server keeps its data, by port, for the few tests that check
 // what a SQLite database holds after a request (tests/api/support.ts,
 // serverDatabase).
@@ -73,7 +80,7 @@ execFileSync(
 // a certificate authority, so the server is told to trust this one.
 const siemDir = path.join(os.tmpdir(), `keykeeper-e2e-siem-${siemPort}`);
 let siemCert = null;
-if (!withMail && !withLimits && !withGroups) {
+if (!side) {
   fs.mkdirSync(siemDir, { recursive: true });
   siemCert = path.join(siemDir, "cert.pem");
   execFileSync(
@@ -111,7 +118,7 @@ const child = spawn(paths.serverBin, [], {
     PATH: process.env.PATH,
     DATA_FOLDER: data,
     // Set KK_DATABASE_URL to use PostgreSQL instead of a fresh SQLite file.
-    ...(process.env.KK_DATABASE_URL && !withMail && !withLimits && !withGroups
+    ...(process.env.KK_DATABASE_URL && !side
       ? { DATABASE_URL: process.env.KK_DATABASE_URL }
       : {}),
     ...(withGroups ? { ORG_GROUPS_ENABLED: "true" } : {}),
@@ -120,7 +127,9 @@ const child = spawn(paths.serverBin, [], {
     // private), and the main one sends Sentinel's sign-in and uploads to the
     // stand-in there, trusting its certificate. The others keep the
     // defaults, so the refusal of private addresses is tested too.
-    ...(!withLimits && !withGroups ? { EVENT_STREAMING_ALLOWED_NETWORKS: "127.0.0.1" } : {}),
+    ...(!withLimits && !withGroups && !keptData
+      ? { EVENT_STREAMING_ALLOWED_NETWORKS: "127.0.0.1" }
+      : {}),
     ...(siemCert
       ? {
           // A test stand-in, which only this setting allows: any https
@@ -178,7 +187,15 @@ const child = spawn(paths.serverBin, [], {
       ? {
           LOG_FILE: process.env.KK_SERVER_LOG.replace(
             /(\.log)?$/,
-            withMail ? "-mail$1" : withLimits ? "-limits$1" : withGroups ? "-groups$1" : "$1",
+            withMail
+              ? "-mail$1"
+              : withLimits
+                ? "-limits$1"
+                : withGroups
+                  ? "-groups$1"
+                  : keptData
+                    ? "-restart$1"
+                    : "$1",
           ),
           LOG_LEVEL: "info",
         }
@@ -200,7 +217,9 @@ setInterval(() => {
   }
 }, 1000).unref();
 child.on("exit", (code) => {
-  fs.rmSync(data, { recursive: true, force: true });
+  if (!keptData) {
+    fs.rmSync(data, { recursive: true, force: true });
+  }
   if (siemCert) {
     fs.rmSync(siemDir, { recursive: true, force: true });
   }

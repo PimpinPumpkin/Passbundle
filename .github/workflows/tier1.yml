@@ -255,6 +255,12 @@ jobs:
           node meta/docs/vectors/make-device-approval-v1.mjs passbundle-apps/core/src/words/eff-large.txt | cmp - meta/docs/vectors/device-approval-v1.json
           node meta/docs/vectors/check-device-approval-vectors.mjs meta/docs/vectors/device-approval-v1.json .
           cmp meta/docs/vectors/device-approval-v1.json libs/auth/src/common/services/auth-request/keykeeper-device-approval.vectors.json
+      - name: The web vault's reload key test vectors, checked with upstream's own crypto
+        run: node meta/docs/vectors/check-reload-key-vectors.mjs meta/docs/vectors/reload-key-v1.json .
+      - name: The reload key test vectors, as their generator makes them, and the web vault's copy
+        run: |
+          node meta/docs/vectors/make-reload-key-v1.mjs | cmp - meta/docs/vectors/reload-key-v1.json
+          cmp meta/docs/vectors/reload-key-v1.json apps/web/src/app/keykeeper/reload-key/reload-key-v1.json
       - name: Single sign-on's client secret test vectors, as their generator makes them
         run: node meta/docs/vectors/make-sso-client-secret-v1.mjs | cmp - meta/docs/vectors/sso-client-secret-v1.json
       - name: Upstream unit tests for every file we changed

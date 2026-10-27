@@ -14,7 +14,7 @@ import { type APIRequestContext, expect, test, type Page } from "@playwright/tes
 import { groupsServerPort } from "../paths.mjs";
 
 import { Api } from "./api/support";
-import { confirmMember, signUp, webUserFor } from "./support/web";
+import { confirmMember, reloadVault, signUp, webUserFor } from "./support/web";
 
 test.use({ baseURL: `https://127.0.0.1:${groupsServerPort}` });
 
@@ -264,11 +264,9 @@ test("a custom role that manages members sees the shared folders it opens itself
   await page.goto(`${org}/members`);
   await confirmMember(page, pocUser.email);
 
-  // Reloading locks the vault; unlock it, and sync so it has Everyone's items.
-  await poc.reload();
-  await poc.getByRole("textbox", { name: /^Master password/ }).fill(pocUser.password);
-  await poc.getByRole("button", { name: "Unlock", exact: true }).click();
-  await poc.waitForURL(/#\/vault/);
+  // Reloading syncs the vault, so it has Everyone's items.
+  await poc.goto("/#/vault");
+  await reloadVault(poc);
   await expect(poc.getByText("Front desk PC").first()).toBeVisible();
 
   const refused: string[] = [];

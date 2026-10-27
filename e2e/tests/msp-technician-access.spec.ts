@@ -5,7 +5,7 @@
 // different role in one client.
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUp, webUserFor } from "./support/web";
+import { reloadVault, signUp, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) =>
@@ -72,15 +72,8 @@ test("an MSP admin chooses a technician's clients, role, and install commands, a
   );
 
   // The technician sees only that client, without its install command, and
-  // opens it where their role starts. Reloading locks the vault; unlock it.
-  // (It returns to the console, where they accepted the invitation.)
-  await tech.reload();
-  await tech
-    .getByRole("textbox", { name: /^Master password/ })
-    .fill(techUser.password);
-  const unlock = tech.getByRole("button", { name: "Unlock", exact: true });
-  await unlock.click();
-  await expect(unlock).toBeHidden();
+  // opens it where their role starts, once a reload syncs their vault.
+  await reloadVault(tech);
   await tech.goto("/#/vault");
   await tech.goto("/#/msp");
   const techDental = tech.getByTestId("msp-client-Acme Dental");
