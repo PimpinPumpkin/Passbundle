@@ -244,8 +244,9 @@ test("big saves can push out only the newest versions, never the item as it was 
   for (const label of ["1", "2"]) {
     await setPassword(api, ana, id, label);
   }
-  // About 400 KB each, encrypted: under the 512 KB limit.
-  const blob = [{ name: encString("blob"), value: encString("x".repeat(300 * 1024)), type: 1, linkedId: null }];
+  // About 400 KB each as the server stores them (a field is kept in the
+  // item's data too): under the 512 KB limit.
+  const blob = [{ name: encString("blob"), value: encString("x".repeat(150 * 1024)), type: 1, linkedId: null }];
   let current = (await api.call(ana, "GET", `/api/ciphers/${id}`)).body;
   for (let i = 1; i <= 25; i++) {
     const saved = await api.call(ana, "PUT", `/api/ciphers/${id}`, {
