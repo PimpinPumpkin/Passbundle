@@ -92,7 +92,12 @@ test("an item's earlier versions show in the popup, and restoring one brings it 
 
   // The oldest: the first password, beside the item now, hidden until shown.
   await versions.last().getByRole("button").click();
-  await expect(popup.getByRole("heading", { name: /^Version from/ })).toBeVisible();
+  // A short date and time: "Oct 27, 2026, 1:15 AM", no seconds.
+  await expect(
+    popup.getByRole("heading", {
+      name: /^Version from [A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2} [AP]M$/,
+    }),
+  ).toBeVisible();
   const password = popup.getByRole("row", { name: /Password/ });
   await expect(password).toHaveAttribute("data-changed", "true");
   await expect(password.getByText("Changed")).toBeVisible();
