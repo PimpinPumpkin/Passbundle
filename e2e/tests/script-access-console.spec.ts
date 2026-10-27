@@ -82,9 +82,11 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
   const made = section.getByTestId("script-token-made");
   const tokenString = (await made.getByTestId("script-token-string").textContent())!.trim();
   expect(tokenString).toMatch(/^pbs1_[0-9a-f]{32}_[A-Za-z0-9_-]{43}$/);
+  // The item by its id, single-quoted, and its name only in a comment: an
+  // item's name never becomes code in an RMM script.
   const usage = made.getByTestId("script-token-usage");
-  await expect(usage).toContainText(`/api/keykeeper/script/PassBundle.psm1" -OutFile PassBundle.psm1`);
-  await expect(usage).toContainText(`Get-PassBundleCredential -Item "Domain admin"`);
+  await expect(usage).toContainText(`/api/keykeeper/script/PassBundle.psm1' -OutFile PassBundle.psm1`);
+  await expect(usage).toContainText(/Get-PassBundleCredential -Item '[0-9a-f-]{36}'\s+# Domain admin/);
   await expect(made.getByTestId("script-token-signing")).toContainText("-ExecutionPolicy Bypass");
 
   // A script with the token reads just the granted fields.
@@ -94,6 +96,7 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
   });
   expect(items.status()).toBe(200);
   const [entry] = (await items.json()).data;
+  await expect(usage).toContainText(`-Item '${entry.itemId}'`);
   const copy = script.open(entry.copy);
   expect(copy).toMatchObject({
     v: 1,

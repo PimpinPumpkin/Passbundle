@@ -47,13 +47,13 @@ All in the admin's browser when the token is made; the server never sees the see
 - **Seed:** 32 random bytes. The token string is `pbs1_<token id, 32 hex digits>_<seed, base64url>`.
 - **Auth secret:** HKDF-SHA256(seed, no salt, "passbundle script auth v1", 32 bytes). The script sends it to prove it holds the token. The server stores only its SHA-256.
 - **Token key:** HKDF-SHA256(seed, no salt, "passbundle script key v1", 64 bytes), used as upstream's symmetric key (AES-256-CBC with HMAC-SHA256, the "type 2" encrypted string every PassBundle app already reads). It never leaves the admin's browser and the script's machine, except sealed (next).
-- **Sealed token key:** the token key encrypted with the organization key, stored on the server, so any app that holds the organization key can write and refresh the token's copies later. This exposes nothing new: whoever holds the organization key can already decrypt every item in the organization.
+- **Sealed token key:** the token key encrypted with the organization key, stored on the server, so any app that holds the organization key can write and refresh the token's copies later. This exposes nothing new: whoever holds the organization key can already decrypt every item in the organization. Version 2 (below) seals it together with the token's id.
 
 Deriving the auth secret and the token key separately from the seed means the server, which sees the auth secret on every request, still can't compute the token key.
 
 ### A copy
 
-A grant on the server is: the token, the item's id, the copy, the item revision the copy was made from (so apps know when it's out of date), and the **spec** (which fields it copies), sealed with the organization key so a refreshing app knows what to copy without the server knowing field names.
+A grant on the server is: the token, the item's id, the copy, the item revision the copy was made from (so apps know when it's out of date), and the **spec** (which fields it copies, and the token and item it's for), sealed with the organization key so a refreshing app knows what to copy without the server knowing field names.
 
 The copy is the token key's encryption of:
 
@@ -63,15 +63,29 @@ The copy is the token key's encryption of:
 
 The script checks that `token` is its own token and `item` is the item it asked for, so a server can't hand it another item's copy, or another token's.
 
+### Version 2 seals (October 2026)
+
+Version 1 sealed the token key and the spec on their own: `{"v":1,"username":…}` and the bare key. A hacked server could then hand a refreshing app any organization's sealed token key (one whose seed an owner or admin of that organization knows, a client's own admin for an MSP's staff) next to any item the person can open, their own or another organization's, and the app would write a copy of it the attacker can read. Version 2 binds each seal to what it's for:
+
+- **Sealed token key:** the organization key's encryption (upstream's type 2 encrypted string) of `{"v":2,"token":"<token id>","key":"<the 64-byte token key, base64>"}`.
+- **Sealed spec:** the organization key's encryption of `{"v":2,"token":"<token id>","item":"<item id>","username":…,"password":…,"totp":…,"fields":[…]}`.
+- **An app refreshing a copy** opens both with the key of the item's own organization and goes on only if both are version 2, both name the grant's token, and the spec names the item it's about to copy. It refuses version 1 seals: nothing was made with them that needs keeping (no one uses PassBundle yet), so tokens made before this need making again.
+- **The copy** is unchanged (version 1 above), so scripts and the module are unchanged.
+
+The test vectors are `docs/vectors/script-grants-v2.json` (made by `make-script-grants-v2.mjs`, checked with upstream's own crypto by `check-script-grants-vectors.mjs`): the token key and spec sealed for their token and item, and pairs an app must refuse (a spec for another item, a spec for another token, another token's key, version 1 seals, seals with another organization's key).
+
 ### Keeping copies current
 
 - **When someone edits a granted item in a PassBundle app**, the app updates that item's copies right after saving: it can, since it holds the organization key, and the server lets it only if the person can edit the item and the copy is for the item's new revision. Someone who can edit the item could put a different password in the copy, but they could equally change the password itself.
 - **When an item changes elsewhere** (an upstream app, the CLI), the background work that already runs in owners', admins', and MSP admins' apps (every five minutes and on unlock, see "MSP templates") refreshes copies whose revision is behind. Until then the script gets the previous value, and the console marks the grant out of date.
+- **What an app refreshes, whatever the server lists:** the server says which grants are behind, and a hacked one could list anything. An app remakes a copy only from an item that is in the grant's organization (never the person's own item or another organization's), not in the trash, that the person can edit and see the passwords of, with version 2 seals for that token and that item. Anything else is left as it is.
+- **Making a token** offers only items whose passwords the admin can see, since the token's copy would show them.
 - **A deleted or trashed item** loses its copies; its grants say so in the console.
 
 ### What a hacked server can and can't do
 
 - It can't read copies or the token key, and can't make copies a script accepts.
+- It can't have an app copy an item to a token it wasn't granted to, or with another token's key (version 2 seals), or copy someone's own items or another organization's.
 - It can refuse requests, or serve an older copy of the right item. Scripts can't tell an old copy from the latest; the console's read log and "out of date" marks are the check.
 - It learns which items are granted to which tokens, and when scripts read them. That's inherent in a server that logs reads.
 - Someone who steals the token string from the RMM can read its grants until it expires or is revoked, from its allowed networks. That's the cost of any credential in an RMM; the limits are the scope, the networks, the expiry, and the read log.
@@ -93,7 +107,7 @@ The script checks that `token` is its own token and `item` is the item it asked 
 ## Tests
 
 - The vectors: the token string, the auth secret and its hash, the token key, a sealed token key and spec, a copy, and copies the script must refuse (tampered, sealed with the wrong key, another item's, another token's). `node docs/vectors/make-script-access-v1.mjs` makes them with plain Node; upstream's own crypto opens them (the clients' tests check that, as for the native-messaging vectors).
-- Clients: unit tests for making a token, copies, specs, and refreshing.
+- Clients: unit tests for making a token, copies, specs, and refreshing, against both sets of vectors: each pair `script-grants-v2.json` refuses, and each item a hacked server could list (the person's own, another organization's, in the trash, not editable, passwords hidden, another item under a grant's seals) is left alone (`script-refresh.spec.ts`). The lines the settings page shows for a script name the item by its id, single-quoted, with its name only in a comment of letters, digits, and plain punctuation, tested with hostile names (`script-usage.spec.ts`).
 - Server: unit tests for the checks; API tests for every endpoint against every role, a token reading only its grants, expiry, revocation, networks, the rate limit, and refresh permissions.
 - The module: tier 1 runs it under PowerShell 7 on Linux against the test server, decrypting real copies and refusing bad ones and a revoked token. `docs/vectors/check-script-module.ps1` checks it against the vectors and RFC 6238's codes, on Windows under Windows PowerShell 5.1 and PowerShell 7.
 - End to end: an owner makes a token in the web vault with real keys, a script reads just the granted fields, an edit in the web vault reaches the script, the reads show, and revoking stops it. The API tests cover MSP admins and everyone else.

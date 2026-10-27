@@ -263,6 +263,17 @@ jobs:
           cmp meta/docs/vectors/reload-key-v1.json apps/web/src/app/keykeeper/reload-key/reload-key-v1.json
       - name: Single sign-on's client secret test vectors, as their generator makes them
         run: node meta/docs/vectors/make-sso-client-secret-v1.mjs | cmp - meta/docs/vectors/sso-client-secret-v1.json
+      # Seals a hacked server can't steer (DESIGN.md, "Joins a hacked server
+      # can't forge", and docs/script-access.md, "Version 2 seals"): the
+      # vectors as their generators make them, the clients' copies, and the
+      # script grant seals as upstream's own crypto opens them.
+      - name: The version 2 join and script grant seal test vectors, as their generators make them, the clients' copies, and as upstream's crypto opens them
+        run: |
+          node meta/docs/vectors/make-joins-v2.mjs | cmp - meta/docs/vectors/joins-v2.json
+          node meta/docs/vectors/make-script-grants-v2.mjs | cmp - meta/docs/vectors/script-grants-v2.json
+          cmp meta/docs/vectors/joins-v2.json libs/admin-console/src/common/keykeeper/joins-v2.vectors.json
+          cmp meta/docs/vectors/script-grants-v2.json libs/admin-console/src/common/keykeeper/script-grants-v2.vectors.json
+          node meta/docs/vectors/check-script-grants-vectors.mjs meta/docs/vectors/script-grants-v2.json .
       - name: Upstream unit tests for every file we changed
         run: |
           base=$(cat .keykeeper-base)

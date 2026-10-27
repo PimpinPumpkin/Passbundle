@@ -2,8 +2,8 @@
 // an MSP admin's extension confirms someone invited to a client by email
 // (install command joins wait for approval unless the command is limited to
 // email domains, which needs a server that sends email; the mail tests cover
-// those), and brings the client's copy of a template up to date after
-// the admin edits it in the popup. Real keys throughout: the confirm encrypts
+// those), and brings the client's copy of a template (in the MSP's own
+// organization) up to date after the admin edits it in the popup. Real keys throughout: the confirm encrypts
 // the org key to the person's real public key, and the copy is encrypted for
 // the client in the extension. See DESIGN.md, "MSP console" and "MSP templates".
 import { generateKeyPairSync } from "node:crypto";
@@ -20,7 +20,7 @@ import {
   test,
   userFor,
 } from "./support/extension";
-import { newTemplate } from "./support/web";
+import { newTemplate, pick } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
@@ -42,7 +42,15 @@ test("with no vault tab open, an MSP admin's extension confirms someone invited 
   await web.getByRole("button", { name: "Add client" }).click();
   await expect(toast(web, "Added Acme Dental")).toBeVisible();
 
+  // The template is in the MSP's own organization, never someone's own vault.
+  await web.goto(`${serverUrl}/#/create-organization`);
+  await web.getByRole("textbox", { name: /Organization name/ }).fill("Northwind Team");
+  await web.getByRole("radio", { name: /A family or a group/ }).check();
+  await web.getByRole("button", { name: "Create organization" }).click();
+  await expect(toast(web, "Created Northwind Team")).toBeVisible();
   await web.goto(`${serverUrl}/#/vault`);
+  await pick(web, "Northwind Team");
+  await pick(web, "Default collection");
   await newTemplate(web, "notes");
   const editor = web.getByRole("dialog", { name: /^New/ });
   await editor.getByRole("textbox", { name: /Item name/ }).fill("Firewall");
@@ -120,19 +128,33 @@ test("with no vault tab open, an MSP admin's extension confirms someone invited 
   await popup.getByRole("button", { name: "Save" }).click();
   await expect(toast(popup, "Item saved")).toBeVisible();
 
-  // The extension updates the client's copy: starting a new item from it in
-  // the popup shows the new field.
+  // The extension updates the client's copy: the copy in Acme Dental, as the
+  // extension decrypts it, has the new field.
+  const copyFields = () =>
+    worker.evaluate(async (clientId) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const main = (self as any).bitwardenMain;
+      const userId = await new Promise<string>((resolve) =>
+        main.accountService.activeAccount$.subscribe((a: { id: string }) => resolve(a.id)),
+      );
+      const items: { name: string; organizationId: string | null; fields?: { name: string }[] }[] =
+        await main.cipherService.getAllDecrypted(userId);
+      const copy = items.find((c) => c.name === "Firewall" && c.organizationId === clientId);
+      return (copy?.fields ?? []).map((f) => f.name);
+    }, orgId);
   await expect(async () => {
     expect(await runWork()).toEqual([]);
-    await popup.goto(vaultUrl);
-    await popup.getByRole("button", { name: /^\W*New$/ }).click();
-    await popup.getByRole("menuitem", { name: "From template" }).click();
-    await popup
-      .getByRole("region", { name: "From Northwind IT" })
-      .getByRole("button", { name: "Firewall", exact: true })
-      .click();
-    await expect(popup.getByRole("textbox", { name: "Firmware version", exact: true })).toBeVisible({
-      timeout: 1000,
-    });
+    expect(await copyFields()).toContain("Firmware version");
   }).toPass({ timeout: 60_000, intervals: [2_000] });
+  // Starting a new item from it in the popup shows the new field too, offered
+  // once, where the template is.
+  await popup.goto(vaultUrl);
+  await popup.getByRole("button", { name: /^\W*New$/ }).click();
+  await popup.getByRole("menuitem", { name: "From template" }).click();
+  await expect(popup.getByRole("button", { name: "Firewall", exact: true })).toHaveCount(1);
+  await popup
+    .getByRole("region", { name: "Northwind Team" })
+    .getByRole("button", { name: "Firewall", exact: true })
+    .click();
+  await expect(popup.getByRole("textbox", { name: "Firmware version", exact: true })).toBeVisible();
 });

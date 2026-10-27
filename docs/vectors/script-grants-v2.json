@@ -1,0 +1,58 @@
+{
+  "version": 2,
+  "inputs": {
+    "tokenId": "5b0f3c1a-7e2d-4a9b-8c6d-1f2e3a4b5c6d",
+    "organizationId": "8f9a7c1e-3b2d-4e5f-9a8b-7c6d5e4f3a2b",
+    "itemId": "0d1e2f3a-4b5c-4d6e-8f70-819a2b3c4d5e",
+    "organizationKey": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+Pw==",
+    "seed": "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8="
+  },
+  "tokenKey": "azLP3gKmRQBtXmCY5n6/StodmW2mi0bZKwKH7Eytdx1mHjRYuZZMPVokkiOJ8hT8FlNdy/nR12vaFrdX6VWdKA==",
+  "sealedTokenKey": {
+    "note": "The token key, sealed with the organization key together with the id of the token it belongs to.",
+    "encString": "2.UFFSU1RVVldYWVpbXF1eXw==|IJptQvDo5Y2UzGQxl0ZZL//1JCS9aspsJRrf1gDxYIvbb6m3iOVe0oKYwqnv9Zxl75yJQhLMjUwPUw00zGcY1Ycmg3ROx6EY9+iJPScWq50CjW9+mXVncWZxYoRPHvRSKt+Gagn/KZsVIxCIzDayd3k1Hxfc+GAl+bZwUNX43RVrB+L7DEmaO5kvWspb+DJMScqubHuSZN9yQc96YCClwA==|xj7jma9JpfLNcTnq4xy/5YhxNZuWpWYK56/WzRzMWrY=",
+    "plaintext": "{\"v\":2,\"token\":\"5b0f3c1a-7e2d-4a9b-8c6d-1f2e3a4b5c6d\",\"key\":\"azLP3gKmRQBtXmCY5n6/StodmW2mi0bZKwKH7Eytdx1mHjRYuZZMPVokkiOJ8hT8FlNdy/nR12vaFrdX6VWdKA==\"}"
+  },
+  "sealedSpec": {
+    "note": "What a grant copies, sealed with the organization key together with the ids of the token and the item it's for.",
+    "encString": "2.WFlaW1xdXl9gYWJjZGVmZw==|OrY3J/i4IEwyUPOufwoCkCrOOEXCKapQqUzbsBI15CbUlbeZ+O8YtqeaTLFzFAqjbIczCTJOEI1Tallp1B2EOosxx8xOWYm6U+Eb9E7qFrf0ZCkzTeUkjSIEPXya74I6JV1UwZS/cuoPXi7UToIvLmtKLzp8PVfjXJOJVzgiBIZ0feY5x5M8Z4OuE9xuwBM7XcGd0wFSKf9NRTGVKKRzjyUFkr51XB5KG8Tp3RhzRYc=|3schAUwwEMM4Bv6UfRnny3FjStx/atlapmPxuvQlPbI=",
+    "plaintext": "{\"v\":2,\"token\":\"5b0f3c1a-7e2d-4a9b-8c6d-1f2e3a4b5c6d\",\"item\":\"0d1e2f3a-4b5c-4d6e-8f70-819a2b3c4d5e\",\"username\":true,\"password\":true,\"totp\":false,\"fields\":[\"Break-glass PIN\"]}"
+  },
+  "refused": [
+    {
+      "why": "a spec sealed for another item, served for this one",
+      "sealedKey": "2.UFFSU1RVVldYWVpbXF1eXw==|IJptQvDo5Y2UzGQxl0ZZL//1JCS9aspsJRrf1gDxYIvbb6m3iOVe0oKYwqnv9Zxl75yJQhLMjUwPUw00zGcY1Ycmg3ROx6EY9+iJPScWq50CjW9+mXVncWZxYoRPHvRSKt+Gagn/KZsVIxCIzDayd3k1Hxfc+GAl+bZwUNX43RVrB+L7DEmaO5kvWspb+DJMScqubHuSZN9yQc96YCClwA==|xj7jma9JpfLNcTnq4xy/5YhxNZuWpWYK56/WzRzMWrY=",
+      "sealedSpec": "2.YGFiY2RlZmdoaWprbG1ubw==|aWkjAG/GOUWHlfjhcT/ATTVvkvKo1Cefv86eQnRe2+9QMYZ5s6Y6C8s7Rf8LoaTfi5puXLGC0ic/axCMvneMM1fvhdfCmdqsF2/TI5JsPGr65dhlTY+MoBXEBfOv0skWHTQjut66bleUD46Uy/AqseBlQSlLxNpg+3QBfKydwiKGIjWJp20GzXCXxd3gpJK5JKgR7LrWfv8YaeazdjNAXTNnAkPsLag/gMxK0/9BKew=|5IbK2LuQIpmDimdVTMGqK7MKkIP9UroVg5avjJ6F4ho="
+    },
+    {
+      "why": "a spec sealed for another token, served for this one",
+      "sealedKey": "2.UFFSU1RVVldYWVpbXF1eXw==|IJptQvDo5Y2UzGQxl0ZZL//1JCS9aspsJRrf1gDxYIvbb6m3iOVe0oKYwqnv9Zxl75yJQhLMjUwPUw00zGcY1Ycmg3ROx6EY9+iJPScWq50CjW9+mXVncWZxYoRPHvRSKt+Gagn/KZsVIxCIzDayd3k1Hxfc+GAl+bZwUNX43RVrB+L7DEmaO5kvWspb+DJMScqubHuSZN9yQc96YCClwA==|xj7jma9JpfLNcTnq4xy/5YhxNZuWpWYK56/WzRzMWrY=",
+      "sealedSpec": "2.aGlqa2xtbm9wcXJzdHV2dw==|/Ht8R+yMLcexTT8SaQ7O7IGPRPdJLVZEMDDR0q4apdwq44Z3h0aDqpFui+t43E9nBk1S6tQ4CyJlCxRHjMtvHTeDdJZD78Tz32/pavXIhSKUis7hAB14FzdpWnHbex4C9p0BcDcwF3nntE7eiI9kVyrLpjJysLK+95DK5EOlP013S9CE/oWq5eCTQpkRDJv2pU/W7TesYZg9hfycWxDi/ICst1JVKslGZWjkf3kf8WY=|3aV+H7e3+RZJCNyjQ2LAufmA1dXwBDeZSfiKQHFxyis="
+    },
+    {
+      "why": "another token's key, whose seed someone else knows, served for this token",
+      "sealedKey": "2.cHFyc3R1dnd4eXp7fH1+fw==|m/HZRVlmiXDf6mtZ/qLBpTsBFkH9gFaioFg4jKq+Dam5pt6khLxKesomTdzQOhvjS4d+yUiJYG/ZBJwIRRjugw4PMgWws5rWbOjLbrvZIrdknl7P1gljdZr/1s8lw1skpgdshyau1+/5+iDW9mJbS0ba51D9tz2yTlU/vf3d3ZeGIi4WeZGkpn3BnfTP/CqFPmNWgnXi+7lmL1k04wiEBQ==|2Hd7XHGwb6LUQOX9LOlA5CCTamUsi0Z0W36WTYFY3w8=",
+      "sealedSpec": "2.WFlaW1xdXl9gYWJjZGVmZw==|OrY3J/i4IEwyUPOufwoCkCrOOEXCKapQqUzbsBI15CbUlbeZ+O8YtqeaTLFzFAqjbIczCTJOEI1Tallp1B2EOosxx8xOWYm6U+Eb9E7qFrf0ZCkzTeUkjSIEPXya74I6JV1UwZS/cuoPXi7UToIvLmtKLzp8PVfjXJOJVzgiBIZ0feY5x5M8Z4OuE9xuwBM7XcGd0wFSKf9NRTGVKKRzjyUFkr51XB5KG8Tp3RhzRYc=|3schAUwwEMM4Bv6UfRnny3FjStx/atlapmPxuvQlPbI="
+    },
+    {
+      "why": "a version 1 spec, which names no token or item",
+      "sealedKey": "2.UFFSU1RVVldYWVpbXF1eXw==|IJptQvDo5Y2UzGQxl0ZZL//1JCS9aspsJRrf1gDxYIvbb6m3iOVe0oKYwqnv9Zxl75yJQhLMjUwPUw00zGcY1Ycmg3ROx6EY9+iJPScWq50CjW9+mXVncWZxYoRPHvRSKt+Gagn/KZsVIxCIzDayd3k1Hxfc+GAl+bZwUNX43RVrB+L7DEmaO5kvWspb+DJMScqubHuSZN9yQc96YCClwA==|xj7jma9JpfLNcTnq4xy/5YhxNZuWpWYK56/WzRzMWrY=",
+      "sealedSpec": "2.eHl6e3x9fn+AgYKDhIWGhw==|pTLjxx3BRwPg/BtyQw0qG6vgv+IyHzfdR8VycHq/sOIbOlAq6b+/WOYEN8SF5nV0G02ygFFPKkvt6r5h0sM/2TAe1IsBySEHqQRaikg7nZDup1VSV6wwVjjk+jCsiRCn|g7JWg3whCFPpBUdOwdhcRvZCAwmKNbVdENoOS/ItMPI="
+    },
+    {
+      "why": "a version 1 token key, which names no token",
+      "sealedKey": "2.gIGCg4SFhoeIiYqLjI2Ojw==|KOeosbjIkeObDcaBFHKliccd9OLO1GQ5aZ4fatT31ghztPiqhjAfXVFF015Gfd3h1Dqn3ysTUtct8Glegf9iuwoSDhsv3oMtR8bSf6PA3X8Lfy62Hu4KhnyfCUgDigz2|8hmvEO1jyLpFGTOiqH3zGjCu9OYciyl1Hh3B94BYOHA=",
+      "sealedSpec": "2.WFlaW1xdXl9gYWJjZGVmZw==|OrY3J/i4IEwyUPOufwoCkCrOOEXCKapQqUzbsBI15CbUlbeZ+O8YtqeaTLFzFAqjbIczCTJOEI1Tallp1B2EOosxx8xOWYm6U+Eb9E7qFrf0ZCkzTeUkjSIEPXya74I6JV1UwZS/cuoPXi7UToIvLmtKLzp8PVfjXJOJVzgiBIZ0feY5x5M8Z4OuE9xuwBM7XcGd0wFSKf9NRTGVKKRzjyUFkr51XB5KG8Tp3RhzRYc=|3schAUwwEMM4Bv6UfRnny3FjStx/atlapmPxuvQlPbI="
+    },
+    {
+      "why": "a spec sealed with another organization's key",
+      "sealedKey": "2.UFFSU1RVVldYWVpbXF1eXw==|IJptQvDo5Y2UzGQxl0ZZL//1JCS9aspsJRrf1gDxYIvbb6m3iOVe0oKYwqnv9Zxl75yJQhLMjUwPUw00zGcY1Ycmg3ROx6EY9+iJPScWq50CjW9+mXVncWZxYoRPHvRSKt+Gagn/KZsVIxCIzDayd3k1Hxfc+GAl+bZwUNX43RVrB+L7DEmaO5kvWspb+DJMScqubHuSZN9yQc96YCClwA==|xj7jma9JpfLNcTnq4xy/5YhxNZuWpWYK56/WzRzMWrY=",
+      "sealedSpec": "2.iImKi4yNjo+QkZKTlJWWlw==|N1R/VWHYY8GeXbpOs3mK8G3UiAkRO4EfzYjzpFB3QUdtQxZEsRURrHBCnGHlRxNwQeVjCPRzE0TAqGDaqLo9pmRkfKvsD9QH6EliiyjHuVpu9B1dIdKKx08oy0L7W/6XYrORjtSlDg+wi0xnqC4CVm9MU7IQw4NbF2+HUhpJVH/ReXljSu939jZ0rQem8blEzzG9Uqp0FRcVNLo0cSN/6+PkYAltfK6mDuUVZWFA7WM=|olR4L2i9buQnAAlCOUpdESzowBr9KJ6/FEElhPJpb9E="
+    },
+    {
+      "why": "a token key sealed with another organization's key",
+      "sealedKey": "2.kJGSk5SVlpeYmZqbnJ2enw==|9PZH+pNYYFJctrbp5BiEOnmtW6cIz9WgU6XPRJCLQWtGYkCYBsjIlyQd1m9XaLxiBvL0cOr9prrYdB0jxNHuiS5Tllve8s6K+/FBVHbLZr/FClYaePGJCbZ30RKcWinCd78f7+nHt9A8lBsoHhlUuxotdlH15O5ROpln4fSxSI0RvwjrdsiHMgysPagqOQAHCbXTeUHUVxUOBjX8h22i+Q==|9sbiHgHfLl2H8XxS3UFgR/+Old2BjT8F3p8cWrbck1Q=",
+      "sealedSpec": "2.WFlaW1xdXl9gYWJjZGVmZw==|OrY3J/i4IEwyUPOufwoCkCrOOEXCKapQqUzbsBI15CbUlbeZ+O8YtqeaTLFzFAqjbIczCTJOEI1Tallp1B2EOosxx8xOWYm6U+Eb9E7qFrf0ZCkzTeUkjSIEPXya74I6JV1UwZS/cuoPXi7UToIvLmtKLzp8PVfjXJOJVzgiBIZ0feY5x5M8Z4OuE9xuwBM7XcGd0wFSKf9NRTGVKKRzjyUFkr51XB5KG8Tp3RhzRYc=|3schAUwwEMM4Bv6UfRnny3FjStx/atlapmPxuvQlPbI="
+    }
+  ]
+}
