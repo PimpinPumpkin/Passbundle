@@ -11,8 +11,9 @@
 // (dates and who only, without Clear); can't move the Admins login out of
 // its folder, which says why; and gets Clear there, where she has view item
 // history and delete. Her web vault hides the identity's numbers too: one
-// rule for what see passwords covers, everywhere. Runs on the test server
-// with groups turned on.
+// rule for what see passwords covers, everywhere. Neither will copy an item
+// she can't see the passwords of, even by its address. Runs on the test
+// server with groups turned on.
 import type { Browser, Locator, Page } from "@playwright/test";
 
 import { groupsServerPort } from "../paths.mjs";
@@ -191,6 +192,8 @@ async function openItem(popup: Page, name: string) {
   return new URL(popup.url().replace("#/", "")).searchParams.get("cipherId")!;
 }
 
+const CANT_COPY = "Your organization doesn't let you copy this item.";
+
 const SECRETS = [
   "lakeside-guest-2026",
   "lakeside-guest-2027",
@@ -357,6 +360,17 @@ test("a member who can't see passwords can't reveal or copy them in the extensio
   await expectIdentityHidden(popup, itemPage(popup));
   await itemPage(popup).getByRole("button", { name: "Back" }).click();
 
+  // Copying the login by its address, as Clone would (which isn't offered):
+  // refused, and the form never opens.
+  await popup.goto(
+    vaultUrl.replace(/#.*$/, `#/clone-cipher?clone=true&cipherId=${wifiId}&type=1`),
+  );
+  await expect(popup.getByText(CANT_COPY)).toBeVisible({ timeout: 30_000 });
+  await expect(popup.locator("app-add-edit")).toHaveCount(0);
+  await expectNoSecrets(popup);
+  await popup.goto(vaultUrl);
+  await expect(row(popup, "Front desk PC")).toBeVisible({ timeout: 30_000 });
+
   // The Admins login: without share, it can't move to another shared folder,
   // and the picker says why; nor is it offered to add to one.
   await openItem(popup, "Front desk PC");
@@ -424,6 +438,21 @@ test("a member who can't see passwords can't reveal or copy them in the extensio
   const view = web.getByRole("dialog", { name: "View Identity" });
   await expect(view).toBeVisible();
   await expectIdentityHidden(web, view);
+  await view.getByRole("button", { name: "Close" }).first().click();
+
+  // Copying the login by its address in the web vault, opened fresh (as a
+  // link would be): refused, and no copy opens. (The address opens the item
+  // too, as upstream does, for her only to look at.)
+  await web.goto(`${server}/#/vault?itemId=${wifiId}&action=clone`);
+  await web.reload();
+  const refused = web.getByText(CANT_COPY);
+  await expect(refused.or(password)).toBeVisible({ timeout: 30_000 });
+  if (await password.isVisible()) {
+    await password.fill(dana.password);
+    await web.getByRole("button", { name: /^(Log in|Unlock)$/ }).click();
+  }
+  await expect(refused).toBeVisible({ timeout: 30_000 });
+  await expect(web.getByRole("dialog", { name: /^New/ })).toHaveCount(0);
 
   await ownerContext.close();
 });
