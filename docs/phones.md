@@ -107,6 +107,15 @@ The core signs and makes passkeys (`docs/core.md`, "Passkeys"); each OS asks for
 
 **Tests:** the core's Digital Asset Links checks (which statements let which app, which site IDs may be fetched, the day's memory); on the emulator, the autofill test app makes a passkey and signs in with it through Credential Manager, checking what comes back as a site would (its challenge, its own origin, the site's ID, and the signature with the passkey's public key). Debug builds read the test site's asset links from a file in the app's folder instead of fetching them, as they stand in for the biometric prompt; release builds always fetch. On the simulator, the AutoFill test's page will do the same in Safari.
 
+## Approving a sign-in
+
+The same as on a computer (`docs/core.md`, "Approving a sign-in"; DESIGN.md, "Approving a sign-in from another device"): someone choosing "Log in with device" on the web vault or in the browser extension approves it on the phone, after comparing the fingerprint phrase.
+
+- **When the phone shows a request:** while PassBundle is open and unlocked, it asks the server every 10 seconds, and shows each new request once. When it opens and unlocks, it asks at once, so a request made while it was closed shows then (after the offer to unlock with a fingerprint, if that comes first). Settings lists every request waiting.
+- **Not while it's closed:** a notice on a closed phone needs push notifications (APNs on iOS, FCM or UnifiedPush on Android), and those wait on PassBundle's own push service, which doesn't exist yet. Until then, someone signing in with a device opens PassBundle on the phone to see it. The server already sends upstream's notice to push when it's set up for that, so it's the delivery that's missing.
+- **Confirming it's you** (on until Settings turns it off, which asks for it too): the phone's own fingerprint or face, through the same Keystore key or Keychain item that unlocks the vault, in a prompt of the approval's own, saying "Approve sign-in" (`biometricConfirmApproval` on the app's channel). Kotlin opens the user key from the Keystore after the prompt (Swift reads it from the Keychain) and hands the bytes straight to the core's call for confirming an approval (`confirmApprovalWithKey`, `pb_confirm_approval_with_key`), never its unlock call, then zeroes them, as biometric unlock does; the core takes it only if it's the open vault's key. The key never reaches Dart. Unlocking, and a passkey's check that it's the person (which also uses that prompt), never confirm an approval. "Use master password" in the prompt, or no biometric unlock, asks for the master password instead.
+- **Nothing new is kept on the phone:** the requests are in memory while unlocked; the user key leaves the core only wrapped to the request's own public key.
+
 ## Locking
 
 - **Lock after a time away:** phones have no "idle time" for the whole device, so the wait counts from when the app leaves the screen. The choices are the desktop's (1, 5, 15, or 30 minutes, 1 or 4 hours), plus "Immediately", which phones' password managers offer because people switch apps all the time. The default is 5 minutes.
@@ -128,4 +137,4 @@ The core signs and makes passkeys (`docs/core.md`, "Passkeys"); each OS asks for
 
 ## Not yet
 
-Passkeys on iPhone (designed above), Wear OS and watchOS, tablets' own layout (they get the desktop layout when wide enough), and sharing from other apps into a new item.
+Passkeys on iPhone (designed above), a sign-in request's notice while PassBundle is closed (push), Wear OS and watchOS, tablets' own layout (they get the desktop layout when wide enough), and sharing from other apps into a new item.

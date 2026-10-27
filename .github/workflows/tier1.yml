@@ -227,7 +227,9 @@ jobs:
           repository: PimpinPumpkin/passbundle-apps
           ref: ${{ needs.refs.outputs.apps }}
           path: passbundle-apps
-          sparse-checkout: agent/tests/vectors
+          sparse-checkout: |
+            agent/tests/vectors
+            core/src/words
           persist-credentials: false
       - name: The agent's native-messaging test vectors, checked with upstream's own crypto
         run: node passbundle-apps/agent/tests/vectors/check-upstream.mjs passbundle-apps/agent/tests/vectors/native-messaging.json .
@@ -244,6 +246,15 @@ jobs:
         run: node meta/docs/vectors/check-core-vectors.mjs meta/docs/vectors/core-v1.json .
       - name: The desktop updater's test vectors, as their generator makes them
         run: node meta/docs/vectors/make-desktop-update-v1.mjs | cmp - meta/docs/vectors/desktop-update-v1.json
+      # Approving a sign-in from another device: the vectors as their
+      # generator makes them (with the apps' copy of EFF's word list), checked
+      # with upstream's own crypto; the clients' unit test (run below) checks
+      # their copy's fingerprint phrases with upstream's own code.
+      - name: The sign-in approval test vectors, as their generator makes them and as upstream's crypto opens them
+        run: |
+          node meta/docs/vectors/make-device-approval-v1.mjs passbundle-apps/core/src/words/eff-large.txt | cmp - meta/docs/vectors/device-approval-v1.json
+          node meta/docs/vectors/check-device-approval-vectors.mjs meta/docs/vectors/device-approval-v1.json .
+          cmp meta/docs/vectors/device-approval-v1.json libs/auth/src/common/services/auth-request/keykeeper-device-approval.vectors.json
       - name: The web vault's reload key test vectors, checked with upstream's own crypto
         run: node meta/docs/vectors/check-reload-key-vectors.mjs meta/docs/vectors/reload-key-v1.json .
       - name: The reload key test vectors, as their generator makes them, and the web vault's copy
@@ -517,7 +528,9 @@ jobs:
     name: API tests on PostgreSQL (${{ matrix.shard }}/2)
     needs: [refs, server, clients]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The second shard took 16 to 20 minutes once single sign-on's and
+    # signing in with a device's tests joined it, and a slow runner ran out.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:

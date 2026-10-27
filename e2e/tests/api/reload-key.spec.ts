@@ -330,17 +330,26 @@ test.describe("with the server's real limits", () => {
       request
         .post("/api/keykeeper/reload-key/leaving", { data: { tabId: tab(), pageId: tab() } })
         .then((response) => response.status());
+    const batch = () => Promise.all(Array.from({ length: 50 }, unmatched));
+    // Beacons that match nothing have a limit of their own, which refills
+    // as time passes: keep sending until it refuses some, however slow the
+    // machine (each batch of 50 outruns its refill, so it always gets
+    // there), and at most 2,000.
     const statuses: number[] = [];
-    for (let batch = 0; batch < 9; batch++) {
-      statuses.push(...(await Promise.all(Array.from({ length: 50 }, unmatched))));
+    while (!statuses.includes(429) && statuses.length < 2_000) {
+      statuses.push(...(await batch()));
     }
     expect(statuses.slice(0, 250)).not.toContain(429);
-    // Beacons that match nothing have a limit of their own; a tab's real
-    // one, with its cookie, doesn't count against it.
     expect(statuses).toContain(429);
-    expect(await unmatched()).toBe(429);
-    const matched = await request.post("/api/keykeeper/reload-key/leaving", { data: { tabId } });
-    expect(matched.status()).toBe(200);
+    // A tab's real beacon, with its cookie, doesn't count against it: sent
+    // with a batch of unmatched ones, which the limit still refuses some of,
+    // it goes through.
+    const [matched, ...alongside] = await Promise.all([
+      request.post("/api/keykeeper/reload-key/leaving", { data: { tabId } }).then((response) => response.status()),
+      ...Array.from({ length: 50 }, unmatched),
+    ]);
+    expect(alongside).toContain(429);
+    expect(matched).toBe(200);
 
     // Signing up, which shares that address's limit, still works.
     await api.account("leaving-bob");
