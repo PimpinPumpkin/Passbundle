@@ -279,6 +279,16 @@ test("a setup session can only set up two-step login, setting it up ends the ses
   expect((await refresh(request, token)).status).toBe(400);
   expect((await api.call(owner, "GET", orgSetting(orgId))).body.required).toBe(true);
 
+  // The other methods' setup endpoints take it too: Duo's, and the security
+  // key's (which this test server, at an IP address, can't offer).
+  const duo = await api.call(setup, "POST", "/api/two-factor/get-duo", { masterPasswordHash: owner.password });
+  expect(duo.status, JSON.stringify(duo.body)).toBe(200);
+  const webAuthn = await api.call(setup, "POST", "/api/two-factor/get-webauthn", {
+    masterPasswordHash: owner.password,
+  });
+  expect(webAuthn.status, JSON.stringify(webAuthn.body)).toBe(400);
+  expect(webAuthn.body.message).toMatch(/not compatible with Webauthn/);
+
   // Upstream's setup endpoints still want the master password.
   const wrong = await api.call(setup, "POST", "/api/two-factor/get-authenticator", {
     masterPasswordHash: Buffer.from("wrong").toString("base64"),
