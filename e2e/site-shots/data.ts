@@ -202,3 +202,16 @@ export function clientVault(client: Client) {
 /** A person's work email at their client: "Maria Lopez" at acmedental.example. */
 export const emailOf = (person: string, client: Client) =>
   `${person.toLowerCase().replace(/[^a-z ]/g, "").replace(/ /g, ".")}@${client.domain}`;
+
+/**
+ * Passwords the stand-in for Have I Been Pwned's Pwned Passwords knows, with
+ * how many times each was seen, so the console's Exposed column has
+ * something to show: the clients' weak and reused ones.
+ */
+export const breached: Record<string, number> = {
+  office1: 48113,
+  office2: 31907,
+  office3: 12554,
+  office4: 9216,
+  "Summer-Harbor-2026!x": 3,
+};

@@ -4,101 +4,66 @@ description: PassBundle is free for every password and every device. Premium and
 layout: wide
 -->
 <section class="hero solo">
-  <div>
-    <h1>Simple prices. A free plan that stays free.</h1>
-    <p class="lead">
-      Everything that keeps you safe is free. The paid plans add storage, convenience, and other
-      people.
-    </p>
-    <nav class="tabs" aria-label="Plans">
-      <a href="#personal">Personal</a>
-      <a href="#business">Business</a>
-      <a href="#msp">MSPs</a>
-    </nav>
-  </div>
+  <h1>Simple prices, with every feature included.</h1>
+  <p class="lead">
+    MSPs and businesses pay per person, with nothing held back for a pricier tier. For you and
+    your family, everything that keeps you safe is free, and stays free.
+  </p>
+  <nav class="tabs" aria-label="Plans">
+    <a href="#msp">MSPs</a>
+    <a href="#business">Business</a>
+    <a href="#personal">Personal</a>
+    <a href="#compare">Compare</a>
+  </nav>
 </section>
 
-<section id="personal" class="tight">
-  <h2>For you and your family</h2>
-  <div class="plans">
-    <div class="plan">
-      <h3>Free</h3>
-      <p class="price">$0</p>
-      <p class="for">For everyone, forever</p>
-      <ul>
-        <li>Unlimited passwords, devices, and sync</li>
-        <li>Autofill, the password generator, and passkeys</li>
-        <li>Every two-step login method, hardware keys included</li>
-        <li>Windows Hello unlock</li>
-        <li>Weak, reused, and exposed password reports</li>
-        <li>Item templates and expiration reminders</li>
-        <li>Legacy contacts</li>
-        <li>Send text with an expiring link</li>
-        <li>Import from other password managers</li>
-      </ul>
-      <a class="button" href="/download/">Get PassBundle</a>
-    </div>
-    <div class="plan featured">
-      <h3>Premium</h3>
-      <p class="price">{{prices.premium}}<small> a year</small></p>
-      <p class="for">For one person</p>
-      <ul>
-        <li>Everything in Free</li>
-        <li>Two-step login codes for your other accounts, built in</li>
-        <li>Encrypted file attachments, 5 GB</li>
-        <li>Send files, not just text</li>
-        <li>Data breach report for your email address</li>
-        <li>Email support within one business day</li>
-      </ul>
-      <a class="button primary" href="{{links.signup}}">Get Premium</a>
-    </div>
-    <div class="plan">
-      <h3>Families</h3>
-      <p class="price">{{prices.families}}<small> a year</small></p>
-      <p class="for">For up to {{prices.familiesPeople}} people</p>
-      <ul>
-        <li>Premium for everyone in the family</li>
-        <li>Shared vaults, as many as you like</li>
-        <li>An organizer who adds and removes people</li>
-        <li>Everyone keeps a private vault</li>
-      </ul>
-      <a class="button" href="{{links.signup}}">Get Families</a>
-    </div>
+<section id="business" class="tight">
+  <div class="head">
+    <h2>For MSPs and businesses</h2>
+    <p class="lead">Per person, every feature included.</p>
   </div>
-</section>
-
-<section id="business">
-  <h2>For a business with its own IT</h2>
   <div class="plans two">
-    <div class="plan featured">
-      <h3>Business</h3>
-      <p class="price">{{prices.business}}<small> per person, monthly</small></p>
-      <p class="for">{{prices.businessLarge}} from {{prices.businessLargeFrom}} people. Every feature included.</p>
-      <ul>
+    <div class="plan featured" id="msp">
+      <h3><x-tile icon="console" tone="brand" class="small"></x-tile>MSPs</h3>
+      <p class="for">For IT providers, and IT teams that run several companies, locations, or brands.</p>
+      <p class="price">{{prices.msp1}}<small>per seat, monthly, and less as your pool grows</small></p>
+      <a class="button primary" href="mailto:hello@passbundle.com?subject=PassBundle%20demo">Book a demo</a>
+      <p class="includes">Everything in Business, for every client, and:</p>
+      <ul class="checks">
+        <li>One console for every client</li>
+        <li>Default policies and templates for all of them</li>
+        <li>Each client's passwords to fix, side by side</li>
+        <li>Access per technician, and a log of everything they do</li>
+        <li>Free staff seats, and one pool of seats across every client</li>
+      </ul>
+    </div>
+    <div class="plan">
+      <h3><x-tile icon="people" tone="turquoise" class="small"></x-tile>Business</h3>
+      <p class="for">For a business with its own IT. {{prices.businessLarge}} from {{prices.businessLargeFrom}} people.</p>
+      <p class="price">{{prices.business}}<small>per person, monthly</small></p>
+      <a class="button primary" href="{{links.signup}}">Start a {{prices.trialDays}}-day trial</a>
+      <p class="includes">Everything in Premium, for every member, and:</p>
+      <ul class="checks">
         <li>Sensible policies from day one</li>
         <li>Rollout from Intune, group policy, or your RMM</li>
         <li>No confirm step for new people</li>
         <li>Account recovery for forgotten master passwords</li>
-        <li>Shared collections, custom roles, and event logs</li>
+        <li>Provisioning from Microsoft Entra ID</li>
+        <li>Shared folders with permissions, custom roles, and event logs</li>
         <li>Item templates for your team</li>
-        <li>Premium for every member</li>
       </ul>
-      <a class="button primary" href="{{links.signup}}">Start a {{prices.trialDays}}-day trial</a>
-    </div>
-    <div class="plan">
-      <h3>Several companies?</h3>
-      <p class="for">If your IT team runs several companies, locations, or brands, use the MSP console and one pool of seats across all of them.</p>
-      <a class="button" href="#msp">See MSP pricing</a>
     </div>
   </div>
 </section>
 
-<section id="msp">
-  <h2>For MSPs and IT providers</h2>
-  <p class="lead">
-    Every user in every client counts toward one pool, billed monthly on the seats in use. The more
-    seats, the lower the price, for every client. Your staff are free.
-  </p>
+<section class="tight">
+  <div class="head">
+    <h2>The MSP seat pool</h2>
+    <p class="lead">
+      Every user in every client counts toward one pool, billed monthly on the seats in use. The more
+      seats, the lower the price, for every client. Your staff are free.
+    </p>
+  </div>
   <div class="table-box">
     <table>
       <thead>
@@ -111,14 +76,216 @@ layout: wide
       </tbody>
     </table>
   </div>
-  <div class="actions">
+  <div class="actions plans-note">
     <a class="button primary" href="mailto:hello@passbundle.com?subject=PassBundle%20demo">Book a demo</a>
     <a class="button" href="/msp/">What MSPs get</a>
   </div>
 </section>
 
+<section id="personal">
+  <div class="head">
+    <h2>For you and your family</h2>
+  </div>
+  <div class="plans">
+    <div class="plan">
+      <h3><x-tile icon="key" tone="sapphire" class="small"></x-tile>Free</h3>
+      <p class="for">For everyone, forever</p>
+      <p class="price">$0<small>No card, no trial, no ads</small></p>
+      <a class="button" href="/download/">Get PassBundle</a>
+      <p class="includes">Everything that keeps you safe:</p>
+      <ul class="checks">
+        <li>Unlimited passwords, devices, and sync</li>
+        <li>Autofill, the password generator, and passkeys</li>
+        <li>Every two-step login method, hardware keys included</li>
+        <li>Windows Hello unlock</li>
+        <li>Weak, reused, and exposed password reports</li>
+        <li>Item templates and expiration reminders</li>
+        <li>Legacy contacts</li>
+        <li>Send text with an expiring link</li>
+        <li>Import from other password managers</li>
+      </ul>
+    </div>
+    <div class="plan featured">
+      <h3><x-tile icon="star" tone="gold" class="small"></x-tile>Premium</h3>
+      <p class="for">For one person</p>
+      <p class="price">{{prices.premium}}<small>a year</small></p>
+      <a class="button primary" href="{{links.signup}}">Get Premium</a>
+      <p class="includes">Everything in Free, and:</p>
+      <ul class="checks">
+        <li>Two-step login codes for your other accounts, built in</li>
+        <li>Encrypted file attachments, 5 GB</li>
+        <li>Send files, not just text</li>
+        <li>Data breach report for your email address</li>
+        <li>Email support within one business day</li>
+      </ul>
+    </div>
+    <div class="plan">
+      <h3><x-tile icon="people" tone="amethyst" class="small"></x-tile>Families</h3>
+      <p class="for">For up to {{prices.familiesPeople}} people</p>
+      <p class="price">{{prices.families}}<small>a year</small></p>
+      <a class="button" href="{{links.signup}}">Get Families</a>
+      <p class="includes">Premium for everyone, and:</p>
+      <ul class="checks">
+        <li>Shared vaults, as many as you like</li>
+        <li>An organizer who adds and removes people</li>
+        <li>Everyone keeps a private vault</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <div class="head">
+    <h2>Compare plans</h2>
+    <p class="lead">Every feature, and the plans that have it.</p>
+    <p class="fine narrow-only">Swipe the table sideways to see every plan.</p>
+  </div>
+  <div class="table-box">
+    <table class="compare">
+      <thead>
+        <tr>
+          <th scope="col"><span class="sr-only">Feature</span></th>
+          <th scope="col">Free<small>$0</small></th>
+          <th scope="col">Premium<small>{{prices.premium}} a year</small></th>
+          <th scope="col">Families<small>{{prices.families}} a year</small></th>
+          <th scope="col">Business<small>{{prices.business}} a person</small></th>
+          <th scope="col">MSPs<small>{{prices.msp1}} a seat</small></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="group"><th scope="colgroup" colspan="6">Your vault</th></tr>
+        <tr>
+          <th scope="row">Unlimited passwords and devices<span>With sync between them</span></th>
+          <td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Autofill, the generator, and passkeys<span>Choose what fills each field, or never fill it</span></th>
+          <td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Item templates and expiration reminders<span>Wi-Fi, servers, licenses, and your own</span></th>
+          <td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Item history<span>Every edit keeps the version before</span></th>
+          <td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Import from other password managers<span>About 70 of them, and every major browser</span></th>
+          <td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Your own server, if you like<span>The server is open source, free to run</span></th>
+          <td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+
+        <tr class="group"><th scope="colgroup" colspan="6">Security</th></tr>
+        <tr>
+          <th scope="row">End-to-end encryption<span>We never hold a key that opens your vault</span></th>
+          <td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Every two-step login method<span>Hardware keys included</span></th>
+          <td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Weak, reused, and exposed password reports</th>
+          <td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Windows Hello unlock</th>
+          <td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Legacy contacts<span>Someone you trust can ask for your vault</span></th>
+          <td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Two-step login codes, built in<span>For your other accounts</span></th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Data breach report<span>For your email address</span></th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+
+        <tr class="group"><th scope="colgroup" colspan="6">Sharing</th></tr>
+        <tr>
+          <th scope="row">Send<span>An encrypted link that expires when you say</span></th>
+          <td>Text</td><td>Text and files</td><td>Text and files</td><td>Text and files</td><td>Text and files</td>
+        </tr>
+        <tr>
+          <th scope="row">Encrypted file attachments</th>
+          <td class="no"><span class="sr-only">Not included</span></td><td>5 GB</td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Shared folders<span>With what each person and group can do in each</span></th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+
+        <tr class="group"><th scope="colgroup" colspan="6">Running it for a company</th></tr>
+        <tr>
+          <th scope="row">Sensible policies from day one<span>One work account per person, strong master passwords</span></th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Account recovery, on by default<span>Reset a forgotten master password, vault intact</span></th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Rollout from Intune, group policy, or an RMM<span>With no confirm step for new people</span></th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Provisioning from Microsoft Entra ID<span>People and groups, over SCIM</span></th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Sign in with Entra</th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td><span class="chip soon">Soon</span></td><td><span class="chip soon">Soon</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Custom roles, groups, and event logs<span>And the Access page: who reaches what</span></th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Events to security tools<span>Microsoft Sentinel, syslog, or a webhook</span></th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+
+        <tr class="group"><th scope="colgroup" colspan="6">Running it for clients</th></tr>
+        <tr>
+          <th scope="row">One console for every client<span>Members, expiring items, and passwords to fix, side by side</span></th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Default policies and templates<span>Set once, for every client</span></th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Technician access and an audit log<span>Chosen clients, roles, and every action recorded</span></th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Free staff seats<span>And one pool of seats across every client</span></th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+
+        <tr class="group"><th scope="colgroup" colspan="6">Help</th></tr>
+        <tr>
+          <th scope="row">Email support<span>Within one business day</span></th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="plans-note">Prices in US dollars, before any sales tax where it applies.</p>
+</section>
+
 <section>
-  <h2>Questions</h2>
+  <div class="head center">
+    <h2>Questions</h2>
+  </div>
   <div class="faq">
     <details>
       <summary>Is the free plan really free forever?</summary>
