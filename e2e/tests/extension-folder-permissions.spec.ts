@@ -1,7 +1,8 @@
 // A shared folder's permissions in the browser extension (DESIGN.md,
 // "Folders and permissions"). An owner makes a business organization with a
-// login (password, one-time code, and a hidden field) and a card in its
-// Everyone folder, and a login in its Admins folder, and gives Dana:
+// login (password, one-time code, and a hidden field), a card, and an
+// identity (SSN, passport and license numbers) in its Everyone folder, and a
+// login in its Admins folder, and gives Dana:
 // Everyone as "Can view but not see passwords", and Admins as Custom (see
 // passwords, create, edit, delete, and view item history, without share).
 // Dana's extension then lists her folders by owner with counts; can't
@@ -9,8 +10,10 @@
 // the list, the right-click menu, password history, or version history
 // (dates and who only, without Clear); can't move the Admins login out of
 // its folder, which says why; and gets Clear there, where she has view item
-// history and delete. Runs on the test server with groups turned on.
-import type { Browser, Page } from "@playwright/test";
+// history and delete. Her web vault hides the identity's numbers too: one
+// rule for what see passwords covers, everywhere. Runs on the test server
+// with groups turned on.
+import type { Browser, Locator, Page } from "@playwright/test";
 
 import { groupsServerPort } from "../paths.mjs";
 
@@ -22,7 +25,7 @@ import {
   test,
   userFor,
 } from "./support/extension";
-import { confirmMember, signUp, webUserFor } from "./support/web";
+import { confirmMember, menu, signUp, webUserFor } from "./support/web";
 
 const server = `https://127.0.0.1:${groupsServerPort}`;
 
@@ -145,6 +148,16 @@ async function setUpOrganization(
   await card.getByRole("button", { name: "Save" }).click();
   await expect(card).toBeHidden();
   await closeView(owner);
+
+  const identity = await newOrgItem(owner, "Identity");
+  await identity.getByRole("textbox", { name: /Item name/ }).fill("Clinic manager");
+  await identity.getByRole("textbox", { name: "First name" }).fill("Pat");
+  await identity.getByRole("textbox", { name: "Social Security number" }).fill("078-05-1120");
+  await identity.getByRole("textbox", { name: "Passport number" }).fill("P1234567");
+  await identity.getByRole("textbox", { name: "License number" }).fill("D7654321");
+  await identity.getByRole("button", { name: "Save" }).click();
+  await expect(identity).toBeHidden();
+  await closeView(owner);
   await grant(owner, danaEmail, "Can view but not see passwords");
 
   // Admins: a login, changed once.
@@ -185,7 +198,22 @@ const SECRETS = [
   "4421-8830",
   "4242424242424242",
   "987",
+  "078-05-1120",
+  "P1234567",
+  "D7654321",
 ];
+
+/** An identity's page: its SSN, passport and license numbers masked, nothing to show or copy. */
+async function expectIdentityHidden(page: Page, view: Locator) {
+  await expect(view.getByTestId("name")).toHaveValue(/Pat/);
+  for (const id of ["ssn", "passport", "license"]) {
+    await expect(view.getByTestId(id)).toHaveValue("••••••••");
+  }
+  for (const id of ["ssn-toggle", "copy-ssn", "passport-toggle", "copy-passport", "copy-license"]) {
+    await expect(view.getByTestId(id)).toHaveCount(0);
+  }
+  await expectNoSecrets(page);
+}
 
 /** Everything the page holds: its text, every field's value, and what each label drags. */
 async function pageHolds(popup: Page): Promise<string> {
@@ -229,9 +257,9 @@ test("a member who can't see passwords can't reveal or copy them in the extensio
   await expect(places).toHaveText([
     /All folders/,
     /Personal\s*0/,
-    /Lakeside Clinic\s*3/,
+    /Lakeside Clinic\s*4/,
     /Admins\s*1/,
-    /Everyone\s*2/,
+    /Everyone\s*3/,
   ]);
   await places.filter({ hasText: "Everyone" }).click();
   await expect(popup.getByTestId("keykeeper-picked-place")).toHaveText(
@@ -324,6 +352,11 @@ test("a member who can't see passwords can't reveal or copy them in the extensio
   await expectNoSecrets(popup);
   await itemPage(popup).getByRole("button", { name: "Back" }).click();
 
+  // The identity: the plain values stay, the numbers don't.
+  await openItem(popup, "Clinic manager");
+  await expectIdentityHidden(popup, itemPage(popup));
+  await itemPage(popup).getByRole("button", { name: "Back" }).click();
+
   // The Admins login: without share, it can't move to another shared folder,
   // and the picker says why; nor is it offered to add to one.
   await openItem(popup, "Front desk PC");
@@ -364,6 +397,27 @@ test("a member who can't see passwords can't reveal or copy them in the extensio
     .click();
   await expect(popup.getByText("History cleared", { exact: true })).toBeVisible();
   await expect(popup.getByTestId("keykeeper-no-versions")).toBeVisible();
+
+  // Her web vault hides the same values: the identity's numbers masked, with
+  // nothing to show or copy. (A new tab may open locked.)
+  const web = await context.newPage();
+  await web.goto(`${server}/#/vault`);
+  const unlock = web.getByRole("textbox", { name: /^Master password/ });
+  const folders = menu(web).getByRole("group", { name: "Folders" });
+  await expect(unlock.or(folders)).toBeVisible({ timeout: 30_000 });
+  if (await unlock.isVisible()) {
+    await unlock.fill(dana.password);
+    await web.getByRole("button", { name: "Unlock", exact: true }).click();
+  }
+  await folders.getByRole("button", { name: "Everyone", exact: true }).click();
+  await web
+    .getByRole("row")
+    .filter({ hasText: "Clinic manager" })
+    .getByText("Clinic manager", { exact: true })
+    .click();
+  const view = web.getByRole("dialog", { name: "View Identity" });
+  await expect(view).toBeVisible();
+  await expectIdentityHidden(web, view);
 
   await ownerContext.close();
 });
