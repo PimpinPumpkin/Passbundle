@@ -124,8 +124,9 @@ export function plan(input) {
   const skipped = new Map();
   for (const audit of input.audits) {
     for (const f of audit.findings) {
-      // npm: by package (packages outside what we ship). cargo: by advisory and package version.
-      const key = audit.npm ? f.package : `${f.id} ${f.package}`;
+      // By advisory and package (npm) or package version (cargo), so a new
+      // advisory for a package with others accepted is still raised.
+      const key = `${f.id} ${f.package}`;
       if ((audit.npm ? accepted.npm : accepted.cargo)?.[key]) {
         skipped.set(key, (skipped.get(key) ?? 0) + 1);
         continue;

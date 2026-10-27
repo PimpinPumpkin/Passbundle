@@ -106,7 +106,7 @@ test("audit findings become to-dos: every cargo advisory, npm's high and critica
   assert.deepEqual(cargoFindings(null), []);
 });
 
-test("accepted findings are noted, not raised: npm by package, cargo by advisory and version", () => {
+test("accepted findings are noted, not raised: npm by advisory and package, cargo by advisory and version", () => {
   const finding = { id: "GHSA-bbbb", package: "vite", title: "Dev server bypass", fix: "a fix is available" };
   const rustls = { id: "RUSTSEC-2026-0349", title: "Downgrade", fix: ">=0.23.46" };
   const result = plan({
@@ -122,10 +122,17 @@ test("accepted findings are noted, not raised: npm by package, cargo by advisory
         ],
       },
     ],
-    accepted: { npm: { vite: "Build tooling only." }, cargo: { "RUSTSEC-2026-0349 rustls 0.21.12": "Server-side use only." } },
+    accepted: {
+      npm: { "GHSA-bbbb vite": "Build tooling only." },
+      cargo: { "RUSTSEC-2026-0349 rustls 0.21.12": "Server-side use only." },
+    },
   });
-  assert.deepEqual(result.actions, ["Server (cargo audit): rustls 0.23.45, Downgrade (RUSTSEC-2026-0349; >=0.23.46)."]);
-  assert.ok(result.notes.some((n) => n.includes("3 findings")));
+  assert.deepEqual(result.actions, [
+    // A new advisory for an accepted package is raised: each is accepted on its own.
+    "Clients (npm audit, production): vite, Dev server bypass (GHSA-cccc; a fix is available).",
+    "Server (cargo audit): rustls 0.23.45, Downgrade (RUSTSEC-2026-0349; >=0.23.46).",
+  ]);
+  assert.ok(result.notes.some((n) => n.includes("2 findings")));
 });
 
 test("the accepted list gives a reason for everything in it", async () => {
@@ -136,6 +143,9 @@ test("the accepted list gives a reason for everything in it", async () => {
   }
   for (const key of Object.keys(cargo)) {
     assert.match(key, /^RUSTSEC-\d{4}-\d{4} \S+ \d+\.\d+\.\d+$/, `${key}: "<advisory> <crate> <version>"`);
+  }
+  for (const key of Object.keys(npm)) {
+    assert.match(key, /^GHSA(-[0-9a-z]{4}){3} \S+$/, `${key}: "<GHSA advisory> <package>"`);
   }
 });
 

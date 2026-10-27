@@ -1,0 +1,9 @@
+{
+  "name": "passbundle-cli-package",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Packs PassBundle's command-line tool (passbundle-clients apps/cli) into one program per platform; its major and minor are the releases' (cli-release.yml). See docs/cli.md.",
+  "devDependencies": {
+    "@yao-pkg/pkg": "6.23.0"
+  }
+}
