@@ -10,12 +10,13 @@ PassBundle's server and branded web vault in one container image, for the hosted
 
 ```sh
 gunzip -c passbundle-image.tar.gz | docker load
-docker run -d --name passbundle -p 127.0.0.1:8080:8080 -v passbundle-data:/data \
-  -e DOMAIN=https://vault.example.com -e IP_HEADER=X-Real-IP -e IP_HEADER_TRUSTED_PROXIES=172.17.0.1 \
+docker network create --subnet 172.30.53.0/24 --ip-range 172.30.53.128/25 passbundle
+docker run -d --name passbundle --network passbundle -v passbundle-data:/data \
+  -e DOMAIN=https://vault.example.com -e IP_HEADER=X-Real-IP -e IP_HEADER_TRUSTED_PROXIES=172.30.53.2 \
   passbundle:release
 ```
 
-The apps refuse a server that isn't HTTPS, so put it behind something that serves HTTPS: a reverse proxy, or a Cloudflare tunnel, as the hosted service does. This example is for a reverse proxy on the same machine that sets `X-Real-IP`: requests through the published port reach the container from Docker's bridge, 172.17.0.1 by default. The hosted service runs the tunnel in the same Compose stack at a fixed address instead (the private ops repo's `hosting/`).
+The apps refuse a server that isn't HTTPS, so put it behind something that serves HTTPS: a reverse proxy, or a Cloudflare tunnel, as the hosted service does. This example is for a reverse proxy that sets `X-Real-IP`, running as a container on the same network at the fixed address 172.30.53.2 (`--ip 172.30.53.2`), outside the range Docker hands out, and reaching the server at `http://passbundle:8080`. Requests that come in through a published port arrive from an address Docker chooses, so a proxy outside Docker is best trusted only if nothing else can reach the server. The hosted service runs its tunnel the same way, in its Compose stack (the private ops repo's `hosting/`).
 
 ### The client's address
 
