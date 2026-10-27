@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { type APIRequestContext, expect, test } from "@playwright/test";
 
 import { mailServerPort } from "../../paths.mjs";
-import { type Account, Api, encString } from "../api/support";
+import { type Account, Api, encString, withMasterPassword } from "../api/support";
 import { message, ssoOrg, ssoSignIn } from "../support/entra";
 
 import { joinByEmail, verifyEmail, waitForMessage } from "./mailbox";
@@ -102,7 +102,12 @@ test("someone removed who rejoins with the install command they kept waits for a
   expect(await letInAlone(api, admin, mspId, ana)).toBe(true);
 
   // Someone the directory removes is remembered the same way.
-  const scim = await api.call(admin, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`);
+  const scim = await api.call(
+    admin,
+    "POST",
+    `/api/keykeeper/organizations/${orgId}/provisioning/token`,
+    withMasterPassword(admin),
+  );
   expect(scim.status, JSON.stringify(scim.body)).toBe(200);
   const ben = await api.account("ben");
   await verifyEmail(api, ben);
