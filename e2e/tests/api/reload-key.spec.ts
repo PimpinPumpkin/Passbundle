@@ -1,12 +1,16 @@
 // Reload keys (DESIGN.md, "Staying unlocked across a reload"): the server
 // keeps a web vault tab's R in memory and gives it back only to the same
-// account, on the same device, for the same tab, while the tab keeps
-// checking in and within its timeout and the organization's Vault lock
-// policy. Locking, signing out, a new master password, and "Deauthorize
-// sessions" forget it at once.
+// account, on the same device, for the same tab, with the tab's reload cookie,
+// while the tab keeps checking in and within its timeout and the
+// organization's Vault lock policy. Locking, signing out, a new master
+// password, and "Deauthorize sessions" forget it at once. These requests
+// share one cookie jar, as a browser does, so the tab's cookie goes along
+// unless a test says otherwise.
 import { randomBytes, randomUUID } from "node:crypto";
 
-import { type APIRequestContext, expect, test } from "@playwright/test";
+import { type APIRequestContext, type APIResponse, expect, test } from "@playwright/test";
+
+import { port } from "../../paths.mjs";
 
 import { Api, type Account, encString } from "./support";
 
@@ -220,4 +224,110 @@ test("each account's calls are limited", async ({ request }) => {
   // Others aren't held up.
   const bob = await api.account("bob");
   expect((await api.call(bob, "POST", "/api/keykeeper/reload-key/forget", { tabId: tab() })).status).toBe(200);
+});
+
+/** The response's Set-Cookie headers. */
+const setCookies = (response: APIResponse) =>
+  response
+    .headersArray()
+    .filter((h) => h.name.toLowerCase() === "set-cookie")
+    .map((h) => h.value);
+
+test("R comes back only with the tab's reload cookie, which is HttpOnly, Secure, Strict, and for the session", async ({
+  request,
+  playwright,
+}) => {
+  const api = new Api(request);
+  const alice = await api.account("alice");
+  const tabId = tab();
+  const key = r();
+  const auth = { Authorization: `Bearer ${alice.token}` };
+
+  const kept = await request.post("/api/keykeeper/reload-key", {
+    headers: auth,
+    data: { tabId, key, timeoutMinutes: 15 },
+  });
+  expect(kept.status()).toBe(200);
+  const [header, ...more] = setCookies(kept);
+  expect(more).toEqual([]);
+  const name = `__Secure-pb-reload-${tabId}`;
+  const value = new RegExp(`^${name}=([A-Za-z0-9_-]{43});`).exec(header)?.[1];
+  expect(value, header).toBeDefined();
+  for (const part of ["HttpOnly", "Secure", "SameSite=Strict", "Path=/api/keykeeper/reload-key"]) {
+    expect(header).toContain(part);
+  }
+  expect(header).not.toMatch(/Max-Age|Expires|Domain/i);
+
+  // Another client with the same session and tab id, but not the cookie, or
+  // a wrong one, gets the same answer as no entry, and changes nothing.
+  const elsewhere = async (cookie?: string) => {
+    const client = await playwright.request.newContext({
+      baseURL: `https://127.0.0.1:${port}`,
+      ignoreHTTPSErrors: true,
+      extraHTTPHeaders: { ...auth, ...(cookie ? { Cookie: cookie } : {}) },
+    });
+    const got = await client.post("/api/keykeeper/reload-key/release", { data: { tabId } });
+    const checkedIn = await client.post("/api/keykeeper/reload-key/check-in", {
+      data: { tabId, idleSeconds: 0, timeoutMinutes: 15 },
+    });
+    const result = { release: got.status(), body: await got.text(), checkIn: checkedIn.status() };
+    await client.dispose();
+    return result;
+  };
+  for (const cookie of [undefined, `${name}=wrong`, `${name}=${value!.toUpperCase()}`]) {
+    const got = await elsewhere(cookie);
+    expect(got.release, cookie).toBe(404);
+    expect(got.checkIn, cookie).toBe(404);
+    expect(got.body).not.toContain(key);
+  }
+  // With the cookie itself, it opens.
+  const withCookie = await elsewhere(`${name}=${value}`);
+  expect(withCookie.release).toBe(200);
+  expect(JSON.parse(withCookie.body).key).toBe(key);
+
+  // The browser's jar keeps it only for the reload endpoints.
+  const jar = (await request.storageState()).cookies.find((c) => c.name === name);
+  expect(jar).toMatchObject({ path: "/api/keykeeper/reload-key", httpOnly: true, secure: true, sameSite: "Strict", expires: -1 });
+
+  // Forgetting R expires the cookie too.
+  const forgotten = await request.post("/api/keykeeper/reload-key/forget", { headers: auth, data: { tabId } });
+  expect(forgotten.status()).toBe(200);
+  const [removal] = setCookies(forgotten);
+  expect(removal).toMatch(new RegExp(`^${name}=;`));
+  expect(removal).toContain("Max-Age=0");
+  expect(removal).toContain("Path=/api/keykeeper/reload-key");
+  expect((await request.storageState()).cookies.find((c) => c.name === name)).toBeUndefined();
+  expect((await release(api, alice, tabId)).status).toBe(404);
+});
+
+test("a tab's cookie that outlived its R is expired when the tab asks, or when another tab keeps one", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const alice = await api.account("alice");
+  const auth = { Authorization: `Bearer ${alice.token}` };
+  const names = () => request.storageState().then((s) => s.cookies.map((c) => c.name).filter((n) => n.includes("pb-reload")));
+
+  // Unused past its timeout: the check-in that finds it gone expires the cookie.
+  const idle = tab();
+  expect((await keep(api, alice, idle, r(), 1)).status).toBe(200);
+  expect(await names()).toEqual([`__Secure-pb-reload-${idle}`]);
+  const late = await request.post("/api/keykeeper/reload-key/check-in", {
+    headers: auth,
+    data: { tabId: idle, idleSeconds: 61, timeoutMinutes: 1 },
+  });
+  expect(late.status()).toBe(404);
+  expect(await names()).toEqual([]);
+
+  // A cookie whose tab has nothing kept on the server any more (here, set
+  // by hand, as a browser would still hold one after a restart) goes when
+  // another tab keeps R.
+  const gone = tab();
+  const withStale = await request.post("/api/keykeeper/reload-key", {
+    headers: { ...auth, Cookie: `__Secure-pb-reload-${gone}=left-over` },
+    data: { tabId: tab(), key: r(), timeoutMinutes: 15 },
+  });
+  expect(withStale.status()).toBe(200);
+  const headers = setCookies(withStale);
+  expect(headers.some((h) => h.startsWith(`__Secure-pb-reload-${gone}=;`) && h.includes("Max-Age=0"))).toBe(true);
 });

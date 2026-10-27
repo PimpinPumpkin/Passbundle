@@ -1,17 +1,25 @@
 // The web vault stays unlocked across a reload, within the vault timeout
 // (DESIGN.md, "Staying unlocked across a reload"). At a real unlock a tab
 // keeps the user key wrapped with a random key R in its own sessionStorage,
-// and the server keeps R in memory; a reload asks for R back. Locking, a new
-// browser, the timeout, "On browser refresh", Log out, and the server
-// restarting all mean the next reload asks for the master password, as
-// upstream's always did.
+// and the server keeps R in memory and sets the tab's reload cookie
+// (HttpOnly); a reload asks for R back, with the cookie. Locking, a new
+// browser, the timeout, "On browser refresh", Log out, the server restarting,
+// a missing cookie, and a copy of the tab's storage without its cookie all
+// mean the next reload asks for the master password, as upstream's always did.
 import { type ChildProcess, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { type APIRequestContext, type Browser, expect, type Page, test } from "@playwright/test";
+import {
+  type APIRequestContext,
+  type Browser,
+  type BrowserContext,
+  expect,
+  type Page,
+  test,
+} from "@playwright/test";
 
 import { restartServerPort } from "../paths.mjs";
 
@@ -95,6 +103,11 @@ async function choose(page: Page, combobox: string, option: string) {
   await page.getByRole("option", { name: option, exact: true }).click();
 }
 
+/** The tab's reload cookie, as the browser keeps it. */
+async function reloadCookie(context: BrowserContext, tabId: string) {
+  return (await context.cookies()).find((c) => c.name === `__Secure-pb-reload-${tabId}`);
+}
+
 /** Lock now, from the account menu behind the avatar. */
 async function lockNow(page: Page) {
   await page.locator('button[aria-haspopup="menu"]:has(bit-avatar)').first().click();
@@ -133,10 +146,13 @@ test("locking, then reloading, asks for the master password", async ({ page }, t
   await signUp(page, user);
   await expect.poll(() => sent.kept.length).toBe(1);
 
+  expect(await reloadCookie(page.context(), sent.kept[0].tabId)).toBeDefined();
   await lockNow(page);
   await expectLocked(page);
   expect(sent.forgotten).toEqual([sent.kept[0].tabId]);
   expect((await storage(page)).record).toBeNull();
+  // The server expired the tab's cookie as it forgot R.
+  await expect.poll(() => reloadCookie(page.context(), sent.kept[0].tabId)).toBeUndefined();
   await page.reload();
   await expectLocked(page);
 
@@ -147,6 +163,82 @@ test("locking, then reloading, asks for the master password", async ({ page }, t
   expect(sent.kept[1].tabId).not.toBe(sent.kept[0].tabId);
   await page.reload();
   await expectUnlocked(page);
+});
+
+test("the tab's reload cookie is HttpOnly, Secure, and Strict, and without it a reload asks", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const sent = watch(page);
+  const user = webUserFor("reload-cookie", testInfo.repeatEachIndex);
+  await signUp(page, user);
+  await expect.poll(() => sent.kept.length).toBe(1);
+  const { tabId } = sent.kept[0];
+
+  // A session cookie, only for the reload endpoints, that page scripts can't
+  // read and the tab's storage doesn't hold.
+  const cookie = (await reloadCookie(page.context(), tabId))!;
+  expect(cookie).toMatchObject({
+    httpOnly: true,
+    secure: true,
+    sameSite: "Strict",
+    path: "/api/keykeeper/reload-key",
+    expires: -1,
+  });
+  expect(cookie.value).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  expect(await page.evaluate(() => document.cookie)).not.toContain("pb-reload");
+  expect((await storage(page)).text).not.toContain(cookie.value);
+
+  await page.reload();
+  await expectUnlocked(page);
+
+  // The cookie gone (cleared, or another browser): the next reload asks.
+  await page.context().clearCookies({ name: cookie.name });
+  await page.reload();
+  await expectLocked(page);
+});
+
+test("another browser with a copy of the tab's storage, but not its cookie, gets nothing", async ({
+  browser,
+  page,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const sent = watch(page);
+  const user = webUserFor("reload-copied-storage", testInfo.repeatEachIndex);
+  await signUp(page, user);
+  await expect.poll(() => sent.kept.length).toBe(1);
+  await expect.poll(async () => (await storage(page)).record?.tabId).toBe(sent.kept[0].tabId);
+
+  // Everything the tab keeps in sessionStorage and localStorage, copied.
+  const copy = await page.evaluate(() => ({
+    session: Object.fromEntries(Object.keys(sessionStorage).map((k) => [k, sessionStorage.getItem(k)!])),
+    local: Object.fromEntries(Object.keys(localStorage).map((k) => [k, localStorage.getItem(k)!])),
+  }));
+  expect(Object.keys(copy.session).some((k) => /_token_accessToken$/.test(k))).toBe(true);
+
+  const other = await browser.newContext();
+  await other.addInitScript((stored) => {
+    if (sessionStorage.length === 0) {
+      for (const [k, v] of Object.entries(stored.session)) {
+        sessionStorage.setItem(k, v);
+      }
+      for (const [k, v] of Object.entries(stored.local)) {
+        localStorage.setItem(k, v);
+      }
+    }
+  }, copy);
+  const thief = await other.newPage();
+  const released: number[] = [];
+  thief.on("response", (response) => {
+    if (response.url().endsWith("/api/keykeeper/reload-key/release")) {
+      released.push(response.status());
+    }
+  });
+  await thief.goto("/#/vault");
+  // Signed in (the copy has the tokens), but locked: the server refused R.
+  await expectLocked(thief);
+  expect(released).toEqual([404]);
+  await other.close();
 });
 
 test("a new browser asks for the master password", async ({ browser, page }, testInfo) => {
