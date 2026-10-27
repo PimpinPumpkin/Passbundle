@@ -86,6 +86,8 @@ export function pkce() {
 export type SignIn = {
   /** Each step's status, for tests that stop early. */
   authorize: number;
+  /** For the command-line tool: the status of its page's Continue (303 to Microsoft). */
+  confirm?: number;
   callback?: number;
   callbackBody?: unknown;
   /** The connector URL the server sent the browser back to. */
@@ -129,10 +131,22 @@ export async function ssoSignIn(
     `&response_mode=query&domain_hint=${encodeURIComponent(identifier)}&ssoToken=`;
   const authorize = await request.get(authorizeUrl, { maxRedirects: 0 });
   const result: SignIn = { authorize: authorize.status(), verifier };
-  if (authorize.status() !== 307) {
+  let toEntra: string;
+  if (options.clientId === "cli" && authorize.status() === 200) {
+    // The command-line tool's sign-in asks first, on a page of the server's
+    // own; its Continue posts the page's token back, from the same origin.
+    const asked = await confirmCli(request, origin, await authorize.text());
+    result.confirm = asked.status();
+    if (asked.status() !== 303) {
+      return result;
+    }
+    toEntra = asked.headers()["location"];
+  } else if (authorize.status() === 307) {
+    toEntra = authorize.headers()["location"];
+  } else {
     return result;
   }
-  const atEntra = await request.get(authorize.headers()["location"], { maxRedirects: 0 });
+  const atEntra = await request.get(toEntra, { maxRedirects: 0 });
   expect(atEntra.status(), await atEntra.text()).toBe(302);
   const callbackUrl = atEntra.headers()["location"];
   result.callbackUrl = callbackUrl;
@@ -240,6 +254,27 @@ export async function linkFromSession(
     code,
     pending,
   };
+}
+
+/** The one-time token on the command-line tool's sign-in page. */
+export function cliConfirmToken(page: string): string {
+  const token = /name="token" value="([^"]+)"/.exec(page)?.[1];
+  expect(token, page).toBeTruthy();
+  return token!;
+}
+
+/** The command-line tool's sign-in page's Continue, as the browser posts it from the page. */
+export async function confirmCli(
+  request: APIRequestContext,
+  origin: string,
+  page: string,
+  headers: Record<string, string> = { Origin: origin, "Sec-Fetch-Site": "same-origin" },
+) {
+  return request.post(`${origin}/identity/connect/authorize/confirm`, {
+    form: { token: cliConfirmToken(page) },
+    headers,
+    maxRedirects: 0,
+  });
 }
 
 /** Confirms a pending link (the linking page's button) as someone. */

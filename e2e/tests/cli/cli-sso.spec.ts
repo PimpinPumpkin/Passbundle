@@ -15,11 +15,14 @@ import { chromium, expect, test } from "@playwright/test";
 
 import { brand, port } from "../../paths.mjs";
 import { serverCertificate } from "../support/core";
+import { Api } from "../api/support";
 import {
   linkFromSession,
+  newDomain,
   newIdentifier,
   settings,
   Tenant,
+  verifyDomain,
 } from "../support/entra";
 import {
   realAccount,
@@ -28,6 +31,15 @@ import {
 } from "../support/vault-crypto";
 
 const cliBin = process.env.KK_CLI;
+
+/** Work to do when the current test ends, passed or failed. */
+const cleanups: (() => void)[] = [];
+const afterThisTest = (cleanup: () => void) => cleanups.push(cleanup);
+test.afterEach(() => {
+  while (cleanups.length > 0) {
+    cleanups.pop()!();
+  }
+});
 test.skip(
   !cliBin && !process.env.CI,
   "KK_CLI isn't set: build the command-line tool first (docs/cli.md)",
@@ -48,8 +60,10 @@ test("a member signs in from the command-line tool with her organization's singl
   test.setTimeout(180_000);
   expect(cliBin, "tier 1 sets KK_CLI").toBeTruthy();
   // Real keys, since the tool syncs and reads the organization's key.
+  // Her organization verified her email's domain, so an email finds its sign-in.
+  const domain = newDomain();
   const owner = await realAccount(request, "cli-sso-owner");
-  const member = await realAccount(request, "cli-sso-ana");
+  const member = await realAccount(request, "cli-sso-ana", `ana-${Date.now()}@${domain}`);
   const org = await realOrganization(request, owner, "Fabrikam");
   await realMember(request, owner, org, member, []);
   const tenant = await new Tenant().register();
@@ -62,6 +76,7 @@ test("a member signs in from the command-line tool with her organization's singl
     },
   );
   expect(saved.status(), await saved.text()).toBe(200);
+  await verifyDomain(new Api(request), owner, org.id, domain);
   // She links her account from her own session first, as in the web vault.
   const ana = await tenant.person(member.email);
   await tenant.next(ana);
@@ -88,6 +103,10 @@ test("a member signs in from the command-line tool with her organization's singl
     NODE_EXTRA_CA_CERTS: await serverCertificate(home),
   };
   type Done = { status: number | null; stdout: string; stderr: string };
+  // Every run of the tool, ended when the test does, so a failed one never
+  // keeps a port of the next run's.
+  const started: ReturnType<typeof spawn>[] = [];
+  afterThisTest(() => started.forEach((child) => child.kill()));
   /** Starts the tool: when it ends, and the address it says it opens, if it does. */
   const start = (args: string[]) => {
     const child = spawn(cliBin!, args, {
@@ -109,6 +128,7 @@ test("a member signs in from the command-line tool with her organization's singl
     const done = new Promise<Done>((resolve) =>
       child.on("close", (status) => resolve({ status, stdout, stderr })),
     );
+    started.push(child);
     return { done, url };
   };
   const run = (args: string[]) => start(args).done;
@@ -148,6 +168,13 @@ test("a member signs in from the command-line tool with her organization's singl
     await expect(page.getByRole("textbox", { name: "SSO identifier" })).toHaveValue(identifier);
     expect(page.url()).toContain("/#/sso?clientId=cli");
     await page.getByRole("button", { name: "Continue" }).click();
+    // Then the server's own page asks again, before anything reaches Microsoft.
+    await expect(
+      page.getByRole("heading", { name: "Sign in to the PassBundle command-line tool?" }),
+    ).toBeVisible();
+    expect(page.url()).toContain("/identity/connect/authorize?client_id=cli");
+    await expect(page.getByText("http://localhost:8066")).toBeVisible();
+    await page.getByRole("button", { name: "Continue to Microsoft" }).click();
     await page.waitForURL(/^http:\/\/localhost:8066\//);
     await expect(page.getByRole("heading")).toHaveText(
       `Successfully authenticated with the ${brand.name} CLI`,
@@ -166,6 +193,26 @@ test("a member signs in from the command-line tool with her organization's singl
     userEmail: member.email,
     status: "locked",
   });
+
+  // A link with only her email, which finds her organization's sign-in by
+  // its verified domain, shows the notice and waits: nothing starts by itself.
+  const linkBrowser = await chromium.launch({
+    args: ["--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE localhost"],
+  });
+  try {
+    const page = await (await linkBrowser.newContext({ ignoreHTTPSErrors: true })).newPage();
+    await page.goto(
+      `${server}/#/sso?clientId=cli&redirectUri=${encodeURIComponent("http://localhost:8065")}` +
+        `&state=${"s".repeat(64)}&codeChallenge=${"c".repeat(43)}&email=${encodeURIComponent(member.email)}`,
+    );
+    await expect(page.getByRole("textbox", { name: "SSO identifier" })).toHaveValue(identifier);
+    await expect(page.getByTestId("sso-for-command-line")).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    expect(page.url()).toContain(`${server}/#/sso?clientId=cli`);
+    await expect(page.getByRole("button", { name: "Continue" })).toBeVisible();
+  } finally {
+    await linkBrowser.close();
+  }
 });
 
 test("with Require single sign-on, the tool says how to sign in, and an API key still signs in", async ({

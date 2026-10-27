@@ -26,14 +26,16 @@
 # add an offset to BUILD then, or the versions go backwards. A release is
 # never marked as the latest release of this repository.
 #
-# The manifest is signed with the desktop apps' Ed25519 release key, over
-# "PassBundle CLI release v1\n" and the manifest's bytes, so a signature for
-# a desktop release can never pass for one of these, nor the other way. The
-# key is the PASSBUNDLE_DESKTOP_UPDATE_KEY secret of passbundle-apps; this
-# repository doesn't have it. Until it does (the owner's call), releases carry
-# the manifest and SHA256SUMS without manifest.json.sig, and say so. The tool
-# doesn't update itself, so nothing reads the signature yet but people
-# checking a download (docs/cli.md, "Checking a download").
+# The manifest is signed with the CLI release key, an Ed25519 key of its own
+# (not the desktop apps' update key), over "PassBundle CLI release v1\n" and
+# the manifest's bytes. Its private half is the PASSBUNDLE_CLI_RELEASE_KEY
+# secret of this repository, and its public half is pinned below
+# (CLI_RELEASE_PUBLIC_KEY); the owner makes both (docs/cli.md, "The CLI
+# release key"). Until the secret is there, releases carry the manifest and
+# SHA256SUMS without manifest.json.sig, and say so. A secret with no pinned
+# public key, or another key, stops the release. The tool doesn't update
+# itself, so nothing reads the signature yet but people checking a download
+# (docs/cli.md, "Checking a download").
 name: CLI release
 
 on:
@@ -56,9 +58,14 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # The release key's public half (the PASSBUNDLE_DESKTOP_UPDATE_KEY secret's),
-  # as the desktop apps pin it: a manifest is signed only with it.
-  UPDATE_PUBLIC_KEY: 5db5f4827dab67b3d7ef0726a202921728e5159ee70199d6e4ea059a1e72b0c5
+  # The CLI release key's public half (the PASSBUNDLE_CLI_RELEASE_KEY
+  # secret's), as 64 hex digits: a manifest is signed only with the key it
+  # names. Empty until the owner makes the key (docs/cli.md, "The CLI release
+  # key"); docs/cli.md lists the same value for checking downloads.
+  CLI_RELEASE_PUBLIC_KEY: ""
+  # The Node.js that builds and packs the tool. The program carries its own
+  # (pkg's, tools/cli/package-lock.json).
+  BUILD_NODE_VERSION: 24.21.0
 
 jobs:
   plan:
@@ -111,6 +118,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           sha=$(git -C clients rev-parse HEAD)
+          # A release is built only from what's merged into keykeeper (whose
+          # tier 1 runs passed), whatever ref it was asked for.
+          if [ "$GITHUB_EVENT_NAME" != pull_request ] &&
+            ! git -C clients merge-base --is-ancestor "$sha" refs/remotes/origin/keykeeper; then
+            echo "passbundle-clients ${sha:0:10} isn't on keykeeper: releases are built only from what's merged there." >&2
+            exit 1
+          fi
           base=$(jq -r '.version | capture("^(?<v>[0-9]+\\.[0-9]+)\\.").v' tools/cli/package.json)
           [ -n "$base" ] && [ "$base" != null ] || { echo "No version in tools/cli/package.json." >&2; exit 1; }
           version="$base.$BUILD"
@@ -229,7 +243,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version-file: clients/.nvmrc
+          node-version: ${{ env.BUILD_NODE_VERSION }}
       - name: Install dependencies
         run: |
           (cd clients && npm ci --no-audit --no-fund)
@@ -271,10 +285,10 @@ jobs:
     needs: [plan, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    # Once the owner gives this repository the desktop apps' release key, in
-    # a "desktop-release" environment with whatever rules they want, this
-    # job, and only this one, takes it:
-    # environment: desktop-release
+    # Once the owner puts the CLI release key in a "cli-release" environment
+    # (with a rule that only main may use it), this job, and only this one,
+    # takes it:
+    # environment: cli-release
     permissions:
       contents: read
     defaults:
@@ -327,24 +341,29 @@ jobs:
             '{format: 1, app: "com.passbundle.cli", tag: $tag, version: $version, commit: $commit, notes: $notes,
               files: $files}' > dist/manifest.json
           cat dist/manifest.json
-      - name: The release key, from the repository's secrets
+      - name: The CLI release key, from the repository's secrets
         id: key
         # Never for a pull request's check.
         if: needs.plan.outputs.publish == 'true'
         env:
-          UPDATE_KEY: ${{ secrets.PASSBUNDLE_DESKTOP_UPDATE_KEY }}
+          RELEASE_KEY: ${{ secrets.PASSBUNDLE_CLI_RELEASE_KEY }}
         run: |
-          if [ -z "$UPDATE_KEY" ]; then
-            echo "::notice::No release key in this repository's secrets: the manifest goes out unsigned, with SHA256SUMS."
+          if [ -z "$RELEASE_KEY" ]; then
+            echo "::notice::No CLI release key in this repository's secrets: the manifest goes out unsigned, with SHA256SUMS."
             echo "signed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          if ! [[ "$CLI_RELEASE_PUBLIC_KEY" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "The CLI release key is in the secrets, but this workflow pins no public key for it (CLI_RELEASE_PUBLIC_KEY): see docs/cli.md, \"The CLI release key\"." >&2
+            exit 1
+          fi
           umask 077
-          printf '%s\n' "$UPDATE_KEY" > "$RUNNER_TEMP/update-key.pem"
-          # The key the desktop apps trust, and no other.
-          public=$(openssl pkey -in "$RUNNER_TEMP/update-key.pem" -pubout -outform DER | tail -c 32 | od -An -tx1 | tr -d ' \n')
-          if [ "$public" != "$UPDATE_PUBLIC_KEY" ]; then
-            echo "The secret isn't the release key the desktop apps pin ($public)." >&2
+          printf '%s\n' "$RELEASE_KEY" > "$RUNNER_TEMP/release-key.pem"
+          # The pinned key, and no other.
+          public=$(openssl pkey -in "$RUNNER_TEMP/release-key.pem" -pubout -outform DER | tail -c 32 | od -An -tx1 | tr -d ' \n')
+          if [ "$public" != "$CLI_RELEASE_PUBLIC_KEY" ]; then
+            rm -f "$RUNNER_TEMP/release-key.pem"
+            echo "The secret isn't the CLI release key this workflow pins." >&2
             exit 1
           fi
           echo "signed=true" >> "$GITHUB_OUTPUT"
@@ -352,17 +371,17 @@ jobs:
         if: steps.key.outputs.signed == 'true'
         run: |
           { printf 'PassBundle CLI release v1\n'; cat dist/manifest.json; } > "$RUNNER_TEMP/signed"
-          openssl pkeyutl -sign -inkey "$RUNNER_TEMP/update-key.pem" -rawin -in "$RUNNER_TEMP/signed" -out "$RUNNER_TEMP/signature"
-          rm -f "$RUNNER_TEMP/update-key.pem"
+          openssl pkeyutl -sign -inkey "$RUNNER_TEMP/release-key.pem" -rawin -in "$RUNNER_TEMP/signed" -out "$RUNNER_TEMP/signature"
+          rm -f "$RUNNER_TEMP/release-key.pem"
           openssl base64 -A -in "$RUNNER_TEMP/signature" > dist/manifest.json.sig
           # Checked with the pinned public key alone, as docs/cli.md says to.
-          printf "$(printf '302a300506032b6570032100%s' "$UPDATE_PUBLIC_KEY" | sed 's/../\\x&/g')" > "$RUNNER_TEMP/public.der"
+          printf "$(printf '302a300506032b6570032100%s' "$CLI_RELEASE_PUBLIC_KEY" | sed 's/../\\x&/g')" > "$RUNNER_TEMP/public.der"
           openssl base64 -d -A -in dist/manifest.json.sig > "$RUNNER_TEMP/check"
           openssl pkeyutl -verify -pubin -keyform DER -inkey "$RUNNER_TEMP/public.der" -rawin \
             -in "$RUNNER_TEMP/signed" -sigfile "$RUNNER_TEMP/check"
       - name: Remove the key
         if: always()
-        run: rm -f "$RUNNER_TEMP/update-key.pem"
+        run: rm -f "$RUNNER_TEMP/release-key.pem"
       - name: SHA256SUMS
         run: |
           (cd dist && sha256sum passbundle-* manifest.json $(ls manifest.json.sig 2>/dev/null) > SHA256SUMS && cat SHA256SUMS)
@@ -406,9 +425,9 @@ jobs:
             printf '%s\n' "$NOTES"
             echo
             if [ "$SIGNED" = true ]; then
-              echo "manifest.json.sig is the manifest's Ed25519 signature with PassBundle's test release key (public key $UPDATE_PUBLIC_KEY), over \"PassBundle CLI release v1\" and a newline, then the manifest."
+              echo "manifest.json.sig is the manifest's Ed25519 signature with the CLI release key (public key $CLI_RELEASE_PUBLIC_KEY), over \"PassBundle CLI release v1\" and a newline, then the manifest: docs/cli.md, \"Checking a download\"."
             else
-              echo "This release's manifest isn't signed yet: check a download against SHA256SUMS."
+              echo "This release's manifest isn't signed: the CLI release key isn't made yet. Check a download against SHA256SUMS."
             fi
           } > "$RUNNER_TEMP/notes.md"
           # Never this repository's latest release.

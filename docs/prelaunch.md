@@ -34,7 +34,7 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 - **Email**: a sending provider (Postmark, Amazon SES, or Resend) so invitations, verification and account recovery mail go out.
 - **A Microsoft 365 tenant** (a free developer tenant is enough) to check Entra provisioning (built; the checks are in DESIGN.md, "Provisioning from Entra ID", "Status") and single sign-on (built; the checks are in docs/sso-entra.md, "Checking it with a real tenant") for real.
 - **Apple Developer account** for the iPhone app, iPhone AutoFill, and a notarized Mac app and command-line tool.
-- **The release key for the command-line tool's releases**: they're published from this repository (`cli-release.yml`), and their manifests are signed with the desktop apps' release key, which is a secret of passbundle-apps only. Add it here too (ideally in a `desktop-release` environment limited to main), or say to publish them from passbundle-apps instead; until then they carry SHA256SUMS and an unsigned manifest.
+- **The command-line tool's release key**: its own Ed25519 key, made on your computer and added as the `PASSBUNDLE_CLI_RELEASE_KEY` secret, with its public key pinned in `cli-release.yml` (docs/cli.md, "The CLI release key", has the commands). Until then its releases carry SHA256SUMS and an unsigned manifest.
 - **Store listings** when you want them (you said not yet): Chrome, Edge, Firefox.
 - **Business details for the site and legal pages**: legal name, payment processor, refunds, governing law, prices (marked as placeholders in site/).
 - **A paid Have I Been Pwned key** for the report of breached accounts at a client's email domain.

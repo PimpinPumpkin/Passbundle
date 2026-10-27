@@ -80,8 +80,8 @@ export type RealAccount = {
 export async function realAccount(
   request: APIRequestContext,
   prefix: string,
+  email = `${prefix}-${randomUUID().slice(0, 8)}@cli.example.test`,
 ): Promise<RealAccount> {
-  const email = `${prefix}-${randomUUID().slice(0, 8)}@cli.example.test`;
   const password = `correct horse ${randomUUID()}`;
   const masterKey = pbkdf2Sync(password, email, KDF_ITERATIONS, 32, "sha256");
   const passwordHash = pbkdf2Sync(

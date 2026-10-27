@@ -10,6 +10,7 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 
 import { entraPort, port } from "../../paths.mjs";
 import {
+  confirmCli,
   confirmLink,
   linkFromSession,
   message,
@@ -730,6 +731,7 @@ test("a sign-in's state and code work once, only with the app's PKCE verifier, r
 
 test("the command-line tool signs in with single sign-on at its own listener on the computer, and only there", async ({
   request,
+  playwright,
 }) => {
   const api = new Api(request);
   const sso = await ssoOrg(api, "cli");
@@ -746,6 +748,52 @@ test("the command-line tool signs in with single sign-on at its own listener on 
     expect(signedIn.token?.status, JSON.stringify(signedIn.token?.body)).toBe(200);
     expect(await whoIs(api, signedIn.token!.body.access_token)).toBe(account.email);
   }
+
+  // A link alone never reaches Microsoft: authorize answers with the
+  // server's own page, which asks, with a cookie only its own pages send.
+  const authorizeUrl = (challenge: string) =>
+    `${origin}/identity/connect/authorize?client_id=cli&redirect_uri=${encodeURIComponent("http://localhost:8065")}` +
+    `&response_type=code&scope=api%20offline_access&state=s_identifier=${identifier}` +
+    `&code_challenge=${challenge}&code_challenge_method=S256&response_mode=query&domain_hint=${identifier}`;
+  const asked = await request.get(authorizeUrl(pkce().challenge), { maxRedirects: 0 });
+  expect(asked.status()).toBe(200);
+  expect(asked.headers()["location"]).toBeUndefined();
+  const page = await asked.text();
+  expect(page).toContain("Sign in to the PassBundle command-line tool?");
+  expect(page).toContain("http://localhost:8065");
+  expect(page).not.toContain(`127.0.0.1:${entraPort}`);
+  expect(asked.headers()["set-cookie"]).toMatch(/PB_SSO_CLI_CONFIRM=.*SameSite=Strict/);
+  expect(asked.headers()["set-cookie"]).toMatch(/HttpOnly/);
+  // Its Continue may go on to the tenant's sign-in and back to the tool's
+  // listeners, and nowhere else.
+  expect(asked.headers()["content-security-policy"]).toContain(
+    `form-action 'self' http://127.0.0.1:${entraPort} ${[8065, 8066, 8067, 8068, 8069, 8070]
+      .map((p) => `http://localhost:${p}`)
+      .join(" ")};`,
+  );
+
+  // Its Continue only from the page itself: never from another site, never
+  // without the browser's cookie, and once.
+  for (const headers of [
+    { Origin: "https://evil.example.test" },
+    { Origin: origin, "Sec-Fetch-Site": "cross-site" },
+    {} as Record<string, string>,
+  ]) {
+    const page = await (await request.get(authorizeUrl(pkce().challenge), { maxRedirects: 0 })).text();
+    expect((await confirmCli(request, origin, page, headers)).status()).toBe(400);
+    // The token is gone, whatever happened.
+    expect((await confirmCli(request, origin, page)).status()).toBe(400);
+  }
+  const otherBrowser = await playwright.request.newContext({ ignoreHTTPSErrors: true });
+  const notTheBrowser = await (await request.get(authorizeUrl(pkce().challenge), { maxRedirects: 0 })).text();
+  expect((await confirmCli(otherBrowser, origin, notTheBrowser)).status()).toBe(400);
+  await otherBrowser.dispose();
+  const madeUp = await request.post(`${origin}/identity/connect/authorize/confirm`, {
+    form: { token: "made-up" },
+    headers: { Origin: origin },
+    maxRedirects: 0,
+  });
+  expect(madeUp.status()).toBe(400);
 
   // The tool's code is the tool's, for that listener only.
   await tenant.next(dee);

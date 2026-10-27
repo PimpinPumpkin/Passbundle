@@ -229,7 +229,8 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version-file: clients/.nvmrc
+          # As the release builds it (cli-release.yml, BUILD_NODE_VERSION).
+          node-version: 24.21.0
           cache: npm
           cache-dependency-path: |
             clients/package-lock.json

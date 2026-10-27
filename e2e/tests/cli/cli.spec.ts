@@ -247,7 +247,8 @@ test("a technician's script signs in with an API key, lists items, and gets only
   expect(login.stdout).toContain("You are logged in!");
   // Its messages name the brand's variable and command.
   expect(login.stdout).toContain(`export ${prefix}SESSION=`);
-  expect(login.stdout).toContain(`$ ${command} list items --session`);
+  // Never a session key on the command line, where other programs can read it.
+  expect(login.stdout).not.toContain("--session");
   const unlock = run(["unlock", "--passwordenv", "ANA_PASSWORD", "--raw"], {
     ANA_PASSWORD: ana.password,
   });
@@ -408,6 +409,17 @@ test("a technician's script signs in with an API key, lists items, and gets only
     expect.arrayContaining(["Network name", "Password", "Security type"]),
   );
 
+  // The local API listens only where this computer alone can reach it,
+  // unless told otherwise.
+  const everywhere = run(["serve", "--hostname", "all"], as);
+  expect(everywhere.status).toBe(1);
+  expect(everywhere.stdout + everywhere.stderr).toContain("Not listening on all");
+
+  // A session key or password on the command line works, with a warning.
+  const onCommandLine = run(["get", "username", domainAdmin, "--session", session]);
+  expect(onCommandLine.status).toBe(0);
+  expect(onCommandLine.stderr).toContain(`Set ${prefix}SESSION instead`);
+
   // Locking ends the session.
   expect(run(["lock"], as).status).toBe(0);
   const afterLock = run(["get", "password", webServer], as);
@@ -423,6 +435,17 @@ test("help and messages are PassBundle's: no upstream name, command, or variable
     HOME: home,
     [`${prefix}APPDATA_DIR`]: path.join(home, "data"),
   });
+
+  // A data folder others can change is refused before anything in it is read.
+  if (process.platform !== "win32") {
+    const shared = fs.mkdtempSync(path.join(os.tmpdir(), "pb-cli-shared-"));
+    fs.chmodSync(shared, 0o777);
+    const refused = run(["status"], { [`${prefix}APPDATA_DIR`]: shared });
+    expect(refused.status).toBe(1);
+    expect(refused.stderr).toContain("Others can change the data folder");
+    fs.chmodSync(shared, 0o700);
+    expect(run(["status"], { [`${prefix}APPDATA_DIR`]: shared }).status).toBe(0);
+  }
 
   const top = run(["--help"]);
   expect(top.status).toBe(0);
