@@ -26,7 +26,7 @@ import {
   verifyDomain,
 } from "../support/entra";
 
-import { Api, confirmed, encString, publicKey, serverDatabase, type Account } from "./support";
+import { Api, withMasterPassword, encString, publicKey, serverDatabase, type Account } from "./support";
 
 const origin = `https://127.0.0.1:${port}`;
 const CONFIRMED = 2;
@@ -174,7 +174,7 @@ test("owners and admins set it up; the secret never comes back; the tenant must 
     other,
     "PUT",
     `/api/keykeeper/organizations/${otherOrg}/sso`,
-    confirmed(other, settings(tenant, identifier)),
+    withMasterPassword(other, settings(tenant, identifier)),
   );
   expect(message(taken.body)).toMatch(/Another organization uses that SSO identifier/);
 
@@ -588,7 +588,7 @@ test("MSP staff are never signed in by a client's single sign-on; the managing M
     mspAdmin,
     "PUT",
     `/api/keykeeper/organizations/${orgId}/sso`,
-    confirmed(mspAdmin, settings(tenant, identifier)),
+    withMasterPassword(mspAdmin, settings(tenant, identifier)),
   );
   expect(saved.status, JSON.stringify(saved.body)).toBe(200);
   await verifyDomain(api, mspAdmin, orgId, domain);
@@ -762,7 +762,7 @@ test("Require single sign-on: members are sent to it, owners aren't, another org
         admin,
         "PUT",
         `/api/keykeeper/organizations/${otherOrg}/sso`,
-        confirmed(admin, settings(otherTenant, otherIdentifier)),
+        withMasterPassword(admin, settings(otherTenant, otherIdentifier)),
       )
     ).status,
   ).toBe(200);
@@ -851,7 +851,7 @@ test("Require single sign-on: members are sent to it, owners aren't, another org
     owner,
     "PUT",
     `/api/keykeeper/organizations/${orgId}/sso`,
-    confirmed(owner, settings(tenant, identifier, false, false)),
+    withMasterPassword(owner, settings(tenant, identifier, false, false)),
   );
   expect(message(ssoOff.body)).toMatch(/Turn off the Require single sign-on policy first/);
 
@@ -867,7 +867,7 @@ test("Require single sign-on: members are sent to it, owners aren't, another org
         owner,
         "PUT",
         `/api/keykeeper/organizations/${orgId}/sso`,
-        confirmed(owner, settings(tenant, identifier, false, false)),
+        withMasterPassword(owner, settings(tenant, identifier, false, false)),
       )
     ).status,
   ).toBe(200);

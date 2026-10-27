@@ -23,7 +23,7 @@ import { type APIRequestContext, expect, test } from "@playwright/test";
 
 import { port } from "../../paths.mjs";
 
-import { Api, confirmed, encString, type Account } from "./support";
+import { Api, withMasterPassword, encString, type Account } from "./support";
 
 const hasPwsh = spawnSync("pwsh", ["-NoProfile", "-Command", "1"]).status === 0;
 test.skip(!hasPwsh && !process.env.CI, "PowerShell 7 isn't installed here; tier 1 runs this");
@@ -72,7 +72,7 @@ async function makeToken(
     owner,
     "POST",
     `/api/keykeeper/organizations/${orgId}/script-tokens`,
-    confirmed(owner, {
+    withMasterPassword(owner, {
       id,
       name: "Join domain",
       expiresAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),

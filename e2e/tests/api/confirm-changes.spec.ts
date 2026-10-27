@@ -12,7 +12,7 @@ import { expect, test } from "@playwright/test";
 
 import { settings, Tenant, newIdentifier } from "../support/entra";
 
-import { type Account, Api, confirmed, encString } from "./support";
+import { type Account, Api, withMasterPassword, encString } from "./support";
 
 const wrong = (who: Account) => ({ masterPasswordHash: Buffer.from(`not-${who.password}`).toString("base64") });
 
@@ -36,7 +36,7 @@ test("making a provisioning token takes the master password", async ({ request }
   }
   const view = await api.call(owner, "GET", `/api/keykeeper/organizations/${orgId}/provisioning`);
   expect(view.body.token ?? null, JSON.stringify(view.body)).toBeNull();
-  const made = await api.call(owner, "POST", path, confirmed(owner));
+  const made = await api.call(owner, "POST", path, withMasterPassword(owner));
   expect(made.status, JSON.stringify(made.body)).toBe(200);
   expect(made.body.newToken).toMatch(/^pbscim1_/);
 });
@@ -51,7 +51,7 @@ test("saving single sign-on takes the master password", async ({ request }) => {
   expectUnconfirmed(await api.call(owner, "PUT", path, body), "none");
   expectUnconfirmed(await api.call(owner, "PUT", path, { ...body, ...wrong(owner) }), "wrong");
   expect((await api.call(owner, "GET", path)).body.enabled).toBe(false);
-  const saved = await api.call(owner, "PUT", path, confirmed(owner, body));
+  const saved = await api.call(owner, "PUT", path, withMasterPassword(owner, body));
   expect(saved.status, JSON.stringify(saved.body)).toBe(200);
   expect(saved.body.enabled).toBe(true);
 });
@@ -72,7 +72,7 @@ test("adding or changing an event destination, or its signing secret, takes the 
     expectUnconfirmed(await api.call(owner, "POST", path, { ...webhook, ...wrong(owner) }), `${path} wrong`);
     expect((await api.call(owner, "GET", path)).body.data).toEqual([]);
 
-    const added = await api.call(owner, "POST", path, confirmed(owner, webhook));
+    const added = await api.call(owner, "POST", path, withMasterPassword(owner, webhook));
     expect(added.status, JSON.stringify(added.body)).toBe(200);
     const id = added.body.id;
     // Turning it off, renaming it, or pointing it elsewhere: each a change.
@@ -82,10 +82,10 @@ test("adding or changing an event destination, or its signing secret, takes the 
     expectUnconfirmed(await api.call(owner, "POST", `${path}/${id}/secret`), `${path} secret`);
     expect((await api.call(owner, "GET", path)).body.data).toMatchObject([{ id, name: "SIEM", enabled: true }]);
 
-    const off = await api.call(owner, "PUT", `${path}/${id}`, confirmed(owner, { enabled: false }));
+    const off = await api.call(owner, "PUT", `${path}/${id}`, withMasterPassword(owner, { enabled: false }));
     expect(off.status, JSON.stringify(off.body)).toBe(200);
     expect(off.body.enabled).toBe(false);
-    const secret = await api.call(owner, "POST", `${path}/${id}/secret`, confirmed(owner));
+    const secret = await api.call(owner, "POST", `${path}/${id}/secret`, withMasterPassword(owner));
     expect(secret.status, JSON.stringify(secret.body)).toBe(200);
     expect(secret.body.signingSecret).toMatch(/^whsec_/);
     // Removing it and sending a test don't change where events go.
@@ -125,7 +125,7 @@ test("making a script token, or adding an item to one, takes the master password
   expectUnconfirmed(await api.call(owner, "POST", path, token), "none");
   expectUnconfirmed(await api.call(owner, "POST", path, { ...token, ...wrong(owner) }), "wrong");
   expect((await api.call(owner, "GET", path)).body.data).toEqual([]);
-  const made = await api.call(owner, "POST", path, confirmed(owner, token));
+  const made = await api.call(owner, "POST", path, withMasterPassword(owner, token));
   expect(made.status, JSON.stringify(made.body)).toBe(200);
 
   // Another item, or other fields of one it has: a change.
@@ -134,7 +134,7 @@ test("making a script token, or adding an item to one, takes the master password
     await api.call(owner, "PUT", `${path}/${id}/grants/${first}`, await grant(first, "wider")),
     "other fields",
   );
-  const added = await api.call(owner, "PUT", `${path}/${id}/grants/${second}`, confirmed(owner, await grant(second)));
+  const added = await api.call(owner, "PUT", `${path}/${id}/grants/${second}`, withMasterPassword(owner, await grant(second)));
   expect(added.status, JSON.stringify(added.body)).toBe(200);
   expect(added.body.grants).toHaveLength(2);
   // The same fields' copy again, as apps refresh it on their own: nothing to confirm.

@@ -16,7 +16,7 @@ import { expect, test } from "@playwright/test";
 
 import { limitsServerPort, paths } from "../../paths.mjs";
 
-import { Api, confirmed, encString } from "./support";
+import { Api, withMasterPassword, encString } from "./support";
 
 test.use({ baseURL: `https://127.0.0.1:${limitsServerPort}` });
 
@@ -32,7 +32,7 @@ test("a forged address header doesn't get a script token past its networks", asy
     owner,
     "POST",
     `/api/keykeeper/organizations/${orgId}/script-tokens`,
-    confirmed(owner, {
+    withMasterPassword(owner, {
       id,
       name: "Office only",
       expiresAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),

@@ -38,7 +38,7 @@ export type Result = { status: number; body: any };
  * adding or changing an event destination or its signing secret, and making
  * a script token need it (DESIGN.md, "Confirming sensitive changes").
  */
-export const confirmed = (
+export const withMasterPassword = (
   who: { password?: string } | null,
   data: Record<string, unknown> = {},
 ): Record<string, unknown> => ({ ...data, ...(who?.password ? { masterPasswordHash: who.password } : {}) });

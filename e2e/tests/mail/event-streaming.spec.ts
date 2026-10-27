@@ -4,7 +4,7 @@
 import { expect, test } from "@playwright/test";
 
 import { httpsReceiver, throwawayCert, waitFor } from "../api/siem";
-import { Api, confirmed } from "../api/support";
+import { Api, withMasterPassword } from "../api/support";
 
 import { joinByEmail, waitForMessage } from "./mailbox";
 
@@ -21,7 +21,7 @@ test("owners and admins hear by email when the server stops sending to a destina
       owner,
       "POST",
       `/api/keykeeper/organizations/${orgId}/event-streaming`,
-      confirmed(owner, {
+      withMasterPassword(owner, {
         name: "Old SIEM",
         kind: "webhook",
         webhook: { url: receiver.url("/hook"), caCertificate: cert.cert },

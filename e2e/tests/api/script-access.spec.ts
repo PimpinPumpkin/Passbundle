@@ -8,7 +8,7 @@ import { createHash, hkdfSync, randomBytes, randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
 
-import { Api, confirmed, encString, type Account } from "./support";
+import { Api, withMasterPassword, encString, type Account } from "./support";
 
 const USER = 2;
 
@@ -68,7 +68,7 @@ async function createToken(
     who,
     "POST",
     `/api/keykeeper/organizations/${orgId}/script-tokens`,
-    confirmed(who, {
+    withMasterPassword(who, {
       id: token.id,
       name: "Join domain",
       expiresAt: inDays(90),
@@ -248,7 +248,7 @@ test("anyone who can edit a granted item refreshes its copy for the item's curre
     member,
     "POST",
     `/api/keykeeper/organizations/${orgId}/script-tokens`,
-    confirmed(member, {
+    withMasterPassword(member, {
       id: asMember.id,
       name: "Not theirs",
       expiresAt: inDays(30),

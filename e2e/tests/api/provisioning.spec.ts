@@ -9,7 +9,7 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test, type APIRequestContext } from "@playwright/test";
 
-import { Api, confirmed, type Account, type Result } from "./support";
+import { Api, withMasterPassword, type Account, type Result } from "./support";
 
 const ERROR = "urn:ietf:params:scim:api:messages:2.0:Error";
 const LIST = "urn:ietf:params:scim:api:messages:2.0:ListResponse";
@@ -68,7 +68,7 @@ function expectError(result: Scim, status: number, scimType?: string) {
 }
 
 async function makeToken(api: Api, who: Account, orgId: string): Promise<string> {
-  const made = await api.call(who, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`, confirmed(who));
+  const made = await api.call(who, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`, withMasterPassword(who));
   expect(made.status, JSON.stringify(made.body)).toBe(200);
   expect(made.body.newToken).toMatch(/^pbscim1_[A-Za-z0-9_-]{43}$/);
   return made.body.newToken;
@@ -475,7 +475,7 @@ test("owners, admins, custom roles, and an MSP's staff are matched but never cha
 
   // A technician can't make the client's token: an MSP's admins can.
   expect(
-    (await api.call(tech, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`, confirmed(tech))).status,
+    (await api.call(tech, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`, withMasterPassword(tech))).status,
   ).toBe(404);
   const token = await makeToken(api, mspAdmin, orgId);
 
