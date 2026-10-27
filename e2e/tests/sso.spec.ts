@@ -203,7 +203,7 @@ test("someone outside the organization is told why single sign-on can't sign the
   // An account at the domain that belongs to another organization.
   const bob: WebUser = { email: `bob-${index}@${domain}`, name: "Bob", password };
   const bobPage = await newPage(browser);
-  await signUp(bobPage, bob);
+  await signUpWithAuthenticator(bobPage, bob);
   await createBusiness(bobPage, "Bob's Bikes");
   await bobPage.context().close();
   await tenant.person(bob.email);
