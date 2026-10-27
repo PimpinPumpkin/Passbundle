@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 import { mailHttpPort } from "../../paths.mjs";
-import { type Account, Api, type Result, encString } from "../api/support";
+import { type Account, Api, type Result, encString, totp } from "../api/support";
 
 import { joinByEmail, waitForMessage } from "./mailbox";
 
@@ -38,7 +38,7 @@ async function requireIt(api: Api, owner: Account, orgId: string) {
   expect(on.status, JSON.stringify(on.body)).toBe(200);
 }
 
-test("an email code doesn't count: an owner with only email codes is asked for one, and the right one gets a setup session", async ({
+test("an email code doesn't count: an owner with only email codes gets a setup session for the right one, and once they have an authenticator app, codes aren't taken", async ({
   request,
 }) => {
   const api = new Api(request);
@@ -79,7 +79,33 @@ test("an email code doesn't count: an owner with only email codes is asked for o
   });
   expect(requested.status, JSON.stringify(requested.body)).toBe(200);
   const code = await emailedCode(owner.email, before);
-  expectSetup(await api.signIn(owner.email, owner.password, { twoFactorProvider: "1", twoFactorToken: code }));
+  const setup = await api.signIn(owner.email, owner.password, { twoFactorProvider: "1", twoFactorToken: code });
+  expectSetup(setup);
+
+  // With an authenticator app as well, email codes aren't offered or taken
+  // any more: the people who run the mailbox could read them.
+  const key = await api.turnOnAuthenticator({ token: setup.body.KeykeeperTwoStepSetup }, owner.password);
+  const offered = await api.signIn(owner.email, owner.password);
+  expect(offered.status).toBe(400);
+  expect(offered.body.TwoFactorProviders).toEqual(["0"]);
+  before = await messageCount(owner.email);
+  await api.call(null, "POST", "/api/two-factor/send-email-login", {
+    email: owner.email,
+    masterPasswordHash: owner.password,
+  });
+  const refused = await api.signIn(owner.email, owner.password, {
+    twoFactorProvider: "1",
+    twoFactorToken: await emailedCode(owner.email, before),
+  });
+  expect(refused.status).toBe(400);
+  expect(refused.body).not.toHaveProperty("access_token");
+  expect(refused.body).not.toHaveProperty("KeykeeperTwoStepSetup");
+  expect(refused.body.TwoFactorProviders).toEqual(["0"]);
+  const signedIn = await api.signIn(owner.email, owner.password, {
+    twoFactorProvider: "0",
+    twoFactorToken: totp(key, Date.now() + 30_000),
+  });
+  expect(signedIn.status, JSON.stringify(signedIn.body)).toBe(200);
 });
 
 test("an MSP recovers a client admin's account, and they set up two-step login at their next sign-in", async ({
