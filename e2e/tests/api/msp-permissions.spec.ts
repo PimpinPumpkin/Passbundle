@@ -58,6 +58,21 @@ async function templateIds(ctx: Context): Promise<string[]> {
   ).body.templates.map((t: { templateId: string }) => t.templateId);
 }
 
+/** What the MSP's admin sees of its templates. */
+async function templatesState(ctx: Context) {
+  return (
+    await ctx.api.call(ctx.admin, "GET", `/api/keykeeper/msp/${ctx.mspId}/templates`)
+  ).body as { collections: Record<string, string | null> };
+}
+
+/** The client's Templates collection, made by the server the first time. */
+async function templatesCollection(ctx: Context): Promise<string> {
+  return (
+    (await templatesState(ctx)).collections[ctx.orgId] ??
+    (await ctx.api.templatesCollection(ctx.admin, ctx.mspId, ctx.orgId))
+  );
+}
+
 /** A template for every client, added by the MSP's admin. */
 async function newTemplate(ctx: Context): Promise<string> {
   const id = randomUUID();
@@ -326,7 +341,7 @@ const rows: Row[] = [
     allowed: ["mspAdmin"],
     request: async (ctx) => {
       const id = await newTemplate(ctx);
-      const collection = await ctx.api.collection(ctx.admin, ctx.orgId);
+      const collection = await templatesCollection(ctx);
       const copy = await ctx.api.orgItem(ctx.admin, ctx.orgId, collection);
       return {
         method: "POST",
@@ -352,23 +367,26 @@ const rows: Row[] = [
     },
   },
   {
-    name: "record a client's Templates collection",
+    name: "make a client's Templates collection",
     allowed: ["mspAdmin"],
     request: async (ctx) => {
-      const collection = await ctx.api.collection(ctx.admin, ctx.orgId);
+      // The client deleted the last one (if it's still there), so the
+      // console asks for a new one.
+      const before = (await templatesState(ctx)).collections[ctx.orgId];
+      if (before != null) {
+        await ctx.api.call(
+          ctx.admin,
+          "DELETE",
+          `/api/organizations/${ctx.orgId}/collections/${before}`,
+        );
+      }
       return {
         method: "PUT",
         path: `/api/keykeeper/msp/${ctx.mspId}/clients/${ctx.orgId}/templates-collection`,
-        data: { collectionId: collection },
+        data: { name: "2.aXY=|Y3Q=|bWFj" },
         check: async (allowed) => {
-          const recorded = (
-            await ctx.api.call(
-              ctx.admin,
-              "GET",
-              `/api/keykeeper/msp/${ctx.mspId}/templates`,
-            )
-          ).body.collections[ctx.orgId];
-          expect(recorded === collection).toBe(allowed);
+          const recorded = (await templatesState(ctx)).collections[ctx.orgId];
+          expect(recorded != null && recorded !== before).toBe(allowed);
         },
       };
     },

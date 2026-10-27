@@ -323,6 +323,21 @@ export class Api {
     return created.body.id;
   }
 
+  /**
+   * A client's Templates collection, which the server makes for one of its
+   * MSP's admins, as the console asks for it before sending a template.
+   */
+  async templatesCollection(admin: Account, mspId: string, orgId: string): Promise<string> {
+    const made = await this.call(
+      admin,
+      "PUT",
+      `/api/keykeeper/msp/${mspId}/clients/${orgId}/templates-collection`,
+      { name: encString(`templates-${orgId}`) },
+    );
+    expect(made.status, JSON.stringify(made.body)).toBe(200);
+    return made.body.collectionId;
+  }
+
   /** An item in an organization's collection, as its owner. */
   async orgItem(
     owner: Account,
