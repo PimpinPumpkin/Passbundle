@@ -199,7 +199,7 @@ Anyone who can decrypt an item can take it apart with their own tools, which is 
 
 - Updating itself (see Updates).
 - Secrets Manager: upstream's separate tool isn't part of PassBundle. Script access tokens, for scripts that shouldn't hold a person's account, are the PowerShell module in docs/script-access.md.
-- Signing in with a device's approval, and unlocking with a key connector or a trusted device (PassBundle has neither yet).
+- Signing in with another device's approval (the web vault and the extension can), and unlocking with a key connector or a trusted device (PassBundle has neither yet).
 - Making accounts or organizations, and organization administration beyond what upstream's tool does (listing and confirming members, folders and their access).
 
 ## Building it yourself
