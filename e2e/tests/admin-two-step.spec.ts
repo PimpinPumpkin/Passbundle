@@ -1,9 +1,11 @@
 // Two-step login for admins, in the web vault (DESIGN.md, "Two-step login for
 // admins"): an admin of a Business organization who hasn't set up two-step
-// login signs in, is taken to "Set up two-step login to continue", sets up an
-// authenticator app, saves the recovery code, and signs in with it to their
-// vault. The organization's Settings page lists who isn't set up, and turning
-// it off asks first. The API test covers the rest.
+// login accepts the role (this test server sends no email, so the invitation
+// joined them without asking), which signs them out; they sign in, are taken
+// to "Set up two-step login to continue", set up an authenticator app, save
+// the recovery code, and sign in with it to their vault. The organization's
+// Settings page lists who isn't set up, and turning it off asks first. The
+// API test covers the rest.
 import { expect, test, type Page } from "@playwright/test";
 
 import { totp } from "./api/support";
@@ -49,6 +51,19 @@ test("an admin without two-step login is taken to set it up, then signs in with 
   await expect(invite).toBeHidden();
   await confirmMember(owner, adminUser.email);
 
+  // This test server sends no email, so the invitation joined them without
+  // asking: the rule leaves them alone until they accept the role. They sign
+  // in to their vault, which asks them to.
+  const adminContext = await browser.newContext();
+  const admin = await adminContext.newPage();
+  await enterPassword(admin, adminUser);
+  await admin.waitForURL(/#\/vault/);
+  const acceptRole = admin.getByTestId("accept-role");
+  await expect(acceptRole).toContainText("Acme Dental made you an admin");
+  await acceptRole.getByRole("button", { name: "Accept the role" }).click();
+  // Without two-step login, accepting signs them out.
+  await admin.waitForURL(/#\/login/);
+
   // The Settings page says it's on and who hasn't set it up.
   await owner.goto(`${org}/settings/account`);
   const card = owner.getByTestId("admin-two-step");
@@ -57,10 +72,8 @@ test("an admin without two-step login is taken to set it up, then signs in with 
   await expect(card.getByTestId("admin-two-step-not-set-up")).not.toContainText(ownerUser.email);
   await expect(card.getByTestId("admin-two-step-you")).toHaveCount(0);
 
-  // The admin signs in: their password checks out, and they're taken to set
-  // up two-step login before anything else.
-  const adminContext = await browser.newContext();
-  const admin = await adminContext.newPage();
+  // The admin signs in again: their password checks out, and they're taken to
+  // set up two-step login before anything else.
   await enterPassword(admin, adminUser);
   await admin.waitForURL(/#\/two-step-setup/);
   await expect(admin.getByTestId("two-step-setup-why")).toContainText(

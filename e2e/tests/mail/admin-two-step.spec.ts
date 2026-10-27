@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 import { mailHttpPort } from "../../paths.mjs";
-import { type Account, Api, type Result, encString, totp } from "../api/support";
+import { type Account, Api, type Result, encString, nextTotp, totp } from "../api/support";
 
 import { joinByEmail, waitForMessage } from "./mailbox";
 
@@ -108,7 +108,7 @@ test("an email code doesn't count: an owner with only email codes gets a setup s
   expect(signedIn.status, JSON.stringify(signedIn.body)).toBe(200);
 });
 
-test("an MSP recovers a client admin's account, and they set up two-step login at their next sign-in", async ({
+test("an MSP resets a client admin's two-step login, which signs them out at once, and recovers their account; they set it up at their next sign-in", async ({
   request,
 }) => {
   const api = new Api(request);
@@ -119,46 +119,48 @@ test("an MSP recovers a client admin's account, and they set up two-step login a
   const clientId = await api.client(mspAdmin, mspId, clientName, "business");
 
   // A client admin with an authenticator app joins by email, enrolling in
-  // account recovery.
+  // account recovery, and signs in.
   const admin = await api.account("recovered-admin");
   await api.giveAuthenticator(admin);
   const memberId = await joinByEmail(api, mspAdmin, clientId, clientName, admin, { type: 1 });
+  const session = await api.signIn(admin.email, admin.password, {
+    twoFactorProvider: "0",
+    twoFactorToken: await nextTotp(admin.email),
+  });
+  expect(session.status, JSON.stringify(session.body)).toBe(200);
+  const works = async (token: string) => (await api.call({ token }, "GET", "/api/sync")).status === 200;
+  expect(await works(session.body.access_token)).toBe(true);
 
-  // They lose their master password and their phone; the MSP resets both.
-  const newHash = Buffer.from(`new-hash-${admin.email}`).toString("base64");
-  const recovered = await api.call(
-    mspAdmin,
-    "PUT",
-    `/api/organizations/${clientId}/users/${memberId}/recover-account`,
-    {
-      newMasterPasswordHash: newHash,
-      key: encString(`user-key-after-recovery-${admin.email}`),
-      resetMasterPassword: true,
-      resetTwoFactor: true,
-    },
-  );
-  expect(recovered.status, JSON.stringify(recovered.body)).toBe(200);
-
-  // The new password works, and leads straight to setting up two-step login.
-  const signIn = await api.signIn(admin.email, newHash);
+  // They lose their phone; the MSP resets their two-step login only. That
+  // leaves them without a method that counts, so every session of theirs
+  // ends at once, and their next sign-in sets one up.
+  const recover = (data: Record<string, unknown>) =>
+    api.call(mspAdmin, "PUT", `/api/organizations/${clientId}/users/${memberId}/recover-account`, data);
+  const reset = await recover({ resetMasterPassword: false, resetTwoFactor: true });
+  expect(reset.status, JSON.stringify(reset.body)).toBe(200);
+  expect(await works(session.body.access_token)).toBe(false);
+  expect(await works(admin.token)).toBe(false);
+  const signIn = await api.signIn(admin.email, admin.password);
   expectSetup(signIn);
   expect(signIn.body.KeykeeperTwoStepRequiredBy).toEqual([clientName]);
   const setup = { token: signIn.body.KeykeeperTwoStepSetup as string };
   expect((await api.call(setup, "GET", "/api/keykeeper/two-step-setup")).status).toBe(200);
 
-  // Recovered again before they set it up, the setup session ends with the
-  // old password, as every session does.
-  const newerHash = Buffer.from(`newer-hash-${admin.email}`).toString("base64");
-  const again = await api.call(mspAdmin, "PUT", `/api/organizations/${clientId}/users/${memberId}/recover-account`, {
-    newMasterPasswordHash: newerHash,
-    key: encString(`user-key-after-second-recovery-${admin.email}`),
+  // They lose their master password too, before they set it up: recovering
+  // it ends the setup session with the old password, as every session.
+  const newHash = Buffer.from(`new-hash-${admin.email}`).toString("base64");
+  const recovered = await recover({
+    newMasterPasswordHash: newHash,
+    key: encString(`user-key-after-recovery-${admin.email}`),
     resetMasterPassword: true,
     resetTwoFactor: false,
   });
-  expect(again.status, JSON.stringify(again.body)).toBe(200);
+  expect(recovered.status, JSON.stringify(recovered.body)).toBe(200);
   expect((await api.call(setup, "GET", "/api/keykeeper/two-step-setup")).status).toBe(401);
-  const next = await api.signIn(admin.email, newerHash);
+
+  // The new password works, and leads straight to setting up two-step login.
+  const next = await api.signIn(admin.email, newHash);
   expectSetup(next);
-  const key = await api.turnOnAuthenticator({ token: next.body.KeykeeperTwoStepSetup }, newerHash);
+  const key = await api.turnOnAuthenticator({ token: next.body.KeykeeperTwoStepSetup }, newHash);
   expect(key).toMatch(/^[A-Z2-7]+$/);
 });

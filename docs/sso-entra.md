@@ -57,7 +57,7 @@ An API key (the command-line tool's) still signs in without single sign-on. With
 
 ## Two-step login for admins
 
-Where the organization requires two-step login for admins, a sign-in with its single sign-on counts for its admins and custom roles (not owners, nor your IT provider's staff), because Microsoft asks for MFA. That's yours to set: require MFA for the PassBundle app with Conditional Access (or security defaults). PassBundle can't see it from the usual ID token; when a token does say how someone signed in (`amr`) and that had no MFA, PassBundle asks them to set up two-step login, as after a password.
+Where the organization requires two-step login for admins, a sign-in with its single sign-on counts for its admins and custom roles (not owners, nor your IT provider's staff), because Microsoft asks for MFA. That's yours to set: require MFA for the PassBundle app with Conditional Access (or security defaults). Entra's ID tokens usually don't say how someone signed in (`amr` is left out), so PassBundle relies on that policy and can't check that it ran. When a token does say (`amr`) and that had no MFA, PassBundle asks them to set up two-step login, as after a password. A stronger check, not built yet: a Conditional Access authentication context that requires MFA, which PassBundle would ask for and see in the token (`acrs`).
 
 ## Who can sign in
 

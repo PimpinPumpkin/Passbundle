@@ -532,7 +532,14 @@ test("single sign-on meets the rule for its own organization's admins, never for
   await tenant.next(person);
   const beforeJoining = await ssoSignIn(request, origin, identifier);
   expectSignedIn(beforeJoining.token!);
-  const otherMemberId = await api.addMember(otherOwner, otherId, admin, "admin", { authenticator: false });
+  // (They accept the role with the session they have, since this test
+  // server's invitation joined them without asking.)
+  const otherMemberId = await api.addMember(otherOwner, otherId, admin, "admin", {
+    authenticator: false,
+    accept: false,
+  });
+  expect(await works(api, beforeJoining.token!.body.access_token)).toBe(true);
+  await api.acceptRole({ token: beforeJoining.token!.body.access_token }, otherId);
   expect(await works(api, beforeJoining.token!.body.access_token)).toBe(false);
   expect((await refresh(request, beforeJoining.token!.body.refresh_token)).status).toBe(400);
   await tenant.next(person);
@@ -797,7 +804,74 @@ test("an API key doesn't sign in someone the rule covers until they set it up, a
     const blocked = await api.call(key, method, path, data);
     expect(blocked.status, `${method} ${path}: ${JSON.stringify(blocked.body)}`).toBe(401);
   }
+  // However the address is written: an empty segment, or a letter
+  // percent-encoded, reaches the same endpoint (the owner's session gets
+  // it), and the API key's token is refused there the same way.
+  for (const path of [
+    `/api//keykeeper/organizations/${orgId}/admin-two-step`,
+    `/api/keykeeper/%6Frganizations/${orgId}/admin-two-step`,
+    `/api/keykeeper//msp`,
+  ]) {
+    expect((await api.call(owner, "GET", path)).status, path).toBe(200);
+    expect((await api.call(key, "GET", path)).status, path).toBe(401);
+  }
+  for (const path of [
+    `/api//keykeeper/organizations/${orgId}/admin-two-step`,
+    `/api/keykeeper/%6Frganizations/${orgId}/admin-two-step`,
+  ]) {
+    const off = await api.call(key, "PUT", path, { required: false });
+    expect(off.status, `${path}: ${JSON.stringify(off.body)}`).toBe(401);
+  }
   expect((await api.call(owner, "GET", orgSetting(orgId))).body.required).toBe(true);
+});
+
+test("on a server without email, an invitation signs nobody out: a role counts once its person accepts it", async ({
+  request,
+}) => {
+  test.setTimeout(60_000);
+  const api = new Api(request);
+  const owner = await api.account("unasked-owner");
+  await api.giveAuthenticator(owner);
+  const orgName = `Unasked Co ${randomUUID().slice(0, 6)}`;
+  const orgId = await api.organization(owner, orgName);
+  await requireIt(api, owner, orgId, true);
+
+  // This test server sends no email, so an invitation joins an account at
+  // once, without asking. Invited as an admin, someone without two-step
+  // login keeps their session and signs in as before.
+  const person = await api.account("unasked-admin");
+  await api.addMember(owner, orgId, person, "admin", { authenticator: false, accept: false });
+  expect(await works(api, person.token)).toBe(true);
+  expectSignedIn(await api.signIn(person.email, person.password));
+  // So does a member made an owner afterwards.
+  const other = await api.account("unasked-owner-made");
+  const otherId = await api.addMember(owner, orgId, other, "user", { accept: false });
+  const promoted = await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${otherId}`, {
+    type: 0,
+    collections: [],
+    groups: [],
+    accessAll: true,
+    permissions: {},
+  });
+  expect(promoted.status, JSON.stringify(promoted.body)).toBe(200);
+  expect(await works(api, other.token)).toBe(true);
+  expectSignedIn(await api.signIn(other.email, other.password));
+  const listed = (await api.call(owner, "GET", orgSetting(orgId))).body.notSetUp as { email: string }[];
+  expect(listed.map((p) => p.email)).toEqual([]);
+
+  // Their vault asks them to accept the role. Accepting takes it on, and the
+  // rule with it: without two-step login, they're signed out, and set it up
+  // as they sign in again.
+  const asked = await api.call(person, "GET", "/api/keykeeper/organizations/unaccepted");
+  expect(asked.status, JSON.stringify(asked.body)).toBe(200);
+  expect(asked.body.data).toEqual([{ organizationId: orgId, name: orgName, role: "admin" }]);
+  await api.acceptRole(person, orgId);
+  expect(await works(api, person.token)).toBe(false);
+  expectSetup(await api.signIn(person.email, person.password), [orgName]);
+  const after = (await api.call(owner, "GET", orgSetting(orgId))).body.notSetUp as { email: string }[];
+  expect(after.map((p) => p.email)).toEqual([person.email]);
+  // The other one hasn't accepted, and still signs in as before.
+  expectSignedIn(await api.signIn(other.email, other.password));
 });
 
 // Signing in with another device's approval (DESIGN.md, "Approving a sign-in

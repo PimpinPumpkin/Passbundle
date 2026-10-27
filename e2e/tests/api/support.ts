@@ -263,19 +263,30 @@ export class Api {
   }
 
   /**
+   * The person accepts a role the server joined them to without asking, as
+   * the web vault's vault page offers on a server that sends no email (this
+   * test server): two-step login for admins counts it from then on.
+   */
+  async acceptRole(member: { token: string }, orgId: string) {
+    const accepted = await this.call(member, "POST", `/api/keykeeper/organizations/${orgId}/accept`);
+    expect(accepted.status, JSON.stringify(accepted.body)).toBe(200);
+  }
+
+  /**
    * Adds an existing account to an organization with a role, confirmed like a
-   * real member: invited (accepted at once, since the test server sends no
-   * mail), then confirmed by the owner with the org key for them. An owner or
-   * admin of an organization that requires two-step login for admins gets an
+   * real member: invited (joined at once, since the test server sends no
+   * mail), accepted by the member (acceptRole, unless `accept` is false), then
+   * confirmed by the owner with the org key for them. An owner or admin of an
+   * organization that requires two-step login for admins gets an
    * authenticator app first, as they'd set one up, unless `authenticator` is
-   * false: joining without one signs them out.
+   * false: accepting without one signs them out.
    */
   async addMember(
     owner: Account,
     orgId: string,
     member: Account,
     type: "admin" | "user" | "manager" | "owner",
-    options: { authenticator?: boolean } = {},
+    options: { authenticator?: boolean; accept?: boolean } = {},
   ) {
     if (
       options.authenticator !== false &&
@@ -308,6 +319,9 @@ export class Api {
       (m: { email: string }) => m.email === member.email,
     );
     expect(membership, `membership for ${member.email}`).toBeTruthy();
+    if (options.accept !== false) {
+      await this.acceptRole(member, orgId);
+    }
     const confirmed = await this.call(
       owner,
       "POST",
@@ -491,7 +505,7 @@ export class Api {
 
   /**
    * Adds an existing account with a custom role: upstream's Custom type (4)
-   * with these permissions, confirmed like any member. One that manages
+   * with these permissions, accepted and confirmed like any member. One that manages
    * members, policies, or account recovery gets an authenticator app first
    * where the organization requires two-step login for admins, as addMember.
    */
@@ -521,6 +535,7 @@ export class Api {
     const membership = (await this.members(owner, orgId)).find(
       (m) => m.email === member.email,
     )!;
+    await this.acceptRole(member, orgId);
     const confirmed = await this.call(
       owner,
       "POST",
