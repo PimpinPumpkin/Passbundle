@@ -50,7 +50,7 @@ test("with no vault tab open, an MSP admin's extension confirms someone invited 
   await expect(toast(web, "Created Northwind Team")).toBeVisible();
   await web.goto(`${serverUrl}/#/vault`);
   await pick(web, "Northwind Team");
-  await pick(web, "Default collection");
+  await pick(web, "Default shared folder");
   await newTemplate(web, "notes");
   const editor = web.getByRole("dialog", { name: /^New/ });
   await editor.getByRole("textbox", { name: /Item name/ }).fill("Firewall");

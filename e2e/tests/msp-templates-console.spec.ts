@@ -70,7 +70,7 @@ test("a template added for every client applies to all of them, a new client inc
   await createOrganization(admin, "Northwind Team");
   await admin.goto("/#/vault");
   await pick(admin, "Northwind Team");
-  await pick(admin, "Default collection");
+  await pick(admin, "Default shared folder");
   await newTemplate(admin, "notes");
   const editor = admin.getByRole("dialog", { name: /^New/ });
   await editor.getByRole("textbox", { name: /Item name/ }).fill("Firewall");
@@ -129,7 +129,7 @@ test("a template added for every client applies to all of them, a new client inc
       .click();
     const copy = admin.getByRole("dialog", { name: /^View/ });
     try {
-      await expect(copy.getByRole("textbox", { name: "Firmware version", exact: true })).toBeVisible({
+      await expect(copy.getByText("Firmware version", { exact: true })).toBeVisible({
         timeout: 1000,
       });
     } finally {
