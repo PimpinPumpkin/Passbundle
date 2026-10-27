@@ -3,15 +3,21 @@
 // caller: a device the account knows asks; only the account's other devices
 // see the request; only one that signed in with the master password approves
 // it (not the device that asked, a session that itself came from an
-// approval, an API key, another account, or no one); an approval signs the
-// device in once; a denial signs nothing in; and a request lasts 15 minutes.
+// approval, an API key, another account, or no one); an approval carries only
+// a type 4 key, never a master password hash; an approval signs in the device
+// that asked, once; a denial signs nothing in; a request lasts 15 minutes; a
+// device asks five times an hour at most; an organization's "Require single
+// sign-on" holds for it too; and a session an approval began can't set up
+// emergency access.
 // The server stores keys as it gets them, so the public key is a real one
 // (from Node) and the wrapped key a stand-in of the right shape.
 import { constants, generateKeyPairSync, publicEncrypt, randomBytes, randomUUID } from "node:crypto";
 
 import { type APIRequestContext, expect, test } from "@playwright/test";
 
-import { type Account, Api, ageSignInRequests } from "./support";
+import { ssoOrg } from "../support/entra";
+
+import { type Account, Api, ageSignInRequests, encString } from "./support";
 
 // The web vault in Chrome, as upstream numbers device types.
 const WEB = "9";
@@ -24,6 +30,7 @@ async function signIn(
   who: { email: string; password: string },
   device: string,
   authRequest?: { id: string; code: string },
+  deviceType = WEB,
 ) {
   const response = await request.post("/identity/connect/token", {
     form: {
@@ -33,7 +40,7 @@ async function signIn(
       ...(authRequest ? { authRequest: authRequest.id } : {}),
       scope: "api offline_access",
       client_id: "web",
-      deviceType: WEB,
+      deviceType,
       deviceIdentifier: device,
       deviceName: "chrome",
     },
@@ -302,4 +309,126 @@ test("a device has one request waiting, an account a few, and only a known devic
     });
     expect(refused.status()).toBe(400);
   }
+});
+
+test("an approval signs in only the device that asked, as the type it asked as", async ({ request }) => {
+  const api = new Api(request);
+  const ana = await api.account("ana");
+  const laptop = await session(request, ana);
+  const asking = await session(request, ana);
+  const elsewhere = await session(request, ana);
+  const a = await asked(request, ana, asking.device);
+  expect((await answer(api, laptop, laptop.device, a, true)).status).toBe(200);
+  // The access code alone isn't enough: another of the account's devices,
+  // or the same one saying it's something else, is refused.
+  expect((await signIn(request, ana, elsewhere.device, a)).status).toBe(400);
+  expect((await signIn(request, ana, randomUUID(), a)).status).toBe(400);
+  expect((await signIn(request, ana, asking.device, a, "10")).status).toBe(400);
+  // Refusals don't use it up: the device that asked still signs in, once.
+  const signedIn = await signIn(request, ana, asking.device, a);
+  expect(signedIn.status, JSON.stringify(signedIn.body)).toBe(200);
+  expect((await signIn(request, ana, asking.device, a)).status).toBe(400);
+});
+
+test("an approval carries only a type 4 key: never a master password hash", async ({ request }) => {
+  const api = new Api(request);
+  const ana = await api.account("ana");
+  const laptop = await session(request, ana);
+  const asking = await session(request, ana);
+  const a = await asked(request, ana, asking.device);
+  // Not a symmetric string, not OAEP with SHA-256, not a short one.
+  for (const key of [encString("user-key"), `3.${randomBytes(256).toString("base64")}`, `4.${randomBytes(16).toString("base64")}`]) {
+    expect((await answer(api, laptop, laptop.device, a, true, key)).status, key.slice(0, 12)).toBe(400);
+  }
+  const approved = await api.call(laptop, "PUT", `/api/auth-requests/${a.id}`, {
+    deviceIdentifier: laptop.device,
+    key: wrapped(a),
+    masterPasswordHash: Buffer.from("a master password hash").toString("base64"),
+    requestApproved: true,
+  });
+  expect(approved.status, JSON.stringify(approved.body)).toBe(200);
+  expect(approved.body.masterPasswordHash).toBeNull();
+  expect((await api.call(laptop, "GET", `/api/auth-requests/${a.id}`)).body.masterPasswordHash).toBeNull();
+  const read = await poll(request, a);
+  expect(read.body.requestApproved).toBe(true);
+  expect(read.body.masterPasswordHash).toBeNull();
+});
+
+test("a device asks five times an hour at most", async ({ request }) => {
+  const api = new Api(request);
+  const ana = await api.account("ana");
+  const laptop = await session(request, ana);
+  const asking = await session(request, ana);
+  for (let i = 0; i < 5; i++) {
+    await asked(request, ana, asking.device);
+  }
+  const sixth = await ask(request, ana, asking.device);
+  expect(sixth.status).toBe(429);
+  // The one waiting is the last; another device still asks.
+  expect(await pending(api, laptop)).toHaveLength(1);
+  expect((await ask(request, ana, (await session(request, ana)).device)).status).toBe(200);
+});
+
+test("an organization that requires single sign-on requires it of a device's approval too", async ({ request }) => {
+  const api = new Api(request);
+  const sso = await ssoOrg(api, "approval-sso");
+  const { owner, orgId, identifier, domain } = sso;
+  const gus = await api.account("approval-gus", `gus-${randomUUID().slice(0, 8)}@${domain}`);
+  await api.addMember(owner, orgId, gus, "user");
+  // Signed in on two devices before the organization requires it.
+  const laptop = await session(request, gus);
+  const asking = await session(request, gus);
+  for (const type of [3, 4]) {
+    const on = await api.call(owner, "PUT", `/api/organizations/${orgId}/policies/${type}`, {
+      policy: { enabled: true, data: null },
+    });
+    expect(on.status, JSON.stringify(on.body)).toBe(200);
+  }
+  // Gus's password goes to single sign-on now; so does a device's approval,
+  // even one his still-open session gives.
+  const a = await asked(request, gus, asking.device);
+  expect((await answer(api, laptop, laptop.device, a, true)).status).toBe(200);
+  const refused = await signIn(request, gus, asking.device, a);
+  expect(refused.status).toBe(400);
+  expect(refused.body.SsoOrganizationIdentifier).toBe(identifier);
+  expect(refused.body.access_token).toBeUndefined();
+  // The owner, whom it never binds, still signs in with a device.
+  const ownerLaptop = await session(request, owner);
+  const ownerAsking = await session(request, owner);
+  const b = await asked(request, owner, ownerAsking.device);
+  expect((await answer(api, ownerLaptop, ownerLaptop.device, b, true)).status).toBe(200);
+  expect((await signIn(request, owner, ownerAsking.device, b)).status).toBe(200);
+});
+
+test("a session an approval began can't set up emergency access", async ({ request }) => {
+  const api = new Api(request);
+  const [ana, ben, cal] = await Promise.all([api.account("ana"), api.account("ben"), api.account("cal")]);
+  const laptop = await session(request, ana);
+  const phone = await session(request, ana);
+  const a = await asked(request, ana, phone.device);
+  expect((await answer(api, laptop, laptop.device, a, true)).status).toBe(200);
+  const fromApproval = await signIn(request, ana, phone.device, a);
+  expect(fromApproval.status).toBe(200);
+  const approvedPhone = { token: fromApproval.body.access_token as string };
+
+  const invite = (email: string) => ({ email, type: 1, waitTimeDays: 1 });
+  const refused = await api.call(approvedPhone, "POST", "/api/emergency-access/invite", invite(cal.email));
+  expect(refused.status).toBe(400);
+  expect(JSON.stringify(refused.body)).toContain("signed in with your master password");
+
+  // From the master password's session it's set up as usual (with no mail,
+  // an existing account accepts at once)...
+  expect((await api.call(laptop, "POST", "/api/emergency-access/invite", invite(ben.email))).status).toBe(200);
+  const trusted = await api.call(laptop, "GET", "/api/emergency-access/trusted");
+  const grant = trusted.body.data.find((g: { email: string }) => g.email === ben.email);
+  expect(grant.status).toBe(1);
+  // ...but the approval's session can't change it or confirm it.
+  expect(
+    (await api.call(approvedPhone, "PUT", `/api/emergency-access/${grant.id}`, { type: 1, waitTimeDays: 0 })).status,
+  ).toBe(400);
+  expect(
+    (await api.call(approvedPhone, "POST", `/api/emergency-access/${grant.id}/confirm`, { key: encString("for-ben") })).status,
+  ).toBe(400);
+  const confirmed = await api.call(laptop, "POST", `/api/emergency-access/${grant.id}/confirm`, { key: encString("for-ben") });
+  expect(confirmed.status, JSON.stringify(confirmed.body)).toBe(200);
 });
