@@ -921,6 +921,80 @@ Disable it, don't purge it.
 - **Our apps (designed, not built):** `docs/core.md` "Passkeys" and `docs/phones.md` "Passkeys". The core signs and makes ES256 passkeys in upstream's format, the private key never leaving it. Android 14 and later get them through Credential Manager, with the site's Digital Asset Links checked for apps; iOS 17 and later through the AutoFill extension. Vectors fix the bytes (RFC 6979), and a real-server test runs passkeys both ways between the core and our extension.
 - **AAGUID:** our apps get PassBundle's own (`09c5ee5f-0845-48e6-aef4-c7c443317de5`). The browser extension still makes passkeys with upstream's, so sites that name a passkey's maker by its AAGUID name upstream's product for them. Moving the extension to ours, and listing ours where sites look it up, is the owner's call.
 
+## Approving a sign-in from another device
+
+Someone signing in on the web vault or the browser extension picks "Log in with device", and approves it from PassBundle's app on their phone or computer (or from the web vault or extension where they're already signed in). The asking side is upstream's GPL code; the server's rules and the approving app are ours. A key moves between devices, so this note and its vectors (`docs/vectors/device-approval-v1.json`) come before the code.
+
+**Status (October 26, 2026):** built. The server's rules (passbundle-server), the apps' prompt and Settings list with the core's crypto (passbundle-apps, `core/src/device_approval.rs`), and one fix to the web vault and extension (below). Tested end to end in tier 1: the web vault asks, our core approves, and the web vault signs in.
+
+### The protocol
+
+Upstream's, read from its GPL clients (`libs/auth`'s login-via-auth-request component and `AuthRequestService`, `KeyService.getFingerprint`, and the approval dialog in `libs/angular`). Nothing under `bitwarden_license` was opened.
+
+1. **Asking.** The device asking makes an RSA-2048 key pair and a 25-character access code, and sends `POST /api/auth-requests` with the email, its device identifier, the public key (SubjectPublicKeyInfo, base64), the access code, and type 0 ("authenticate and unlock"). It shows the fingerprint phrase and waits on the server's anonymous websocket for an answer. The private key stays on it (in memory, and in the web vault's session cache while it waits). Upstream's web vault and extension offer "Log in with device" only on a device that signed in to the account before, and the server checks the same.
+2. **Seeing it.** The account's other devices list it (`GET /api/auth-requests/pending`): its id, public key, device type, address, and time.
+3. **Approving.** The approving device wraps the **user key** (64 bytes, the same key the master password unlocks; not the master key, and no master password hash) to the request's public key with RSA-OAEP, SHA-1 for both the hash and MGF1, as an encrypted string of type 4, and sends `PUT /api/auth-requests/<id>` with its own device identifier, the key, and `requestApproved: true`. Denying sends `requestApproved: false` and no key (upstream's dialog wraps the key even to deny; our apps don't, and our server ignores it).
+4. **Signing in.** The asking device reads the answer with its access code (`GET /api/auth-requests/<id>/response?code=`), opens the user key with its private key, and signs in with the password grant: the email, the access code as the password, and `authRequest=<id>`. The server sends it the account's encrypted keys as at any sign-in; the user key it now holds opens them.
+
+**The fingerprint phrase:** SHA-256 of the request's public key (DER), expanded with HKDF-Expand-SHA256 under the account's email in lower case to 32 bytes, read as one big-endian number, then written in base 7,776 from its lowest digit up, one word of EFF's long list per digit, five words joined by hyphens (about 64 bits). The asking device makes it from the key it made, the approving device from the key the server gave it.
+
+**What the phrase protects:** the server, or anyone who could change what passes through it, relaying a public key of its own instead of the asking device's, so the user key would be wrapped to them. Then the two devices show different phrases. It only protects when the person compares them, so our apps put the phrase first and largest, and say to approve only if it matches. Finding another key with the same phrase means trying about 2^64 keys, and the request lasts 15 minutes. The phrase is no secret, and says nothing about the account's keys.
+
+### The server's rules (passbundle-server)
+
+Vaultwarden had the endpoints. What's ours (`src/api/core/keykeeper_device_approval.rs`, the `// Keykeeper:` blocks in `accounts.rs`, `identity.rs`, and `auth.rs`):
+
+- **15 minutes**, from when the request was made, for everything: listing it, reading it, approving or denying it, the asking device reading its answer, and signing in with it. Upstream's purge deletes it then. (Vaultwarden let the sign-in happen only in the first 5 minutes, so an approval after that couldn't be used.)
+- **Who asks:** only a device the account knows, of the type it says it is (Vaultwarden's rule). The request must hold a public key of a sensible size and an access code of 8 to 128 printable characters.
+- **Rate limits:** the address's limit for unauthenticated calls, and the account's own login limits (DESIGN.md, "Login limits"): a request counts as a sign-in attempt. One request waiting per device (a new one replaces it, as the web vault's "Resend" does), and five per account; a sixth device is refused (429).
+- **Scope:** listing, reading, and answering are the account's own; another account gets "doesn't exist". A device never sees or answers its own request. The answer is read only with the access code, from the same device type and address that asked.
+- **Who approves:** only a session that signed in with the master password. Not a session that itself came from an approval (an approval can't approve the next device, so one mistaken approval doesn't spread), not an API key's, and not SSO's, which gets a trusted-device design of its own. The access token says how its session signed in (`keykeeper_signin`), and the refresh token keeps it across refreshes. Denying is open to any of the account's sessions: it hands nothing out.
+- **The key:** an approval must carry an encrypted string. The server stores it as it came and can't open it: only the asking device has the private key. The server never holds a key that opens a vault.
+- **Once:** an approved request signs in one time (Vaultwarden's rule).
+- **Events**, logged for the person and each of their organizations, as upstream's: requested (1010), approved (1513), denied (1514), the sign-in as a sign-in (1000), and failures as failed sign-ins (1005).
+- **Notifications:** as upstream, the server tells the account's devices on its websocket (and push, where a push relay is set up), and tells the asking device on the anonymous websocket when it's approved. Our apps ask every 10 seconds instead (below).
+- **Email two-step login** with a request sends the code only to the request's own account, and not once it's expired.
+
+### Our apps
+
+Design in `docs/core.md`, "Approving a sign-in", and `docs/phones.md`, "Approving a sign-in".
+
+- **Seeing requests:** while the vault is unlocked and the app is on screen, the core asks the server every 10 seconds (one small request; the app's screens go on meanwhile). Each new request opens a prompt over the vault once; Settings, "Sign-in requests", lists every one waiting, to review. Expired requests disappear, and an open prompt closes when its time is up. How long is left is by the server's clock.
+- **The prompt:** "Approve sign-in?", the fingerprint phrase first and largest, then the device ("Web vault in Chrome"), its address, when it asked, and how long is left. Approve, Deny, or Later.
+- **Approving asks it's you** first, by default: Windows Hello or Touch ID on a computer, the fingerprint or face on a phone, or the master password. Settings can turn that off on the device. The core enforces it: an approval within a minute of the person confirming, one approval per confirmation.
+- **The core sends the key only to the request whose phrase the person saw.** It keeps the requests it listed, approves only one of them by the phrase shown, checks the server still has it waiting with the same public key, and wraps the user key to the key it listed. A public key that isn't RSA-2048 with the exponent 65537 (what upstream makes) is refused, with nothing sent. The user key never reaches Dart, Kotlin, or Swift.
+- **Phones** show a request while PassBundle is open, or the next time it opens. A prompt while it's closed needs push notifications, which wait on our own push service (APNs, FCM, UnifiedPush; "Clients" above).
+
+### The web vault and the extension
+
+Upstream's GPL code already approves: the extension shows its approval dialog when the server's websocket tells it, and the web vault's Settings, Security, Devices shows a device's waiting request and opens the same dialog. Both are held to the server's rules above.
+
+**One fix (passbundle-clients):** the asking side made its access code with the person's password generator settings, and PassBundle's add symbols. The code goes into the answer's address unencoded, which the client's own check refuses when it holds `#` or `/` and can't read with a `%`, so most requests could never read their answer. It's 25 letters and digits now (about 149 bits).
+
+### Threat model
+
+- **A phishing site relaying the phrase.** A fake sign-in page drives a real request from the attacker's machine and shows the victim that request's phrase, so the phrase matches. What stands in the way: the request must come from a device the account already knows (the attacker's machine isn't one, unless they have one of the person's device identifiers too); the prompt names the device and its address; it says to approve only a sign-in the person started themselves, on a device in front of them; requests are few and short-lived; and every request, approval, and sign-in is in the event log. A person who approves an attacker's request has handed over their vault, as with typing the master password into a phishing page. Not yet: the country an address is in.
+- **Request spam (approval fatigue).** One request waiting per device and five per account, the account's login limits, the address's limit, and only known devices may ask. Each request is prompted for once; after that it waits in Settings. Nothing happens without an approval, and approving asks for biometrics or the master password.
+- **Approving on a compromised device.** Malware on an unlocked approving device already has the user key, as with every password manager; approving gives it nothing new. Asking for biometrics or the master password stops someone who picks up an unlocked phone or computer. A session that came from an approval can't approve, so an attacker's approved device can't approve more.
+- **A hacked server** can swap the public key (the phrase shows it), hide requests (a nuisance), or make up a request (approving it gives the key to whoever holds that request's private key: the phrase check is what stops a made-up one, as the person has no matching phrase on a device in front of them). It never sees the user key.
+- **The access code** is a bearer secret for the answer and the sign-in, sent only to the server over TLS. On its own it opens nothing: the answer needs the private key.
+
+### Tests
+
+- **Vectors** (`docs/vectors/device-approval-v1.json`, made by `make-device-approval-v1.mjs` with plain Node and EFF's word list, and remade the same in tier 1): the phrase for an email and a key (and the same email with capitals, another account, another key), the user key wrapped with RSA-OAEP SHA-1 (encoded by hand with a fixed seed), and public keys the apps refuse. Upstream's crypto checks them (`check-device-approval-vectors.mjs`: the wrap opens, upstream's own wrap is the same scheme), and upstream's own code makes the same phrases (the clients' unit test `keykeeper-device-approval.spec.ts`). The core's tests make every phrase and open the wrap.
+- **Server:** unit tests for the 15 minutes, which sessions approve, and what a request and an approval may hold; API tests for every endpoint and caller (`e2e/tests/api/device-approval.spec.ts`): the account's other device, the device asking, another account, no one, a session from an approval (before and after refreshing), an API key's, a denial, an expired request, too many, and an unknown device.
+- **The core against a real server** (`core/tests/server.rs`): listing, the phrase, approving only after confirming and with the phrase shown, the key opening with the request's private key only, signing in with it, denying, turning confirming off, another account, and locking.
+- **The app** (`app/test/sign_in_requests_test.dart`): the prompt, confirming first, a stale confirmation, denying, expiring, prompting once, and Settings' list.
+- **End to end** (`e2e/tests/device-approval.spec.ts`): the web vault asks to sign in with a device, the core approves through the app's own calls, and the web vault signs in; a denial; an expired request; and another account never seeing it.
+
+### Not yet
+
+- Push to phones while PassBundle is closed (our own push service).
+- The country an address is in (the server could take Cloudflare's country header).
+- SSO sessions approving, with SSO's trusted-device design.
+- Signing in with a device on one that never signed in to the account (upstream and Vaultwarden don't allow it).
+- Our own apps asking to sign in with a device; they approve only.
+
 ## Autofill
 
 The goal is to be measurably better than upstream. 1Password currently does this much better than Bitwarden.

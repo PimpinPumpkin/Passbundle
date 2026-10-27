@@ -19,6 +19,7 @@ What CI can't check: real devices, real sites, and how it feels. Work through it
 - [ ] **New item:** a login, a card, a note, and one from a template (Wi-Fi, server). Icons and colors match across web, extension, phone, and Mac.
 - [ ] **Search** finds items by name, username, and website.
 - [ ] **Generator:** default 20 characters; change the length on one device and see it follow you to another.
+- [ ] **Sign in with a device:** in a browser where you've signed in before, sign out of the web vault (or the extension), type your email, and choose "Log in with device". The Mac app (and the Pixel, with PassBundle open) shows "Approve sign-in?" within about 10 seconds: check its fingerprint phrase matches the browser's, approve with Touch ID, your fingerprint, or your master password, and the browser signs in. Try Deny once too, and leave one to expire (15 minutes): it should disappear.
 
 ## Autofill (the part people judge us on)
 

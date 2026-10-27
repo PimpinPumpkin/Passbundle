@@ -405,3 +405,33 @@ export async function serverDatabase(): Promise<
     }
   };
 }
+
+/**
+ * Makes an account's sign-in requests older in the test server's SQLite
+ * database, as if `minutes` had passed since they were made: the server's
+ * clock can't be moved, and a request lasts 15 minutes (DESIGN.md,
+ * "Approving a sign-in from another device"). Returns how many it changed,
+ * or null when the server runs on PostgreSQL (KK_DATABASE_URL), where tests
+ * leave this out.
+ */
+export async function ageSignInRequests(email: string, minutes: number): Promise<number | null> {
+  if (process.env.KK_DATABASE_URL) {
+    return null;
+  }
+  const data = fs.readFileSync(path.join(os.tmpdir(), `keykeeper-e2e-data-${port}`), "utf8");
+  const { DatabaseSync } = await import("node:sqlite");
+  const db = new DatabaseSync(path.join(data, "db.sqlite3"));
+  try {
+    db.exec("PRAGMA busy_timeout = 5000");
+    const changed = db
+      .prepare(
+        `UPDATE auth_requests
+           SET creation_date = strftime('%Y-%m-%d %H:%M:%f', creation_date, ?)
+         WHERE user_uuid = (SELECT uuid FROM users WHERE email = ?)`,
+      )
+      .run(`-${minutes} minutes`, email.toLowerCase());
+    return Number(changed.changes);
+  } finally {
+    db.close();
+  }
+}
