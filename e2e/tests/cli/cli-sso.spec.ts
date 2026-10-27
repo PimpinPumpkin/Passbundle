@@ -124,9 +124,8 @@ test("a member signs in from the command-line tool with her organization's singl
   );
   expect(address).toContain(`&identifier=${identifier}`);
 
-  // Her browser: the web vault's sign-in page goes on to Microsoft by itself
-  // (it has the identifier), then back to the tool's listener. Only
-  // 127.0.0.1 and localhost resolve.
+  // Her browser: the web vault's sign-in page, then Microsoft, then back to
+  // the tool's listener. Only 127.0.0.1 and localhost resolve.
   const browser = await chromium.launch({
     args: [
       "--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE localhost",
@@ -137,6 +136,14 @@ test("a member signs in from the command-line tool with her organization's singl
       await browser.newContext({ ignoreHTTPSErrors: true })
     ).newPage();
     await page.goto(address);
+    // A link alone never starts the tool's sign-in: the page says what it's
+    // for and waits for Continue.
+    await expect(page.getByTestId("sso-for-command-line")).toContainText(
+      "command-line tool on this computer",
+    );
+    await expect(page.getByRole("textbox", { name: "SSO identifier" })).toHaveValue(identifier);
+    expect(page.url()).toContain("/#/sso?clientId=cli");
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.waitForURL(/^http:\/\/localhost:80(6[5-9]|70)\//);
     await expect(page.getByRole("heading")).toHaveText(
       `Successfully authenticated with the ${brand.name} CLI`,

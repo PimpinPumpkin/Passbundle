@@ -91,7 +91,9 @@ If your organization signs you in with Microsoft Entra ID, link your account onc
 passbundle login --sso contoso      # your organization's SSO identifier
 ```
 
-The tool opens your browser to the web vault's sign-in page, which goes on to Microsoft and back to the tool (it listens on `http://localhost`, ports 8065 to 8070, on the computer you run it on). It also prints the address, for when no browser opens. Your master password still unlocks your vault: `passbundle unlock`.
+The tool opens your browser to the web vault's sign-in page, which says it's for the command-line tool: press Continue, sign in with Microsoft, and the browser hands the sign-in back to the tool, which listens on `http://localhost` (the first free port of 8065 to 8070) on the computer you run it on. It also prints the address, for when no browser opens; open it in a browser on the same computer. Your master password still unlocks your vault: `passbundle unlock`.
+
+The page never goes on by itself, so a link someone sends you can't start a sign-in for the tool: only press Continue for a sign-in you just started.
 
 ### What your organization's rules do here
 
@@ -179,7 +181,7 @@ For an item you can't see the passwords of:
 
 - `get item`, `list items`, and `serve` give its plain values only: its name, notes, websites, username, a card's holder, brand, and expiry, an identity's name and contact details, an SSH key's public key, and the like. Its secrets (password, one-time code, card number and code, SSN, passport and license numbers, private key, bank account number, PIN, IBAN, SWIFT, hidden fields, linked fields that fill a secret) are empty, and its passkeys and password history aren't there at all. Hidden fields stay listed by name, without values.
 - `get password`, `get totp`, and `get exposed` refuse it: "You can't see this item's passwords: the shared folder it's in lets you use them, not see them."
-- `edit item` keeps its secrets as they are: send them back empty, as `get item` shows them, and they're kept; changing, clearing, adding, or removing one is refused, and so is changing its type.
+- `edit item` keeps its secrets as they are: send them back empty, as `get item` shows them, and they're kept. A request with any value for one is refused, even its real value (so an edit can't be used to check a guess), and so is adding or removing a hidden field, or changing the item's type.
 - `report password-health` leaves it out, so it can't tell you whether its password is weak, breached, or the same as one of yours.
 - `get history` shows when it changed and by whom, never earlier values.
 
