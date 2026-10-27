@@ -5,7 +5,7 @@
 // its history too; and the history can be cleared.
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
-import { newItem, signUp, webUserFor } from "./support/web";
+import { newItem, reloadVault, signUp, webUserFor } from "./support/web";
 
 /** Changes the password in the item's view, through Edit, and back to its view. */
 async function changePassword(page: Page, view: Locator, password: string) {
@@ -90,13 +90,9 @@ test("a login's earlier passwords show in its history, and restoring one brings 
   await replaced.getByRole("button", { name: "Close" }).last().click();
   await expect(replaced).toBeHidden();
 
-  // It stays restored after the vault syncs again: reloading locks it, and
-  // unlocking syncs.
+  // It stays restored after the vault syncs again, which a reload does.
   await view.getByRole("button", { name: "Close" }).first().click();
-  await page.reload();
-  await page.getByRole("textbox", { name: /^Master password/ }).fill(user.password);
-  await page.getByRole("button", { name: "Unlock", exact: true }).click();
-  await page.waitForURL(/#\/vault/);
+  await reloadVault(page);
   await page.getByText("Example mail").first().click();
   await expectPassword(view, "first-password-1");
   await expect(versions).toHaveCount(3);

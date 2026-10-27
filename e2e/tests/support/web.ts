@@ -61,6 +61,17 @@ export async function confirmMember(page: Page, email: string) {
 }
 
 /**
+ * Reloads the web vault, which syncs it again. Within the vault timeout a
+ * reload stays unlocked (DESIGN.md, "Staying unlocked across a reload"), so
+ * it waits until the page is back, unlocked, with its left menu.
+ */
+export async function reloadVault(page: Page) {
+  await page.reload();
+  await expect(menu(page)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("textbox", { name: /^Master password/ })).toHaveCount(0);
+}
+
+/**
  * The web vault's one left menu: search, the categories, and the folders
  * (Personal's, then each organization's), then the tools (DESIGN.md, "The
  * left menu").

@@ -87,7 +87,7 @@ Checked October 23, 2026. A feature-by-feature look at where PassBundle stands a
 | Send and sharing controls | "Manage Send and share" | Item sharing settings | **Built** | Remove Send and Send options, inherited. | [bw-policies] [op-share-admin] |
 | Remove export | Yes | "Export Items" vault permission | **Partly** | The export permission of each shared folder (see "Granular permissions"), kept by the apps. No organization-wide policy: Vaultwarden doesn't have it. | [bw-policies] [op-vaults] |
 | Account recovery | Yes | Yes | **Built** | Off by default; each organization turns it on. | [bw-policies] [op-recovery] |
-| Session timeout | Yes (owners exempt) | Unlock and auto-lock enforcement | **Built** | Ours: server, web vault page, and our apps (`docs/core.md`, "Locking by policy"). | [bw-policies] [op-policies] |
+| Session timeout | Yes (owners exempt) | Unlock and auto-lock enforcement | **Built** | Ours: server, web vault page, and our apps (`docs/core.md`, "Locking by policy"). The web vault stays unlocked across a reload within the timeout, where Bitwarden's locks at every reload (DESIGN.md, "Staying unlocked across a reload"). | [bw-policies] [op-policies] |
 | Remove unlock with PIN | Yes | No equivalent found | **Built** | Inherited. | [bw-policies] |
 | Default website matching | Yes | No equivalent found | **Built** | Inherited. | [bw-policies] |
 | Fill on page load, fill assist | Yes (two policies) | Autofill and automatic sign-in policies | **Missing** | Site fixes have their own MSP control instead. | [bw-policies] [op-policies] |
