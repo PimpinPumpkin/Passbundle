@@ -9,7 +9,7 @@
 // with only those still opens the admin console's Vault tab.
 import { expect, test, type Page } from "@playwright/test";
 
-import { reloadVault, signUp, webUserFor } from "./support/web";
+import { reloadVault, signUp, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 const toast = (page: Page, text: string | RegExp) => page.getByText(text).first();
 
@@ -33,12 +33,14 @@ test("an MSP admin gives a client's point of contact a custom role that manages 
   test.setTimeout(150_000);
   const pocContext = await browser.newContext();
   const poc = await pocContext.newPage();
+  // A point of contact who manages members, and the MSP's admin, sign in with
+  // two-step login (DESIGN.md, "Two-step login for admins").
   const pocUser = webUserFor("poc", testInfo.repeatEachIndex);
-  await signUp(poc, pocUser);
+  await signUpWithAuthenticator(poc, pocUser);
 
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
-  await signUp(admin, webUserFor("roles-admin", testInfo.repeatEachIndex));
+  await signUpWithAuthenticator(admin, webUserFor("roles-admin", testInfo.repeatEachIndex));
   await admin.goto("/#/msp");
   await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Roles IT");
   await admin.getByRole("button", { name: "Create MSP" }).click();
@@ -136,7 +138,7 @@ test("upstream's Custom role that only manages all collections still opens the a
 
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
-  await signUp(admin, webUserFor("collections-admin", testInfo.repeatEachIndex));
+  await signUpWithAuthenticator(admin, webUserFor("collections-admin", testInfo.repeatEachIndex));
   await admin.goto("/#/msp");
   await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Collections IT");
   await admin.getByRole("button", { name: "Create MSP" }).click();
@@ -179,7 +181,7 @@ test("a client's custom role that only views event logs opens the event log and 
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
   const adminUser = webUserFor("events-admin", testInfo.repeatEachIndex);
-  await signUp(admin, adminUser);
+  await signUpWithAuthenticator(admin, adminUser);
   await admin.goto("/#/msp");
   await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Events IT");
   await admin.getByRole("button", { name: "Create MSP" }).click();
@@ -226,11 +228,11 @@ test("a custom role that manages members and views event logs opens a member's e
   const pocContext = await browser.newContext();
   const poc = await pocContext.newPage();
   const pocUser = webUserFor("poc-both", testInfo.repeatEachIndex);
-  await signUp(poc, pocUser);
+  await signUpWithAuthenticator(poc, pocUser);
 
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
-  await signUp(admin, webUserFor("both-admin", testInfo.repeatEachIndex));
+  await signUpWithAuthenticator(admin, webUserFor("both-admin", testInfo.repeatEachIndex));
   await admin.goto("/#/msp");
   await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Both IT");
   await admin.getByRole("button", { name: "Create MSP" }).click();

@@ -3,14 +3,14 @@
 // limit does at a join is in join-notices.spec.ts.
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUp, webUserFor } from "../support/web";
+import { signUpWithAuthenticator, webUserFor } from "../support/web";
 
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
 
 test("an MSP admin limits a client's install command to its email domains, and lifts it", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const admin = webUserFor("domains-admin", testInfo.repeatEachIndex);
-  await signUp(page, admin);
+  await signUpWithAuthenticator(page, admin);
   await page.goto("/#/msp");
   await page.getByRole("textbox", { name: "Your MSP's name" }).fill("Fabrikam IT");
   await page.getByRole("button", { name: "Create MSP" }).click();

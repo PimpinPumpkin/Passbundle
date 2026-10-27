@@ -10,7 +10,7 @@
 // DESIGN.md, "MSP templates".
 import { expect, test, type Page } from "@playwright/test";
 
-import { menu, newTemplate, pick, signUp, templatePicker, webUserFor } from "./support/web";
+import { menu, newTemplate, pick, signUpWithAuthenticator, templatePicker, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) =>
@@ -52,7 +52,7 @@ test("a template added for every client applies to all of them, a new client inc
   const context = await browser.newContext();
   const admin = await context.newPage();
   const adminUser = webUserFor("msp-admin-templates", testInfo.repeatEachIndex);
-  await signUp(admin, adminUser);
+  await signUpWithAuthenticator(admin, adminUser);
   await admin.goto("/#/msp");
   await admin
     .getByRole("textbox", { name: "Your MSP's name" })

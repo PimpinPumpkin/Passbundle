@@ -296,6 +296,8 @@ test("a company's own owners and admins seal their organization; an MSP's client
 }) => {
   const api = new Api(request);
   const owner = await api.account("own-sealer");
+  // The Business preset requires two-step login of its owners.
+  await api.giveAuthenticator(owner);
   const created = await api.call(owner, "POST", "/api/keykeeper/organizations", {
     name: "Sealed Co",
     preset: "business",
