@@ -1,8 +1,9 @@
 // Every item the server sends says whether the person may see its passwords
 // (DESIGN.md, "Folders and permissions"): `viewPassword`, a boolean, on sync,
 // the item by itself, what the item's own calls return, the organization's
-// admin view, and an item's version history. The apps treat a missing one as
-// "hidden" (fail closed), so it must never be missing.
+// admin view, and an item's version history, always from the person's grid.
+// The apps treat a missing one as "hidden" (fail closed), so it must never be
+// missing.
 import { expect, test } from "@playwright/test";
 
 import { type Account, Api, encString } from "./support";
@@ -117,6 +118,14 @@ test("every item the server sends says whether its passwords show", async ({ req
       expect(says(item, `${who.email}'s admin view`)).toBe(true);
     }
   }
+
+  // Changing the item's folders as an admin: the item sent back says too,
+  // from the person's grid.
+  const moved = await api.call(owner, "PUT", `/api/ciphers/${orgItem}/collections-admin`, {
+    collectionIds: [collection],
+  });
+  expect(moved.status, JSON.stringify(moved.body)).toBe(200);
+  expect(says(moved.body, "an item after an admin's folder change")).toBe(true);
 
   // Version history: each version sent with its contents says too.
   const history = await api.call(owner, "GET", `/api/keykeeper/ciphers/${orgItem}/history`);
