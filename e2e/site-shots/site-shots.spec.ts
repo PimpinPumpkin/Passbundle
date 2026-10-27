@@ -38,7 +38,7 @@ import {
 import { brand, paths, siteHost, siteHostRules } from "../paths.mjs";
 import { Api, encString } from "../tests/api/support";
 import { verifyEmail } from "../tests/mail/mailbox";
-import { confirmMember, signUp, type WebUser } from "../tests/support/web";
+import { confirmMember, confirmWithPassword, signUp, type WebUser } from "../tests/support/web";
 
 import { breached, clientVault, clients, emailOf, personalVault } from "./data";
 
@@ -394,6 +394,7 @@ test("an MSP's console with five clients, a client's passwords to fix, Entra, an
   await web.goto(`${acme}/settings/provisioning`);
   const provisioning = web.getByTestId("provisioning");
   await provisioning.getByRole("button", { name: "Create token" }).click();
+  await confirmWithPassword(web, jordan.password);
   const scimToken = (await provisioning.getByTestId("provisioning-token").textContent())!.trim();
   await provisioning.getByRole("button", { name: "Done" }).click();
   const hire = { name: "Jamal Reed", email: emailOf("Jamal Reed", clients[0]) };

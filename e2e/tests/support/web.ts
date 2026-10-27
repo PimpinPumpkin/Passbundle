@@ -36,6 +36,25 @@ export async function skipImport(page: Page) {
 }
 
 /**
+ * The prompt the web vault shows before a sensitive change (DESIGN.md,
+ * "Confirming sensitive changes"): upstream's "Verification required" dialog.
+ * Making a provisioning token, saving single sign-on settings, adding,
+ * changing, turning on or off, or making a new signing secret for an event
+ * destination, and making a script token ask for the master password there.
+ */
+export function verificationPrompt(page: Page) {
+  return page.getByRole("dialog", { name: "Verification required" });
+}
+
+/** Confirms a sensitive change in that prompt with the master password. */
+export async function confirmWithPassword(page: Page, password: string) {
+  const prompt = verificationPrompt(page);
+  await prompt.getByLabel(/Master password/).fill(password);
+  await prompt.getByRole("button", { name: "Continue" }).click();
+  await expect(prompt).toBeHidden();
+}
+
+/**
  * An owner or admin approves someone waiting on the Members page they have
  * open, with upstream's Confirm and its fingerprint dialog.
  *

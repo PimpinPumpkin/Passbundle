@@ -14,7 +14,7 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 import { port } from "../paths.mjs";
 
 import { newDomain, newIdentifier, setTxt, Tenant } from "./support/entra";
-import { signUp, type WebUser } from "./support/web";
+import { confirmWithPassword, signUp, type WebUser } from "./support/web";
 
 const origin = `https://127.0.0.1:${port}`;
 const password = "correct horse battery staple 42";
@@ -76,6 +76,9 @@ async function setUp(browser: Browser, index: number, name: string) {
   await form.getByLabel("Client secret value").fill(tenant.clientSecret);
   await form.getByRole("checkbox", { name: "Turn on single sign-on" }).check();
   await form.getByRole("button", { name: "Save" }).click();
+  // Saving asks for the master password first (DESIGN.md, "Confirming
+  // sensitive changes").
+  await confirmWithPassword(owner, ownerUser.password);
   await expect(toast(owner, "Single sign-on is on")).toBeVisible();
   await expect(sso.getByTestId("sso-status")).toContainText("Single sign-on is on.");
   // The secret is never shown again; the field is empty and says it's saved.
