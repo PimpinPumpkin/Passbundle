@@ -86,6 +86,7 @@ The test vectors are `docs/vectors/script-grants-v2.json` (made by `make-script-
 
 - It can't read copies or the token key, and can't make copies a script accepts.
 - It can't have an app copy an item to a token it wasn't granted to, or with another token's key (version 2 seals), or copy someone's own items or another organization's.
+- It can keep a grant alive that was ended. Revoking a token, taking an item out of it (narrowing), and its expiry are enforced by the server only: version 2 seals bind a grant to its token and item, not to a time or to the token still being live. So a hacked server can keep listing an old version 2 grant as behind, and apps that hold the organization key keep refreshing its copy with the item's current values, for whoever holds that token's seed, until an expiry is bound into the seal (planned, with the token's expiry inside the sealed spec and key).
 - It can refuse requests, or serve an older copy of the right item. Scripts can't tell an old copy from the latest; the console's read log and "out of date" marks are the check.
 - It learns which items are granted to which tokens, and when scripts read them. That's inherent in a server that logs reads.
 - Someone who steals the token string from the RMM can read its grants until it expires or is revoked, from its allowed networks. That's the cost of any credential in an RMM; the limits are the scope, the networks, the expiry, and the read log.
