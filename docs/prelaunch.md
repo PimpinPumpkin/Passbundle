@@ -17,15 +17,15 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 - **Web vault redesign** from the approved mockups: the menu as a card with jewel tiles, rows of site icons and tiles, the selected item in a side panel beside the list, and graphite glass, a neutral dark mode, for the web vault and the extension. Pull requests open.
 - **Exposed passwords in the MSP health view**, using the k-anonymity range check, with an off switch for the check after unlocking. Security review fixes in progress.
 - **Events to security tools**: a signed webhook, syslog over TLS (JSON or CEF), and Microsoft Sentinel, per organization or one feed for an MSP. Security review fixes in progress.
+- **Item history and the new folders in the extension**: version history with restore, folders by owner with counts, the grouped Folder picker, and see passwords, export, and share enforced on every extension path. Pull requests open.
 
 ## Next
 
 1. **Self-updating Windows and Linux apps**, like the Mac and Android ones.
 2. **Sign in with Entra (SSO) per organization**, master password still unlocking at first; trusted-device unlock after, as its own design with test vectors.
-3. **Item history and the new folders in the extension**, so every app shows and restores the same versions.
-4. **Approving a new sign-in from our apps**, and a CLI build for macOS and Linux scripts.
-5. **A full security pass over the whole stack** before the first company: server, web vault, extension, apps, CI and releases.
-6. **Website redesign** in the new look.
+3. **Approving a new sign-in from our apps**, and a CLI build for macOS and Linux scripts.
+4. **A full security pass over the whole stack** before the first company: server, web vault, extension, apps, CI and releases.
+5. **Website redesign** in the new look.
 
 ## Waiting on you
 
