@@ -17,22 +17,22 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 - **Web vault redesign** from the approved mockups: the menu as a card with jewel tiles, rows of site icons and tiles, the selected item in a side panel beside the list, and graphite glass, a neutral dark mode, for the web vault and the extension. Pull requests open.
 - **Exposed passwords in the MSP health view**, using the k-anonymity range check, with an off switch for the check after unlocking. Security review fixes in progress.
 - **Events to security tools**: a signed webhook, syslog over TLS (JSON or CEF), and Microsoft Sentinel, per organization or one feed for an MSP. Security review fixes in progress.
-- **Approving a new sign-in from our apps** (DESIGN.md, "Approving a sign-in from another device"): "Log in with device" on the web vault or the extension, approved on the phone or computer after comparing the fingerprint phrase. Pull requests open; security review before merge. Later: a notice on a closed phone (push), and SSO sessions approving.
+- **Sign in with Entra (SSO) per organization**: built and tested against a stand-in for Entra (DESIGN.md, "Sign in with Microsoft Entra ID"; setup in docs/sso-entra.md): each client's own tenant, domain verification, Require single sign-on, the master password still unlocking. Its client secret is sealed with event streaming's module under a key of its own; a verification review next. Trusted-device unlock after, as its own design with test vectors.
+- **Approving a new sign-in from our apps** (DESIGN.md, "Approving a sign-in from another device"): "Log in with device" on the web vault or the extension, approved on the phone or computer after comparing the fingerprint phrase. Security review fixes in progress. Later: a notice on a closed phone (push), and SSO sessions approving.
 
 ## Next
 
 1. **Self-updating Windows and Linux apps**, like the Mac and Android ones.
-2. **Sign in with Entra (SSO) per organization**, master password still unlocking at first; trusted-device unlock after, as its own design with test vectors.
-3. **Item history and the new folders in the extension**, so every app shows and restores the same versions.
-4. **A CLI build** for macOS and Linux scripts.
-5. **A full security pass over the whole stack** before the first company: server, web vault, extension, apps, CI and releases.
-6. **Website redesign** in the new look.
+2. **Item history and the new folders in the extension**, so every app shows and restores the same versions.
+3. **A CLI build** for macOS and Linux scripts.
+4. **A full security pass over the whole stack** before the first company: server, web vault, extension, apps, CI and releases.
+5. **Website redesign** in the new look.
 
 ## Waiting on you
 
 - **Production hosting**: a storage bucket for backups at a second provider (Backblaze or Cloudflare R2), a backup key made on your own computer (ops/hosting/README.md, "The backup key"), and the go-ahead to point vault.passbundle.com at the hosted stack.
 - **Email**: a sending provider (Postmark, Amazon SES, or Resend) so invitations, verification and account recovery mail go out.
-- **A Microsoft 365 tenant** (a free developer tenant is enough) to check Entra provisioning (built; the checks are in DESIGN.md, "Provisioning from Entra ID", "Status") and SSO for real.
+- **A Microsoft 365 tenant** (a free developer tenant is enough) to check Entra provisioning (built; the checks are in DESIGN.md, "Provisioning from Entra ID", "Status") and single sign-on (built; the checks are in docs/sso-entra.md, "Checking it with a real tenant") for real.
 - **Apple Developer account** for the iPhone app, iPhone AutoFill, and a notarized Mac app.
 - **Store listings** when you want them (you said not yet): Chrome, Edge, Firefox.
 - **Business details for the site and legal pages**: legal name, payment processor, refunds, governing law, prices (marked as placeholders in site/).
