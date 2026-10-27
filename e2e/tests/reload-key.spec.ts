@@ -16,12 +16,13 @@ import {
   type APIRequestContext,
   type Browser,
   type BrowserContext,
+  chromium,
   expect,
   type Page,
   test,
 } from "@playwright/test";
 
-import { restartServerPort } from "../paths.mjs";
+import { fixturePort, hostResolverRules, port, restartServerPort } from "../paths.mjs";
 
 import { confirmMember, signUp, webUserFor, type WebUser } from "./support/web";
 
@@ -113,6 +114,29 @@ async function lockNow(page: Page) {
   await page.locator('button[aria-haspopup="menu"]:has(bit-avatar)').first().click();
   await page.getByRole("menuitem", { name: "Lock now" }).click();
 }
+
+/** What a copy of the tab's storage would hold: its access token and reload key's tab id. */
+async function tabSecrets(page: Page) {
+  return await page.evaluate(() => {
+    const keys = Object.keys(sessionStorage);
+    const read = (suffix: string) =>
+      JSON.parse(sessionStorage.getItem(keys.find((k) => k.endsWith(suffix))!)!);
+    return {
+      token: read("_token_accessToken") as string,
+      tabId: read("_keykeeperReloadKey_reloadKey").tabId as string,
+      session: Object.fromEntries(keys.map((k) => [k, sessionStorage.getItem(k)!])),
+    };
+  });
+}
+
+/** Asks the server for R as the tab would, with this browser's cookies. */
+const releaseAs = (context: BrowserContext, token: string, tabId: string) =>
+  context.request
+    .post("/api/keykeeper/reload-key/release", {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { tabId },
+    })
+    .then((r) => r.status());
 
 test("a reload within the timeout stays unlocked, with no prompt", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
@@ -217,14 +241,13 @@ test("another browser with a copy of the tab's storage, but not its cookie, gets
   expect(Object.keys(copy.session).some((k) => /_token_accessToken$/.test(k))).toBe(true);
 
   const other = await browser.newContext();
+  // The copy is put back at every load, as a thief would.
   await other.addInitScript((stored) => {
-    if (sessionStorage.length === 0) {
-      for (const [k, v] of Object.entries(stored.session)) {
-        sessionStorage.setItem(k, v);
-      }
-      for (const [k, v] of Object.entries(stored.local)) {
-        localStorage.setItem(k, v);
-      }
+    for (const [k, v] of Object.entries(stored.session)) {
+      sessionStorage.setItem(k, v);
+    }
+    for (const [k, v] of Object.entries(stored.local)) {
+      localStorage.setItem(k, v);
     }
   }, copy);
   const thief = await other.newPage();
@@ -235,10 +258,134 @@ test("another browser with a copy of the tab's storage, but not its cookie, gets
     }
   });
   await thief.goto("/#/vault");
-  // Signed in (the copy has the tokens), but locked: the server refused R.
+  // Signed in (the copy has the tokens), but locked; and a reload, the one
+  // load that asks for R, is refused by the server.
+  await expectLocked(thief);
+  await thief.reload();
   await expectLocked(thief);
   expect(released).toEqual([404]);
   await other.close();
+});
+
+test("a closed tab, reopened, finds the vault locked, and the server lets R go", async ({
+  context,
+  page,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const sent = watch(page);
+  await signUp(page, webUserFor("reload-reopen", testInfo.repeatEachIndex));
+  await expect.poll(() => sent.kept.length).toBe(1);
+  const { token, tabId, session } = await tabSecrets(page);
+
+  // A reopened tab gets its sessionStorage back from the browser.
+  await context.addInitScript((stored) => {
+    if (sessionStorage.length === 0) {
+      for (const [k, v] of Object.entries(stored)) {
+        sessionStorage.setItem(k, v);
+      }
+    }
+  }, session);
+
+  // Closed as a person closes a tab: its page says it's leaving.
+  await page.close({ runBeforeUnload: true });
+
+  // Reopened at once: not a reload, so locked, and it doesn't even ask for R.
+  const reopened = await context.newPage();
+  const asked: string[] = [];
+  reopened.on("request", (r) => r.url().endsWith("/reload-key/release") && asked.push(r.url()));
+  await reopened.goto("/#/vault");
+  await expectLocked(reopened);
+  expect(asked).toEqual([]);
+  expect(await reopened.evaluate(() => (performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming).type)).toBe(
+    "navigate",
+  );
+
+  // And the server let R go: 15 seconds after the page left, with no reload
+  // asking, even this browser's cookie and the tab's token get nothing.
+  await new Promise((resolve) => setTimeout(resolve, 16_000));
+  expect(await releaseAs(context, token, tabId)).toBe(404);
+});
+
+test("Back to the vault asks for the master password", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const sent = watch(page);
+  await signUp(page, webUserFor("reload-back", testInfo.repeatEachIndex));
+  await expect.poll(() => sent.kept.length).toBe(1);
+
+  await page.goto("about:blank");
+  await page.goBack();
+  await expectLocked(page);
+  expect(await page.evaluate(() => (performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming).type)).toBe(
+    "back_forward",
+  );
+  expect(sent.released).toEqual([]);
+});
+
+test("Back asks with the back-forward cache on, too", async ({}, testInfo) => {
+  test.setTimeout(120_000);
+  // Playwright turns the cache off; a browser of this test's own keeps it.
+  const browser = await chromium.launch({
+    args: [hostResolverRules],
+    ignoreDefaultArgs: ["--disable-back-forward-cache"],
+  });
+  try {
+    const context = await browser.newContext({
+      ignoreHTTPSErrors: true,
+      baseURL: `https://127.0.0.1:${port}`,
+    });
+    const page = await context.newPage();
+    const sent = watch(page);
+    await signUp(page, webUserFor("reload-bfcache", testInfo.repeatEachIndex));
+    await expect.poll(() => sent.kept.length).toBe(1);
+    await page.goto(`https://127.0.0.1:${fixturePort}/alive`);
+    await page.goBack();
+    // Whether the page comes back from the cache (it locks as it shows) or
+    // loads again (not a reload), the vault is locked.
+    await expectLocked(page);
+  } finally {
+    await browser.close();
+  }
+});
+
+test("Log out from the account menu forgets the tab's R first", async ({ context, page }, testInfo) => {
+  test.setTimeout(120_000);
+  const sent = watch(page);
+  await signUp(page, webUserFor("reload-log-out-menu", testInfo.repeatEachIndex));
+  await expect.poll(() => sent.kept.length).toBe(1);
+  const { token, tabId } = await tabSecrets(page);
+
+  await page.locator('button[aria-haspopup="menu"]:has(bit-avatar)').first().click();
+  await page.getByRole("menuitem", { name: "Log out" }).click();
+  await expect(page.getByLabel(/Email address/)).toBeVisible({ timeout: 30_000 });
+  expect(sent.forgotten).toEqual([tabId]);
+  await expect.poll(() => reloadCookie(context, tabId)).toBeUndefined();
+  // The access token still works for a while; the server has nothing for it.
+  expect(await releaseAs(context, token, tabId)).toBe(404);
+});
+
+test("with Stay unlocked when I reload off, every reload asks", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const sent = watch(page);
+  const user = webUserFor("reload-setting-off", testInfo.repeatEachIndex);
+  await signUp(page, user);
+  await expect.poll(() => sent.kept.length).toBe(1);
+
+  await sessionTimeout(page);
+  const setting = page.getByRole("checkbox", { name: "Stay unlocked when I reload" });
+  await expect(setting).toBeChecked();
+  await setting.uncheck();
+  await expect.poll(() => sent.forgotten).toEqual([sent.kept[0].tabId]);
+  // The timeout itself is as it was.
+  await expect(page.getByText("15 minutes", { exact: true }).first()).toBeVisible();
+
+  await page.goto("/#/vault");
+  await page.reload();
+  await expectLocked(page);
+  await unlock(page, user);
+  await expectUnlocked(page);
+  await page.reload();
+  await expectLocked(page);
+  expect(sent.kept).toHaveLength(1);
 });
 
 test("a new browser asks for the master password", async ({ browser, page }, testInfo) => {
@@ -299,9 +446,18 @@ test("with the Log out action, a reload signs out, as before", async ({ page }, 
   await expect(page.getByLabel(/Email address/)).toBeVisible({ timeout: 30_000 });
 });
 
+/** Browsers a test opened besides its own page's, closed after it, pass or fail. */
+const opened: BrowserContext[] = [];
+test.afterEach(async () => {
+  for (const context of opened.splice(0)) {
+    await context.close().catch(() => {});
+  }
+});
+
 /** A member of a Business organization: its preset has Vault lock, "when the computer locks". */
 async function businessMember(browser: Browser, prefix: string, repeatIndex: number) {
   const ownerContext = await browser.newContext({ ignoreHTTPSErrors: true });
+  opened.push(ownerContext);
   const owner = await ownerContext.newPage();
   const memberContext = await browser.newContext({ ignoreHTTPSErrors: true });
   const joining = await memberContext.newPage();
@@ -332,6 +488,7 @@ test("with the Business preset's Vault lock, a member signs in, reloads, and sta
   const { member } = await businessMember(browser, "reload-business", testInfo.repeatEachIndex);
 
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  opened.push(context);
   const page = await context.newPage();
   const sent = watch(page);
   await logIn(page, member);
@@ -345,8 +502,7 @@ test("with the Business preset's Vault lock, a member signs in, reloads, and sta
   await expect(
     page.getByText(
       "Your organization locks vaults when the computer locks. A web page can't tell when " +
-        "that happens, so the web vault locks after 15 minutes without use, and 2 minutes " +
-        "after the browser closes.",
+        "that happens, so here the timeout is at most 15 minutes, or On browser refresh.",
     ),
   ).toBeVisible();
   await page.getByRole("combobox", { name: /^Timeout/ }).first().click();
@@ -354,8 +510,15 @@ test("with the Business preset's Vault lock, a member signs in, reloads, and sta
     "1 minute",
     "5 minutes",
     "15 minutes",
+    "On browser refresh",
     "Custom",
   ]);
+  // "On browser refresh" is still the person's to pick, and means it.
+  await page.getByRole("option", { name: "On browser refresh", exact: true }).click();
+  await expect.poll(async () => (await storage(page)).record).toBeNull();
+  await page.goto("/#/vault");
+  await page.reload();
+  await expectLocked(page);
   await context.close();
 });
 
@@ -376,16 +539,18 @@ test("with the web vault's wait at 1 minute, moving the clock past it locks", as
   await expect(owner.getByText("Edited policy Vault lock.", { exact: true }).last()).toBeVisible();
 
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  opened.push(context);
   const page = await context.newPage();
+  // Playwright's clock also stands in for performance, without the
+  // navigation's entry, so no load counts as a reload under it: the tests
+  // above cover reloads.
   await page.clock.install();
   const sent = watch(page);
   await logIn(page, member);
   await expect.poll(() => sent.kept.length).toBe(1);
-  // Within the minute, a reload stays unlocked; the timeout is 1 minute.
-  await page.reload();
-  await expectUnlocked(page);
+  // The timeout is 1 minute.
   await sessionTimeout(page);
-  await expect(page.getByText(/locks after 1 minute without use/)).toBeVisible();
+  await expect(page.getByText(/the timeout is at most 1 minute,/)).toBeVisible();
   await page.goto("/#/vault");
   await expectUnlocked(page);
 
@@ -394,6 +559,42 @@ test("with the web vault's wait at 1 minute, moving the clock past it locks", as
   await expectLocked(page);
   await page.reload();
   await expectLocked(page);
+  await context.close();
+});
+
+test("a Vault lock policy can turn staying unlocked across a reload off for its members", async ({
+  browser,
+}, testInfo) => {
+  test.setTimeout(240_000);
+  const { owner, org, member } = await businessMember(browser, "reload-policy-off", testInfo.repeatEachIndex);
+
+  await owner.goto(`${org}/settings/policies`);
+  await owner.getByRole("button", { name: /^Vault lock .* On$/ }).click();
+  const dialog = owner.getByRole("dialog");
+  const webReload = dialog.getByRole("checkbox", { name: /^Web vaults can stay unlocked/ });
+  await expect(webReload).toBeChecked();
+  await webReload.uncheck();
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect(owner.getByText("Edited policy Vault lock.", { exact: true }).last()).toBeVisible();
+
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  opened.push(context);
+  const page = await context.newPage();
+  const sent = watch(page);
+  await logIn(page, member);
+  // Settings shows it off, and why.
+  await sessionTimeout(page);
+  const setting = page.getByRole("checkbox", { name: "Stay unlocked when I reload" });
+  await expect(setting).toBeDisabled();
+  await expect(setting).not.toBeChecked();
+  await expect(
+    page.getByText("Your organization turned this off: every reload asks for your master password."),
+  ).toBeVisible();
+  await page.goto("/#/vault");
+  await page.reload();
+  await expectLocked(page);
+  // Signing in may have asked before the policy synced; the server refused.
+  expect(sent.released).toEqual([]);
   await context.close();
 });
 

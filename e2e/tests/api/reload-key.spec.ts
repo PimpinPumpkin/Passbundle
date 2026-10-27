@@ -12,7 +12,7 @@ import { type APIRequestContext, type APIResponse, expect, test } from "@playwri
 
 import { port } from "../../paths.mjs";
 
-import { Api, type Account, encString } from "./support";
+import { Api, type Account, encString, publicKey } from "./support";
 
 const VAULT_LOCK = 9;
 const r = () => randomBytes(64).toString("base64");
@@ -167,7 +167,7 @@ test("a new master password, or Deauthorize sessions, forgets every tab's R at o
   }
 });
 
-test("the Vault lock policy caps the wait for its members, and owners aren't bound", async ({
+test("the Vault lock policy caps the wait for everyone in the organization, owners included", async ({
   request,
 }) => {
   const api = new Api(request);
@@ -183,17 +183,17 @@ test("the Vault lock policy caps the wait for its members, and owners aren't bou
     expect(set.status, JSON.stringify(set.body)).toBe(200);
   };
 
-  // When the computer locks, with the web vault's wait at 1 minute.
+  // When the computer locks, with the web vault's wait at 1 minute. For
+  // reload keys only, owners are bound too: refusing one costs a prompt.
   await setPolicy({ type: "onSystemLock", minutes: null, webMinutes: 1, action: "lock" });
-  const memberTab = tab();
-  const ownerTab = tab();
-  expect((await keep(api, member, memberTab, r(), 15)).status).toBe(200);
-  expect((await keep(api, owner, ownerTab, r(), 15)).status).toBe(200);
-  // 61 seconds unused: past the member's minute, within the owner's 15.
-  expect((await checkIn(api, member, memberTab, 61, 15)).status).toBe(404);
-  expect((await release(api, member, memberTab)).status).toBe(404);
-  expect((await checkIn(api, owner, ownerTab, 61, 15)).status).toBe(200);
-  expect((await release(api, owner, ownerTab)).status).toBe(200);
+  for (const who of [member, owner]) {
+    const tabId = tab();
+    expect((await keep(api, who, tabId, r(), 15)).status).toBe(200);
+    expect((await checkIn(api, who, tabId, 59, 15)).status).toBe(200);
+    // 61 seconds unused: past the minute.
+    expect((await checkIn(api, who, tabId, 61, 15)).status).toBe(404);
+    expect((await release(api, who, tabId)).status).toBe(404);
+  }
 
   // A longest wait caps it the same way.
   await setPolicy({ type: "custom", minutes: 5, action: "lock" });
@@ -202,25 +202,171 @@ test("the Vault lock policy caps the wait for its members, and owners aren't bou
   expect((await checkIn(api, member, custom, 299, 60)).status).toBe(200);
   expect((await checkIn(api, member, custom, 300, 60)).status).toBe(404);
 
-  // "Immediately" means a reload locks: no reload key at all, and one kept
-  // before the policy goes at the next reload.
-  const before = tab();
-  expect((await keep(api, member, before, r(), 15)).status).toBe(200);
-  await setPolicy({ type: "immediately", minutes: null, action: "lock" });
-  expect((await keep(api, member, tab(), r(), 1)).status).toBe(400);
-  expect((await release(api, member, before)).status).toBe(404);
+  // "Immediately", signing out at the timeout, and webReload: false each
+  // refuse reload keys, for owners too, and end one kept before at the next
+  // reload.
+  for (const data of [
+    { type: "immediately", minutes: null, action: "lock" },
+    { type: "custom", minutes: 30, action: "logOut" },
+    { type: "onSystemLock", minutes: null, action: "lock", webReload: false },
+  ]) {
+    await setPolicy({ type: "custom", minutes: 30, action: "lock" });
+    const before = tab();
+    expect((await keep(api, owner, before, r(), 15)).status).toBe(200);
+    await setPolicy(data);
+    for (const who of [member, owner]) {
+      expect((await keep(api, who, tab(), r(), 1)).status, JSON.stringify(data)).toBe(400);
+    }
+    expect((await release(api, owner, before)).status, JSON.stringify(data)).toBe(404);
+  }
 });
 
-test("each account's calls are limited", async ({ request }) => {
+test("the strictest policy of every organization someone is in applies", async ({ request }) => {
+  const api = new Api(request);
+  const member = await api.account("member");
+  const owners = [await api.account("owner-a"), await api.account("owner-b")];
+  const orgs: string[] = [];
+  for (const [i, owner] of owners.entries()) {
+    const orgId = await api.organization(owner, `Clinic ${i}`);
+    await api.addMember(owner, orgId, member, "user");
+    orgs.push(orgId);
+  }
+  const setPolicy = async (i: number, data: unknown) => {
+    const set = await api.call(owners[i], "PUT", `/api/organizations/${orgs[i]}/policies/${VAULT_LOCK}`, {
+      policy: { enabled: true, data },
+    });
+    expect(set.status, JSON.stringify(set.body)).toBe(200);
+  };
+
+  await setPolicy(0, { type: "custom", minutes: 10, action: "lock" });
+  await setPolicy(1, { type: "onSystemLock", webMinutes: 3, action: "lock" });
+  const tabId = tab();
+  expect((await keep(api, member, tabId, r(), 60)).status).toBe(200);
+  expect((await checkIn(api, member, tabId, 179, 60)).status).toBe(200);
+  expect((await checkIn(api, member, tabId, 181, 60)).status).toBe(404);
+
+  // One organization that refuses outweighs the other's wait.
+  await setPolicy(1, { type: "onSystemLock", webMinutes: 3, action: "lock", webReload: false });
+  expect((await keep(api, member, tab(), r(), 5)).status).toBe(400);
+});
+
+test("the server's own clock ends an entry past the cap, with nothing from the tab", async ({
+  request,
+}) => {
+  test.setTimeout(150_000);
+  const api = new Api(request);
+  const owner = await api.account("owner");
+  const member = await api.account("member");
+  const orgId = await api.organization(owner, "Pinecrest Clinic");
+  await api.addMember(owner, orgId, member, "user");
+  const set = await api.call(owner, "PUT", `/api/organizations/${orgId}/policies/${VAULT_LOCK}`, {
+    policy: { enabled: true, data: { type: "onSystemLock", webMinutes: 1, action: "lock" } },
+  });
+  expect(set.status).toBe(200);
+
+  // The tab asks for 15 minutes and never checks in; the server caps it at 1.
+  const tabId = tab();
+  expect((await keep(api, member, tabId, r(), 15)).status).toBe(200);
+  await new Promise((resolve) => setTimeout(resolve, 65_000));
+  expect((await release(api, member, tabId)).status).toBe(404);
+});
+
+test("a page that leaves ends its entry unless a reload asks within seconds", async ({ request, playwright }) => {
+  test.setTimeout(90_000);
   const api = new Api(request);
   const alice = await api.account("alice");
+  const tabId = tab();
+  expect((await keep(api, alice, tabId, r())).status).toBe(200);
+  // A beacon: no access token, only the tab's cookie (in this jar).
+  const leaving = () => request.post("/api/keykeeper/reload-key/leaving", { data: { tabId } });
+
+  // A reload: leaving, then the new page asks.
+  expect((await leaving()).status()).toBe(200);
+  expect((await release(api, alice, tabId)).status).toBe(200);
+
+  // Without the cookie, saying it's leaving changes nothing.
+  const stranger = await playwright.request.newContext({
+    baseURL: `https://127.0.0.1:${port}`,
+    ignoreHTTPSErrors: true,
+  });
+  expect((await stranger.post("/api/keykeeper/reload-key/leaving", { data: { tabId } })).status()).toBe(200);
+  await stranger.dispose();
+
+  // Closed: leaving, and nothing asks; a check-in doesn't count. Reopened
+  // 16 seconds later, it finds nothing.
+  expect((await leaving()).status()).toBe(200);
+  expect((await checkIn(api, alice, tabId, 0)).status).toBe(200);
+  await new Promise((resolve) => setTimeout(resolve, 16_000));
+  expect((await release(api, alice, tabId)).status).toBe(404);
+});
+
+test("key rotation, and deleting the account, forget every tab's R", async ({ request }) => {
+  test.setTimeout(90_000);
+  const api = new Api(request);
+
+  const ana = await api.account("ana");
+  const laptop = await session(request, ana);
+  const tabId = tab();
+  expect((await keep(api, laptop, tabId, r())).status).toBe(200);
+  const rotated = await api.call(ana, "POST", "/api/accounts/key-management/rotate-user-account-keys", {
+    oldMasterKeyAuthenticationHash: ana.password,
+    accountUnlockData: {
+      masterPasswordUnlockData: {
+        kdfType: 0,
+        kdfIterations: 600000,
+        kdfParallelism: null,
+        kdfMemory: null,
+        email: ana.email,
+        masterKeyAuthenticationHash: ana.password,
+        masterKeyEncryptedUserKey: encString(`new-user-key-${ana.email}`),
+      },
+      emergencyAccessUnlockData: [],
+      organizationAccountRecoveryUnlockData: [],
+    },
+    accountKeys: {
+      userKeyEncryptedAccountPrivateKey: encString(`new-private-key-${ana.email}`),
+      accountPublicKey: publicKey(ana.email),
+    },
+    accountData: { ciphers: [], folders: [], sends: [] },
+  });
+  expect(rotated.status, JSON.stringify(rotated.body)).toBe(200);
+  // Signed in again on the same device: nothing comes back.
+  const again = await session(request, ana, laptop.device);
+  expect((await release(api, again, tabId)).status).toBe(404);
+
+  const bo = await api.account("bo");
+  const boTab = tab();
+  expect((await keep(api, bo, boTab, r())).status).toBe(200);
+  const deleted = await api.call(bo, "DELETE", "/api/accounts", { masterPasswordHash: bo.password });
+  expect(deleted.status, JSON.stringify(deleted.body)).toBe(200);
+  expect((await release(api, bo, boTab)).status).toBe(401);
+});
+
+test("each tab's calls are limited, and an account's many tabs aren't", async ({ request }) => {
+  const api = new Api(request);
+  const alice = await api.account("alice");
+  const forget = (tabId: string) =>
+    api.call(alice, "POST", "/api/keykeeper/reload-key/forget", { tabId }).then((r) => r.status);
+
+  // One tab asking far more than twice a minute.
+  const busy = tab();
   const statuses: number[] = [];
-  for (let i = 0; i < 40; i++) {
-    statuses.push(
-      (await api.call(alice, "POST", "/api/keykeeper/reload-key/forget", { tabId: tab() })).status,
-    );
+  for (let i = 0; i < 25; i++) {
+    statuses.push(await forget(busy));
   }
   expect(statuses).toContain(429);
+
+  // A technician's twenty tabs, each kept and checking in twice: fine.
+  const tech = await api.account("tech");
+  const tabs = Array.from({ length: 20 }, tab);
+  for (const tabId of tabs) {
+    expect((await keep(api, tech, tabId, r())).status).toBe(200);
+  }
+  for (let round = 0; round < 2; round++) {
+    for (const tabId of tabs) {
+      expect((await checkIn(api, tech, tabId, 0)).status).toBe(200);
+    }
+  }
   // Others aren't held up.
   const bob = await api.account("bob");
   expect((await api.call(bob, "POST", "/api/keykeeper/reload-key/forget", { tabId: tab() })).status).toBe(200);
