@@ -154,7 +154,9 @@ const child = spawn(paths.serverBin, [], {
     ROCKET_ADDRESS: "127.0.0.1",
     ROCKET_PORT: port,
     ROCKET_TLS: `{certs="${cert}",key="${key}"}`,
-    DOMAIN: `https://127.0.0.1:${port}`,
+    // The website's screenshots (site-shots/) give the hosted service's
+    // name, so the addresses the server writes into screens show it.
+    DOMAIN: process.env.KK_DOMAIN ?? `https://127.0.0.1:${port}`,
     SIGNUPS_ALLOWED: "true",
     SIGNUPS_VERIFY: "false",
     MSP_SIGNUPS_ALLOWED: "true",

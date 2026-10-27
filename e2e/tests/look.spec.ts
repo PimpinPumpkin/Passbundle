@@ -112,6 +112,26 @@ async function save(page: Page, kind: string, name: string) {
 
 const row = (page: Page, name: string) => page.getByRole("row").filter({ hasText: name });
 
+/**
+ * Where a row's tile sits: its cell's display, how far the tile is from the
+ * row's middle, and whether its cell reaches into the name's cell. A flex
+ * cell (upstream's) leaves the table's layout: the tile sat at the row's top,
+ * and the open row's raised fill drew a second block over the name's cell.
+ */
+const tilePlacement = (page: Page, name: string, tile: string) =>
+  row(page, name).evaluate((tr, tileSelector) => {
+    const cell = tr.querySelector("td:has(> vault-keykeeper-item-tile)")!;
+    const nameCell = tr.querySelector('td:has([id^="cipher-btn-"])')!;
+    const r = tr.getBoundingClientRect();
+    const t = cell.querySelector(tileSelector)!.getBoundingClientRect();
+    return {
+      display: getComputedStyle(cell).display,
+      offCenter: Math.round(Math.abs(t.top - r.top - (r.bottom - t.bottom))),
+      spills: cell.getBoundingClientRect().right > nameCell.getBoundingClientRect().left + 0.5,
+    };
+  }, tile);
+const placed = { display: "table-cell", offCenter: 0, spills: false };
+
 test("the vault: jewel tiles in the menu and the list, and the item open in a side panel beside it", async ({
   page,
 }, testInfo) => {
@@ -156,6 +176,12 @@ test("the vault: jewel tiles in the menu and the list, and the item open in a si
   // title is still the list's.
   await expect(row(page, "Contoso Mail")).toHaveAttribute("data-keykeeper-open", "");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("All items");
+  // Each tile sits in the middle of its row, the open one's and the others',
+  // in a cell of the row's table.
+  await expect.poll(() => tilePlacement(page, "Contoso Mail", "[data-tile]")).toEqual(placed);
+  await expect
+    .poll(() => tilePlacement(page, "Visa ending 4242", '[data-category="card"]'))
+    .toEqual(placed);
 
   // Another row shows its item in the panel instead; the whole row opens it,
   // not only its name (here, a click on its tile).
@@ -243,4 +269,35 @@ test("an item being edited in the panel keeps its edits beside a dialog, and ask
   await expect(page.getByRole("dialog", { name: "View Card" })).toBeVisible();
   await expect(row(page, "Contoso Mail")).toBeVisible();
   await expect(row(page, "Visa ending 4242")).toHaveAttribute("data-keykeeper-open", "");
+});
+
+test("on a phone, the open item's panel lies over the list: solid, and no wider than the screen", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(90_000);
+  await signUp(page, webUserFor("look-phone-panel", testInfo.repeatEachIndex));
+  await save(page, "Login", "Contoso Mail");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await row(page, "Contoso Mail").getByText("Contoso Mail", { exact: true }).click();
+  const panel = page.getByRole("dialog", { name: "View Login" });
+  await expect(panel).toBeVisible();
+  const card = panel.locator(":scope > section");
+  const alpha = () =>
+    card.evaluate((el) => {
+      const parts = getComputedStyle(el).backgroundColor.match(/[\d.]+/g)!.map(Number);
+      return parts[3] ?? 1;
+    });
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await expect.poll(() => look(page)).toEqual(["pb-web", `theme_${scheme}`]);
+    // Solid, so the list under it doesn't show through (in dark mode the
+    // panel beside the list is translucent).
+    await expect.poll(alpha).toBe(1);
+    // Within the screen, with Close in view.
+    const box = (await card.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+    await expect(panel.getByRole("button", { name: "Close" }).first()).toBeInViewport({ ratio: 1 });
+  }
 });
