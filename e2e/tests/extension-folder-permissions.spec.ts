@@ -399,16 +399,22 @@ test("a member who can't see passwords can't reveal or copy them in the extensio
   await expect(popup.getByTestId("keykeeper-no-versions")).toBeVisible();
 
   // Her web vault hides the same values: the identity's numbers masked, with
-  // nothing to show or copy. (A new tab may open locked.)
+  // nothing to show or copy. (A new tab opens logged out or locked.)
   const web = await context.newPage();
   await web.goto(`${server}/#/vault`);
-  const unlock = web.getByRole("textbox", { name: /^Master password/ });
+  const email = web.getByLabel(/Email address/);
+  const password = web.getByRole("textbox", { name: /^Master password/ });
   const folders = menu(web).getByRole("group", { name: "Folders" });
-  await expect(unlock.or(folders)).toBeVisible({ timeout: 30_000 });
-  if (await unlock.isVisible()) {
-    await unlock.fill(dana.password);
-    await web.getByRole("button", { name: "Unlock", exact: true }).click();
+  await expect(email.or(password).or(folders)).toBeVisible({ timeout: 30_000 });
+  if (await email.isVisible()) {
+    await email.fill(dana.email);
+    await web.getByRole("button", { name: "Continue" }).click();
   }
+  if (!(await folders.isVisible())) {
+    await password.fill(dana.password);
+    await web.getByRole("button", { name: /^(Log in|Unlock)$/ }).click();
+  }
+  await expect(folders).toBeVisible({ timeout: 30_000 });
   await folders.getByRole("button", { name: "Everyone", exact: true }).click();
   await web
     .getByRole("row")
