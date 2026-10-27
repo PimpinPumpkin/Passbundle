@@ -6,7 +6,7 @@
 // real, made through the UI, since confirming encrypts the org key to them.
 import { expect, test, type Page } from "@playwright/test";
 
-import { reloadVault, signUp, webUserFor } from "./support/web";
+import { reloadVault, signUp, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
@@ -18,14 +18,16 @@ test("a client's owner removes one of its MSP's technicians: the Members page of
   const techContext = await browser.newContext();
   const tech = await techContext.newPage();
   const techUser = webUserFor("offboard-tech", testInfo.repeatEachIndex);
-  await signUp(tech, techUser);
+  // An MSP's staff sign in with two-step login (DESIGN.md, "Two-step login
+  // for admins"), so the MSP's admin and technician have an authenticator app.
+  await signUpWithAuthenticator(tech, techUser);
   const ownerContext = await browser.newContext();
   const owner = await ownerContext.newPage();
   const ownerUser = webUserFor("offboard-owner", testInfo.repeatEachIndex);
   await signUp(owner, ownerUser);
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
-  await signUp(admin, webUserFor("offboard-admin", testInfo.repeatEachIndex));
+  await signUpWithAuthenticator(admin, webUserFor("offboard-admin", testInfo.repeatEachIndex));
 
   // An MSP with a client and a technician, who joins from the invitation link.
   await admin.goto("/#/msp");
