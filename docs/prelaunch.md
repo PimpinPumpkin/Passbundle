@@ -10,6 +10,7 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 - **The apps' logo and icons**, and Windows and Linux windows that remember their size and place.
 - **Hands-on test checklist** for the owner: docs/hands-on-testing.md.
 - **Extension redesign** from the approved mockups: jewel-tone categories, site icons, the "Where's your vault?" sign-in, and an item view with big copy buttons.
+- **Approving a new sign-in from our apps** (DESIGN.md, "Approving a sign-in from another device"): "Log in with device" on the web vault or the extension, approved on the phone or computer after comparing the fingerprint phrase, with the security review's fixes. Later: a notice on a closed phone (push), and SSO sessions approving.
 
 ## In progress
 
@@ -24,7 +25,7 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 ## Next
 
 1. **Self-updating Windows and Linux apps**, like the Mac and Android ones.
-2. **Approving a new sign-in from our apps**, and a CLI build for macOS and Linux scripts.
+2. **A CLI build** for macOS and Linux scripts.
 3. **A full security pass over the whole stack** before the first company: server, web vault, extension, apps, CI and releases.
 4. **Website redesign** in the new look.
 
