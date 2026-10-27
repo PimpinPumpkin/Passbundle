@@ -23,8 +23,7 @@ test("a client's members get its Templates collection read-only, now and when th
   };
   const memberId = async (person: Account) => (await api.members(admin, orgId)).find((m) => m.email === person.email)!.id;
 
-  // Two members in before there are templates; an admin lets one edit the
-  // collection the console will use for them.
+  // Two members in before there are templates.
   const early = await api.account("early");
   await joinAndConfirm(early);
   const editor = await api.account("editor");
@@ -32,19 +31,18 @@ test("a client's members get its Templates collection read-only, now and when th
   const tech = await api.account("tech");
   await api.addStaff(admin, mspId, tech, "technician");
   await api.confirmPending(admin, mspId);
-  const collection = await api.collection(admin, orgId);
-  const shared = await api.call(admin, "PUT", `/api/organizations/${orgId}/collections/${collection}`, {
-    name: encString("templates"),
+
+  // The console has the server make the Templates collection: new and
+  // empty, and both members get it read-only at once.
+  const collection = await api.templatesCollection(admin, mspId, orgId);
+  // An admin then lets one of them edit it.
+  const shared = await api.call(admin, "PUT", `/api/organizations/${orgId}/users/${await memberId(editor)}`, {
+    type: 2,
+    collections: [{ id: collection, readOnly: false, hidePasswords: false, manage: false }],
     groups: [],
-    users: [{ id: await memberId(editor), readOnly: false, hidePasswords: false, manage: false }],
+    permissions: {},
   });
   expect(shared.status, JSON.stringify(shared.body)).toBe(200);
-
-  // The console records it as the Templates collection.
-  const recorded = await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/clients/${orgId}/templates-collection`, {
-    collectionId: collection,
-  });
-  expect(recorded.status, JSON.stringify(recorded.body)).toBe(200);
 
   // Someone who joins afterward gets it once they're confirmed.
   const later = await api.account("later");
