@@ -73,8 +73,10 @@ test("someone without an account is invited, then accepts with the link and join
     forYou: false,
   });
 
-  // They create an account with that address and accept.
+  // They create an account with that address, set up an authenticator app
+  // (the MSP requires two-step login of its staff), and accept.
   const hire = await api.account("new-hire", email);
+  await api.giveAuthenticator(hire);
   const info = await api.call(hire, "POST", "/api/keykeeper/msp/invites/info", {
     token,
   });

@@ -44,6 +44,7 @@ On a real computer and the Pixel, with logins saved for each:
 - [ ] **Remove your second person:** the confirmation says what they had, then the "Passwords they could see" list appears; open one and change it.
 - [ ] **Item history:** change a password twice, open History, compare, restore the first.
 - [ ] **Account recovery:** as the organization's admin, reset your second person's master password; they sign in with the new one.
+- [ ] **Two-step login for admins:** make your second person an admin of a Business organization while they have no authenticator app (or only email codes). If they're signed in somewhere, that session ends as you save. They sign in on the web: "Set up two-step login to continue" with a QR code; scan it with a real authenticator app (and once, a security key or passkey), save the recovery code, and sign in with the code. In the extension and the Pixel before they set it up, the message says to use the web vault. The organization's Settings page lists them until they're done.
 - [ ] **MSP console:** add a client, look at its health numbers, push a template, check the activity log.
 - [ ] **Event log** shows what you just did.
 - [ ] **Event streaming** (Reporting > Event streaming, and the MSP console's section): send events to a real SIEM you have (Huntress, Blumira, or a Sentinel workspace, set up as docs/event-streaming.md says), press Test, do something in the organization, and find both in the SIEM.

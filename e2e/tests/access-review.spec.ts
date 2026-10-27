@@ -14,7 +14,7 @@ import { type APIRequestContext, expect, test, type Page } from "@playwright/tes
 import { groupsServerPort } from "../paths.mjs";
 
 import { Api } from "./api/support";
-import { confirmMember, reloadVault, signUp, webUserFor } from "./support/web";
+import { confirmMember, reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 test.use({ baseURL: `https://127.0.0.1:${groupsServerPort}` });
 
@@ -143,7 +143,7 @@ test("the Access page shows who reaches each shared folder and how, and removing
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   const page = await context.newPage();
   const owner = webUserFor("access-owner", testInfo.repeatEachIndex);
-  await signUp(page, owner);
+  await signUpWithAuthenticator(page, owner);
   const { alex } = await harborDental(page, request);
 
   // By person: Everyone two ways, the more open one winning; Admins through
@@ -248,11 +248,11 @@ test("a custom role that manages members sees the shared folders it opens itself
   const pocContext = await browser.newContext();
   const poc = await pocContext.newPage();
   const pocUser = webUserFor("access-poc", testInfo.repeatEachIndex);
-  await signUp(poc, pocUser);
+  await signUpWithAuthenticator(poc, pocUser);
 
   const ownerContext = await browser.newContext();
   const page = await ownerContext.newPage();
-  await signUp(page, webUserFor("access-owner-2", testInfo.repeatEachIndex));
+  await signUpWithAuthenticator(page, webUserFor("access-owner-2", testInfo.repeatEachIndex));
   const { org, everyone, alex, invite } = await harborDental(page, request);
 
   // The point of contact manages members, and can view Everyone.

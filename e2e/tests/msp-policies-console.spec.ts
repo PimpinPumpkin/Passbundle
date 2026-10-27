@@ -4,7 +4,7 @@
 // it, and a client put back on the default. See DESIGN.md, "Default policies".
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUp, webUserFor } from "./support/web";
+import { signUpWithAuthenticator, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) =>
@@ -17,7 +17,7 @@ test("an MSP admin changes a default policy and sees which clients took it, and 
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
   const adminUser = webUserFor("msp-admin-policies", testInfo.repeatEachIndex);
-  await signUp(admin, adminUser);
+  await signUpWithAuthenticator(admin, adminUser);
   await admin.goto("/#/msp");
   await admin
     .getByRole("textbox", { name: "Your MSP's name" })

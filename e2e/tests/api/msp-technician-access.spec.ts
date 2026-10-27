@@ -620,15 +620,31 @@ test("a technician with a custom role works in every Business client: single org
   const mspId = await api.msp(admin, "Northwind IT");
   const dental = await api.client(admin, mspId, "Acme Dental", "business");
   const law = await api.client(admin, mspId, "Baker Law", "business");
+  // Two-step login for admins is off here (the MSP's for its staff, and each
+  // client's for its admins), so the technician, who has none, keeps their
+  // session, and only the clients' policies apply.
+  const staffRule = await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/two-step`, { staffRequired: false });
+  expect(staffRule.status, JSON.stringify(staffRule.body)).toBe(200);
+  for (const org of [dental, law]) {
+    const off = await api.call(admin, "PUT", `/api/keykeeper/organizations/${org}/admin-two-step`, { required: false });
+    expect(off.status, JSON.stringify(off.body)).toBe(200);
+  }
 
   // A custom role makes them a regular member in each client, and both
   // clients have single organization on. Staff are exempt, as admins are.
-  await api.addStaff(admin, mspId, tech, "technician", {
-        allClients: true,
-        clients: [],
-        custom: { permissions: { manageUsers: true }, vaultItems: false },
-        installCommands: true,
-      });
+  await api.addStaff(
+    admin,
+    mspId,
+    tech,
+    "technician",
+    {
+      allClients: true,
+      clients: [],
+      custom: { permissions: { manageUsers: true }, vaultItems: false },
+      installCommands: true,
+    },
+    { authenticator: false },
+  );
   // One membership waiting in each client, both confirmed.
   expect(await api.confirmPending(admin, mspId)).toEqual([
     tech.email,

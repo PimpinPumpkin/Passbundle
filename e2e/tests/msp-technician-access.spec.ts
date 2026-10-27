@@ -5,7 +5,7 @@
 // different role in one client.
 import { expect, test, type Page } from "@playwright/test";
 
-import { reloadVault, signUp, webUserFor } from "./support/web";
+import { reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) =>
@@ -19,12 +19,12 @@ test("an MSP admin chooses a technician's clients, role, and install commands, a
   const techContext = await browser.newContext();
   const tech = await techContext.newPage();
   const techUser = webUserFor("access-tech", testInfo.repeatEachIndex);
-  await signUp(tech, techUser);
+  await signUpWithAuthenticator(tech, techUser);
 
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
   const adminUser = webUserFor("access-admin", testInfo.repeatEachIndex);
-  await signUp(admin, adminUser);
+  await signUpWithAuthenticator(admin, adminUser);
   await admin.goto("/#/msp");
   await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Wingtip IT");
   await admin.getByRole("button", { name: "Create MSP" }).click();

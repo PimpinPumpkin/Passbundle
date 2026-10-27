@@ -9,7 +9,7 @@ import { generateKeyPairSync } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 
 import { Api } from "./api/support";
-import { signUp, webUserFor } from "./support/web";
+import { signUpWithAuthenticator, webUserFor } from "./support/web";
 
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
 
@@ -30,7 +30,8 @@ test("the console lets nobody in on its own when the server's answers are forged
 }, testInfo) => {
   test.setTimeout(180_000);
   const admin = await (await browser.newContext()).newPage();
-  await signUp(admin, webUserFor("forged-admin", testInfo.repeatEachIndex));
+  // An MSP's staff sign in with two-step login (DESIGN.md, "Two-step login for admins").
+  await signUpWithAuthenticator(admin, webUserFor("forged-admin", testInfo.repeatEachIndex));
   await admin.goto("/#/msp");
   await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Forged IT");
   await admin.getByRole("button", { name: "Create MSP" }).click();

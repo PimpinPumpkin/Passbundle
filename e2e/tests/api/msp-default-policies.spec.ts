@@ -13,6 +13,9 @@ const REQUIRE_SSO = 4;
 const DISABLE_SEND = 6;
 const RESET_PASSWORD = 8;
 const VAULT_LOCK = 9;
+// Two-step login for admins: a default that isn't an upstream policy (DESIGN.md,
+// "Two-step login for admins").
+const ADMIN_TWO_STEP = 1000;
 const CONFIRMED = 2;
 const REVOKED = -1;
 
@@ -55,7 +58,7 @@ async function ownSettings(
     (c) => c.id === orgId,
   );
   expect(client, `client ${orgId}`).toBeTruthy();
-  return client!.own.map((p) => p.type).sort();
+  return client!.own.map((p) => p.type).sort((a, b) => a - b);
 }
 
 /** A client's policy, as its admin console reads it. */
@@ -123,14 +126,15 @@ test("a new MSP's defaults are the Business policies, and a new client starts wi
   // Account recovery is a default too, but only offered when the server
   // sends email, which this one doesn't.
   expect(start.types).toContain(TWO_STEP);
+  expect(start.types).toContain(ADMIN_TWO_STEP);
   expect(start.types).not.toContain(RESET_PASSWORD);
   expect(start.types).not.toContain(REQUIRE_SSO);
   expect(
     start.defaults
       .filter((p) => p.enabled)
       .map((p) => p.type)
-      .sort(),
-  ).toEqual([MASTER_PASSWORD, SINGLE_ORG, VAULT_LOCK]);
+      .sort((a, b) => a - b),
+  ).toEqual([MASTER_PASSWORD, SINGLE_ORG, VAULT_LOCK, ADMIN_TWO_STEP]);
   expect(
     start.defaults.find((p) => p.type === MASTER_PASSWORD)!.data,
   ).toMatchObject({ minLength: 12, minComplexity: 3 });
@@ -152,6 +156,8 @@ test("a new MSP's defaults are the Business policies, and a new client starts wi
     type: "onSystemLock",
     action: "lock",
   });
+  const adminTwoStep = await api.call(admin, "GET", `/api/keykeeper/organizations/${dental}/admin-two-step`);
+  expect(adminTwoStep.body.required).toBe(true);
   expect(await ownSettings(api, admin, mspId, dental)).toEqual([]);
 
   // A client added without the defaults has its own settings: all off.
@@ -160,6 +166,7 @@ test("a new MSP's defaults are the Business policies, and a new client starts wi
     MASTER_PASSWORD,
     SINGLE_ORG,
     VAULT_LOCK,
+    ADMIN_TWO_STEP,
   ]);
 });
 
@@ -274,7 +281,9 @@ test("a default reaches a client through its admin console's policy code: two-st
   const member = await api.account("dental-member");
   const mspId = await api.msp(admin, "Northwind IT");
   const dental = await api.client(admin, mspId, "Acme Dental", "business");
-  await api.addStaff(admin, mspId, tech, "technician");
+  // A technician without two-step login (whom two-step login for admins
+  // signs out, but the client's policy is what's checked here).
+  await api.addStaff(admin, mspId, tech, "technician", undefined, { authenticator: false });
   await api.confirmPending(admin, mspId);
   await api.addMember(admin, dental, member, "user");
 
