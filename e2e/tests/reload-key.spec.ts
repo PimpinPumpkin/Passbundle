@@ -3,9 +3,10 @@
 // keeps the user key wrapped with a random key R in its own sessionStorage,
 // and the server keeps R in memory and sets the tab's reload cookie
 // (HttpOnly); a reload asks for R back, with the cookie. Locking, a new
-// browser, the timeout, "On browser refresh", Log out, the server restarting,
-// a missing cookie, and a copy of the tab's storage without its cookie all
-// mean the next reload asks for the master password, as upstream's always did.
+// browser, the timeout, "On browser refresh" (a member's own, under a policy
+// too), Log out, the server restarting, a missing cookie, and a copy of the
+// tab's storage without its cookie all mean the next reload asks for the
+// master password, as upstream's always did.
 import { type ChildProcess, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -388,6 +389,31 @@ test("with Stay unlocked when I reload off, every reload asks", async ({ page },
   expect(sent.kept).toHaveLength(1);
 });
 
+test("turning Stay unlocked when I reload off in one tab forgets the other tabs' at once", async ({
+  context,
+  page,
+}, testInfo) => {
+  test.setTimeout(150_000);
+  const sent = watch(page);
+  const user = webUserFor("reload-setting-tabs", testInfo.repeatEachIndex);
+  await signUp(page, user);
+  await expect.poll(() => sent.kept.length).toBe(1);
+  // The same person in a second tab of the same browser.
+  const other = await context.newPage();
+  const sentOther = watch(other);
+  await logIn(other, user);
+  await expect.poll(() => sentOther.kept.length).toBe(1);
+
+  await sessionTimeout(page);
+  await page.getByRole("checkbox", { name: "Stay unlocked when I reload" }).uncheck();
+  await expect.poll(() => sent.forgotten).toEqual([sent.kept[0].tabId]);
+  // The other tab forgets its own, without a reload or a check-in.
+  await expect.poll(() => sentOther.forgotten, { timeout: 10_000 }).toEqual([sentOther.kept[0].tabId]);
+  await expect.poll(async () => (await storage(other)).record).toBeNull();
+  await other.reload();
+  await expectLocked(other);
+});
+
 test("a new browser asks for the master password", async ({ browser, page }, testInfo) => {
   test.setTimeout(120_000);
   const user = webUserFor("reload-new-browser", testInfo.repeatEachIndex);
@@ -454,16 +480,36 @@ test.afterEach(async () => {
   }
 });
 
-/** A member of a Business organization: its preset has Vault lock, "when the computer locks". */
-async function businessMember(browser: Browser, prefix: string, repeatIndex: number) {
+/** What Settings says under the Business preset's "when the computer locks". */
+const SYSTEM_LOCK_MESSAGE =
+  "Your organization locks vaults when the computer locks. A web page can't tell when " +
+  'that happens, so here the timeout is at most 15 minutes. To lock at every reload too, turn off "Stay ' +
+  'unlocked when I reload".';
+
+/**
+ * A member of a Business organization: its preset has Vault lock, "when the
+ * computer locks". With `before`, the member's browser stays open, after
+ * `before` runs in it as they join.
+ */
+async function businessMember(
+  browser: Browser,
+  prefix: string,
+  repeatIndex: number,
+  before?: (page: Page) => Promise<void>,
+) {
   const ownerContext = await browser.newContext({ ignoreHTTPSErrors: true });
   opened.push(ownerContext);
   const owner = await ownerContext.newPage();
   const memberContext = await browser.newContext({ ignoreHTTPSErrors: true });
+  opened.push(memberContext);
   const joining = await memberContext.newPage();
   const member = webUserFor(`${prefix}-member`, repeatIndex);
   await signUp(joining, member);
-  await memberContext.close();
+  if (before == null) {
+    await memberContext.close();
+  } else {
+    await before(joining);
+  }
 
   await signUp(owner, webUserFor(`${prefix}-owner`, repeatIndex));
   await owner.goto("/#/create-organization");
@@ -478,7 +524,7 @@ async function businessMember(browser: Browser, prefix: string, repeatIndex: num
   await invite.getByRole("button", { name: "Save" }).click();
   await expect(invite).toBeHidden();
   await confirmMember(owner, member.email);
-  return { owner, org, member };
+  return { owner, org, member, joining };
 }
 
 test("with the Business preset's Vault lock, a member signs in, reloads, and stays unlocked", async ({
@@ -497,29 +543,59 @@ test("with the Business preset's Vault lock, a member signs in, reloads, and sta
   await expectUnlocked(page);
 
   // Settings says what "when the computer locks" means here, and offers
-  // the waits up to 15 minutes.
+  // only the waits up to 15 minutes: "On browser refresh" would turn the
+  // idle lock off.
   await sessionTimeout(page);
-  await expect(
-    page.getByText(
-      "Your organization locks vaults when the computer locks. A web page can't tell when " +
-        "that happens, so here the timeout is at most 15 minutes, or On browser refresh.",
-    ),
-  ).toBeVisible();
+  await expect(page.getByText(SYSTEM_LOCK_MESSAGE)).toBeVisible();
   await page.getByRole("combobox", { name: /^Timeout/ }).first().click();
-  await expect(page.getByRole("option")).toHaveText([
-    "1 minute",
-    "5 minutes",
-    "15 minutes",
-    "On browser refresh",
-    "Custom",
-  ]);
-  // "On browser refresh" is still the person's to pick, and means it.
-  await page.getByRole("option", { name: "On browser refresh", exact: true }).click();
+  await expect(page.getByRole("option")).toHaveText(["1 minute", "5 minutes", "15 minutes", "Custom"]);
+  await page.keyboard.press("Escape");
+  // Locking at every reload too is the setting's job.
+  await page.getByRole("checkbox", { name: "Stay unlocked when I reload" }).uncheck();
   await expect.poll(async () => (await storage(page)).record).toBeNull();
   await page.goto("/#/vault");
   await page.reload();
   await expectLocked(page);
   await context.close();
+});
+
+test("under the Business preset, a member's own On browser refresh still asks at each reload", async ({
+  browser,
+}, testInfo) => {
+  test.setTimeout(240_000);
+  // Chosen before joining, and kept: the policy shows 15 minutes instead.
+  const { member, joining: page } = await businessMember(
+    browser,
+    "reload-business-refresh",
+    testInfo.repeatEachIndex,
+    async (joining) => {
+      await sessionTimeout(joining);
+      await choose(joining, "Timeout", "On browser refresh");
+      await expect.poll(async () => (await storage(joining)).record).toBeNull();
+    },
+  );
+  const sent = watch(page);
+
+  // The unlock after the next reload brings the organization's policy.
+  await page.goto("/#/vault");
+  await page.reload();
+  await expectLocked(page);
+  await unlock(page, member);
+  await sessionTimeout(page);
+  await expect(page.getByText(SYSTEM_LOCK_MESSAGE)).toBeVisible({ timeout: 30_000 });
+  const setting = page.getByRole("checkbox", { name: "Stay unlocked when I reload" });
+  await expect(setting).not.toBeChecked();
+  await expect(setting).toBeDisabled();
+  await expect(page.getByText("Off while your own timeout is On browser refresh, which locks at every reload.")).toBeVisible();
+
+  await page.goto("/#/vault");
+  await page.reload();
+  await expectLocked(page);
+  await unlock(page, member);
+  await expectUnlocked(page);
+  await page.reload();
+  await expectLocked(page);
+  expect(sent.kept).toHaveLength(0);
 });
 
 test("with the web vault's wait at 1 minute, moving the clock past it locks", async ({
@@ -550,7 +626,7 @@ test("with the web vault's wait at 1 minute, moving the clock past it locks", as
   await expect.poll(() => sent.kept.length).toBe(1);
   // The timeout is 1 minute.
   await sessionTimeout(page);
-  await expect(page.getByText(/the timeout is at most 1 minute,/)).toBeVisible();
+  await expect(page.getByText(/the timeout is at most 1 minute\./)).toBeVisible();
   await page.goto("/#/vault");
   await expectUnlocked(page);
 

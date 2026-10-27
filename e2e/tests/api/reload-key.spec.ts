@@ -10,7 +10,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 
 import { type APIRequestContext, type APIResponse, expect, test } from "@playwright/test";
 
-import { port } from "../../paths.mjs";
+import { limitsServerPort, port } from "../../paths.mjs";
 
 import { Api, type Account, encString, publicKey } from "./support";
 
@@ -36,10 +36,17 @@ async function session(request: APIRequestContext, account: Account, device = ra
   return { token: (await response.json()).access_token as string, device };
 }
 
-const keep = (api: Api, as: { token: string }, tabId: string, key: string, timeoutMinutes = 15) =>
-  api.call(as, "POST", "/api/keykeeper/reload-key", { tabId, key, timeoutMinutes });
-const release = (api: Api, as: { token: string }, tabId: string) =>
-  api.call(as, "POST", "/api/keykeeper/reload-key/release", { tabId });
+const keep = (
+  api: Api,
+  as: { token: string },
+  tabId: string,
+  key: string,
+  timeoutMinutes = 15,
+  pageId?: string,
+) => api.call(as, "POST", "/api/keykeeper/reload-key", { tabId, pageId, key, timeoutMinutes });
+const release = (api: Api, as: { token: string }, tabId: string, pageId?: string) =>
+  api.call(as, "POST", "/api/keykeeper/reload-key/release", { tabId, pageId });
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const checkIn = (
   api: Api,
   as: { token: string },
@@ -276,28 +283,68 @@ test("a page that leaves ends its entry unless a reload asks within seconds", as
   const api = new Api(request);
   const alice = await api.account("alice");
   const tabId = tab();
-  expect((await keep(api, alice, tabId, r())).status).toBe(200);
+  // Each load of the tab has its own page id.
+  const [first, second, third] = [tab(), tab(), tab()];
+  expect((await keep(api, alice, tabId, r(), 15, first)).status).toBe(200);
   // A beacon: no access token, only the tab's cookie (in this jar).
-  const leaving = () => request.post("/api/keykeeper/reload-key/leaving", { data: { tabId } });
+  const leaving = (pageId: string) => request.post("/api/keykeeper/reload-key/leaving", { data: { tabId, pageId } });
 
-  // A reload: leaving, then the new page asks.
-  expect((await leaving()).status()).toBe(200);
-  expect((await release(api, alice, tabId)).status).toBe(200);
+  // A reload: the page leaving, then the new page asks.
+  expect((await leaving(first)).status()).toBe(200);
+  expect((await release(api, alice, tabId, second)).status).toBe(200);
 
   // Without the cookie, saying it's leaving changes nothing.
   const stranger = await playwright.request.newContext({
     baseURL: `https://127.0.0.1:${port}`,
     ignoreHTTPSErrors: true,
   });
-  expect((await stranger.post("/api/keykeeper/reload-key/leaving", { data: { tabId } })).status()).toBe(200);
+  const strangerLeaving = await stranger.post("/api/keykeeper/reload-key/leaving", { data: { tabId, pageId: second } });
+  expect(strangerLeaving.status()).toBe(200);
   await stranger.dispose();
+  // Nor does a late beacon from the page before the reload.
+  expect((await leaving(first)).status()).toBe(200);
+  await sleep(16_000);
+  expect((await release(api, alice, tabId, third)).status).toBe(200);
 
   // Closed: leaving, and nothing asks; a check-in doesn't count. Reopened
   // 16 seconds later, it finds nothing.
-  expect((await leaving()).status()).toBe(200);
+  expect((await leaving(third)).status()).toBe(200);
   expect((await checkIn(api, alice, tabId, 0)).status).toBe(200);
-  await new Promise((resolve) => setTimeout(resolve, 16_000));
+  await sleep(16_000);
   expect((await release(api, alice, tabId)).status).toBe(404);
+});
+
+test.describe("with the server's real limits", () => {
+  test.use({ baseURL: `https://127.0.0.1:${limitsServerPort}` });
+
+  test("closing many tabs never uses up an address's limit for signing up and signing in", async ({ request }) => {
+    test.setTimeout(120_000);
+    const api = new Api(request);
+    const alice = await api.account("leaving-alice");
+    const tabId = tab();
+    expect((await keep(api, alice, tabId, r())).status).toBe(200);
+
+    // An office closing tabs whose entries already ended: far more than the
+    // 150 that requests without a session share at one address.
+    const unmatched = () =>
+      request
+        .post("/api/keykeeper/reload-key/leaving", { data: { tabId: tab(), pageId: tab() } })
+        .then((response) => response.status());
+    const statuses: number[] = [];
+    for (let batch = 0; batch < 9; batch++) {
+      statuses.push(...(await Promise.all(Array.from({ length: 50 }, unmatched))));
+    }
+    expect(statuses.slice(0, 250)).not.toContain(429);
+    // Beacons that match nothing have a limit of their own; a tab's real
+    // one, with its cookie, doesn't count against it.
+    expect(statuses).toContain(429);
+    expect(await unmatched()).toBe(429);
+    const matched = await request.post("/api/keykeeper/reload-key/leaving", { data: { tabId } });
+    expect(matched.status()).toBe(200);
+
+    // Signing up, which shares that address's limit, still works.
+    await api.account("leaving-bob");
+  });
 });
 
 test("key rotation, and deleting the account, forget every tab's R", async ({ request }) => {
