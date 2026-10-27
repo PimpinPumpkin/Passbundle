@@ -27,7 +27,7 @@ import {
   verifyDomain,
 } from "../support/entra";
 
-import { Api, encString, publicKey, serverDatabase, type Account } from "./support";
+import { Api, encString, nextTotp, publicKey, serverDatabase, type Account } from "./support";
 
 const origin = `https://127.0.0.1:${port}`;
 const CONFIRMED = 2;
@@ -602,15 +602,21 @@ test("MSP staff are never signed in by a client's single sign-on; the managing M
   await api.addMember(mspAdmin, orgId, moonlighter, "user");
   const otherMspAdmin = await api.account("staff-other-msp");
   const otherMsp = await api.msp(otherMspAdmin, `Other IT ${Date.now()}`);
-  await api.addStaff(otherMspAdmin, otherMsp, moonlighter, "technician");
+  await api.addStaff(otherMspAdmin, otherMsp, moonlighter, "technician", undefined, { authenticator: false });
 
   // Require single sign-on (the Business preset has Single organization on):
   // the managing MSP's staff still sign in with their passwords; staff of
-  // another MSP don't get out of it.
+  // another MSP don't get out of it. (MSP staff sign in with two-step login
+  // too, with the authenticator Api.msp and Api.addStaff gave them:
+  // DESIGN.md, "Two-step login for admins".)
   const required = await setPolicy(api, mspAdmin, orgId, 4, true);
   expect(required.status, JSON.stringify(required.body)).toBe(200);
   for (const staff of [tech, mspAdmin]) {
-    expect((await passwordLogin(request, staff)).status).toBe(200);
+    const signedIn = await passwordLogin(request, staff, {
+      twoFactorProvider: "0",
+      twoFactorToken: await nextTotp(staff.email),
+    });
+    expect(signedIn.status, JSON.stringify(signedIn.body)).toBe(200);
   }
   const moon = await passwordLogin(request, moonlighter);
   expect(moon.status).toBe(400);

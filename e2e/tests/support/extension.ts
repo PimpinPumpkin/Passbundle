@@ -12,6 +12,7 @@ import {
 } from "@playwright/test";
 
 import { hostResolverRules, paths, port } from "../../paths.mjs";
+import { answerTwoStep, hasAuthenticator } from "./two-step";
 import { skipImport } from "./web";
 
 const chromeUserAgent =
@@ -130,6 +131,11 @@ export async function logInPopup(popup: Page, user: User, server = serverUrl) {
     .getByRole("textbox", { name: /Master password/ })
     .fill(user.password);
   await popup.getByRole("button", { name: "Log in", exact: true }).click();
+  // Someone the tests gave an authenticator app (an MSP's staff, an owner or
+  // admin of a Business organization) answers two-step login.
+  if (hasAuthenticator(user.email)) {
+    await answerTwoStep(popup, user.email);
+  }
   // Key derivation and the first sync take a while on slow CI runners.
   await expect(
     popup.getByRole("heading", { name: /Items/ }).first(),

@@ -7,7 +7,7 @@
 // tests cover the emailed link and its lifetime. See DESIGN.md, "Joining".
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUp, webUserFor, type WebUser } from "./support/web";
+import { signUp, signUpWithAuthenticator, type WebUser, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
@@ -108,7 +108,7 @@ test("an MSP's joining default reaches its clients, a client can have its own, a
 }, testInfo) => {
   test.setTimeout(120_000);
   const admin = await (await browser.newContext()).newPage();
-  await signUp(admin, webUserFor("joining-msp-admin", testInfo.repeatEachIndex));
+  await signUpWithAuthenticator(admin, webUserFor("joining-msp-admin", testInfo.repeatEachIndex));
   await admin.goto("/#/msp");
   await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Northwind IT");
   await admin.getByRole("button", { name: "Create MSP" }).click();

@@ -8,7 +8,7 @@ import fs from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
 import { httpsReceiver, throwawayCert, verifyWebhook, waitFor } from "./api/siem";
-import { signUp, webUserFor } from "./support/web";
+import { signUp, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
 
@@ -127,7 +127,7 @@ test("an MSP's admin sets up the MSP's feed in the console", async ({ page }, te
   const cert = throwawayCert();
   const receiver = await httpsReceiver(cert);
   try {
-    await signUp(page, webUserFor("stream-console-msp", testInfo.repeatEachIndex));
+    await signUpWithAuthenticator(page, webUserFor("stream-console-msp", testInfo.repeatEachIndex));
     await page.goto("/#/msp");
     await page.getByRole("textbox", { name: "Your MSP's name" }).fill("Northwind IT");
     await page.getByRole("button", { name: "Create MSP" }).click();
