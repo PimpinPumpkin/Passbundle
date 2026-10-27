@@ -232,6 +232,42 @@ test("a burst of saves keeps the newest 20 and the item as it was before the bur
   expect(passwords(await versions(api, ana, id))).toEqual([...expected, password("0")]);
 });
 
+test("big saves can push out only the newest versions, never the item as it was before them", async ({ request }) => {
+  // Someone who can edit an item, but not delete it or see its history, saves
+  // it big over and over: the newest versions fill their own 4 MB, and the
+  // item as it was before the day's saves stays (the days before too, in the
+  // server's unit tests).
+  test.setTimeout(180_000);
+  const api = new Api(request);
+  const ana = await api.account("ana");
+  const id = await personalLogin(api, ana, "0");
+  for (const label of ["1", "2"]) {
+    await setPassword(api, ana, id, label);
+  }
+  // About 400 KB each, encrypted: under the 512 KB limit.
+  const blob = [{ name: encString("blob"), value: encString("x".repeat(300 * 1024)), type: 1, linkedId: null }];
+  let current = (await api.call(ana, "GET", `/api/ciphers/${id}`)).body;
+  for (let i = 1; i <= 25; i++) {
+    const saved = await api.call(ana, "PUT", `/api/ciphers/${id}`, {
+      ...current,
+      fields: blob,
+      login: { ...current.login, password: password(`big-${i}`) },
+      encryptedFor: ana.userId,
+      lastKnownRevisionDate: current.revisionDate,
+    });
+    expect(saved.status, JSON.stringify(saved.body).slice(0, 300)).toBe(200);
+    current = saved.body;
+  }
+  const kept = passwords(await versions(api, ana, id));
+  // The newest big ones that fit, newest first, then the item before the day's saves.
+  expect(kept[0]).toBe(password("big-24"));
+  expect(kept.length).toBeGreaterThan(5);
+  expect(kept.length).toBeLessThanOrEqual(11);
+  expect(kept.at(-1)).toBe(password("0"));
+  const bigOnes = Array.from({ length: 25 }, (_, i) => password(`big-${i + 1}`));
+  expect(kept.slice(0, -1).every((p) => bigOnes.includes(p))).toBe(true);
+});
+
 test("an item's versions keep the item key they were encrypted with", async ({ request }) => {
   const api = new Api(request);
   const ana = await api.account("ana");

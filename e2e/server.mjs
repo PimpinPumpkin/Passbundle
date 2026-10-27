@@ -157,6 +157,18 @@ const child = spawn(paths.serverBin, [], {
     // The website's screenshots (site-shots/) give the hosted service's
     // name, so the addresses the server writes into screens show it.
     DOMAIN: process.env.KK_DOMAIN ?? `https://127.0.0.1:${port}`,
+    // The client's address: chosen, as a public DOMAIN requires (the site
+    // screenshots give the hosted service's), and taken from X-Real-IP only
+    // where the request comes from this machine. The limits server trusts
+    // no proxy at all, so a forged header there changes nothing
+    // (tests/api/client-address.spec.ts).
+    IP_HEADER: "X-Real-IP",
+    IP_HEADER_TRUSTED_PROXIES: withLimits ? "192.0.2.10" : "127.0.0.1",
+    // These servers send no email, so nothing proves who owns an invited
+    // address; tests run on this machine alone, so invitations still let
+    // people in, as most tests expect. The limits server keeps the default,
+    // where an owner or admin approves those joins (tests/api/joining.spec.ts).
+    ...(!withMail && !withLimits ? { INVITE_JOINS_WITHOUT_EMAIL: "true" } : {}),
     SIGNUPS_ALLOWED: "true",
     SIGNUPS_VERIFY: "false",
     MSP_SIGNUPS_ALLOWED: "true",

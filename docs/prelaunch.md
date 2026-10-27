@@ -19,6 +19,7 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 - **Exposed passwords in the MSP health view**, using the k-anonymity range check, with an off switch for the check after unlocking. Security review fixes in progress.
 - **Events to security tools**: a signed webhook, syslog over TLS (JSON or CEF), and Microsoft Sentinel, per organization or one feed for an MSP. Security review fixes in progress.
 - **Item history and the new folders in the extension**: version history with restore, folders by owner with counts, the grouped Folder picker, and see passwords, export, and share enforced on every extension path. Security review fixes in progress.
+- **The server's security pass** (DESIGN.md, "Running the server safely"): the visitor's address only from a trusted proxy (the hosted service believes Cloudflare's header from its tunnel alone, and a public server won't start without choosing), the master password for changes that reach outside PassBundle, safer defaults on public servers, history, SCIM, logs, and token fixes. Pull requests open; a verification review next.
 - **Sign in with Entra (SSO) per organization**: built and tested against a stand-in for Entra (DESIGN.md, "Sign in with Microsoft Entra ID"; setup in docs/sso-entra.md): each client's own tenant, domain verification, Require single sign-on, the master password still unlocking. Its client secret is sealed with event streaming's module under a key of its own; a verification review next. Trusted-device unlock after, as its own design with test vectors.
 
 ## Next

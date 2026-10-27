@@ -22,7 +22,7 @@ import {
   verifyWebhook,
   waitFor,
 } from "./siem";
-import { type Account, Api } from "./support";
+import { type Account, Api, confirmed } from "./support";
 
 const cert: Cert = throwawayCert();
 
@@ -44,7 +44,7 @@ type Destination = {
 };
 
 async function create(api: Api, who: Account, path: string, data: unknown): Promise<Destination> {
-  const created = await api.call(who, "POST", path, data);
+  const created = await api.call(who, "POST", path, confirmed(who, data));
   expect(created.status, JSON.stringify(created.body)).toBe(200);
   return created.body;
 }
@@ -157,7 +157,7 @@ test("a webhook gets each event signed, with who did what and no secrets, and th
     expect(sample).toMatchObject({ id: tested.body.eventId, name: "Test event", organization: { id: orgId } });
 
     // A new signing secret: shown once, and later events are signed with it.
-    const renewed = await api.call(owner, "POST", `${orgPath(orgId)}/${added.id}/secret`);
+    const renewed = await api.call(owner, "POST", `${orgPath(orgId)}/${added.id}/secret`, confirmed(owner));
     expect(renewed.status, JSON.stringify(renewed.body)).toBe(200);
     const next = renewed.body.signingSecret as string;
     expect(next).not.toBe(secret);
@@ -180,15 +180,18 @@ test("a webhook gets each event signed, with who did what and no secrets, and th
       { url: receiver.url("/hook?token=SECRET-IN-URL"), caCertificate: "" },
     ];
     for (const change of changes) {
-      const asked = await api.call(owner, "PUT", `${orgPath(orgId)}/${added.id}`, { webhook: change });
+      const asked = await api.call(owner, "PUT", `${orgPath(orgId)}/${added.id}`, confirmed(owner, { webhook: change }));
       expect(asked.status, JSON.stringify(change)).toBe(400);
       expect(asked.body.message).toMatch(/Enter the header's value again/);
     }
     // And trusting another certificate authority takes knowing the URL
     // (which can carry a token): it's asked for again too.
-    const caOnly = await api.call(owner, "PUT", `${orgPath(orgId)}/${added.id}`, {
-      webhook: { caCertificate: "", headerValue: "Bearer collector-token" },
-    });
+    const caOnly = await api.call(
+      owner,
+      "PUT",
+      `${orgPath(orgId)}/${added.id}`,
+      confirmed(owner, { webhook: { caCertificate: "", headerValue: "Bearer collector-token" } }),
+    );
     expect(caOnly.status).toBe(400);
     expect(caOnly.body.message).toMatch(/Enter the webhook's URL again/);
 
@@ -196,9 +199,12 @@ test("a webhook gets each event signed, with who did what and no secrets, and th
     // signing secret for the new one.
     const other = await httpsReceiver(cert);
     try {
-      const moved = await api.call(owner, "PUT", `${orgPath(orgId)}/${added.id}`, {
-        webhook: { url: other.url("/new"), headerValue: "Bearer collector-token-2" },
-      });
+      const moved = await api.call(
+        owner,
+        "PUT",
+        `${orgPath(orgId)}/${added.id}`,
+        confirmed(owner, { webhook: { url: other.url("/new"), headerValue: "Bearer collector-token-2" } }),
+      );
       expect(moved.status, JSON.stringify(moved.body)).toBe(200);
       const third = moved.body.signingSecret as string;
       expect(third).toMatch(/^whsec_/);
@@ -357,7 +363,7 @@ test("one person sets up destinations in at most 20 organizations and MSPs", asy
     made.push([made[0][0], (await create(api, busy, orgPath(made[0][0]), webhook("https://127.0.0.1:9/more"))).id]);
     // A 21st organization isn't, for this person; another admin there can.
     const another = await api.organization(busy, "Busy 21");
-    const refused = await api.call(busy, "POST", orgPath(another), webhook("https://127.0.0.1:9/busy-21"));
+    const refused = await api.call(busy, "POST", orgPath(another), confirmed(busy, webhook("https://127.0.0.1:9/busy-21")));
     expect(refused.status).toBe(400);
     expect(refused.body.message).toMatch(/the most one person can/);
     const colleague = await api.account("busy-colleague");
@@ -534,7 +540,7 @@ test("a failing destination is retried, one that's gone is paused, and turning i
 
     // Turned back on, what waited goes.
     answer = 200;
-    const resumed = await api.call(owner, "PUT", `${orgPath(orgId)}/${d.id}`, { enabled: true });
+    const resumed = await api.call(owner, "PUT", `${orgPath(orgId)}/${d.id}`, confirmed(owner, { enabled: true }));
     expect(resumed.status, JSON.stringify(resumed.body)).toBe(200);
     const arrived = await waitFor(
       receiver.received,
@@ -548,7 +554,7 @@ test("a failing destination is retried, one that's gone is paused, and turning i
     await expect.poll(async () => (await status()).queued).toBe(0);
 
     // Turned off on purpose: it's told so, then nothing waits and nothing goes.
-    const off = await api.call(owner, "PUT", `${orgPath(orgId)}/${d.id}`, { enabled: false });
+    const off = await api.call(owner, "PUT", `${orgPath(orgId)}/${d.id}`, confirmed(owner, { enabled: false }));
     expect(off.body).toMatchObject({ status: "off", enabled: false });
     const notice = await waitFor(
       receiver.received,
@@ -575,7 +581,7 @@ test("events never go to link-local or cloud metadata addresses, and private one
   const owner = await api.account("ssrf-owner");
   const orgId = await api.organization(owner, "Litware");
   const refuse = async (on: Api, who: Account, org: string, data: unknown, message: RegExp) => {
-    const result = await on.call(who, "POST", orgPath(org), data);
+    const result = await on.call(who, "POST", orgPath(org), confirmed(who, data as Record<string, unknown>));
     expect(result.status, JSON.stringify(data)).toBe(400);
     expect(String(result.body?.message), JSON.stringify(data)).toMatch(message);
   };
@@ -899,14 +905,17 @@ test("Sentinel gets rows through the Logs Ingestion API with a token from Micros
 
     // Sentinel trusts only the system's certificate authorities (here, the
     // server's test setting): a destination can't bring its own.
-    const ownCa = await api.call(owner, "PUT", `${orgPath(orgId)}/${d.id}`, {
-      sentinel: { caCertificate: cert.cert },
-    });
+    const ownCa = await api.call(
+      owner,
+      "PUT",
+      `${orgPath(orgId)}/${d.id}`,
+      confirmed(owner, { sentinel: { caCertificate: cert.cert } }),
+    );
     expect(ownCa.status).toBe(400);
     expect(ownCa.body.message).toMatch(/doesn't take one of its own/);
 
     // A wrong secret: the test says Entra refused it.
-    await api.call(owner, "PUT", `${orgPath(orgId)}/${d.id}`, { sentinel: { clientSecret: "wrong" } });
+    await api.call(owner, "PUT", `${orgPath(orgId)}/${d.id}`, confirmed(owner, { sentinel: { clientSecret: "wrong" } }));
     const tested = await api.call(owner, "POST", `${orgPath(orgId)}/${d.id}/test`);
     expect(tested.status).toBe(400);
     expect(tested.body.message).toMatch(/Microsoft Entra refused/);
@@ -922,7 +931,7 @@ test("people the directory provisions arrive with the system as the actor", asyn
     const owner = await api.account("scim-stream-owner");
     const orgId = await api.organization(owner, "Proseware");
     const d = await create(api, owner, orgPath(orgId), webhook(receiver.url("/scim")));
-    const made = await api.call(owner, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`);
+    const made = await api.call(owner, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`, confirmed(owner));
     expect(made.status, JSON.stringify(made.body)).toBe(200);
     const email = `scim-${randomUUID().slice(0, 8)}@api.example.test`;
     const created = await request.fetch(`/scim/v2/${orgId}/Users`, {
@@ -960,17 +969,22 @@ test("each organization has at most five destinations, and a destination's kind 
   const api = new Api(request);
   const owner = await api.account("limits-owner");
   const orgId = await api.organization(owner, "Woodgrove");
-  const nameless = await api.call(owner, "POST", orgPath(orgId), { kind: "webhook", webhook: { url: "https://x.example" } });
+  const nameless = await api.call(
+    owner,
+    "POST",
+    orgPath(orgId),
+    confirmed(owner, { kind: "webhook", webhook: { url: "https://x.example" } }),
+  );
   expect(nameless.status).toBe(400);
   expect(nameless.body.message).toMatch(/Name must be/);
   const ids: string[] = [];
   for (let i = 0; i < 5; i++) {
     ids.push((await create(api, owner, orgPath(orgId), webhook(`https://127.0.0.1:${9000 + i}/hook`))).id);
   }
-  const sixth = await api.call(owner, "POST", orgPath(orgId), webhook("https://127.0.0.1:9100/hook"));
+  const sixth = await api.call(owner, "POST", orgPath(orgId), confirmed(owner, webhook("https://127.0.0.1:9100/hook")));
   expect(sixth.status).toBe(400);
   expect(sixth.body.message).toMatch(/at most 5/);
-  const changed = await api.call(owner, "PUT", `${orgPath(orgId)}/${ids[0]}`, { kind: "syslog" });
+  const changed = await api.call(owner, "PUT", `${orgPath(orgId)}/${ids[0]}`, confirmed(owner, { kind: "syslog" }));
   expect(changed.status).toBe(400);
   expect(changed.body.message).toMatch(/kind can't change/);
   // Removed: it's gone, and that's in the log.
@@ -1062,18 +1076,18 @@ const orgRows: MatrixRow<OrgActor, OrgCtx>[] = [
   {
     name: "add a destination",
     allowed: ["owner", "admin"],
-    request: async (ctx) => {
+    request: async (ctx, _, account) => {
       await clear(ctx.api, ctx.owner, orgPath(ctx.orgId));
-      return { method: "POST", path: orgPath(ctx.orgId), data: webhook(ctx.url) };
+      return { method: "POST", path: orgPath(ctx.orgId), data: confirmed(account, webhook(ctx.url)) };
     },
   },
   {
     name: "change a destination",
     allowed: ["owner", "admin"],
-    request: async (ctx) => ({
+    request: async (ctx, _, account) => ({
       method: "PUT",
       path: `${orgPath(ctx.orgId)}/${await fresh(ctx)}`,
-      data: { name: "Renamed" },
+      data: confirmed(account, { name: "Renamed" }),
     }),
   },
   {
@@ -1084,7 +1098,11 @@ const orgRows: MatrixRow<OrgActor, OrgCtx>[] = [
   {
     name: "make a new signing secret",
     allowed: ["owner", "admin"],
-    request: async (ctx) => ({ method: "POST", path: `${orgPath(ctx.orgId)}/${await fresh(ctx)}/secret` }),
+    request: async (ctx, _, account) => ({
+      method: "POST",
+      path: `${orgPath(ctx.orgId)}/${await fresh(ctx)}/secret`,
+      data: confirmed(account),
+    }),
   },
   {
     name: "remove a destination",
@@ -1153,18 +1171,18 @@ const mspRows: MatrixRow<MspActor, MspCtx>[] = [
   {
     name: "add a destination for the MSP",
     allowed: ["mspAdmin"],
-    request: async (ctx) => {
+    request: async (ctx, _, account) => {
       await clear(ctx.api, ctx.admin, mspPath(ctx.mspId));
-      return { method: "POST", path: mspPath(ctx.mspId), data: webhook(ctx.url) };
+      return { method: "POST", path: mspPath(ctx.mspId), data: confirmed(account, webhook(ctx.url)) };
     },
   },
   {
     name: "change the MSP's destination",
     allowed: ["mspAdmin"],
-    request: async (ctx) => ({
+    request: async (ctx, _, account) => ({
       method: "PUT",
       path: `${mspPath(ctx.mspId)}/${await freshMsp(ctx)}`,
-      data: { name: "Renamed" },
+      data: confirmed(account, { name: "Renamed" }),
     }),
   },
   {
@@ -1191,9 +1209,9 @@ const mspRows: MatrixRow<MspActor, MspCtx>[] = [
     // A technician is an admin in the client, but can't send its events anywhere.
     name: "manage a client's own destinations",
     allowed: ["mspAdmin", "clientOwner"],
-    request: async (ctx) => {
+    request: async (ctx, _, account) => {
       await clear(ctx.api, ctx.admin, orgPath(ctx.clientId));
-      return { method: "POST", path: orgPath(ctx.clientId), data: webhook(ctx.url) };
+      return { method: "POST", path: orgPath(ctx.clientId), data: confirmed(account, webhook(ctx.url)) };
     },
   },
   {

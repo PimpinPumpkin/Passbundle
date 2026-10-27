@@ -26,7 +26,7 @@ import {
   verifyDomain,
 } from "../support/entra";
 
-import { Api, encString, publicKey, serverDatabase, type Account } from "./support";
+import { Api, confirmed, encString, publicKey, serverDatabase, type Account } from "./support";
 
 const origin = `https://127.0.0.1:${port}`;
 const CONFIRMED = 2;
@@ -170,7 +170,12 @@ test("owners and admins set it up; the secret never comes back; the tenant must 
   // An identifier belongs to one organization.
   const other = await api.account("sso-setup-other");
   const otherOrg = await api.organization(other, `SSO Other ${Date.now()}`);
-  const taken = await api.call(other, "PUT", `/api/keykeeper/organizations/${otherOrg}/sso`, settings(tenant, identifier));
+  const taken = await api.call(
+    other,
+    "PUT",
+    `/api/keykeeper/organizations/${otherOrg}/sso`,
+    confirmed(other, settings(tenant, identifier)),
+  );
   expect(message(taken.body)).toMatch(/Another organization uses that SSO identifier/);
 
   // Members and outsiders get "not found", never 403 (the web vault signs out on 403).
@@ -579,7 +584,12 @@ test("MSP staff are never signed in by a client's single sign-on; the managing M
   // the staff's own domain verified and their emails vouched for.
   const tenant = await new Tenant().register();
   const identifier = newIdentifier("staff");
-  const saved = await api.call(mspAdmin, "PUT", `/api/keykeeper/organizations/${orgId}/sso`, settings(tenant, identifier));
+  const saved = await api.call(
+    mspAdmin,
+    "PUT",
+    `/api/keykeeper/organizations/${orgId}/sso`,
+    confirmed(mspAdmin, settings(tenant, identifier)),
+  );
   expect(saved.status, JSON.stringify(saved.body)).toBe(200);
   await verifyDomain(api, mspAdmin, orgId, domain);
   // A technician (an admin in the client through the MSP) can't open the settings.
@@ -746,7 +756,16 @@ test("Require single sign-on: members are sent to it, owners aren't, another org
   const otherOrg = await api.organization(admin, `Admin's Other ${Date.now()}`);
   const otherTenant = await new Tenant().register();
   const otherIdentifier = newIdentifier("other");
-  expect((await api.call(admin, "PUT", `/api/keykeeper/organizations/${otherOrg}/sso`, settings(otherTenant, otherIdentifier))).status).toBe(200);
+  expect(
+    (
+      await api.call(
+        admin,
+        "PUT",
+        `/api/keykeeper/organizations/${otherOrg}/sso`,
+        confirmed(admin, settings(otherTenant, otherIdentifier)),
+      )
+    ).status,
+  ).toBe(200);
   const adminElsewhere = await otherTenant.person(admin.email);
   await otherTenant.next(adminElsewhere);
   expect((await linkFromSession(request, origin, admin, otherIdentifier)).status).toBe(200);
@@ -828,7 +847,12 @@ test("Require single sign-on: members are sent to it, owners aren't, another org
   // Its prerequisites can't be turned off under it.
   const singleOff = await setPolicy(api, owner, orgId, 3, false);
   expect(message(singleOff.body)).toMatch(/Turn off Require single sign-on before/);
-  const ssoOff = await api.call(owner, "PUT", `/api/keykeeper/organizations/${orgId}/sso`, settings(tenant, identifier, false, false));
+  const ssoOff = await api.call(
+    owner,
+    "PUT",
+    `/api/keykeeper/organizations/${orgId}/sso`,
+    confirmed(owner, settings(tenant, identifier, false, false)),
+  );
   expect(message(ssoOff.body)).toMatch(/Turn off the Require single sign-on policy first/);
 
   // Off again: passwords work. Turning single sign-on off ends the sessions
@@ -837,7 +861,16 @@ test("Require single sign-on: members are sent to it, owners aren't, another org
   expect((await passwordLogin(request, member)).status).toBe(200);
   const view = await api.call(owner, "GET", `/api/keykeeper/organizations/${orgId}/sso`);
   expect(view.body).toMatchObject({ requireSso: false, singleOrg: true });
-  expect((await api.call(owner, "PUT", `/api/keykeeper/organizations/${orgId}/sso`, settings(tenant, identifier, false, false))).status).toBe(200);
+  expect(
+    (
+      await api.call(
+        owner,
+        "PUT",
+        `/api/keykeeper/organizations/${orgId}/sso`,
+        confirmed(owner, settings(tenant, identifier, false, false)),
+      )
+    ).status,
+  ).toBe(200);
   const afterOff = await request.post("/identity/connect/token", {
     form: { grant_type: "refresh_token", refresh_token: signedIn.token!.body.refresh_token, client_id: "web" },
   });
