@@ -6,7 +6,7 @@
 // DESIGN.md, "Folders and permissions"). The accounts, the organization, and
 // its items have real keys (tests/support/vault-crypto.ts), since the tool
 // decrypts what the server sends.
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -20,6 +20,7 @@ import {
   editLogin,
   realAccount,
   realCollection,
+  realItem,
   realLogin,
   realMember,
   realOrganization,
@@ -114,15 +115,107 @@ test("a technician's script signs in with an API key, lists items, and gets only
     uri: "https://dc.contoso.example",
     totp: "JBSWY3DPEHPK3PXP",
   });
+  // Every other kind of item in the same folder, each value marked as the
+  // allowlist calls it (libs/common/src/vault/keykeeper/hidden-secrets.ts):
+  // SECRET for a secret, plain for a plain value.
+  const kinds = [
+    {
+      type: 3,
+      name: "Company card",
+      part: "card",
+      values: {
+        cardholderName: "plain-card-holder",
+        brand: "plain-card-brand",
+        number: "SECRET-card-number",
+        expMonth: "4",
+        expYear: "2030",
+        code: "SECRET-card-code",
+      },
+    },
+    {
+      type: 4,
+      name: "Ana's identity",
+      part: "identity",
+      values: {
+        firstName: "plain-identity-first",
+        lastName: "plain-identity-last",
+        email: "plain-identity@contoso.example",
+        ssn: "SECRET-identity-ssn",
+        passportNumber: "SECRET-identity-passport",
+        licenseNumber: "SECRET-identity-license",
+      },
+    },
+    {
+      type: 5,
+      name: "Deploy key",
+      part: "sshKey",
+      values: {
+        privateKey: "SECRET-ssh-private-key",
+        publicKey: "plain-ssh-public-key",
+        keyFingerprint: "plain-ssh-fingerprint",
+      },
+    },
+    {
+      type: 6,
+      name: "Operating account",
+      part: "bankAccount",
+      values: {
+        bankName: "plain-bank-name",
+        routingNumber: "plain-bank-routing",
+        accountNumber: "SECRET-bank-account",
+        pin: "SECRET-bank-pin",
+        iban: "SECRET-bank-iban",
+        swiftCode: "SECRET-bank-swift",
+      },
+    },
+    {
+      type: 7,
+      name: "Ana's license",
+      part: "driversLicense",
+      values: {
+        firstName: "plain-license-first",
+        issuingState: "plain-license-state",
+        licenseNumber: "SECRET-license-number",
+      },
+    },
+    {
+      type: 8,
+      name: "Ana's passport",
+      part: "passport",
+      values: {
+        givenName: "plain-passport-given",
+        surname: "plain-passport-surname",
+        passportNumber: "SECRET-passport-number",
+        nationalIdentificationNumber: "SECRET-passport-national-id",
+      },
+    },
+    { type: 2, name: "Alarm codes", part: undefined, values: {} as Record<string, string> },
+  ];
+  const kindIds: string[] = [];
+  for (const kind of kinds) {
+    kindIds.push(
+      await realItem(request, owner, org, hidden, {
+        ...kind,
+        fields: [
+          { name: "Hidden field", value: "SECRET-hidden-field", type: 1 },
+          { name: "Text field", value: "plain-text-field", type: 0 },
+        ],
+      }),
+    );
+  }
+  const plainMarkers = kinds.flatMap((k) =>
+    Object.values(k.values as Record<string, string>).filter((v) => v.startsWith("plain-")),
+  );
   const key = await apiKey(request, ana);
 
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "pb-cli-"));
+  const certificate = await serverCertificate(home);
   // As a script runs it: never waiting for someone to type.
   const run = tool({
     HOME: home,
     [`${prefix}APPDATA_DIR`]: path.join(home, "data"),
     [`${prefix}NOINTERACTION`]: "true",
-    NODE_EXTRA_CA_CERTS: await serverCertificate(home),
+    NODE_EXTRA_CA_CERTS: certificate,
   });
 
   // The product's own version, and where to get the newest; it doesn't update itself.
@@ -168,14 +261,17 @@ test("a technician's script signs in with an API key, lists items, and gets only
   expect(locked.status).toBe(1);
   expect(locked.stdout + locked.stderr).toContain("Vault is locked.");
 
-  // Both items are listed; the hidden one without its password.
+  // Every item is listed; the hidden ones without their secrets.
   const listed = run(["list", "items", "--response"], as);
   expect(listed.status, listed.stdout + listed.stderr).toBe(0);
   const items = listed.json.data.data;
-  expect(items.map((i: any) => i.name).sort()).toEqual([
-    "Domain admin",
-    "Web server",
-  ]);
+  expect(items.map((i: any) => i.name).sort()).toEqual(
+    ["Domain admin", "Web server", ...kinds.map((k) => k.name)].sort(),
+  );
+  expect(listed.stdout).not.toContain("SECRET");
+  for (const marker of plainMarkers) {
+    expect(listed.stdout).toContain(marker);
+  }
   const listedHidden = items.find((i: any) => i.id === domainAdmin);
   expect(listedHidden.login.username).toBe("administrator");
   expect(listedHidden.login.password).toBeNull();
@@ -211,6 +307,66 @@ test("a technician's script signs in with an API key, lists items, and gets only
   expect(run(["get", "username", domainAdmin], as).stdout).toBe(
     "administrator",
   );
+
+  // Each kind of item, one by one: plain values only.
+  for (const id of kindIds) {
+    const one = run(["get", "item", id], as);
+    expect(one.status, one.stdout + one.stderr).toBe(0);
+    expect(one.stdout).not.toContain("SECRET");
+    expect(one.stdout).toContain("plain-text-field");
+  }
+
+  // Her own export never holds the organization's items, and she can't
+  // export the organization's ("Can view" has no export).
+  const exported = path.join(home, "export.json");
+  const own = run(["export", "--format", "json", "--output", exported], as);
+  expect(own.status, own.stdout + own.stderr).toBe(0);
+  const exportedText = fs.readFileSync(exported, "utf8");
+  expect(exportedText).not.toContain("SECRET");
+  expect(exportedText).not.toContain("domain-admin-password");
+  const orgFile = path.join(home, "org.json");
+  const orgExport = run(["export", "--organizationid", org.id, "--format", "json", "--output", orgFile], as);
+  expect(orgExport.status).toBe(1);
+  expect(fs.existsSync(orgFile)).toBe(false);
+
+  // The local API (`serve`) runs the same commands.
+  const servePort = String(Number(port) + 300);
+  const serve = spawn(cliBin!, ["serve", "--hostname", "127.0.0.1", "--port", servePort], {
+    env: {
+      PATH: process.env.PATH ?? "",
+      HOME: home,
+      [`${prefix}APPDATA_DIR`]: path.join(home, "data"),
+      [`${prefix}NOINTERACTION`]: "true",
+      NODE_EXTRA_CA_CERTS: certificate,
+      ...as,
+    },
+    stdio: "ignore",
+  });
+  try {
+    const api = `http://127.0.0.1:${servePort}`;
+    await expect
+      .poll(async () => (await fetch(`${api}/status`).catch(() => null))?.status, { timeout: 30_000 })
+      .toBe(200);
+    const servedList = await (await fetch(`${api}/list/object/items`)).text();
+    expect(servedList).not.toContain("SECRET");
+    expect(servedList).not.toContain("domain-admin-password-1");
+    for (const marker of plainMarkers) {
+      expect(servedList).toContain(marker);
+    }
+    for (const id of [...kindIds, domainAdmin]) {
+      const servedItem = await (await fetch(`${api}/object/item/${id}`)).text();
+      expect(servedItem).toContain('"success":true');
+      expect(servedItem).not.toContain("SECRET");
+      expect(servedItem).not.toContain("domain-admin-password-1");
+    }
+    const servedPassword = await (await fetch(`${api}/object/password/${domainAdmin}`)).json();
+    expect(servedPassword.success).toBe(false);
+    expect(servedPassword.message).toContain("You can't see this item's passwords");
+    const visiblePassword = await (await fetch(`${api}/object/password/${webServer}`)).json();
+    expect(visiblePassword.data.data).toBe("web-server-password-1");
+  } finally {
+    serve.kill();
+  }
 
   // Each folder says what she may do there.
   const collections = run(["list", "collections"], as).json;

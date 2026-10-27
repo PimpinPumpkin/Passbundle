@@ -299,6 +299,51 @@ export async function realLogin(
   return (await created.json()).id;
 }
 
+/** An item of any kind in one of the organization's folders: each value of its part, and its fields, encrypted. */
+export async function realItem(
+  request: APIRequestContext,
+  owner: RealAccount,
+  org: RealOrganization,
+  collectionId: string,
+  item: {
+    type: number;
+    name: string;
+    part?: string;
+    values?: Record<string, string>;
+    fields?: { name: string; value: string; type: number }[];
+  },
+): Promise<string> {
+  const cipher: Record<string, unknown> = {
+    type: item.type,
+    organizationId: org.id,
+    encryptedFor: owner.userId,
+    name: encrypt(org.key, item.name),
+    notes: null,
+    favorite: false,
+    reprompt: 0,
+    fields: (item.fields ?? []).map((f) => ({
+      name: encrypt(org.key, f.name),
+      value: encrypt(org.key, f.value),
+      type: f.type,
+      linkedId: null,
+    })),
+  };
+  if (item.type === 2) {
+    cipher.secureNote = { type: 0 };
+  }
+  if (item.part != null) {
+    cipher[item.part] = Object.fromEntries(
+      Object.entries(item.values ?? {}).map(([k, v]) => [k, encrypt(org.key, v)]),
+    );
+  }
+  const created = await request.post("/api/ciphers/create", {
+    headers: auth(owner),
+    data: { cipher, collectionIds: [collectionId] },
+  });
+  expect(created.status(), await created.text()).toBe(200);
+  return (await created.json()).id;
+}
+
 /** Saves new values for a login, as an edit in an app does (its last version goes to history). */
 export async function editLogin(
   request: APIRequestContext,

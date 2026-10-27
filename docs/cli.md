@@ -184,6 +184,9 @@ For an item you can't see the passwords of:
 - `edit item` keeps its secrets as they are: send them back empty, as `get item` shows them, and they're kept. A request with any value for one is refused, even its real value (so an edit can't be used to check a guess), and so is adding or removing a hidden field, or changing the item's type.
 - `report password-health` leaves it out, so it can't tell you whether its password is weak, breached, or the same as one of yours.
 - `get history` shows when it changed and by whom, never earlier values.
+- `export` never puts it in a file: your own export holds only your own items, and an organization's export needs the export permission in every one of its folders you reach, which only comes with see passwords (owners and admins, who see everything, export everything).
+- Item templates made from it come without its hidden defaults.
+- Its attachments still download (`get attachment`), as in the web vault and the extension: they're part of seeing the item, which the server decides, not of seeing its passwords.
 
 Anyone who can decrypt an item can take it apart with their own tools, which is why the server enforces what it can (who reaches a folder, and who can edit, delete, or read history there) and the apps enforce the rest; see DESIGN.md, "What the server enforces, and what the apps do".
 
