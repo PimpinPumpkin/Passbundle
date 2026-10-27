@@ -2,7 +2,10 @@
 # from a commit of passbundle-clients (apps/cli, branded), packed with Node.js
 # inside it by tools/cli/pack.sh, for macOS (Apple silicon and Intel), Linux
 # (x64 and arm64), and 64-bit Windows, and published as a release of this
-# repository. Started by hand, from main.
+# repository. Started by hand, from main. A pull request that changes this
+# file or tools/cli builds every platform and checks the archives the same
+# way, with the linked passbundle-clients branch if there is one, and stops
+# there: no key, nothing published.
 #
 # Four jobs, as the desktop apps' releases in passbundle-apps
 # (linux-release.yml, windows-release.yml), so a signing key and the token
@@ -40,12 +43,17 @@ on:
         description: The passbundle-clients branch or commit to build
         type: string
         default: keykeeper
+  pull_request:
+    paths:
+      - .github/workflows/cli-release.yml
+      - tools/cli/**
 
 permissions: {}
 
 concurrency:
-  group: cli-release
-  cancel-in-progress: false
+  # Releases one at a time; a pull request's check by itself, the newest only.
+  group: cli-release-${{ github.event_name == 'pull_request' && github.ref || 'publish' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   # The release key's public half (the PASSBUNDLE_DESKTOP_UPDATE_KEY secret's),
@@ -55,7 +63,7 @@ env:
 jobs:
   plan:
     name: What to release
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -65,10 +73,25 @@ jobs:
         shell: bash
     outputs:
       release: ${{ steps.plan.outputs.release }}
+      publish: ${{ steps.plan.outputs.publish }}
       sha: ${{ steps.plan.outputs.sha }}
       version: ${{ steps.plan.outputs.version }}
       notes: ${{ steps.notes.outputs.notes }}
     steps:
+      - name: Which passbundle-clients to build
+        id: ref
+        env:
+          INPUT: ${{ inputs.clients-ref }}
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          # A pull request builds the clients' branch of the same name, if
+          # there is one (as tier 1 does), else keykeeper.
+          ref=${INPUT:-keykeeper}
+          if [ -n "$BRANCH" ] &&
+            git ls-remote --exit-code --heads https://github.com/PimpinPumpkin/passbundle-clients.git "refs/heads/$BRANCH" > /dev/null; then
+            ref=$BRANCH
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: tools/cli
@@ -76,7 +99,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: PimpinPumpkin/passbundle-clients
-          ref: ${{ inputs.clients-ref }}
+          ref: ${{ steps.ref.outputs.ref }}
           path: clients
           # The history, for the notes.
           fetch-depth: 0
@@ -105,12 +128,18 @@ jobs:
             echo "last=$last"
             echo "last_sha=$last_sha"
           } >> "$GITHUB_OUTPUT"
-          if [ "$sha" = "$last_sha" ]; then
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            echo "A pull request's check: building passbundle-clients ${sha:0:10} as $version, publishing nothing." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          elif [ "$sha" = "$last_sha" ]; then
             echo "${sha:0:10} is already $last: nothing new to release." | tee -a "$GITHUB_STEP_SUMMARY"
             echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
           else
             echo "Releasing passbundle-clients ${sha:0:10} as $version (the last release is ${last:-none})." | tee -a "$GITHUB_STEP_SUMMARY"
             echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
       - name: The notes, the command-line tool's changes since the last release
         id: notes
@@ -297,6 +326,8 @@ jobs:
           cat dist/manifest.json
       - name: The release key, from the repository's secrets
         id: key
+        # Never for a pull request's check.
+        if: needs.plan.outputs.publish == 'true'
         env:
           UPDATE_KEY: ${{ secrets.PASSBUNDLE_DESKTOP_UPDATE_KEY }}
         run: |
@@ -345,6 +376,7 @@ jobs:
   publish:
     name: Publish ${{ needs.plan.outputs.version }}
     needs: [plan, sign]
+    if: needs.plan.outputs.publish == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     # The only job that can write, with no secrets but its token, and no
