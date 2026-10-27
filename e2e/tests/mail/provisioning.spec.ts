@@ -8,7 +8,7 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
 
-import { Api, encString } from "../api/support";
+import { Api, encString, expiringSeal } from "../api/support";
 
 import { inviteParams, verifyEmail, waitForMessage } from "./mailbox";
 
@@ -107,7 +107,7 @@ test("the install command's email domains apply to the directory's invitations",
 
   // Once an admin lets the outsider in (sealing their invitation), they're an
   // admin's choice, and the command takes them from any address.
-  const seal = Buffer.alloc(32, 3).toString("base64");
+  const seal = expiringSeal(3);
   const letIn = await api.call(admin, "PUT", `/api/keykeeper/organizations/${orgId}/provisioning/seals`, {
     seals: [{ email: outsider.email, seal }],
   });

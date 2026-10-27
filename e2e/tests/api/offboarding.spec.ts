@@ -10,7 +10,7 @@ import { createHash, hkdfSync, randomBytes, randomUUID } from "node:crypto";
 import { type APIRequestContext, expect, test } from "@playwright/test";
 
 import { type Cert, httpsReceiver, throwawayCert } from "./siem";
-import { type Account, Api, encString, serverDatabase } from "./support";
+import { type Account, Api, encString, expiringSeal, serverDatabase } from "./support";
 
 const REVOKED = -1;
 const CONFIRMED = 2;
@@ -139,7 +139,7 @@ test("removing an MSP revokes the script and provisioning tokens and event desti
     await api.addStaff(admin, mspId, tech, "technician");
     await api.confirmPending(admin, mspId);
     const sealed = await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/seals`, {
-      staff: [{ organizationId: orgId, email: tech.email, seal: seal() }],
+      staff: [{ organizationId: orgId, email: tech.email, seal: expiringSeal(1) }],
     });
     expect(sealed.status, JSON.stringify(sealed.body)).toBe(200);
 
@@ -299,7 +299,7 @@ test("someone the client removes from its MSP's people stays out: staff changes 
   await api.addStaff(admin, mspId, tess, "technician");
   await api.confirmPending(admin, mspId);
   const sealed = await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/seals`, {
-    staff: [{ organizationId: orgId, email: tess.email, seal: seal() }],
+    staff: [{ organizationId: orgId, email: tess.email, seal: expiringSeal(1) }],
   });
   expect(sealed.status, JSON.stringify(sealed.body)).toBe(200);
 
@@ -450,7 +450,7 @@ test("an MSP admin the client revoked can't act on it from the MSP console, whil
   await refusedForMia("POST", enrollment);
   await refusedForMia("PUT", `${enrollment}/domains`, { domains: ["elm.example.test"] });
   await refusedForMia("PUT", `/api/keykeeper/msp/${mspId}/seals`, {
-    staff: [{ organizationId: orgId, email: bob.email, seal: seal() }],
+    staff: [{ organizationId: orgId, email: bob.email, seal: expiringSeal(1) }],
   });
   await refusedForMia("PUT", `/api/keykeeper/msp/${mspId}/seals`, {
     joining: [{ organizationId: orgId, seal: seal() }],

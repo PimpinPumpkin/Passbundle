@@ -9,7 +9,7 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test, type APIRequestContext } from "@playwright/test";
 
-import { Api, type Account, type Result } from "./support";
+import { Api, expiringSeal, type Account, type Result } from "./support";
 
 const ERROR = "urn:ietf:params:scim:api:messages:2.0:Error";
 const LIST = "urn:ietf:params:scim:api:messages:2.0:ListResponse";
@@ -727,8 +727,13 @@ test("an invitation from the directory waits until an owner or admin lets it in"
     { memberId: made.body.id, email, userName: email, joined: true },
   ]);
 
-  // Only people the directory invited, and only seals that look like seals.
-  const seal = Buffer.alloc(32, 7).toString("base64");
+  // Only people the directory invited, and only seals that look like seals:
+  // version 2 invitation seals, which end.
+  const seal = expiringSeal(7);
+  const v1 = await api.call(owner, "PUT", `${page}/seals`, {
+    seals: [{ email, seal: Buffer.alloc(32, 7).toString("base64") }],
+  });
+  expect(v1.status).toBe(400);
   const stranger = await api.call(owner, "PUT", `${page}/seals`, { seals: [{ email: owner.email, seal }] });
   expect(stranger.status).toBe(400);
   const notSeal = await api.call(owner, "PUT", `${page}/seals`, { seals: [{ email, seal: "nope" }] });

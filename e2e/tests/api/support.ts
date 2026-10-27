@@ -23,6 +23,14 @@ export const encString = (label: string) =>
 /** A stand-in public key, unique per label. */
 export const publicKey = (label: string) => b64(`public-key-${label}`);
 
+/**
+ * A stand-in invitation or staff seal in version 2's form
+ * (docs/vectors/joins-v2.json): `v2.<expires>.<nonce>.<mac>`, ending a day
+ * from now unless told otherwise. The server can't tell a real one from this.
+ */
+export const expiringSeal = (n: number, endsInSeconds = 86_400) =>
+  `v2.${Math.floor(Date.now() / 1000) + endsInSeconds}.${Buffer.alloc(16, n).toString("base64url")}.${Buffer.alloc(32, n).toString("base64url")}`;
+
 export type Account = {
   email: string;
   password: string;
