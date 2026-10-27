@@ -311,9 +311,11 @@ test("a member who can't see passwords can't reveal or copy them in the extensio
   }, wifiId);
   expect(copied).toEqual(["frontdesk"]);
 
-  // The card: its number and code masked, nothing to show or copy.
+  // The card: not even its last digits in the list, its number and code
+  // masked on its page, nothing to show or copy.
   await popup.goto(vaultUrl);
   await expect(row(popup, "Clinic Visa")).toBeVisible({ timeout: 30_000 });
+  await expect(row(popup, "Clinic Visa")).not.toContainText("4242");
   await openItem(popup, "Clinic Visa");
   await expect(popup.getByTestId("cardholder-number")).toHaveValue("••••••••");
   await expect(popup.getByTestId("toggle-number")).toHaveCount(0);
@@ -340,6 +342,7 @@ test("a member who can't see passwords can't reveal or copy them in the extensio
   await row(popup, "Front desk PC").getByRole("button", { name: "More options" }).click();
   await expect(popup.getByRole("menuitem", { name: "Edit" })).toBeVisible();
   await expect(popup.getByRole("menuitem", { name: /Add to shared folder/ })).toHaveCount(0);
+  await expect(popup.getByRole("menuitem", { name: "Clone" })).toHaveCount(0);
   await popup.keyboard.press("Escape");
 
   // Its history: she has view item history, see passwords, and delete in
