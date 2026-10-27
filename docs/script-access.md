@@ -80,7 +80,7 @@ The script checks that `token` is its own token and `item` is the item it asked 
 
 - Tables: `script_tokens` (id, organization, name, created by, created, expires, revoked, auth hash, networks, sealed token key, last used), `script_grants` (token, item, copy, revision, sealed spec), `script_reads` (token, item, time, address, result).
 - Admin endpoints, for an organization's owners and admins and its MSP's admins: create, list, revoke, add and remove grants, and the read log. Refreshing a copy: anyone who can edit the item, with the item's current revision.
-- Script endpoints, authenticated by `Authorization: PassBundleScript <token id>.<auth secret>` and nothing else: list the token's grants, read one copy. Checked every time: the token exists, isn't revoked or expired, the secret matches (constant time), the address is in its networks, and the organization is enabled. At most 60 reads a minute per token.
+- Script endpoints, authenticated by `Authorization: PassBundleScript <token id>.<auth secret>` and nothing else: list the token's grants, read one copy. Checked every time: the token exists, isn't revoked or expired, the secret matches (constant time), the address is in its networks, and the organization is enabled. At most 60 reads a minute per token, in any minute: counted over the last 60 seconds, so 60 at once means none more until the first of them is a minute old (not one more each second, as a token bucket would allow). Past that, 429.
 - Every read, allowed or refused, goes in `script_reads`. The MSP console shows reads and a token's first use from a new address in the MSP's activity log.
 
 ## The PowerShell module

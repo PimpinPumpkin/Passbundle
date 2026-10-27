@@ -60,7 +60,10 @@ test("a login's earlier passwords show in its history, and restoring one brings 
 
   // The oldest version: the first password, next to the item now.
   await versions.last().getByRole("button", { name: /^View/ }).click();
-  const version = page.getByRole("dialog", { name: /^Version from/ });
+  // A short date and time: "Oct 27, 2026, 1:15 AM", no seconds.
+  const version = page.getByRole("dialog", {
+    name: /^Version from [A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2} [AP]M$/,
+  });
   const password = version.getByRole("row", { name: /Password/ });
   await expect(password).toHaveAttribute("data-changed", "true");
   await expect(password.getByText("Changed")).toBeVisible();

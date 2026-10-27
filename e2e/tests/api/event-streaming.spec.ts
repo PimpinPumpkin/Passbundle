@@ -423,6 +423,52 @@ test("syslog over TLS gets RFC 5424 messages, framed by octet counting, as JSON 
   }
 });
 
+test("an event queued just as the worker finishes with a destination isn't left behind", async ({ request }) => {
+  // Adding a destination is an event the worker sends at once, so a rename
+  // right after adding two is queued while the worker is finishing with
+  // them. After each turn the worker sets when a destination next has
+  // something due (DESIGN.md, "Finding work"). It once set that from a queue
+  // it had read before the rename was in it, and the rename then waited,
+  // unseen, until another event came. One organization hit that moment now
+  // and then; 18 of them hit it in most runs.
+  test.setTimeout(120_000);
+  const api = new Api(request);
+  const collector = await syslogReceiver(cert);
+  try {
+    const owner = await api.account("syslog-many");
+    const orgs: string[] = [];
+    for (let i = 0; i < 18; i++) {
+      const orgId = await api.organization(owner, `Northwind ${i}`);
+      orgs.push(orgId);
+      for (const format of ["json", "cef"]) {
+        await create(api, owner, orgPath(orgId), {
+          name: `Syslog ${format}`,
+          kind: "syslog",
+          syslog: { host: "127.0.0.1", port: collector.port, format, caCertificate: cert.cert },
+        });
+      }
+      await touch(api, owner, orgId, `Northwind ${i} Inc`);
+    }
+    // Each organization's rename, in each format, that hasn't arrived.
+    const missing = () => {
+      const arrived = new Set(
+        collector.messages
+          .map(parseSyslog)
+          .filter((m) => m.msgId === "1600")
+          .map((m) =>
+            m.message.startsWith("{")
+              ? `json ${JSON.parse(m.message).organization.id}`
+              : `cef ${/ cs1=(\S+) cs1Label=organizationId/.exec(m.message)?.[1]}`,
+          ),
+      );
+      return orgs.flatMap((o) => [`json ${o}`, `cef ${o}`]).filter((k) => !arrived.has(k));
+    };
+    await expect.poll(missing, { message: "renames that never arrived", timeout: 20_000 }).toEqual([]);
+  } finally {
+    await collector.close();
+  }
+});
+
 test("a failing destination is retried, one that's gone is paused, and turning it back on sends what waited", async ({
   request,
 }) => {
