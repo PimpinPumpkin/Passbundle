@@ -702,7 +702,8 @@ test("a sign-in's state and code work once, only with the app's PKCE verifier, r
   const otherClient = await ssoSignIn(request, origin, identifier);
   expect((await redeem(request, otherClient.code!, otherClient.verifier, `${origin}/sso-connector.html`, "browser")).status).toBe(400);
 
-  // Only the web vault's connector page, and only its clients.
+  // The web vault's clients get only its connector page, and other apps
+  // nothing (the command-line tool has a test of its own below).
   expect((await request.get(`/identity/connect/authorize?client_id=web&redirect_uri=${encodeURIComponent("https://evil.example.test/cb")}&response_type=code&state=s_identifier=${identifier}&code_challenge=${"a".repeat(43)}&code_challenge_method=S256&domain_hint=${identifier}`, { maxRedirects: 0 })).status()).toBe(400);
   expect((await request.get(`/identity/connect/authorize?client_id=web&redirect_uri=${encodeURIComponent(`${origin}/sso-connector.html`)}&response_type=code&state=s_identifier=${identifier}&code_challenge=${"a".repeat(43)}&code_challenge_method=plain&domain_hint=${identifier}`, { maxRedirects: 0 })).status()).toBe(400);
   expect((await ssoSignIn(request, origin, identifier, { clientId: "desktop" })).authorize).toBe(400);
@@ -725,6 +726,50 @@ test("a sign-in's state and code work once, only with the app's PKCE verifier, r
   expect(message(await elsewhere.json())).toMatch(/started in another browser/);
   await otherBrowser.dispose();
   expect((await request.get(callbackUrl, { maxRedirects: 0 })).status()).toBe(400);
+});
+
+test("the command-line tool signs in with single sign-on at its own listener on the computer, and only there", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const sso = await ssoOrg(api, "cli");
+  const { tenant, identifier } = sso;
+  const { account, person: dee } = await linkedMember(api, request, sso, "dee");
+
+  // As upstream's tool asks: client "cli", answered at http://localhost on
+  // the first free port of 8065 to 8070 (RFC 8252's loopback redirect).
+  for (const listenerPort of [8065, 8070]) {
+    await tenant.next(dee);
+    const listener = `http://localhost:${listenerPort}`;
+    const signedIn = await ssoSignIn(request, origin, identifier, { clientId: "cli", listener });
+    expect(signedIn.returned?.origin).toBe(listener);
+    expect(signedIn.token?.status, JSON.stringify(signedIn.token?.body)).toBe(200);
+    expect(await whoIs(api, signedIn.token!.body.access_token)).toBe(account.email);
+  }
+
+  // The tool's code is the tool's, for that listener only.
+  await tenant.next(dee);
+  const asWeb = await ssoSignIn(request, origin, identifier, { clientId: "cli", listener: "http://localhost:8066", redeemClientId: "web" });
+  expect(asWeb.token?.status).toBe(400);
+  await tenant.next(dee);
+  const elsewhere = await ssoSignIn(request, origin, identifier, { clientId: "cli", listener: "http://localhost:8066", redirectUri: "http://localhost:8067" });
+  expect(elsewhere.token?.status).toBe(400);
+
+  // Nowhere else: not another port or host, not the web vault's page for the
+  // tool, and not the tool's listener for the web vault.
+  for (const [clientId, listener] of [
+    ["cli", `${origin}/sso-connector.html`],
+    ["cli", "http://localhost:8064"],
+    ["cli", "http://localhost:8071"],
+    ["cli", "http://localhost:8065/callback"],
+    ["cli", "http://127.0.0.1:8065"],
+    ["cli", "https://evil.example.test"],
+    ["web", "http://localhost:8065"],
+    ["browser", "http://localhost:8065"],
+  ]) {
+    const refused = await ssoSignIn(request, origin, identifier, { clientId, listener });
+    expect(refused.authorize, `${clientId} ${listener}`).toBe(400);
+  }
 });
 
 test("Require single sign-on: members are sent to it, owners aren't, another organization's sign-in doesn't count, and its prerequisites stay on", async ({

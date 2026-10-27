@@ -1,12 +1,12 @@
 {
   "about": "Advisories the weekly watch doesn't raise, each with why. npm entries are by package and cover only packages outside the web vault and the extension; cargo entries are by advisory and package version. Review the reasons whenever what we ship changes.",
   "npm": {
-    "node-forge": "Only the command-line client (apps/cli) uses it, and we don't ship the CLI yet. Revisit before we do.",
-    "multer": "Only the command-line client's local server (bw serve) uses it, and we don't ship the CLI yet. Revisit before we do.",
-    "inquirer": "Only the command-line client's prompts use it, and we don't ship the CLI yet. Revisit before we do.",
-    "external-editor": "Comes with inquirer, in the command-line client only.",
-    "tmp": "Comes with inquirer, in the command-line client only.",
-    "ws": "Node's WebSocket, under SignalR. The browser apps use the browser's own WebSocket; only the command-line client would load it.",
+    "node-forge": "The command-line tool uses it only to read other password managers' exports when importing (Keeper, LastPass, DuckDuckGo). Its advisory for 1.4.0 and earlier (GHSA-86w9-cpqp-85rv) is about checking RSA PKCS#1 v1.5 signatures, which it never does there. Take 1.4.1 or later at the next dependency update, once it's two weeks old.",
+    "multer": "Only the command-line tool's local API (`passbundle serve`, on localhost unless its `--hostname` says otherwise) uses it, for attachment uploads. Its advisories before 2.5.0 let something that can already reach that port stop the server (denial of service); nothing else. Take 2.5.0 or later once it's two weeks old.",
+    "inquirer": "The command-line tool's prompts in the person's own terminal (text, password, and lists; never the editor prompt). Its advisories are its editor prompt's (external-editor, tmp).",
+    "external-editor": "Comes with inquirer, for its editor prompt, which the command-line tool never shows.",
+    "tmp": "Comes with inquirer's editor prompt, which the command-line tool never shows, and build tooling; its advisory is about file names a caller chooses.",
+    "ws": "Node's WebSocket, under SignalR and jsdom. The browser apps use the browser's own WebSocket, and the command-line tool loads neither for it: it has no live notifications, and uses jsdom only to read import files.",
     "vite": "Build tooling (through vite-tsconfig-paths); none of it runs in the web vault or the extension.",
     "immutable": "Comes with vite, build tooling only.",
     "nanoid": "Comes with vite and postcss, build tooling only.",

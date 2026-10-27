@@ -20,6 +20,7 @@ What CI can't check: real devices, real sites, and how it feels. Work through it
 - [ ] **Search** finds items by name, username, and website.
 - [ ] **Generator:** default 20 characters; change the length on one device and see it follow you to another.
 - [ ] **Sign in with a device:** in a browser where you've signed in before, sign out of the web vault (or the extension), type your email, and choose "Log in with device". The Mac app (and the Pixel, with PassBundle open) shows "Approve sign-in?" within about 10 seconds: check its fingerprint phrase matches the browser's, approve with Touch ID, your fingerprint, or your master password, and the browser signs in. Try Deny once too, and leave one to expire (15 minutes): it should disappear.
+- [ ] **Command-line tool:** install the newest `cli-v` release for your Mac (docs/cli.md, "Install"), `passbundle config server https://test.passbundle.com`, sign in with your API key (web vault, Settings, Security, Keys), unlock, then `passbundle list items` and `passbundle get password` on one of your logins. As your second person, `get password` on an item in their "Can view but not see passwords" folder is refused, and `get item` shows it without the password.
 
 ## Autofill (the part people judge us on)
 
