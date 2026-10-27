@@ -522,7 +522,9 @@ jobs:
     name: API tests on PostgreSQL (${{ matrix.shard }}/2)
     needs: [refs, server, clients]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The second shard took 16 to 20 minutes once single sign-on's and
+    # signing in with a device's tests joined it, and a slow runner ran out.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
