@@ -2,10 +2,11 @@
 // own extension (DESIGN.md, "Connector pages"). A page on another site that
 // frames the security key connector, as a real-time phishing page would,
 // gets nothing: the server forbids the frame, and even where that header is
-// lost the connector asks no key and sends nothing. The server refuses a
-// security key's answer made in a frame on another site, whichever page
-// asked for it. Signing in with a security key still works in the web vault
-// (its own frame) and in the extension (a tab of its own).
+// lost the connector asks no key and sends nothing. The server refuses every
+// security key answer made in a frame, whichever page asked for it. The
+// connector pages still work under their own policy, and signing in with a
+// security key still works in the web vault (its own frame) and in the
+// extension (a tab of its own).
 //
 // WebAuthn won't take an IP address as a site's name, so these tests start a
 // server of their own named vault.connectors.test, which the browser
@@ -29,7 +30,7 @@ import {
   test,
 } from "@playwright/test";
 
-import { brand, connectorServerPort, hostResolverRules } from "../paths.mjs";
+import { brand, connectorServerPort, hostResolverRules, port } from "../paths.mjs";
 
 import { extensionIdOf, launchWithExtension, openPopup } from "./support/extension";
 import { signUp, skipImport, webUserFor, type WebUser } from "./support/web";
@@ -47,6 +48,9 @@ const rules = hostResolverRules.replace(
 const otherSite = "https://phish.example.test";
 const otherPage = `${otherSite}/frames-security-key.html`;
 const ourExtension = `chrome-extension://${brand.extension.chromiumId}`;
+const connectorPolicy =
+  "default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; " +
+  `frame-ancestors 'self' ${ourExtension}`;
 
 let server: ChildProcess;
 let dataDir: string;
@@ -311,9 +315,11 @@ test("connector pages may be framed only by the vault and PassBundle's extension
   ]) {
     const response = await http.get(`/${page}`);
     expect(response.status(), page).toBe(200);
-    expect(response.headers()["content-security-policy"], page).toBe(`frame-ancestors 'self' ${ourExtension}`);
+    expect(response.headers()["content-security-policy"], page).toBe(connectorPolicy);
     expect(response.headers()["x-frame-options"], page).toBe("SAMEORIGIN");
-    expect(response.headers()["strict-transport-security"], page).toBe("max-age=31536000; includeSubDomains");
+    // HTTPS only, on a host name; names under it only when the server is
+    // told to (HSTS_INCLUDE_SUBDOMAINS).
+    expect(response.headers()["strict-transport-security"], page).toBe("max-age=31536000");
   }
   // The vault's other pages: the same, and no other extension.
   const main = (await http.get("/")).headers()["content-security-policy"];
@@ -321,7 +327,48 @@ test("connector pages may be framed only by the vault and PassBundle's extension
   expect(main).not.toContain("moz-extension");
   // Upstream's mobile page and its deep links are gone.
   expect((await http.get("/webauthn-mobile-connector.html")).status()).toBe(404);
+  // No HSTS for a server at an address (the main test server).
+  const atAddress = await http.get(`https://127.0.0.1:${port}/webauthn-connector.html`);
+  expect(atAddress.status()).toBe(200);
+  expect(atAddress.headers()["strict-transport-security"]).toBeUndefined();
   await http.dispose();
+});
+
+test("connector pages work under their own policy", async ({ page }) => {
+  const refused: string[] = [];
+  page.on("console", (m) => {
+    if (m.text().includes("Content Security Policy")) refused.push(m.text());
+  });
+  page.on("pageerror", (e) => refused.push(String(e)));
+
+  // The extension's security key tab: its script, styles, logo, and words.
+  const options = { challenge: "dGVzdA", allowCredentials: [] };
+  const params = new URLSearchParams({
+    data: Buffer.from(JSON.stringify(options)).toString("base64"),
+    parent: encodeURIComponent(`${vault}/`),
+    v: "1",
+    locale: "en",
+  });
+  await page.goto(`/webauthn-fallback-connector.html?${params}`);
+  await expect(page.getByRole("button", { name: "Read security key" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Verify your Identity" })).toBeVisible();
+
+  // Duo's answer for the web vault.
+  await page.goto("/duo-redirect-connector.html?client=web&code=a-code&state=a-state");
+  await expect(page.getByText("You successfully logged in")).toBeVisible();
+
+  // The email links' redirect, into the vault.
+  await page.goto("/redirect-connector.html#login");
+  await expect(page).toHaveURL(`${vault}/#/login`);
+
+  // Duo's start, for the extension: it goes on to Duo, which the policy
+  // doesn't stop (Duo's host doesn't resolve in the tests).
+  const duo = "https://api-a1b2c3.duosecurity.com/oauth/v1/authorize?client_id=x";
+  const toDuo = page.waitForRequest((r) => r.url().startsWith("https://api-a1b2c3.duosecurity.com/"));
+  await page.goto(`/duo-redirect-connector.html?duoFramelessUrl=${encodeURIComponent(duo)}`).catch(() => {});
+  await toDuo;
+
+  expect(refused).toEqual([]);
 });
 
 test("a page on another site that frames the security key connector gets nothing", async ({
@@ -343,7 +390,7 @@ test("a page on another site that frames the security key connector gets nothing
   await openOtherSite(phish, options);
   // The server sends the connector with its frame-ancestors, and the browser
   // shows an error page in the frame instead.
-  expect((await served).headers()["content-security-policy"]).toBe(`frame-ancestors 'self' ${ourExtension}`);
+  expect((await served).headers()["content-security-policy"]).toBe(connectorPolicy);
   await expect
     .poll(() => phish.frames().map((f) => f.url()))
     .toEqual([phish.url(), "chrome-error://chromewebdata/"]);
@@ -375,14 +422,14 @@ test("without the server's header, the connector itself answers no other site", 
   expect(await received(phish)).toEqual([]);
   expect((await key.credential()).signCount).toBe(credential.signCount);
 
-  // The server refuses an answer made in that frame anyway, whatever page
-  // asked for it: here the test asks, inside the vault's own frame.
+  // The server refuses an answer made in that frame anyway, as it does any
+  // answer made in a frame: here the test asks, inside the vault's own frame.
   const inFrame = phish.frames().find((f) => f.url().startsWith(`${vault}/webauthn-connector.html`))!;
   const framedAnswer = await answerIn(inFrame, options);
   expect(clientData(framedAnswer)).toMatchObject({ origin: vault, crossOrigin: true, topOrigin: otherSite });
   const refused = await finishSignIn(http, form, framedAnswer);
   expect(refused.status, JSON.stringify(refused.body)).toBe(400);
-  expect(JSON.stringify(refused.body)).toContain("used on a page of another site");
+  expect(JSON.stringify(refused.body)).toContain("used inside another page");
 
   // The same key, answering on the vault's own page, signs in.
   const again = await pendingSignIn(http, user, hash);

@@ -26,6 +26,7 @@ The settings are the server's environment variables, as in Vaultwarden. The ones
 | `SIGNUPS_ALLOWED` | Whether anyone can make an account. |
 | `MSP_SIGNUPS_ALLOWED` | Whether anyone can set up an MSP. |
 | `ADMIN_TOKEN` | Turns on the server's admin page. Leave it unset unless you need it. |
+| `HSTS_INCLUDE_SUBDOMAINS` | `true` adds `includeSubDomains` to the HTTPS-only header (HSTS) the server sends when `DOMAIN` is https on a host name. Off by default; turn it on only when every name under `DOMAIN`'s host serves HTTPS. |
 | `ATTACHMENTS_FOLDER`, `SENDS_FOLDER` | Where file attachments and Send files go. A folder in `/data` by default, or object storage: `s3://bucket/attachments?endpoint=https://...&region=auto&default_storage_class=STANDARD`, with `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. They're encrypted by the apps before upload, like everything else. |
 
 ## Not yet
