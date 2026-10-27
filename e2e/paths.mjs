@@ -34,6 +34,10 @@ export const restartServerPort = process.env.KK_RESTART_SERVER_PORT ?? "8100";
 // domain checks.
 export const entraPort = process.env.KK_ENTRA_PORT ?? "8101";
 export const dnsPort = process.env.KK_DNS_PORT ?? "8102";
+// A server named vault.connectors.test, which the security key tests start
+// themselves: WebAuthn won't take an IP address as a site's name
+// (tests/connector-origins.spec.ts).
+export const connectorServerPort = process.env.KK_CONNECTOR_SERVER_PORT ?? "8103";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??
