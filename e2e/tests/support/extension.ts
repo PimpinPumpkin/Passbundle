@@ -22,9 +22,12 @@ export const serverUrl = `https://127.0.0.1:${port}`;
 /**
  * A real Chromium profile with the built extension loaded, in a new folder:
  * close it, then remove the folder. Extensions need the full Chromium build,
- * not the headless shell, so this uses channel "chromium".
+ * not the headless shell, so this uses channel "chromium". `rules` replaces
+ * the host resolver rules, for a test with hosts of its own.
  */
-export async function launchWithExtension(): Promise<{ context: BrowserContext; profile: string }> {
+export async function launchWithExtension(
+  rules = hostResolverRules,
+): Promise<{ context: BrowserContext; profile: string }> {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), "keykeeper-ext-"));
   const context = await chromium.launchPersistentContext(profile, {
     channel: "chromium",
@@ -38,7 +41,7 @@ export async function launchWithExtension(): Promise<{ context: BrowserContext; 
       // Headless Chromium says "HeadlessChrome/", which upstream's browser
       // detection misreads as Safari. Real users never send it.
       `--user-agent=${chromeUserAgent}`,
-      hostResolverRules,
+      rules,
     ],
   });
   return { context, profile };

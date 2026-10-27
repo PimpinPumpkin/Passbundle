@@ -51,6 +51,7 @@ The settings are the server's environment variables, as in Vaultwarden. The ones
 | `SIGNUPS_ALLOWED` | Whether anyone can make an account. |
 | `MSP_SIGNUPS_ALLOWED` | Whether anyone can set up an MSP. |
 | `ADMIN_TOKEN` | Turns on the server's admin page. Leave it unset in production; turn it on for a task, then off again (see "The admin page"). |
+| `HSTS_INCLUDE_SUBDOMAINS` | `true` adds `includeSubDomains` to the HTTPS-only header (HSTS) the server sends when `DOMAIN` is https on a host name. Off by default; turn it on only when every name under `DOMAIN`'s host serves HTTPS. |
 | `IP_HEADER`, `IP_HEADER_TRUSTED_PROXIES` | Where the visitor's address comes from (see "The client's address"). Required on a public `DOMAIN`. |
 | `ORG_CREATION_USERS` | Who may make organizations: `all`, `none`, or a list of emails. |
 | `ORG_ITEM_HISTORY_LIMIT` | The most an organization's item history may take, in KB (1048576, 1 GB, by default). Past it, an edit keeps a version only if it's 64 KB or less, as real items are. |
