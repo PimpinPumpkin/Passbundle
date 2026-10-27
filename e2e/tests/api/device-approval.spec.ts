@@ -7,15 +7,17 @@
 // a type 4 key, never a master password hash; an approval signs in the device
 // that asked, once; a denial signs nothing in; a request lasts 15 minutes; a
 // device asks five times an hour at most; an organization's "Require single
-// sign-on" holds for it too; and a session an approval began can't set up
-// emergency access.
+// sign-on" holds for it too; and a session an approval began can't use
+// emergency access on either side, while a password's or single sign-on's
+// can.
 // The server stores keys as it gets them, so the public key is a real one
 // (from Node) and the wrapped key a stand-in of the right shape.
 import { constants, generateKeyPairSync, publicEncrypt, randomBytes, randomUUID } from "node:crypto";
 
 import { type APIRequestContext, expect, test } from "@playwright/test";
 
-import { ssoOrg } from "../support/entra";
+import { port } from "../../paths.mjs";
+import { linkFromSession, ssoOrg, ssoSignIn } from "../support/entra";
 
 import { type Account, Api, ageSignInRequests, encString } from "./support";
 
@@ -414,7 +416,7 @@ test("a session an approval began can't set up emergency access", async ({ reque
   const invite = (email: string) => ({ email, type: 1, waitTimeDays: 1 });
   const refused = await api.call(approvedPhone, "POST", "/api/emergency-access/invite", invite(cal.email));
   expect(refused.status).toBe(400);
-  expect(JSON.stringify(refused.body)).toContain("signed in with your master password");
+  expect(JSON.stringify(refused.body)).toContain("signed in with your master password or single sign-on");
 
   // From the master password's session it's set up as usual (with no mail,
   // an existing account accepts at once)...
@@ -431,4 +433,78 @@ test("a session an approval began can't set up emergency access", async ({ reque
   ).toBe(400);
   const confirmed = await api.call(laptop, "POST", `/api/emergency-access/${grant.id}/confirm`, { key: encString("for-ben") });
   expect(confirmed.status, JSON.stringify(confirmed.body)).toBe(200);
+});
+
+/** A session from a device's approval: the account's laptop approves its phone. */
+async function approvedSession(request: APIRequestContext, api: Api, who: Account) {
+  const laptop = await session(request, who);
+  const phone = await session(request, who);
+  const a = await asked(request, who, phone.device);
+  expect((await answer(api, laptop, laptop.device, a, true)).status).toBe(200);
+  const signedIn = await signIn(request, who, phone.device, a);
+  expect(signedIn.status).toBe(200);
+  expect(signedInWith(signedIn.body.access_token)).toBe("authrequest");
+  return { laptop, approved: { token: signedIn.body.access_token as string } };
+}
+
+const invite = (email: string) => ({ email, type: 1, waitTimeDays: 1 });
+
+test("someone signed in with single sign-on uses emergency access; an approval's session of theirs can't", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const sso = await ssoOrg(api, "ea-sso");
+  const dee = await api.account("ea-dee", `dee-${randomUUID().slice(0, 8)}@${sso.domain}`);
+  await api.addMember(sso.owner, sso.orgId, dee, "user");
+  const [ben, cal] = await Promise.all([api.account("ben"), api.account("cal")]);
+  const person = await sso.tenant.person(dee.email);
+  await sso.tenant.next(person);
+  const origin = `https://127.0.0.1:${port}`;
+  const linked = await linkFromSession(request, origin, dee, sso.identifier);
+  expect(linked.status, JSON.stringify(linked.body)).toBe(200);
+  await sso.tenant.next(person);
+  const viaSso = await ssoSignIn(request, origin, sso.identifier);
+  expect(viaSso.token?.status, JSON.stringify(viaSso.token?.body)).toBe(200);
+  const ssoSession = { token: viaSso.token!.body.access_token as string };
+  expect(signedInWith(ssoSession.token)).toBe("sso");
+
+  // A session from a device's approval can't invite...
+  const { approved } = await approvedSession(request, api, dee);
+  expect((await api.call(approved, "POST", "/api/emergency-access/invite", invite(cal.email))).status).toBe(400);
+  // ...the single sign-on session invites and confirms.
+  const invited = await api.call(ssoSession, "POST", "/api/emergency-access/invite", invite(ben.email));
+  expect(invited.status, JSON.stringify(invited.body)).toBe(200);
+  const trusted = await api.call(ssoSession, "GET", "/api/emergency-access/trusted");
+  const grant = trusted.body.data.find((g: { email: string }) => g.email === ben.email);
+  expect(grant.status).toBe(1);
+  expect((await api.call(approved, "POST", `/api/emergency-access/${grant.id}/confirm`, { key: encString("for-ben") })).status).toBe(400);
+  const confirmed = await api.call(ssoSession, "POST", `/api/emergency-access/${grant.id}/confirm`, { key: encString("for-ben") });
+  expect(confirmed.status, JSON.stringify(confirmed.body)).toBe(200);
+});
+
+test("a grantee's session from an approval can't start a takeover, take over, or set the new password", async ({ request }) => {
+  const api = new Api(request);
+  const [ana, ben] = await Promise.all([api.account("ana"), api.account("ben")]);
+  const anaLaptop = await session(request, ana);
+  expect((await api.call(anaLaptop, "POST", "/api/emergency-access/invite", invite(ben.email))).status).toBe(200);
+  const grant = (await api.call(anaLaptop, "GET", "/api/emergency-access/trusted")).body.data.find(
+    (g: { email: string }) => g.email === ben.email,
+  );
+  expect((await api.call(anaLaptop, "POST", `/api/emergency-access/${grant.id}/confirm`, { key: encString("for-ben") })).status).toBe(200);
+
+  const { laptop: benLaptop, approved: benPhone } = await approvedSession(request, api, ben);
+  const refusedStart = await api.call(benPhone, "POST", `/api/emergency-access/${grant.id}/initiate`);
+  expect(refusedStart.status).toBe(400);
+  expect(JSON.stringify(refusedStart.body)).toContain("signed in with your master password or single sign-on");
+  expect((await api.call(benLaptop, "POST", `/api/emergency-access/${grant.id}/initiate`)).status).toBe(200);
+  // Ana lets it through early, from her own master password's session.
+  expect((await api.call(anaLaptop, "POST", `/api/emergency-access/${grant.id}/approve`)).status).toBe(200);
+
+  expect((await api.call(benPhone, "POST", `/api/emergency-access/${grant.id}/takeover`)).status).toBe(400);
+  const takeover = await api.call(benLaptop, "POST", `/api/emergency-access/${grant.id}/takeover`);
+  expect(takeover.status, JSON.stringify(takeover.body)).toBe(200);
+  expect(takeover.body.keyEncrypted).toBe(encString("for-ben"));
+  const newPassword = { newMasterPasswordHash: Buffer.from("new-hash").toString("base64"), key: encString("ana-new-key") };
+  expect((await api.call(benPhone, "POST", `/api/emergency-access/${grant.id}/password`, newPassword)).status).toBe(400);
+  expect((await api.call(benLaptop, "POST", `/api/emergency-access/${grant.id}/password`, newPassword)).status).toBe(200);
 });
