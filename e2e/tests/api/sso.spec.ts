@@ -291,6 +291,13 @@ test("an account with keys links only from its own signed-in session, then signs
   const ticketPath = "/api/accounts/sso/user-identifier";
   expect((await api.call(member, "POST", ticketPath, {})).status).toBe(400);
   expect((await api.call(member, "POST", ticketPath, { masterPasswordHash: "wrong" })).status).toBe(400);
+  // A one-time code (which only proves the mailbox) doesn't do for an
+  // account that has a master password, even with the password too.
+  for (const proof of [{ otp: "123456" }, { masterPasswordHash: member.password, otp: "123456" }]) {
+    const byCode = await api.call(member, "POST", ticketPath, proof);
+    expect(byCode.status, JSON.stringify(proof)).toBe(400);
+    expect(message(byCode.body)).toMatch(/Enter your master password to link single sign-on/);
+  }
   const apiKey = await api.call(member, "POST", "/api/accounts/api-key", { masterPasswordHash: member.password });
   expect(apiKey.status, JSON.stringify(apiKey.body)).toBe(200);
   const keyLogin = await request.post("/identity/connect/token", {
