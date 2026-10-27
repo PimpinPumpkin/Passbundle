@@ -14,7 +14,8 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 import { port } from "../paths.mjs";
 
 import { newDomain, newIdentifier, setTxt, Tenant } from "./support/entra";
-import { signUp, type WebUser } from "./support/web";
+import { answerTwoStep } from "./support/two-step";
+import { signUp, signUpWithAuthenticator, type WebUser } from "./support/web";
 
 const origin = `https://127.0.0.1:${port}`;
 const password = "correct horse battery staple 42";
@@ -62,7 +63,9 @@ async function setUp(browser: Browser, index: number, name: string) {
   const identifier = newIdentifier("web");
   const ownerUser: WebUser = { email: `owner-${index}@${domain}`, name: "Owner", password };
   const owner = await newPage(browser);
-  await signUp(owner, ownerUser);
+  // A business's owner signs in with two-step login (DESIGN.md, "Two-step
+  // login for admins").
+  await signUpWithAuthenticator(owner, ownerUser);
   const orgId = await createBusiness(owner, name);
 
   const sso = await openSso(owner, orgId);
@@ -293,6 +296,7 @@ test("with Require single sign-on, a member's password sends them to it, one not
   await ownerAgain.getByRole("button", { name: "Continue" }).click();
   await ownerAgain.getByRole("textbox", { name: /Master password/ }).fill(ownerUser.password);
   await ownerAgain.getByRole("button", { name: "Log in", exact: true }).click();
+  await answerTwoStep(ownerAgain, ownerUser.email);
   await ownerAgain.waitForURL(/#\/vault/);
   await expect(ownerAgain).toHaveTitle(/^Items/);
 });

@@ -6,7 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { brand } from "../paths.mjs";
 
-import { reloadVault, signUp, webUserFor } from "./support/web";
+import { reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) =>
@@ -20,11 +20,11 @@ test("an MSP admin adds a client and a technician, and the technician gets in on
   const techContext = await browser.newContext();
   const tech = await techContext.newPage();
   const techUser = webUserFor("msp-tech", testInfo.repeatEachIndex);
-  await signUp(tech, techUser);
+  await signUpWithAuthenticator(tech, techUser);
 
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
-  await signUp(admin, webUserFor("msp-admin", testInfo.repeatEachIndex));
+  await signUpWithAuthenticator(admin, webUserFor("msp-admin", testInfo.repeatEachIndex));
 
   // Set up the MSP.
   await admin.goto("/#/msp");
@@ -189,12 +189,12 @@ test("a client's own owner sees its MSP on the Members page and removes it; the 
   const ownerContext = await browser.newContext();
   const owner = await ownerContext.newPage();
   const ownerUser = webUserFor("client-owner", testInfo.repeatEachIndex);
-  await signUp(owner, ownerUser);
+  await signUpWithAuthenticator(owner, ownerUser);
 
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
   const adminUser = webUserFor("msp-admin-2", testInfo.repeatEachIndex);
-  await signUp(admin, adminUser);
+  await signUpWithAuthenticator(admin, adminUser);
   await admin.goto("/#/msp");
   await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Contoso IT");
   await admin.getByRole("button", { name: "Create MSP" }).click();
@@ -248,7 +248,7 @@ test("an MSP admin invites someone without an account, who signs up and joins fr
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
   const adminUser = webUserFor("invite-admin", testInfo.repeatEachIndex);
-  await signUp(admin, adminUser);
+  await signUpWithAuthenticator(admin, adminUser);
   await admin.goto("/#/msp");
   await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Tailspin IT");
   await admin.getByRole("button", { name: "Create MSP" }).click();
@@ -268,7 +268,7 @@ test("an MSP admin invites someone without an account, who signs up and joins fr
   // They create an account with that address and open the link.
   const hireContext = await browser.newContext();
   const hire = await hireContext.newPage();
-  await signUp(hire, hireUser);
+  await signUpWithAuthenticator(hire, hireUser);
   await hire.goto(link!.slice(link!.indexOf("/#/")));
   const invitation = hire.getByTestId("msp-invitation");
   await expect(invitation).toContainText(`${adminUser.email} invited you to join Tailspin IT as a technician`);

@@ -1,7 +1,7 @@
 // A small client for the server's HTTP API, for black-box tests. The server
 // stores keys and encrypted values as opaque strings and never decrypts them,
 // so tests use stand-in key material instead of real crypto.
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -31,6 +31,22 @@ export type Account = {
 };
 
 export type Result = { status: number; body: any };
+
+/** The code for an authenticator key at a time (RFC 6238: SHA-1, 30 seconds, 6 digits). */
+export function totp(base32Key: string, now = Date.now()): string {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = "";
+  for (const c of base32Key.replace(/=+$/, "").toUpperCase()) {
+    bits += alphabet.indexOf(c).toString(2).padStart(5, "0");
+  }
+  const key = Buffer.from(bits.match(/.{8}/g)!.map((b) => parseInt(b, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(now / 30_000)));
+  const hmac = createHmac("sha1", key).update(counter).digest();
+  const offset = hmac[hmac.length - 1] & 0xf;
+  const code = (hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000;
+  return code.toString().padStart(6, "0");
+}
 
 async function result(response: APIResponse): Promise<Result> {
   const text = await response.text();
@@ -104,6 +120,52 @@ export class Api {
     });
     expect(response.status(), await response.text()).toBe(200);
     return (await response.json()).access_token;
+  }
+
+  /**
+   * A password sign-in as an app makes it, with anything extra (a two-step
+   * provider and code, an approved request), and the raw answer.
+   */
+  async signIn(
+    email: string,
+    password: string,
+    extra: Record<string, string> = {},
+  ): Promise<Result> {
+    const response = await this.request.post("/identity/connect/token", {
+      form: {
+        grant_type: "password",
+        username: email,
+        password,
+        scope: "api offline_access",
+        client_id: "web",
+        deviceType: "10",
+        deviceIdentifier: randomUUID(),
+        deviceName: "api-test",
+        ...extra,
+      },
+    });
+    return result(response);
+  }
+
+  /**
+   * Turns on an authenticator app for someone, as the web vault's two-step
+   * login settings do, with their session (or a setup session's token).
+   * Returns its key. The code used to turn it on can't be used again, so a
+   * sign-in right after needs the next one (`totp(key, Date.now() + 30_000)`).
+   */
+  async turnOnAuthenticator(as: { token: string }, password: string): Promise<string> {
+    const started = await this.call(as, "POST", "/api/two-factor/get-authenticator", {
+      masterPasswordHash: password,
+    });
+    expect(started.status, JSON.stringify(started.body)).toBe(200);
+    const key = started.body.key as string;
+    const on = await this.call(as, "POST", "/api/two-factor/authenticator", {
+      key,
+      token: totp(key),
+      masterPasswordHash: password,
+    });
+    expect(on.status, JSON.stringify(on.body)).toBe(200);
+    return key;
   }
 
   /** Calls the API as someone (or no one), and returns the status and parsed body. */

@@ -11,7 +11,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { groupsServerPort } from "../paths.mjs";
 
-import { confirmMember, menu, newItem, reloadVault, signUp, webUserFor } from "./support/web";
+import { confirmMember, menu, newItem, reloadVault, signUp, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 test.use({ baseURL: `https://127.0.0.1:${groupsServerPort}` });
 
@@ -39,7 +39,7 @@ test("an owner gives someone a Custom grid in a shared folder, and the web vault
 
   const ownerContext = await browser.newContext();
   const owner = await ownerContext.newPage();
-  await signUp(owner, webUserFor("grid-owner", testInfo.repeatEachIndex));
+  await signUpWithAuthenticator(owner, webUserFor("grid-owner", testInfo.repeatEachIndex));
 
   // A business organization comes with Everyone and Admins.
   await owner.goto("/#/create-organization");

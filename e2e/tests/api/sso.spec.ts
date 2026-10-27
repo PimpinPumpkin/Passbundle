@@ -605,11 +605,17 @@ test("MSP staff are never signed in by a client's single sign-on; the managing M
 
   // Require single sign-on (the Business preset has Single organization on):
   // the managing MSP's staff still sign in with their passwords; staff of
-  // another MSP don't get out of it.
+  // another MSP don't get out of it. (MSP staff sign in with two-step login
+  // too: DESIGN.md, "Two-step login for admins".)
+  const keys = [await turnOnAuthenticator(api, tech), await turnOnAuthenticator(api, mspAdmin)];
   const required = await setPolicy(api, mspAdmin, orgId, 4, true);
   expect(required.status, JSON.stringify(required.body)).toBe(200);
-  for (const staff of [tech, mspAdmin]) {
-    expect((await passwordLogin(request, staff)).status).toBe(200);
+  for (const [i, staff] of [tech, mspAdmin].entries()) {
+    const signedIn = await passwordLogin(request, staff, {
+      twoFactorProvider: "0",
+      twoFactorToken: totp(keys[i], Date.now() + 30_000),
+    });
+    expect(signedIn.status, JSON.stringify(signedIn.body)).toBe(200);
   }
   const moon = await passwordLogin(request, moonlighter);
   expect(moon.status).toBe(400);

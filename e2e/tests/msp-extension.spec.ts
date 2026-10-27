@@ -20,6 +20,7 @@ import {
   test,
   userFor,
 } from "./support/extension";
+import { giveAuthenticator } from "./support/two-step";
 import { newTemplate } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
@@ -33,6 +34,8 @@ test("with no vault tab open, an MSP admin's extension confirms someone invited 
   test.setTimeout(240_000);
   const adminUser = userFor("msp-ext-admin", testInfo.repeatEachIndex);
   const web = await createAccount(context, adminUser);
+  // An MSP's staff sign in with two-step login (DESIGN.md, "Two-step login for admins").
+  await giveAuthenticator(request, adminUser);
 
   // An MSP with one client, and a template that applies to it.
   await web.goto(`${serverUrl}/#/msp`);

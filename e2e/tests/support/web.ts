@@ -1,5 +1,7 @@
 // Helpers for tests that use the web vault directly, without the extension.
-import { expect, type Page } from "@playwright/test";
+import { type APIRequestContext, expect, type Page } from "@playwright/test";
+
+import { giveAuthenticator } from "./two-step";
 
 export type WebUser = { email: string; name: string; password: string };
 
@@ -14,6 +16,20 @@ export async function signUp(page: Page, user: WebUser) {
   await startSignUp(page, user);
   await skipImport(page);
   await expect(page).toHaveTitle(/^Items/);
+}
+
+/**
+ * Creates an account with an authenticator app, as someone who will own or run
+ * a Business organization, or be on an MSP's staff, needs: without one, their
+ * session ends at its next refresh (DESIGN.md, "Two-step login for admins").
+ */
+export async function signUpWithAuthenticator(
+  page: Page,
+  user: WebUser,
+  request: APIRequestContext = page.context().request,
+) {
+  await signUp(page, user);
+  await giveAuthenticator(request, user);
 }
 
 /** Creates an account, up to the offer to import that comes first. */
