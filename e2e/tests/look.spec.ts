@@ -83,14 +83,11 @@ test("the look follows the device for System, Light and Dark hold, and the type 
   await expect.poll(() => look(page)).toEqual(["pb-web", "theme_dark"]);
   await expect(ground(page)).toHaveCSS("background-color", "rgb(17, 19, 24)");
 
-  // The choice holds across a reload, before the app has started. (A reload
-  // locks the web vault: its keys live in memory.)
+  // The choice holds across a reload, before the app has started.
   await page.reload();
   expect(await look(page)).toEqual(["pb-web", "theme_dark"]);
-  await page.getByLabel(/Master password/).fill(user.password);
-  await page.getByRole("button", { name: "Unlock", exact: true }).click();
-  // Unlocking goes back to the page it was on.
-  await page.waitForURL((url) => !url.hash.includes("lock"));
+  // Within the vault timeout the reload stays unlocked, on the same page.
+  await expect(theme).toBeVisible({ timeout: 30_000 });
 
   await page.goto("/#/settings/appearance");
   await theme.click();

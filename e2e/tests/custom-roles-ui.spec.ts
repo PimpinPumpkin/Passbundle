@@ -9,7 +9,7 @@
 // with only those still opens the admin console's Vault tab.
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUp, webUserFor, type WebUser } from "./support/web";
+import { reloadVault, signUp, webUserFor } from "./support/web";
 
 const toast = (page: Page, text: string | RegExp) => page.getByText(text).first();
 
@@ -25,14 +25,6 @@ function refusedCalls(page: Page) {
     }
   });
   return refused;
-}
-
-/** Reloading locks the vault; unlock it again. */
-async function unlock(page: Page, user: WebUser) {
-  await page.reload();
-  await page.getByRole("textbox", { name: /^Master password/ }).fill(user.password);
-  await page.getByRole("button", { name: "Unlock", exact: true }).click();
-  await page.waitForURL(/#\/vault/);
 }
 
 test("an MSP admin gives a client's point of contact a custom role that manages members, and nothing more", async ({
@@ -78,7 +70,7 @@ test("an MSP admin gives a client's point of contact a custom role that manages 
 
   // The point of contact opens the organization, lands on Members, and sees
   // nothing else of the admin console.
-  await unlock(poc, pocUser);
+  await reloadVault(poc);
   const refused = refusedCalls(poc);
   await poc.goto(orgUrl);
   await expect(poc).toHaveURL(/#\/organizations\/[^/]+\/members/);
@@ -164,7 +156,7 @@ test("upstream's Custom role that only manages all collections still opens the a
   await admin.goto("/#/msp");
   await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
 
-  await unlock(manager, managerUser);
+  await reloadVault(manager);
   const refused = refusedCalls(manager);
   await manager.goto(orgUrl);
   await expect(manager).toHaveURL(/#\/organizations\/[^/]+\/vault/);
@@ -210,7 +202,7 @@ test("a client's custom role that only views event logs opens the event log and 
 
   // They open the organization and land on its event log, which names the
   // MSP admin who invited them.
-  await unlock(viewer, viewerUser);
+  await reloadVault(viewer);
   const refused = refusedCalls(viewer);
   await viewer.goto(orgUrl);
   await expect(viewer).toHaveURL(/#\/organizations\/[^/]+\/reporting\/events/);
@@ -263,7 +255,7 @@ test("a custom role that manages members and views event logs opens a member's e
 
   // On the Members page, a member's Options menu offers their event log, and
   // it opens.
-  await unlock(poc, pocUser);
+  await reloadVault(poc);
   const refused = refusedCalls(poc);
   await poc.goto(orgUrl);
   await expect(poc).toHaveURL(/#\/organizations\/[^/]+\/members/);

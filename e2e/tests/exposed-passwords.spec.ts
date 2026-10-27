@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
-import { menu, signUp, webUserFor, type WebUser } from "./support/web";
+import { menu, reloadVault, signUp, webUserFor } from "./support/web";
 
 const sha1 = (text: string) => createHash("sha1").update(text).digest("hex").toUpperCase();
 
@@ -93,17 +93,6 @@ async function cutOff(context: BrowserContext) {
   await context.route("https://api.pwnedpasswords.com/**", (route) => route.abort("internetdisconnected"));
 }
 
-/**
- * Reloading locks the web vault, which forgets what the check learned;
- * unlock again, back on the page it was on.
- */
-async function reloadAndUnlock(page: Page, user: WebUser) {
-  await page.reload();
-  const masterPassword = page.getByRole("textbox", { name: /^Master password/ });
-  await masterPassword.fill(user.password);
-  await page.getByRole("button", { name: "Unlock", exact: true }).click();
-  await expect(masterPassword).toBeHidden();
-}
 
 /** Adds a login to a client's Everyone folder from its admin console. */
 async function addClientLogin(page: Page, clientUrl: string, name: string, password: string) {
@@ -234,7 +223,7 @@ test("the MSP console counts each client's exposed passwords from hash prefixes,
 
   // Firewalled: the console says it couldn't check, and keeps the rest.
   await cutOff(context);
-  await reloadAndUnlock(page, user);
+  await reloadVault(page);
   await page.goto("/#/msp");
   const unchecked = page.getByTestId("msp-exposed-unchecked");
   await expect(unchecked).toContainText("Couldn't check for exposed passwords");
@@ -295,7 +284,7 @@ test("a person's Health counts the items to fix beside it, and its exposed passw
   // Firewalled: the count keeps weak and reused and says it couldn't check,
   // and the report says what it couldn't check, never "good news".
   await cutOff(context);
-  await reloadAndUnlock(page, user);
+  await reloadVault(page);
   await expect(count).toHaveText("3", { timeout: 30_000 });
   await expect(count.getByTestId("keykeeper-health-unchecked")).toBeVisible({ timeout: 30_000 });
   await expect(count).toHaveAttribute(
@@ -333,7 +322,7 @@ test("with checking after unlocking turned off, nothing goes to the breach servi
   await importLogins(page, HEALTH_LOGINS);
   // A new session: the choice is kept, and after unlocking the count is
   // weak and reused only, without a single request.
-  await reloadAndUnlock(page, user);
+  await reloadVault(page);
   const sentBefore = asked.length;
   const count = menu(page).getByTestId("keykeeper-health-count");
   await expect(count).toHaveText("3", { timeout: 30_000 });

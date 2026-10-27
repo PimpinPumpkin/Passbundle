@@ -11,17 +11,9 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { groupsServerPort } from "../paths.mjs";
 
-import { confirmMember, menu, newItem, signUp, webUserFor, type WebUser } from "./support/web";
+import { confirmMember, menu, newItem, reloadVault, signUp, webUserFor } from "./support/web";
 
 test.use({ baseURL: `https://127.0.0.1:${groupsServerPort}` });
-
-/** Reloading locks the vault; unlock it again. */
-async function unlock(page: Page, user: WebUser) {
-  await page.reload();
-  await page.getByRole("textbox", { name: /^Master password/ }).fill(user.password);
-  await page.getByRole("button", { name: "Unlock", exact: true }).click();
-  await page.waitForURL(/#\/vault/);
-}
 
 /** The web vault's own access token, from its latest API request. */
 function tokenOf(page: Page) {
@@ -117,7 +109,7 @@ test("an owner gives someone a Custom grid in a shared folder, and the web vault
   await expect(access).toBeHidden();
 
   // Dana's web vault: Everyone under Lakeside Clinic, with the owner's login.
-  await unlock(dana, danaUser);
+  await reloadVault(dana);
   const folders = menu(dana).getByRole("group", { name: "Folders" });
   await expect(folders.getByRole("button", { name: "Lakeside Clinic", exact: true })).toBeVisible();
   await expect(folders.getByRole("button", { name: "Everyone", exact: true })).toBeVisible();

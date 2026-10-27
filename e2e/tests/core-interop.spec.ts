@@ -10,7 +10,7 @@ import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 import { core, coreTool, serverCertificate } from "./support/core";
-import { newItem, signUp, webUserFor, type WebUser } from "./support/web";
+import { newItem, reloadVault, signUp, webUserFor } from "./support/web";
 
 test.skip(!coreTool && !process.env.CI, "KK_CORE_INTEROP isn't set; tier 1 builds the core's interop tool");
 
@@ -43,13 +43,10 @@ async function webLogin(page: Page, at: string, item: { name: string; username: 
   await expect(view).toBeHidden();
 }
 
-/** Reloading locks the web vault; unlocking it again syncs. */
-async function unlock(page: Page, user: WebUser) {
+/** Reloading the web vault syncs it. */
+async function resync(page: Page) {
   await page.goto("/#/vault");
-  await page.reload();
-  await page.getByRole("textbox", { name: /^Master password/ }).fill(user.password);
-  await page.getByRole("button", { name: "Unlock", exact: true }).click();
-  await page.waitForURL(/#\/vault/);
+  await reloadVault(page);
 }
 
 test("the core and the web vault read each other's items, personal and an organization's", async ({ page }, testInfo) => {
@@ -113,7 +110,7 @@ test("the core and the web vault read each other's items, personal and an organi
   // The web vault opens what the core made, every field as the core wrote it
   // (the password once shown: until then the field holds dots, and then it's
   // colored text rather than an input).
-  await unlock(page, user);
+  await resync(page);
   const view = page.getByRole("dialog", { name: "View Login" });
   await page.getByText("From the core").first().click();
   await expect(view.getByRole("textbox", { name: "Username" })).toHaveValue("core@example.test");
