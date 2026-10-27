@@ -231,7 +231,13 @@ test("a client's own owner sees its MSP on the Members page and removes it; the 
   await expect(staffLine).toContainText("Owner, with every item");
   await ownerBanner.getByRole("button", { name: "Remove Contoso IT" }).click();
   await owner.getByRole("dialog").getByRole("button", { name: "Remove Contoso IT" }).click();
-  await expect(toast(owner, "Removed Contoso IT")).toBeVisible();
+  // It says what went with the MSP (DESIGN.md, "Offboarding").
+  const removed = owner.getByTestId("msp-removed");
+  await expect(removed).toContainText("Removed Contoso IT");
+  await expect(removed).toContainText("1 person from Contoso IT lost access to this organization.");
+  await expect(removed).toContainText("Contoso IT's install command stopped working.");
+  await removed.getByRole("button", { name: "Done" }).click();
+  await expect(removed).toHaveCount(0);
   await expect(ownerBanner).toHaveCount(0);
   await expect(owner.getByText(adminUser.email)).toHaveCount(0);
   await expect(owner.getByText(ownerUser.email).first()).toBeVisible();
