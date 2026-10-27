@@ -175,6 +175,9 @@ async function setAccess(
   expect(saved.status, JSON.stringify(saved.body)).toBe(200);
 }
 
+/** A list of grants in id order, to compare two reads of the same folder. */
+const byId = <T extends { id: string }>(list: T[]): T[] => [...list].sort((a, b) => a.id.localeCompare(b.id));
+
 /** A folder with the same people as F, for requests that change a folder. */
 async function copyOfF(ctx: Context): Promise<string> {
   const created = await ctx.api.call(ctx.owner, "POST", `/api/organizations/${ctx.orgId}/collections`, {
@@ -651,6 +654,10 @@ test.describe("Shared folder grids", () => {
   test("grids that break the rules are refused, and nothing changes", async () => {
     const folder = await copyOfF(ctx);
     const before = await api.call(ctx.owner, "GET", `/api/organizations/${ctx.orgId}/collections/${folder}/details`);
+    expect(before.status, JSON.stringify(before.body)).toBe(200);
+    // Everyone copyOfF granted is there to compare.
+    expect(before.body.users).toHaveLength(Object.keys(GRIDS).length);
+    expect(before.body.groups).toHaveLength(1);
     for (const broken of [
       { ...NONE, export: true },
       { ...NONE, print: true },
@@ -666,8 +673,11 @@ test.describe("Shared folder grids", () => {
       expect(result.status, JSON.stringify(broken)).toBe(400);
     }
     const after = await api.call(ctx.owner, "GET", `/api/organizations/${ctx.orgId}/collections/${folder}/details`);
-    expect(after.body.users).toEqual(before.body.users);
-    expect(after.body.groups).toEqual(before.body.groups);
+    expect(after.status, JSON.stringify(after.body)).toBe(200);
+    // The server lists grants in no set order (PostgreSQL's can differ
+    // between two reads), so compare them by id: every grant, in full.
+    expect(byId(after.body.users)).toEqual(byId(before.body.users));
+    expect(byId(after.body.groups)).toEqual(byId(before.body.groups));
   });
 
   test("a grant saved without a grid is the preset upstream's fields name", async () => {
