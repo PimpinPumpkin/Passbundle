@@ -6,14 +6,22 @@
 // Pages can use:
 //   {{prices.premium}}, {{links.vault}}: values from site.json. An empty link
 //     isn't live yet and becomes /download/ (check.mjs --launch refuses it).
-//   <x-shot name="msp-console" alt="..."></x-shot>: a screenshot from
-//     static/shots, with its dark version in dark mode. Add `eager` for one
-//     that's on screen when the page opens, and `class` to style it.
+//   <x-shot name="msp-console" alt="..." frame="desktop"></x-shot>: a
+//     screenshot from static/shots, with its dark version in dark mode. Add
+//     `eager` for one that's on screen when the page opens, and `class` to
+//     style it. Until e2e/site-shots has made it, it's a placeholder the size
+//     of its `frame` (desktop, popup, or panel), which check.mjs --launch
+//     refuses.
+//   <x-tile icon="console" tone="sapphire"></x-tile>: a jewel tile, as in the
+//     apps, with a glyph from icons.mjs. Decorative: say what it means beside
+//     it. `class` sizes it (small, large).
 //   <x-art name="LockIcon"></x-art>: one of the apps' drawings from art/,
 //     inline so it takes the page's colors.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { ICONS } from "./icons.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pagesDir = path.join(here, "pages");
@@ -24,8 +32,9 @@ const site = JSON.parse(fs.readFileSync(path.join(here, "site.json"), "utf8"));
 
 const MARK =
   "M4.5 13V8.5a8.5 8.5 0 0 1 17 0V13h-4V8.5a4.5 4.5 0 0 0-9 0V13ZM4.5 13h17a4.5 4.5 0 0 1 4.5 4.5V18H0v-.5A4.5 4.5 0 0 1 4.5 13ZM0 20h26v5H0ZM0 27h26v.5a4.5 4.5 0 0 1-4.5 4.5h-17A4.5 4.5 0 0 1 0 27.5Z";
-// The logo: the jewel tile with the lock, and the name in lower case, two-tone
-// (styles.css, .brand). Its accessible name is the link's, "PassBundle home".
+// The logo: the emerald jewel tile with the lock in white, then the name in
+// lower case, two-tone, "pass" bold and "bundle" lighter (styles.css, .brand).
+// Its accessible name is the link's, "PassBundle home".
 const brandMark = `
       <span class="brand-tile" aria-hidden="true"><svg viewBox="0 0 26 32"><path fill-rule="evenodd" d="${MARK}"/></svg></span>
       <span class="brand-word" aria-hidden="true"><b>pass</b>bundle</span>`;
@@ -71,19 +80,39 @@ const attrs = (tag) =>
   Object.fromEntries([...tag.matchAll(/([a-z-]+)(?:="([^"]*)")?/g)].map(([, k, v]) => [k, v ?? ""]));
 
 /** <x-shot>: a <picture> with the light and dark screenshots. Shots are 2x, so the size given is half. */
+const placeholders = [];
+const FRAMES = ["desktop", "popup", "panel"];
 function shot(tag, file) {
   const a = attrs(tag);
   const shots = path.join(staticDir, "shots");
-  const light = ["-light", ""].map((s) => `${a.name}${s}.webp`).find((f) => fs.existsSync(path.join(shots, f)));
-  if (!light) throw new Error(`${file}: no screenshot ${a.name}`);
   if (!a.alt) throw new Error(`${file}: screenshot ${a.name} needs alt text`);
+  const light = ["-light", ""].map((s) => `${a.name}${s}.webp`).find((f) => fs.existsSync(path.join(shots, f)));
+  const cls = a.class ? ` ${a.class}` : "";
+  if (!light) {
+    // Not made yet: a box the shot's size, saying what goes there.
+    const frame = a.frame ?? "desktop";
+    if (!FRAMES.includes(frame)) throw new Error(`${file}: screenshot ${a.name} has an unknown frame ${frame}`);
+    placeholders.push(`${path.basename(file)}: ${a.name}`);
+    return `<span class="shot placeholder ${frame}${cls}" role="img" aria-label="${escape(a.alt)}"><mark class="todo">Screenshot to come: ${escape(a.name)}</mark></span>`;
+  }
   const dark = `${a.name}-dark.webp`;
   const [w, h] = webpSize(path.join(shots, light));
   const source = fs.existsSync(path.join(shots, dark))
     ? `<source srcset="/shots/${dark}" media="(prefers-color-scheme: dark)">`
     : "";
   const loading = "eager" in a ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"';
-  return `<picture class="shot${a.class ? ` ${a.class}` : ""}">${source}<img src="/shots/${light}" width="${w / 2}" height="${h / 2}" alt="${escape(a.alt)}" ${loading}></picture>`;
+  return `<picture class="shot${cls}">${source}<img src="/shots/${light}" width="${w / 2}" height="${h / 2}" alt="${escape(a.alt)}" ${loading}></picture>`;
+}
+
+/** <x-tile>: a jewel tile with a white glyph, decorative. */
+const TONES = [
+  "brand", "sapphire", "topaz", "amethyst", "turquoise", "onyx", "aquamarine", "garnet", "emerald", "ruby", "gold",
+];
+function tile(tag, file) {
+  const { icon, tone, class: cls } = attrs(tag);
+  if (!ICONS[icon]) throw new Error(`${file}: no icon ${icon} in icons.mjs`);
+  if (!TONES.includes(tone)) throw new Error(`${file}: tile ${icon} has an unknown tone ${tone}`);
+  return `<span class="tile ${tone}${cls ? ` ${cls}` : ""}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="${ICONS[icon]}"/></svg></span>`;
 }
 
 /** <x-art>: an inline drawing, decorative. */
@@ -108,13 +137,15 @@ function expand(html, file) {
   return html
     .replace(/<x-shot\b([^>]*)><\/x-shot>/g, (_, t) => shot(t, file))
     .replace(/<x-art\b([^>]*)><\/x-art>/g, (_, t) => art(t, file))
+    .replace(/<x-tile\b([^>]*)><\/x-tile>/g, (_, t) => tile(t, file))
     .replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k) => value(k, file));
 }
 
 const NAV = [
-  ["/business/", "Business"],
   ["/msp/", "For MSPs"],
+  ["/business/", "Business"],
   ["/pricing/", "Pricing"],
+  ["/download/", "Download"],
   ["/security/", "Security"],
   ["/help/", "Help"],
 ];
@@ -124,6 +155,7 @@ function layout({ meta, body, file }, route) {
   const kind = meta.layout === "wide" ? "wide" : "doc";
   const current = (href) => (route.startsWith(href) ? ' aria-current="page"' : "");
   const links = NAV.map(([href, label]) => `<a href="${href}"${current(href)}>${label}</a>`).join("\n        ");
+  const vault = value("links.vault", file);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -131,7 +163,8 @@ function layout({ meta, body, file }, route) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escape(title)}</title>
 <meta name="description" content="${escape(meta.description)}">
-<meta name="theme-color" content="#1F6F5C">
+<meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111318" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="/fonts/google-sans-flex-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -148,14 +181,15 @@ function layout({ meta, body, file }, route) {
         ${links}
     </nav>
     <div class="header-actions">
-      <a class="login" href="${value("links.vault", file)}">Log in</a>
+      <a class="login" href="${vault}">Log in</a>
       <a class="button primary small" href="/download/">Get PassBundle</a>
     </div>
     <details class="menu">
       <summary>Menu</summary>
-      <nav aria-label="Main">
+      <nav aria-label="Menu">
         ${links}
-        <a href="${value("links.vault", file)}">Log in</a>
+        <a href="${vault}">Log in</a>
+        <a class="button primary" href="/download/">Get PassBundle</a>
       </nav>
     </details>
   </div>
@@ -164,17 +198,18 @@ function layout({ meta, body, file }, route) {
 ${kind === "doc" ? `<div class="paper">\n${expand(body.trim(), file)}\n</div>` : expand(body.trim(), file)}
 </main>
 <footer class="site-footer">
-  <div class="bar">
+  <div class="bar footer-grid">
     <div class="footer-brand">
       <a class="brand" href="/" aria-label="PassBundle home">${brandMark}
       </a>
-      <p>The password manager for you, your family, your business, and every client you look after.</p>
+      <p>The password manager for MSPs and every client they look after, for businesses with their own IT, and for everyone at home.</p>
+      <p class="quiet">This site has no cookies, no trackers, and no scripts.</p>
     </div>
     <nav aria-label="Product">
       <h2>Product</h2>
-      <a href="/">Personal</a>
-      <a href="/business/">Business</a>
       <a href="/msp/">For MSPs</a>
+      <a href="/business/">Business</a>
+      <a href="/#personal">Personal and families</a>
       <a href="/pricing/">Pricing</a>
       <a href="/download/">Download</a>
     </nav>
@@ -231,3 +266,6 @@ for (const rel of fs.readdirSync(pagesDir).filter((f) => f.endsWith(".html"))) {
   pages++;
 }
 console.log(`built ${pages} pages into ${path.relative(process.cwd(), dist) || dist}`);
+if (placeholders.length > 0) {
+  console.log(`screenshots not made yet, shown as placeholders (${placeholders.length}):\n  ${placeholders.join("\n  ")}`);
+}

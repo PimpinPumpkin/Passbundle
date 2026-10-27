@@ -7,13 +7,19 @@ description: Getting started with PassBundle, for MSPs, their clients, and every
 
 <h2>Getting started</h2>
 <h3>How do I start?</h3>
-<p>Add the extension to your browser from <a href="/download/">Get PassBundle</a>, select its icon, and create an account. Then bring your passwords in: see <a href="/switch/">Switch to PassBundle</a>.</p>
+<p>Add the extension to your browser from <a href="/download/">Get PassBundle</a>, select its icon, and create an account, or create one in the PassBundle app on your computer or phone. Then bring your passwords in: see <a href="/switch/">Switch to PassBundle</a>.</p>
 
 <h3>Is there an app for my phone?</h3>
-<p>Not yet. iPhone and Android apps are coming. Until then, open the <a href="{{links.vault}}">web vault</a> in your phone's browser.</p>
+<p>On Android, yes: a test build that fills your passwords in apps and browsers and unlocks with your fingerprint or face. Get it from <a href="/download/#apps">Get PassBundle</a>. The iPhone app is coming; until then, open the <a href="{{links.vault}}">web vault</a> in Safari.</p>
 
-<h3>Which theme should I use?</h3>
-<p>Glass, the default, follows your device's light or dark mode with translucent panels. If text is easier for you to read on solid colors, choose Light or Dark under Settings, Appearance, Theme, in the extension or the web vault.</p>
+<h3>Is there an app for my computer?</h3>
+<p>Yes, for Windows, Mac, and Linux, as test builds on <a href="/download/#apps">Get PassBundle</a>. They keep themselves up to date. The browser extension still does the filling in your browser.</p>
+
+<h3>Can I choose light or dark?</h3>
+<p>PassBundle follows your device's light or dark mode. To keep one or the other, choose Light or Dark under Settings, Appearance, Theme, in the extension or the web vault.</p>
+
+<h3>What do the colors mean?</h3>
+<p>Each kind of item has its own colored tile: logins are blue, notes amber, cards purple, identities teal, and SSH keys charcoal. Templates bring their own, such as Wi-Fi, servers, and licenses. A login with a website shows the site's own icon, or its first letter.</p>
 
 <h2>Your account</h2>
 <h3>I forgot my master password</h3>
@@ -21,6 +27,9 @@ description: Getting started with PassBundle, for MSPs, their clients, and every
 
 <h3>Is two-step login supported?</h3>
 <p>Yes: authenticator apps, security keys, and email codes. Turn it on in your account's security settings. Some organizations require it.</p>
+
+<h3>Can I get back an earlier version of an item?</h3>
+<p>Yes. Open the item and choose <strong>Version history</strong>: every edit keeps the version before, with who saved it. View one to see what changed, then restore it. In a shared folder, this follows the folder's permissions.</p>
 
 <h3>How do I move my passwords in?</h3>
 <p>Export them from your browser or your current password manager, then import the file under Tools, Import. PassBundle reads exports from about 70 password managers and every major browser; <a href="/switch/">here is how</a>.</p>
@@ -34,10 +43,16 @@ description: Getting started with PassBundle, for MSPs, their clients, and every
 
 <h2>For businesses</h2>
 <h3>How do I set PassBundle up for my company?</h3>
-<p>In the web vault, choose <strong>New organization</strong> and pick <strong>A business</strong>. It starts with account recovery, strong master passwords, one work account per person, and Everyone and Admins collections, and you can change any of them on its Settings and Policies pages.</p>
+<p>In the web vault, choose <strong>New organization</strong> and pick <strong>A business</strong>. It starts with account recovery, strong master passwords, one work account per person, and Everyone and Admins shared folders, and you can change any of them on its Settings and Policies pages.</p>
 
 <h3>How do I roll it out to our computers?</h3>
 <p>Your organization's Settings page has an install command. Run it as an administrator on each Windows computer, from Intune, group policy, or your RMM. It installs the extension in Chrome and Edge, turns off the browsers' own password managers, and anyone who then signs in joins your organization. Your owners get an email for each person who joins, and you can limit the command to your email domains.</p>
+
+<h3>How do I connect Microsoft Entra ID?</h3>
+<p>In the organization's admin console, open <strong>Settings</strong>, then <strong>Provisioning</strong>, and choose <strong>Create token</strong>. In Entra, add a new enterprise application of your own (not from the gallery), set its provisioning to Automatic, paste the page's address as the Tenant URL and the token as the Secret Token, and test the connection. Then assign the users and groups who should be in PassBundle, and start provisioning.</p>
+
+<h3>How do shared folders and their permissions work?</h3>
+<p>Your own items live in Personal, and each organization has its shared folders. For each shared folder, give a person or group a preset (Can view, Can view but not see passwords, Can edit, or Can manage), or choose Custom to pick from ten capabilities, such as see passwords, delete, share, or export. Someone who reaches a folder more than one way gets the most open of them.</p>
 
 <h2>For MSPs</h2>
 <h3>How do I add a client?</h3>
@@ -54,6 +69,9 @@ description: Getting started with PassBundle, for MSPs, their clients, and every
 
 <h3>What can my technicians do?</h3>
 <p>By default, a technician is an admin in every client. You can limit each one to chosen clients, give them a custom role (such as managing members and account recovery but not policies), choose whether they see vault items, and hide install commands.</p>
+
+<h3>Where do I see which clients have weak or exposed passwords?</h3>
+<p>In the MSP console, each client's row counts its weak, reused, and exposed passwords. Select a count to see which items to fix, by name. Exposed passwords are checked against Have I Been Pwned with five characters of each password's hash; you can turn the check after unlocking off in Settings, Appearance.</p>
 
 <h3>How do default policies and templates work?</h3>
 <p>Default policies apply to every client, including new ones. Change a policy in a client's own admin console and that client keeps its own setting. Templates you add in the console go into every client's Templates collection, and when you edit one, every copy is updated.</p>
