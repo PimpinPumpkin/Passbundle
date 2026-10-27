@@ -281,7 +281,9 @@ test("a default reaches a client through its admin console's policy code: two-st
   const member = await api.account("dental-member");
   const mspId = await api.msp(admin, "Northwind IT");
   const dental = await api.client(admin, mspId, "Acme Dental", "business");
-  await api.addStaff(admin, mspId, tech, "technician");
+  // A technician without two-step login (whom two-step login for admins
+  // signs out, but the client's policy is what's checked here).
+  await api.addStaff(admin, mspId, tech, "technician", undefined, { authenticator: false });
   await api.confirmPending(admin, mspId);
   await api.addMember(admin, dental, member, "user");
 

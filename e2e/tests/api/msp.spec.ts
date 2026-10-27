@@ -307,7 +307,11 @@ test("a client's single-organization policy doesn't lock its MSP out, and its tw
   const mspId = await api.msp(admin, "Adatum IT");
   const strict = await api.client(admin, mspId, "Strict Co");
   const other = await api.client(admin, mspId, "Other Co");
-  await api.addStaff(admin, mspId, tech, "technician");
+  // The MSP doesn't require two-step login of its staff here, nor do these
+  // clients of their admins, so only the clients' policies apply.
+  const staffRule = await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/two-step`, { staffRequired: false });
+  expect(staffRule.status, JSON.stringify(staffRule.body)).toBe(200);
+  await api.addStaff(admin, mspId, tech, "technician", undefined, { authenticator: false });
   await api.confirmPending(admin, mspId);
 
   // Single organization (3) and two-step login (0): the technician belongs to

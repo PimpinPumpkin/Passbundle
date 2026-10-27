@@ -118,11 +118,11 @@ test("an MSP recovers a client admin's account, and they set up two-step login a
   // The Business defaults, with this server's account recovery.
   const clientId = await api.client(mspAdmin, mspId, clientName, "business");
 
-  // A client admin joins by email, enrolling in account recovery, and has an
-  // authenticator app.
+  // A client admin with an authenticator app joins by email, enrolling in
+  // account recovery.
   const admin = await api.account("recovered-admin");
+  await api.giveAuthenticator(admin);
   const memberId = await joinByEmail(api, mspAdmin, clientId, clientName, admin, { type: 1 });
-  await api.turnOnAuthenticator(admin, admin.password);
 
   // They lose their master password and their phone; the MSP resets both.
   const newHash = Buffer.from(`new-hash-${admin.email}`).toString("base64");
@@ -143,6 +143,22 @@ test("an MSP recovers a client admin's account, and they set up two-step login a
   const signIn = await api.signIn(admin.email, newHash);
   expectSetup(signIn);
   expect(signIn.body.KeykeeperTwoStepRequiredBy).toEqual([clientName]);
-  const key = await api.turnOnAuthenticator({ token: signIn.body.KeykeeperTwoStepSetup }, newHash);
+  const setup = { token: signIn.body.KeykeeperTwoStepSetup as string };
+  expect((await api.call(setup, "GET", "/api/keykeeper/two-step-setup")).status).toBe(200);
+
+  // Recovered again before they set it up, the setup session ends with the
+  // old password, as every session does.
+  const newerHash = Buffer.from(`newer-hash-${admin.email}`).toString("base64");
+  const again = await api.call(mspAdmin, "PUT", `/api/organizations/${clientId}/users/${memberId}/recover-account`, {
+    newMasterPasswordHash: newerHash,
+    key: encString(`user-key-after-second-recovery-${admin.email}`),
+    resetMasterPassword: true,
+    resetTwoFactor: false,
+  });
+  expect(again.status, JSON.stringify(again.body)).toBe(200);
+  expect((await api.call(setup, "GET", "/api/keykeeper/two-step-setup")).status).toBe(401);
+  const next = await api.signIn(admin.email, newerHash);
+  expectSetup(next);
+  const key = await api.turnOnAuthenticator({ token: next.body.KeykeeperTwoStepSetup }, newerHash);
   expect(key).toMatch(/^[A-Z2-7]+$/);
 });

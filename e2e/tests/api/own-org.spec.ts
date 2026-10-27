@@ -28,6 +28,11 @@ async function create(api: Api, owner: Account, name: string, preset?: "business
 }
 
 async function makeOrg(api: Api, owner: Account, name: string, preset?: "business" | "none") {
+  // The Business preset requires two-step login of its owners, and making it
+  // signs out an owner without it.
+  if (preset === "business") {
+    await api.giveAuthenticator(owner);
+  }
   const created = await create(api, owner, name, preset);
   expect(created.status, JSON.stringify(created.body)).toBe(200);
   return created.body.id as string;

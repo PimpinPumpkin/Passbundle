@@ -55,6 +55,10 @@ While it's on, the tenant can't change: a new tenant unlinks everyone. Turn the 
 
 An API key (the command-line tool's) still signs in without single sign-on. With the policy on, the Single sign-on page offers **Replace members' API keys**, so members' old keys stop working; they get a new one from their account settings after signing in with single sign-on.
 
+## Two-step login for admins
+
+Where the organization requires two-step login for admins, a sign-in with its single sign-on counts for its admins and custom roles (not owners, nor your IT provider's staff), because Microsoft asks for MFA. That's yours to set: require MFA for the PassBundle app with Conditional Access (or security defaults). PassBundle can't see it from the usual ID token; when a token does say how someone signed in (`amr`) and that had no MFA, PassBundle asks them to set up two-step login, as after a password.
+
 ## Who can sign in
 
 - **Someone invited who has no account yet** (by email, or by provisioning from Entra): they sign in with Microsoft, then choose a master password. Their email must be vouched for (step 3 or 5).
@@ -92,5 +96,5 @@ Not done yet: PassBundle's tests use a stand-in for Entra. With a Microsoft 365 
 - [ ] A wrong secret is refused with AADSTS7000215; an expired or deleted one too.
 - [ ] Require single sign-on: a member's password sign-in goes to Microsoft; the owner's doesn't. A member not linked yet is taken through linking after their password (and two-step login), then signs in with Microsoft.
 - [ ] Account recovery: reset a member's master password; they sign in with Microsoft and unlock with the new one.
-- [ ] Conditional Access (for example, requiring MFA for the app) applies at Microsoft's sign-in, with nothing to change here.
+- [ ] Conditional Access (for example, requiring MFA for the app) applies at Microsoft's sign-in, with nothing to change here. Whether the ID token carries `amr` with `mfa` after it.
 - [ ] A guest (B2B) user in the tenant, invited to the organization: links only by their own invited email.
