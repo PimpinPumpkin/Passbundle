@@ -4,16 +4,18 @@
 // the settings, domain verification, how accounts link (by tenant id and
 // object id, never by the email Entra sends), the ID token checks, single-use
 // states and codes, "Require single sign-on", and the event log.
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 
 import { expect, test, type APIRequestContext } from "@playwright/test";
 
 import { entraPort, port } from "../../paths.mjs";
 import {
+  confirmLink,
   linkFromSession,
   message,
   newDomain,
   newIdentifier,
+  pkce,
   redeem,
   settings,
   setTxt,
@@ -56,7 +58,7 @@ async function setPolicy(api: Api, owner: Account, orgId: string, type: number, 
   });
 }
 
-async function passwordLogin(request: APIRequestContext, who: Account) {
+async function passwordLogin(request: APIRequestContext, who: Account, extra: Record<string, string> = {}) {
   const response = await request.post("/identity/connect/token", {
     form: {
       grant_type: "password",
@@ -67,9 +69,42 @@ async function passwordLogin(request: APIRequestContext, who: Account) {
       deviceType: "10",
       deviceIdentifier: randomUUID(),
       deviceName: "api-test",
+      ...extra,
     },
   });
   return { status: response.status(), body: await response.json() };
+}
+
+/** The current code for an authenticator key (RFC 6238: SHA-1, 30 seconds, 6 digits). */
+function totp(base32Key: string, now = Date.now()): string {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = "";
+  for (const c of base32Key.replace(/=+$/, "").toUpperCase()) {
+    bits += alphabet.indexOf(c).toString(2).padStart(5, "0");
+  }
+  const key = Buffer.from(bits.match(/.{8}/g)!.map((b) => parseInt(b, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(now / 30_000)));
+  const hmac = createHmac("sha1", key).update(counter).digest();
+  const offset = hmac[hmac.length - 1] & 0xf;
+  const code = (hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000;
+  return code.toString().padStart(6, "0");
+}
+
+/** Turns on an authenticator app for someone; returns its key. */
+async function turnOnAuthenticator(api: Api, person: Account) {
+  const started = await api.call(person, "POST", "/api/two-factor/get-authenticator", {
+    masterPasswordHash: person.password,
+  });
+  expect(started.status, JSON.stringify(started.body)).toBe(200);
+  const key = started.body.key as string;
+  const on = await api.call(person, "POST", "/api/two-factor/authenticator", {
+    key,
+    token: totp(key),
+    masterPasswordHash: person.password,
+  });
+  expect(on.status, JSON.stringify(on.body)).toBe(200);
+  return key;
 }
 
 test("owners and admins set it up; the secret never comes back; the tenant must exist", async ({ request }) => {
@@ -225,8 +260,8 @@ async function linkedMember(
   const memberId = await api.addMember(sso.owner, sso.orgId, account, role);
   const person = await sso.tenant.person(account.email);
   await sso.tenant.next(person);
-  const linked = await linkFromSession(request, origin, account.token, sso.identifier);
-  expect(linked.status, JSON.stringify(linked.body)).toBe(307);
+  const linked = await linkFromSession(request, origin, account, sso.identifier);
+  expect(linked.status, JSON.stringify(linked.body)).toBe(200);
   return { account, memberId, person };
 }
 
@@ -249,16 +284,48 @@ test("an account with keys links only from its own signed-in session, then signs
   await tenant.next(ana);
   const byEmail = await ssoSignIn(request, origin, identifier);
   expect(byEmail.token?.status).toBe(400);
-  expect(message(byEmail.token!.body)).toMatch(/already has a PassBundle account\. Sign in with your master password once/);
+  expect(message(byEmail.token!.body)).toMatch(/already has a PassBundle account\. Sign in with your email and master password, then link/);
 
-  // From her signed-in session: Link SSO.
+  // From her signed-in session: Link SSO. A ticket needs her master password
+  // (or a one-time code); an API key's token can't get one at all.
+  const ticketPath = "/api/accounts/sso/user-identifier";
+  expect((await api.call(member, "POST", ticketPath, {})).status).toBe(400);
+  expect((await api.call(member, "POST", ticketPath, { masterPasswordHash: "wrong" })).status).toBe(400);
+  const apiKey = await api.call(member, "POST", "/api/accounts/api-key", { masterPasswordHash: member.password });
+  expect(apiKey.status, JSON.stringify(apiKey.body)).toBe(200);
+  const keyLogin = await request.post("/identity/connect/token", {
+    form: {
+      grant_type: "client_credentials",
+      client_id: `user.${member.userId}`,
+      client_secret: apiKey.body.apiKey,
+      scope: "api",
+      deviceType: "8",
+      deviceIdentifier: randomUUID(),
+      deviceName: "sso-cli",
+    },
+  });
+  expect(keyLogin.status(), await keyLogin.text()).toBe(200);
+  const keyToken = (await keyLogin.json()).access_token;
+  expect((await api.call({ token: keyToken }, "POST", ticketPath, { masterPasswordHash: member.password })).status).toBe(401);
+
+  // Microsoft is asked to let her pick her account, and the link waits for
+  // her session to confirm it, showing which Microsoft account it is.
   await tenant.next(ana);
-  expect((await linkFromSession(request, origin, member.token, identifier)).status).toBe(307);
+  const linked = await linkFromSession(request, origin, member, identifier);
+  expect(linked.status, JSON.stringify(linked.body)).toBe(200);
+  expect(linked.atMicrosoft?.searchParams.get("prompt")).toBe("select_account");
+  expect(linked.pending?.body).toMatchObject({ microsoftEmail: member.email, accountEmail: member.email, identifier });
   const profile = await api.call(member, "GET", "/api/accounts/profile");
   const org = profile.body.organizations.find((o: { id: string }) => o.id === orgId);
   expect(org).toMatchObject({ useSso: true, identifier, ssoBound: true });
+  // A plain sign-in isn't asked to pick an account.
+  const plain = await request.get(
+    `${origin}/identity/connect/authorize?client_id=web&redirect_uri=${encodeURIComponent(`${origin}/sso-connector.html`)}&response_type=code&state=p_identifier=${identifier}&code_challenge=${"c".repeat(43)}&code_challenge_method=S256&domain_hint=${identifier}`,
+    { maxRedirects: 0 },
+  );
+  expect(new URL(plain.headers()["location"]).searchParams.get("prompt")).toBeNull();
   // A ticket works once.
-  const ticket = (await api.call(member, "GET", "/api/accounts/sso/user-identifier")).body as string;
+  const ticket = (await api.call(member, "POST", ticketPath, { masterPasswordHash: member.password })).body as string;
   expect(typeof ticket).toBe("string");
   const once = `${origin}/identity/connect/authorize?client_id=web&redirect_uri=${encodeURIComponent(`${origin}/sso-connector.html`)}&response_type=code&state=s_identifier=${identifier}&code_challenge=${"c".repeat(43)}&code_challenge_method=S256&domain_hint=${identifier}&user_identifier=${encodeURIComponent(ticket)}`;
   expect((await request.get(once, { maxRedirects: 0 })).status()).toBe(307);
@@ -298,7 +365,7 @@ test("an account with keys links only from its own signed-in session, then signs
   expect(message((await ssoSignIn(request, origin, identifier)).token!.body)).toMatch(/already linked to a different Microsoft account/);
   // And a session can't take a Microsoft account linked to someone else.
   await tenant.next(ana);
-  const taken = await linkFromSession(request, origin, owner.token, identifier);
+  const taken = await linkFromSession(request, origin, owner, identifier);
   expect(taken.status).toBe(400);
   expect(message(taken.body)).toMatch(/That Microsoft account is already linked to another PassBundle account/);
 
@@ -320,7 +387,7 @@ test("an account with keys links only from its own signed-in session, then signs
   // She can link again herself, and unlink herself.
   const session = await passwordLogin(request, member);
   await tenant.next(ana);
-  expect((await linkFromSession(request, origin, session.body.access_token, identifier)).status).toBe(307);
+  expect((await linkFromSession(request, origin, { token: session.body.access_token, password: member.password }, identifier)).status).toBe(200);
   const self = await api.call({ token: session.body.access_token }, "DELETE", `/api/accounts/sso/${orgId}`);
   expect(self.status, JSON.stringify(self.body)).toBe(200);
   expect((await api.call(owner, "GET", `/api/keykeeper/organizations/${orgId}/sso`)).body.links).toEqual([]);
@@ -330,6 +397,59 @@ test("an account with keys links only from its own signed-in session, then signs
   expect(log.some((e) => e.type === 1590 && e.organizationUserId === memberId && e.actingUserId === member.userId)).toBe(true);
   expect(log.some((e) => e.type === 1505 && e.organizationUserId === memberId)).toBe(true);
   expect(log.some((e) => e.type === 1591 && /links from a signed-in session/.test(e.keykeeperDetail ?? ""))).toBe(true);
+});
+
+test("a link ticket works only in the browser it was issued to, and only the session that asked confirms the link", async ({
+  request,
+  playwright,
+}) => {
+  const api = new Api(request);
+  const { owner, orgId, tenant, identifier, domain } = await ssoOrg(api, "bind");
+  const member = await api.account("bind-member", `bo-${randomUUID().slice(0, 8)}@${domain}`);
+  await api.addMember(owner, orgId, member, "user");
+  const bo = await tenant.person(member.email);
+  const coworker = await tenant.person(`co-${randomUUID().slice(0, 8)}@${domain}`);
+  const links = async () => (await api.call(owner, "GET", `/api/keykeeper/organizations/${orgId}/sso`)).body.links;
+
+  // Bo's ticket, finished in a coworker's browser (where Microsoft would sign
+  // the coworker in), links nothing: the ticket needs Bo's browser's cookie,
+  // and it's gone once tried.
+  const coworkersBrowser = await playwright.request.newContext({ baseURL: origin, ignoreHTTPSErrors: true });
+  try {
+    await tenant.next(coworker);
+    const elsewhere = await linkFromSession(request, origin, member, identifier, { browser: coworkersBrowser });
+    expect(elsewhere.status).toBe(400);
+    expect(message(elsewhere.body)).toMatch(/started in another browser/);
+    expect(await links()).toEqual([]);
+  } finally {
+    await coworkersBrowser.dispose();
+  }
+
+  // A pending link waits for the session that asked: not another account's,
+  // and not another session of Bo's own.
+  const other = await api.account("bind-other", `other-${randomUUID().slice(0, 8)}@${domain}`);
+  const secondSession = await api.logIn(member.email, member.password);
+  for (const confirmAs of [other.token, secondSession]) {
+    await tenant.next(bo);
+    const refused = await linkFromSession(request, origin, member, identifier, { confirmAs });
+    expect(refused.pending?.status).toBe(400);
+    expect(refused.status).toBe(400);
+    expect(message(refused.body)).toMatch(/expired, or was started somewhere else/);
+    // Their attempts don't use up the code: Bo's session still confirms it.
+    const mine = await confirmLink(request, origin, member.token, refused.code!);
+    expect(mine.status, JSON.stringify(mine.body)).toBe(200);
+    expect(await links()).toEqual([expect.objectContaining({ email: member.email })]);
+    // A code works once.
+    expect((await confirmLink(request, origin, member.token, refused.code!)).status).toBe(400);
+    expect((await api.call(owner, "DELETE", `/api/keykeeper/organizations/${orgId}/sso/links/${member.userId}`)).status).toBe(200);
+  }
+
+  // A link's code is never redeemed as a sign-in.
+  await tenant.next(bo);
+  const held = await linkFromSession(request, origin, member, identifier, { confirm: false });
+  const asSignIn = await redeem(request, held.code!, pkce().verifier, `${origin}/sso-connector.html`);
+  expect(asSignIn.status).toBe(400);
+  expect(await links()).toEqual([]);
 });
 
 test("an invitation links by email only when the email is vouched for: xms_edov, or a verified domain for a member of the tenant", async ({
@@ -396,7 +516,7 @@ test("linking is refused for non-members, unvouched emails, and people with no a
   expect(message(notMember.token!.body)).toMatch(/isn't a member of/);
   // Nor from that account's own session.
   await tenant.next(await tenant.person(elsewhere.email, true));
-  const fromSession = await linkFromSession(request, origin, elsewhere.token, identifier);
+  const fromSession = await linkFromSession(request, origin, elsewhere, identifier);
   expect(fromSession.status).toBe(400);
   expect(message(fromSession.body)).toMatch(/isn't a member of/);
 
@@ -420,7 +540,7 @@ test("linking is refused for non-members, unvouched emails, and people with no a
   await tenant.next(soloPerson);
   expect(message((await ssoSignIn(request, origin, identifier)).token!.body)).toMatch(/already has a PassBundle account/);
   await tenant.next(soloPerson);
-  expect((await linkFromSession(request, origin, solo.token, identifier)).status).toBe(307);
+  expect((await linkFromSession(request, origin, solo, identifier)).status).toBe(200);
   await tenant.next(soloPerson);
   expect((await ssoSignIn(request, origin, identifier)).token?.status).toBe(200);
   expect(await api.orgsOf(solo)).toEqual([]);
@@ -465,7 +585,7 @@ test("MSP staff are never signed in by a client's single sign-on; the managing M
     expect(refused.token?.status).toBe(400);
     expect(message(refused.token!.body)).toMatch(/IT provider staff sign in with their email and master password/);
     await tenant.next(person);
-    const fromSession = await linkFromSession(request, origin, staff.token, identifier);
+    const fromSession = await linkFromSession(request, origin, staff, identifier);
     expect(message(fromSession.body)).toMatch(/IT provider staff/);
   }
 
@@ -523,12 +643,22 @@ test("each ID token check refuses the sign-in: issuer, tenant, audience, expiry,
   await tenant.next(cy, undefined, { error: "access_denied", error_description: "AADSTS50105: The signed in user isn't assigned to a role for the application." });
   const denied = await ssoSignIn(request, origin, identifier);
   expect(message(denied.token!.body)).toMatch(/Microsoft didn't sign you in \(access_denied\)\. AADSTS50105/);
+  // Whoever starts a sign-in can make up what the browser brings back, so
+  // the log keeps only an error code that fits OAuth's grammar, and never
+  // the description.
+  await tenant.next(cy, undefined, { error: 'made "up"', error_description: "Call 555-0100 to restore access" });
+  const madeUp = await ssoSignIn(request, origin, identifier);
+  expect(message(madeUp.token!.body)).toMatch(/Microsoft didn't sign you in \(unrecognized_error\)/);
 
   // After all that, the real thing still works, and the log has each refusal.
   await tenant.next(cy);
   expect((await ssoSignIn(request, origin, identifier)).token?.status).toBe(200);
   const refusals = (await events(api, owner, orgId)).filter((e) => e.type === 1591);
-  expect(refusals.length).toBeGreaterThanOrEqual(15);
+  expect(refusals.length).toBeGreaterThanOrEqual(16);
+  const details = refusals.map((e) => e.keykeeperDetail ?? "");
+  expect(details).toContain("Microsoft refused, as the browser reported it: access_denied");
+  expect(details).toContain("Microsoft refused, as the browser reported it: unrecognized_error");
+  expect(details.filter((d) => /AADSTS|555/.test(d))).toEqual([]);
 });
 
 test("a sign-in's state and code work once, only with the app's PKCE verifier, redirect URI, and browser", async ({
@@ -612,7 +742,7 @@ test("Require single sign-on: members are sent to it, owners aren't, another org
   expect((await api.call(admin, "PUT", `/api/keykeeper/organizations/${otherOrg}/sso`, settings(otherTenant, otherIdentifier))).status).toBe(200);
   const adminElsewhere = await otherTenant.person(admin.email);
   await otherTenant.next(adminElsewhere);
-  expect((await linkFromSession(request, origin, admin.token, otherIdentifier)).status).toBe(307);
+  expect((await linkFromSession(request, origin, admin, otherIdentifier)).status).toBe(200);
 
   // It needs Single organization first.
   const tooSoon = await setPolicy(api, owner, orgId, 4, true);
@@ -644,6 +774,13 @@ test("Require single sign-on: members are sent to it, owners aren't, another org
   const viaOther = await ssoSignIn(request, origin, otherIdentifier);
   expect(viaOther.token?.status).toBe(400);
   expect(message(viaOther.token!.body)).toMatch(/requires you to sign in with its own single sign-on/);
+  // The person is told which organization; the other organization's log
+  // doesn't name it.
+  const thisName = (await api.call(owner, "GET", `/api/organizations/${orgId}`)).body.name as string;
+  expect(message(viaOther.token!.body)).toContain(thisName);
+  const otherLog = (await events(api, admin, otherOrg)).filter((e) => e.type === 1591).map((e) => e.keykeeperDetail ?? "");
+  expect(otherLog.some((d) => /another organization that requires it/.test(d))).toBe(true);
+  expect(otherLog.filter((d) => d.includes(thisName))).toEqual([]);
 
   // The owner is never locked out.
   expect((await passwordLogin(request, owner)).status).toBe(200);
@@ -698,6 +835,104 @@ test("Require single sign-on: members are sent to it, owners aren't, another org
     form: { grant_type: "refresh_token", refresh_token: signedIn.token!.body.refresh_token, client_id: "web" },
   });
   expect(afterOff.status()).toBe(400);
+});
+
+test("Require single sign-on with members not linked yet: their password and two-step login get a linking session, which only links", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const sso = await ssoOrg(api, "unlinked");
+  const { owner, orgId, tenant, identifier, domain } = sso;
+  const base = `/api/keykeeper/organizations/${orgId}/sso`;
+  const gus = await api.account("unlinked-gus", `gus-${randomUUID().slice(0, 8)}@${domain}`);
+  const gusMember = await api.addMember(owner, orgId, gus, "user");
+  const hal = await api.account("unlinked-hal", `hal-${randomUUID().slice(0, 8)}@${domain}`);
+  await api.addMember(owner, orgId, hal, "user");
+  const halKey = await turnOnAuthenticator(api, hal);
+  const gusPerson = await tenant.person(gus.email, undefined, "Gus Grant");
+  const halPerson = await tenant.person(hal.email);
+
+  // Before it's on, the page lists who isn't linked yet (never the owner).
+  const before = await api.call(owner, "GET", base);
+  expect(before.body.unlinked.map((u: { email: string }) => u.email).sort()).toEqual([gus.email, hal.email].sort());
+  expect((await setPolicy(api, owner, orgId, 3, true)).status).toBe(200);
+  expect((await setPolicy(api, owner, orgId, 4, true)).status).toBe(200);
+
+  // Gus's password gets a linking session, not a login.
+  const sent = await passwordLogin(request, gus);
+  expect(sent.status).toBe(400);
+  expect(sent.body.SsoOrganizationIdentifier).toBe(identifier);
+  const linking = sent.body.KeykeeperSsoLinkSession as string;
+  expect(typeof linking).toBe("string");
+  expect(sent.body.access_token).toBeUndefined();
+  // It opens nothing but linking.
+  for (const path of ["/api/sync", "/api/accounts/profile", `/api/organizations/${orgId}/users`]) {
+    expect((await api.call({ token: linking }, "GET", path)).status, path).toBe(401);
+  }
+  // A ticket from it works only for this organization's single sign-on.
+  const other = await ssoOrg(api, "unlinked-other");
+  await other.tenant.next(await other.tenant.person(gus.email));
+  const wrongOrg = await linkFromSession(request, origin, { token: linking }, other.identifier);
+  expect(wrongOrg.status).toBe(400);
+  // With it, Gus links his Microsoft account, seeing which one first.
+  await tenant.next(gusPerson);
+  const linked = await linkFromSession(request, origin, { token: linking }, identifier);
+  expect(linked.status, JSON.stringify(linked.body)).toBe(200);
+  expect(linked.pending?.body).toMatchObject({ microsoftName: "Gus Grant", microsoftEmail: gus.email, accountEmail: gus.email });
+  expect(linked.body.identifier).toBe(identifier);
+  // The linking session ended with the link.
+  expect((await api.call({ token: linking }, "POST", "/api/accounts/sso/user-identifier", {})).status).toBe(401);
+  // Now single sign-on signs him in, and his password sends him there.
+  await tenant.next(gusPerson);
+  const signedIn = await ssoSignIn(request, origin, identifier);
+  expect(signedIn.token?.status, JSON.stringify(signedIn.token?.body)).toBe(200);
+  const again = await passwordLogin(request, gus);
+  expect(again.body.SsoOrganizationIdentifier).toBe(identifier);
+  expect(again.body.KeykeeperSsoLinkSession).toBeUndefined();
+
+  // Hal has two-step login: his password alone gets the two-step prompt,
+  // and only with his code a linking session.
+  const prompted = await passwordLogin(request, hal);
+  expect(prompted.status).toBe(400);
+  expect(prompted.body.TwoFactorProviders2).toBeTruthy();
+  expect(prompted.body.KeykeeperSsoLinkSession).toBeUndefined();
+  const withCode = await passwordLogin(request, hal, {
+    // The next 30 seconds' code: the current one turned the authenticator on.
+    twoFactorToken: totp(halKey, Date.now() + 30_000),
+    twoFactorProvider: "0",
+    twoFactorRemember: "0",
+  });
+  expect(withCode.body.KeykeeperSsoLinkSession, JSON.stringify(withCode.body)).toBeTruthy();
+  await tenant.next(halPerson);
+  expect((await linkFromSession(request, origin, { token: withCode.body.KeykeeperSsoLinkSession }, identifier)).status).toBe(200);
+  expect((await api.call(owner, "GET", base)).body.unlinked).toEqual([]);
+
+  // Unlinked while it's on, Gus isn't locked out: his next password sign-in
+  // links again.
+  expect((await api.call(owner, "DELETE", `${base}/links/${gus.userId}`)).status).toBe(200);
+  const relink = await passwordLogin(request, gus);
+  expect(relink.body.KeykeeperSsoLinkSession).toBeTruthy();
+  await tenant.next(gusPerson);
+  expect((await linkFromSession(request, origin, { token: relink.body.KeykeeperSsoLinkSession }, identifier)).status).toBe(200);
+
+  // The tenant can't change under it: that would unlink everyone at once.
+  const otherTenant = await new Tenant().register();
+  const moved = await api.call(owner, "PUT", base, settings(otherTenant, identifier, true, true));
+  expect(moved.status).toBe(400);
+  expect(message(moved.body)).toMatch(/Turn off the Require single sign-on policy before changing the tenant/);
+
+  // Removed from the organization, Gus's link goes, and the sessions it
+  // started stop refreshing.
+  await tenant.next(gusPerson);
+  const lastSignIn = await ssoSignIn(request, origin, identifier);
+  expect(lastSignIn.token?.status).toBe(200);
+  expect((await api.call(owner, "DELETE", `/api/organizations/${orgId}/users/${gusMember}`)).status).toBe(200);
+  const links = (await api.call(owner, "GET", base)).body.links as { email: string }[];
+  expect(links.map((l) => l.email)).toEqual([hal.email]);
+  const refreshed = await request.post("/identity/connect/token", {
+    form: { grant_type: "refresh_token", refresh_token: lastSignIn.token!.body.refresh_token, client_id: "web" },
+  });
+  expect(refreshed.status()).toBe(400);
 });
 
 test("someone invited without an account signs in with single sign-on, then sets a master password and joins", async ({

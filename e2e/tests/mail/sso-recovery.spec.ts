@@ -41,7 +41,7 @@ test("an owner recovers a member who must sign in with single sign-on, and the n
   // They link their account from their signed-in session (it has keys, so an
   // email never links it), and the account hears about it.
   await tenant.next(gus);
-  expect((await linkFromSession(request, origin, member.token, identifier)).status).toBe(307);
+  expect((await linkFromSession(request, origin, member, identifier)).status).toBe(200);
   const linked = await waitForMessage(member.email, /linked to .* single sign-on/);
   expect(linked.text).toContain("If you didn't do this");
 

@@ -141,27 +141,47 @@ export async function ssoSignIn(
   return result;
 }
 
+export type LinkResult = {
+  /** The status of the step it ended at: 200 once linked, or the refusal's. */
+  status: number;
+  body: any;
+  /** Where authorize sent the browser (to Microsoft, for linking). */
+  atMicrosoft?: URL;
+  /** The pending link's code, once Microsoft answered. */
+  code?: string;
+  /** What the web vault's linking page shows before confirming. */
+  pending?: { status: number; body: any };
+};
+
 /**
- * Links a signed-in account to an organization's single sign-on, as the web
- * vault's Link SSO does: a ticket from the session, then authorize with it as
- * `user_identifier`, Microsoft (the stand-in, whose next sign-in the caller
- * queued), and the callback, which finishes the link. Returns the callback's
- * status (307 when linked) and its body when refused.
+ * Links an account to an organization's single sign-on, as the web vault's
+ * Link SSO does: a ticket for the session (proving the master password, or
+ * none for a linking session), then authorize with it as `user_identifier`
+ * from the same browser, Microsoft (the stand-in, whose next sign-in the
+ * caller queued), the callback, which holds the link, and the session's
+ * confirmation on the linking page. `browser` finishes from another request
+ * context (another browser); `confirmAs` confirms with another token.
  */
 export async function linkFromSession(
   request: APIRequestContext,
   origin: string,
-  token: string,
+  as: { token: string; password?: string | null },
   identifier: string,
-): Promise<{ status: number; body: any }> {
-  const ticket = await request.get(`${origin}/api/accounts/sso/user-identifier`, {
-    headers: { Authorization: `Bearer ${token}` },
+  options: { browser?: APIRequestContext; confirm?: boolean; confirmAs?: string } = {},
+): Promise<LinkResult> {
+  const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
+  const ticket = await request.post(`${origin}/api/accounts/sso/user-identifier`, {
+    headers: auth(as.token),
+    data: as.password ? { masterPasswordHash: as.password } : {},
   });
-  expect(ticket.status(), await ticket.text()).toBe(200);
+  if (ticket.status() !== 200) {
+    return { status: ticket.status(), body: await ticket.json().catch(() => null) };
+  }
   const userIdentifier = (await ticket.json()) as string;
+  const browser = options.browser ?? request;
   const { challenge } = pkce();
-  const state = `${b64url(randomBytes(24))}_returnUri='/vault'_identifier=${identifier}`;
-  const authorize = await request.get(
+  const state = `${b64url(randomBytes(24))}_identifier=${identifier}`;
+  const authorize = await browser.get(
     `${origin}/identity/connect/authorize?client_id=web&redirect_uri=${encodeURIComponent(`${origin}/sso-connector.html`)}` +
       `&response_type=code&scope=api%20offline_access&state=${encodeURIComponent(state)}&code_challenge=${challenge}` +
       `&code_challenge_method=S256&response_mode=query&domain_hint=${encodeURIComponent(identifier)}&ssoToken=` +
@@ -171,16 +191,46 @@ export async function linkFromSession(
   if (authorize.status() !== 307) {
     return { status: authorize.status(), body: await authorize.json().catch(() => null) };
   }
-  const atEntra = await request.get(authorize.headers()["location"], { maxRedirects: 0 });
+  const atMicrosoft = new URL(authorize.headers()["location"]);
+  const atEntra = await browser.get(atMicrosoft.toString(), { maxRedirects: 0 });
   expect(atEntra.status(), await atEntra.text()).toBe(302);
-  const callback = await request.get(atEntra.headers()["location"], { maxRedirects: 0 });
-  if (callback.status() === 307) {
-    const back = new URL(callback.headers()["location"]);
-    expect(back.origin + back.pathname).toBe(`${origin}/sso-connector.html`);
-    expect(back.searchParams.get("state")).toBe(state);
-    return { status: 307, body: null };
+  const callback = await browser.get(atEntra.headers()["location"], { maxRedirects: 0 });
+  if (callback.status() !== 307) {
+    return { status: callback.status(), body: await callback.json().catch(() => null), atMicrosoft };
   }
-  return { status: callback.status(), body: await callback.json().catch(() => null) };
+  // Back to the web vault's linking page with the pending link's code.
+  const back = callback.headers()["location"];
+  expect(back.startsWith(`${origin}/#/sso-link?code=`), back).toBe(true);
+  const code = new URLSearchParams(back.slice(back.indexOf("?") + 1)).get("code")!;
+  const confirmer = options.confirmAs ?? as.token;
+  const pendingResponse = await request.post(`${origin}/api/accounts/sso/link/pending`, {
+    headers: auth(confirmer),
+    data: { code },
+  });
+  const pending = { status: pendingResponse.status(), body: await pendingResponse.json().catch(() => null) };
+  if (options.confirm === false) {
+    return { status: pending.status, body: pending.body, atMicrosoft, code, pending };
+  }
+  const confirmed = await request.post(`${origin}/api/accounts/sso/link/confirm`, {
+    headers: auth(confirmer),
+    data: { code },
+  });
+  return {
+    status: confirmed.status(),
+    body: await confirmed.json().catch(() => null),
+    atMicrosoft,
+    code,
+    pending,
+  };
+}
+
+/** Confirms a pending link (the linking page's button) as someone. */
+export async function confirmLink(request: APIRequestContext, origin: string, token: string, code: string) {
+  const response = await request.post(`${origin}/api/accounts/sso/link/confirm`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { code },
+  });
+  return { status: response.status(), body: await response.json().catch(() => null) };
 }
 
 /** The web vault's token request for a sign-in's code. */

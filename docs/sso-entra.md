@@ -47,16 +47,22 @@ Now people can sign in: on the sign-in page, they type their email and choose **
 
 ## 6. Optional: require it
 
-Policies, **Require single sign-on**, makes members sign in with it. It needs single sign-on on and the **Single organization** policy. Owners and your IT provider's staff can always sign in with their passwords, so nobody is locked out, and account recovery keeps working.
+Policies, **Require single sign-on**, makes members sign in with it. It needs single sign-on on and the **Single organization** policy. Owners and your IT provider's staff can always sign in with their passwords, and account recovery keeps working.
+
+Before you turn it on, the policy's dialog (and the Single sign-on page) lists the members who aren't linked yet. They aren't locked out: their open sessions end at their next refresh, and when they next sign in with their email and master password (and two-step login, if they use it), PassBundle asks them to link their Microsoft account first, in the web vault. Then Microsoft signs them in and their master password unlocks. The same happens to anyone you unlink while it's on, and to anyone who joins later. Two cases do lock someone out until you act: someone who is also on another IT provider's staff (make them an owner or remove them), and someone turned off in Entra before they linked.
+
+While it's on, the tenant can't change: a new tenant unlinks everyone. Turn the policy off first.
 
 An API key (the command-line tool's) still signs in without single sign-on. With the policy on, the Single sign-on page offers **Replace members' API keys**, so members' old keys stop working; they get a new one from their account settings after signing in with single sign-on.
 
 ## Who can sign in
 
 - **Someone invited who has no account yet** (by email, or by provisioning from Entra): they sign in with Microsoft, then choose a master password. Their email must be vouched for (step 3 or 5).
-- **Members who already have an account**: they sign in with their master password once, open the organization's menu in their vault, and choose **Link SSO**. After that, Microsoft signs them in and their email doesn't matter. Their account is emailed whenever it's linked.
+- **Members who already have an account**: they link it themselves. In their vault, they open the organization's menu, choose **Link SSO**, confirm their master password, pick their Microsoft account, and confirm the link on the page that names it. With single sign-on required, PassBundle asks them to when they next sign in with their password. After that, Microsoft signs them in and their email doesn't matter. Their account is emailed whenever it's linked, and leaving the organization unlinks it.
 - **Accounts in no organization at a verified domain**: the same way, with Link SSO; they sign in to their own vault.
 - **Never:** people who aren't members (they're told so), your IT provider's staff (they use their master password), or an account already linked to a different Microsoft account. To relink someone whose Microsoft account was recreated, unlink them under **Linked accounts**; they're signed out everywhere and link again the same way.
+
+A verified domain vouches for emails at it from the tenant in your settings, whichever that is: keep the tenant ID right, and only let people you trust manage the organization's settings.
 
 ## When something goes wrong
 
@@ -71,7 +77,7 @@ The sign-in page says what PassBundle refused, and the organization's event log 
 | AADSTS50105, not assigned to a role for the application | Assignment is required and this person isn't assigned (step 4.2). |
 | AADSTS65001, the user or administrator hasn't consented | Grant admin consent (step 4.1). |
 | "Microsoft didn't confirm that ... is yours" | Their email's domain isn't verified in PassBundle and the token has no `xms_edov`, or `xms_edov` is false, or they're a guest without `xms_edov` (steps 3 and 5). |
-| "... already has a PassBundle account" | They link it themselves: sign in with the master password, then Link SSO in the organization's menu. |
+| "... already has a PassBundle account" | They link it themselves: sign in with the email and master password, then link (PassBundle asks if single sign-on is required; otherwise Link SSO in the organization's menu). |
 | "... isn't a member of ..." | Invite them first (Members, or provisioning from Entra). |
 
 ## Checking it with a real tenant
@@ -79,12 +85,12 @@ The sign-in page says what PassBundle refused, and the organization's event log 
 Not done yet: PassBundle's tests use a stand-in for Entra. With a Microsoft 365 developer tenant, check:
 
 - [ ] Steps 1 to 5 as written; the setup page's steps match what Entra shows.
-- [ ] A member with an account uses Link SSO, gets the email, then signs in with Microsoft and unlocks with their master password.
+- [ ] A member with an account uses Link SSO: Microsoft shows its account picker (`prompt=select_account`), the linking page names the right Microsoft account, they get the email, then sign in with Microsoft and unlock with their master password.
 - [ ] Someone invited without an account signs in with Microsoft and sets a master password.
 - [ ] The ID token carries `email` and `xms_edov` after step 3 (the event log says "not vouched for" when it doesn't).
 - [ ] A user not assigned to the app (with Assignment required) is refused by Microsoft with AADSTS50105, and PassBundle shows it.
 - [ ] A wrong secret is refused with AADSTS7000215; an expired or deleted one too.
-- [ ] Require single sign-on: a member's password sign-in goes to Microsoft; the owner's doesn't.
+- [ ] Require single sign-on: a member's password sign-in goes to Microsoft; the owner's doesn't. A member not linked yet is taken through linking after their password (and two-step login), then signs in with Microsoft.
 - [ ] Account recovery: reset a member's master password; they sign in with Microsoft and unlock with the new one.
 - [ ] Conditional Access (for example, requiring MFA for the app) applies at Microsoft's sign-in, with nothing to change here.
 - [ ] A guest (B2B) user in the tenant, invited to the organization: links only by their own invited email.

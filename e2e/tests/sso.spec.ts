@@ -2,12 +2,13 @@
 // Microsoft Entra ID"), against the local stand-in for Entra
 // (e2e/entra-standin.mjs): an owner sets it up on the organization's Single
 // sign-on page and verifies a domain; a member with an account links it from
-// their own session (Link SSO in the organization's menu), then types their
-// email, is sent to the organization's sign-in, picks their Microsoft
-// account, and unlocks with their master password; someone outside the
-// organization is told why not; and with "Require single sign-on" on, a
-// member's password sends them to it while the owner's still works. Real
-// keys throughout.
+// their own session (Link SSO in the organization's menu, their master
+// password, Microsoft, and their confirmation), then types their email, is
+// sent to the organization's sign-in, picks their Microsoft account, and
+// unlocks with their master password; someone outside the organization is
+// told why not; and with "Require single sign-on" on, a member's password
+// sends them to it, a member not linked yet links first, and the owner's
+// password still works. Real keys throughout.
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
 import { port } from "../paths.mjs";
@@ -100,9 +101,10 @@ async function setUp(browser: Browser, index: number, name: string) {
 
 /**
  * An account with keys links itself to the organization's single sign-on
- * from its own signed-in session: Link SSO in the organization's menu, then
- * Microsoft (the stand-in's account picker), and back to the vault, which
- * unlocks with the master password. Its owner's web vault confirms it first.
+ * from its own signed-in session: Link SSO in the organization's menu, its
+ * master password, Microsoft (the stand-in's account picker), and its
+ * confirmation on the linking page, then back to the vault, which unlocks
+ * with the master password. Its owner's web vault confirms it first.
  */
 async function linkSso(owner: Page, orgId: string, orgName: string, user: WebUser, page: Page) {
   // The organization's menu shows when its entry in the side menu is hovered.
@@ -126,7 +128,16 @@ async function linkSso(owner: Page, orgId: string, orgName: string, user: WebUse
   }).toPass({ timeout: 60_000 });
   await openOrgMenu();
   await page.getByRole("menuitem", { name: "Link SSO" }).click();
+  const verify = page.getByRole("dialog");
+  await verify.getByLabel(/Master password/).fill(user.password);
+  await verify.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("link", { name: `Sign in as ${user.email}` }).click();
+  // The linking page says which Microsoft account it is, and this session
+  // confirms it.
+  await page.waitForURL(/#\/sso-link\?code=/);
+  await expect(page.getByTestId("sso-link-microsoft")).toContainText(user.email);
+  await expect(page.getByTestId("sso-link-account")).toHaveText(user.email);
+  await page.getByRole("button", { name: "Link accounts" }).click();
   // Back in the vault, which reloaded, so it's locked.
   await expect(page.getByRole("button", { name: "Unlock", exact: true })).toBeVisible();
   await page.getByLabel(/Master password/).fill(user.password);
@@ -202,10 +213,19 @@ test("someone outside the organization is told why single sign-on can't sign the
   await expect(page.getByRole("textbox", { name: "SSO identifier" })).toHaveValue(identifier);
 });
 
-test("with Require single sign-on, a member's password sends them to it, and the owner still signs in with theirs", async ({
+/** Signs in with an email and master password on the sign-in page. */
+async function passwordSignIn(page: Page, user: WebUser) {
+  await page.goto("/#/login");
+  await page.getByLabel(/Email address/).fill(user.email);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("textbox", { name: /Master password/ }).fill(user.password);
+  await page.getByRole("button", { name: "Log in", exact: true }).click();
+}
+
+test("with Require single sign-on, a member's password sends them to it, one not linked yet links first, and the owner still signs in with theirs", async ({
   browser,
 }, testInfo) => {
-  test.setTimeout(180_000);
+  test.setTimeout(240_000);
   const index = testInfo.repeatEachIndex;
   const { owner, ownerUser, orgId, tenant, domain } = await setUp(browser, index, "Pine Street Law");
   const cy: WebUser = { email: `cy-${index}@${domain}`, name: "Cy", password };
@@ -215,29 +235,56 @@ test("with Require single sign-on, a member's password sends them to it, and the
   await tenant.person(cy.email);
   await linkSso(owner, orgId, "Pine Street Law", cy, cyVault);
   await cyVault.context().close();
+  // Dee joins too, and doesn't link.
+  const dee: WebUser = { email: `dee-${index}@${domain}`, name: "Dee", password };
+  const deeVault = await newPage(browser);
+  await signUp(deeVault, dee);
+  await invite(owner, orgId, dee.email);
+  await tenant.person(dee.email, undefined, "Dee Park");
+  await owner.goto("/#/vault");
+  await owner.goto(`/#/organizations/${orgId}/members`);
+  await expect(owner.getByRole("row").filter({ hasText: dee.email })).toBeVisible();
+  await deeVault.context().close();
 
-  // The policy, turned on from the Policies page (the Business preset has Single organization on).
+  // The policy, turned on from the Policies page (the Business preset has
+  // Single organization on). The dialog says who isn't linked yet.
   await owner.goto("/#/vault");
   await owner.goto(`/#/organizations/${orgId}/settings/policies`);
   await owner.getByRole("button", { name: /^Require single sign-on/ }).click();
   const dialog = owner.getByRole("dialog");
   await expect(dialog).toContainText("IT provider's staff");
+  await expect(dialog.getByTestId("require-sso-unlinked")).toContainText(dee.email);
+  await expect(dialog.getByTestId("require-sso-unlinked")).not.toContainText(cy.email);
   await dialog.getByRole("checkbox", { name: /Turn on/ }).check();
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(owner.getByRole("button", { name: /^Require single sign-on .* On$/ })).toBeVisible();
 
   // Cy's password checks out, then sends them to single sign-on.
   const page = await newPage(browser);
-  await page.goto("/#/login");
-  await page.getByLabel(/Email address/).fill(cy.email);
-  await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByRole("textbox", { name: /Master password/ }).fill(cy.password);
-  await page.getByRole("button", { name: "Log in", exact: true }).click();
+  await passwordSignIn(page, cy);
   await page.getByRole("link", { name: `Sign in as ${cy.email}` }).click();
   await page.waitForURL(/#\/lock/);
   await page.getByLabel(/Master password/).fill(cy.password);
   await page.getByRole("button", { name: "Unlock", exact: true }).click();
   await page.waitForURL(/#\/vault/);
+
+  // Dee isn't linked: her password takes her to linking first, then
+  // Microsoft signs her in, and her master password unlocks.
+  const deePage = await newPage(browser);
+  await passwordSignIn(deePage, dee);
+  await deePage.waitForURL(/#\/sso-link/);
+  await deePage.getByRole("button", { name: "Continue with Microsoft" }).click();
+  await deePage.getByRole("link", { name: `Sign in as ${dee.email}` }).click();
+  await deePage.waitForURL(/#\/sso-link\?code=/);
+  await expect(deePage.getByTestId("sso-link-microsoft")).toContainText("Dee Park");
+  await deePage.getByRole("button", { name: "Link accounts" }).click();
+  await deePage.getByRole("link", { name: `Sign in as ${dee.email}` }).click();
+  await deePage.waitForURL(/#\/lock/);
+  await deePage.getByLabel(/Master password/).fill(dee.password);
+  await deePage.getByRole("button", { name: "Unlock", exact: true }).click();
+  await deePage.waitForURL(/#\/vault/);
+  const sso = await openSso(owner, orgId);
+  await expect(sso.getByTestId("sso-links")).toContainText(dee.email);
 
   // The owner is never locked out.
   const ownerAgain = await newPage(browser);

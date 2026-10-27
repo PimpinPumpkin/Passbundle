@@ -5,7 +5,8 @@
 // with Microsoft Entra ID", "The client secret"). It's sealed the way event
 // streaming seals its destinations' secrets (event-streaming-secrets-v1.json),
 // but under a key of its own, derived over another label, and bound to the
-// organization, so neither feature's ciphertexts open as the other's. Uses
+// organization by associated data of its own, so neither feature's
+// ciphertexts open as the other's. Uses
 // only Node's crypto, independently of the server's code (ring and OpenSSL),
 // whose unit tests check their own results against a copy of the file
 // (passbundle-server, src/api/core/keykeeper_sso/vectors/sso-client-secret-v1.json).
@@ -27,25 +28,25 @@ if (streamingKey.toString("hex") !== streaming.key || key.equals(streamingKey)) 
   throw new Error("Event streaming's key must be its vectors' key, and differ from this one");
 }
 
-/** An organization's client secret is bound to it, with its own kind. */
-const kind = "entra-sso-client-secret";
-const binding = (organization) => ({ id: organization, owner: organization, kind });
-/** The associated data event streaming's module writes for a binding. */
-const aad = ({ id, owner, kind }) => Buffer.from(`event destination ${id}\u0000owner ${owner}\u0000kind ${kind}`, "utf8");
+/** An organization's client secret is bound to it: the associated data. */
+const aad = (organization) => Buffer.from(`sso client secret\u0000organization ${organization}`, "utf8");
+/** The associated data event streaming writes for a destination's binding. */
+const streamingAad = ({ id, owner, kind }) =>
+  Buffer.from(`event destination ${id}\u0000owner ${owner}\u0000kind ${kind}`, "utf8");
 
 /** "v1." and base64 of nonce, ciphertext, and the 16-byte tag. */
-function seal(k, b, nonce, plaintext) {
+function seal(k, associated, nonce, plaintext) {
   const cipher = createCipheriv("aes-256-gcm", k, nonce);
-  cipher.setAAD(aad(b));
+  cipher.setAAD(associated);
   const data = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   return `v1.${Buffer.concat([nonce, data, cipher.getAuthTag()]).toString("base64")}`;
 }
 
-/** Whether a ciphertext opens with this key and binding. */
-function opens(k, b, sealed) {
+/** Whether a ciphertext opens with this key and associated data. */
+function opens(k, associated, sealed) {
   const bytes = Buffer.from(sealed.slice("v1.".length), "base64");
   const decipher = createDecipheriv("aes-256-gcm", k, bytes.subarray(0, 12));
-  decipher.setAAD(aad(b));
+  decipher.setAAD(associated);
   decipher.setAuthTag(bytes.subarray(bytes.length - 16));
   try {
     decipher.update(bytes.subarray(12, bytes.length - 16));
@@ -70,21 +71,22 @@ const cases = [
     plaintext: "not.a~real_secret-2",
   },
 ];
-const sealed = cases.map((c) => seal(key, binding(c.organization), c.nonce, c.plaintext));
+const sealed = cases.map((c) => seal(key, aad(c.organization), c.nonce, c.plaintext));
 
-// The same plaintext and binding sealed with event streaming's key: a
-// ciphertext event streaming's module could have made, which must not open
-// as this organization's client secret.
-const streamingSealed = seal(streamingKey, binding(organization), cases[0].nonce, cases[0].plaintext);
+// The same plaintext and associated data sealed with event streaming's key,
+// which must not open as this organization's client secret.
+const streamingSealed = seal(streamingKey, aad(organization), cases[0].nonce, cases[0].plaintext);
 
 const wrongOrganizations = ["0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4e", cases[1].organization];
+const asDestination = { id: organization, owner: organization, kind: "webhook" };
 if (
-  !opens(key, binding(organization), sealed[0]) ||
-  !opens(streamingKey, binding(organization), streamingSealed) ||
-  wrongOrganizations.some((o) => opens(key, binding(o), sealed[0])) ||
-  opens(key, binding(organization), streamingSealed) ||
-  opens(streamingKey, binding(organization), sealed[0]) ||
-  opens(key, streaming.cases[0].binding, streaming.cases[0].sealed)
+  !opens(key, aad(organization), sealed[0]) ||
+  !opens(streamingKey, aad(organization), streamingSealed) ||
+  wrongOrganizations.some((o) => opens(key, aad(o), sealed[0])) ||
+  opens(key, aad(organization), streamingSealed) ||
+  opens(streamingKey, aad(organization), sealed[0]) ||
+  opens(streamingKey, streamingAad(asDestination), sealed[0]) ||
+  [organization, streaming.cases[0].binding.id].some((o) => opens(key, aad(o), streaming.cases[0].sealed))
 ) {
   throw new Error("A ciphertext opened where it mustn't, or didn't where it must");
 }
@@ -96,17 +98,16 @@ const vectors = {
   key: key.toString("hex"),
   streamingLabel: streaming.label,
   streamingKey: streamingKey.toString("hex"),
-  kind,
   cases: cases.map((c, i) => ({
     organization: c.organization,
-    aad: aad(binding(c.organization)).toString("utf8"),
+    aad: aad(c.organization).toString("utf8"),
     nonce: c.nonce.toString("hex"),
     plaintext: c.plaintext,
     sealed: sealed[i],
   })),
   // The first case's ciphertext must not open as these organizations' secret.
   wrongOrganizations,
-  // The first case's plaintext, organization, and nonce, sealed with event
+  // The first case's plaintext, associated data, and nonce, sealed with event
   // streaming's key: it must not open as a client secret. And the first
   // case's ciphertext must not open with event streaming's key.
   streamingSealed,
