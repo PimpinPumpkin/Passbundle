@@ -18,15 +18,15 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 - **Exposed passwords in the MSP health view**, using the k-anonymity range check, with an off switch for the check after unlocking. Security review fixes in progress.
 - **Events to security tools**: a signed webhook, syslog over TLS (JSON or CEF), and Microsoft Sentinel, per organization or one feed for an MSP. Security review fixes in progress.
 - **Two-step login for admins** (DESIGN.md, "Two-step login for admins"): a client's owners, admins, and custom roles that manage members, policies, or account recovery, and every MSP's staff, sign in with an authenticator app, a security key or passkey, or Duo (not email codes), or the client's own single sign-on for its admins. On by default for the Business preset and every MSP; anyone without it is taken to setting it up in the web vault. Pull requests open, for a security review.
+- **Item history and the new folders in the extension**: version history with restore, folders by owner with counts, the grouped Folder picker, and see passwords, export, and share enforced on every extension path. Security review fixes in progress.
 - **Sign in with Entra (SSO) per organization**: built and tested against a stand-in for Entra (DESIGN.md, "Sign in with Microsoft Entra ID"; setup in docs/sso-entra.md): each client's own tenant, domain verification, Require single sign-on, the master password still unlocking. Its client secret is sealed with event streaming's module under a key of its own; a verification review next. Trusted-device unlock after, as its own design with test vectors.
 
 ## Next
 
 1. **Self-updating Windows and Linux apps**, like the Mac and Android ones.
-2. **Item history and the new folders in the extension**, so every app shows and restores the same versions.
-3. **Approving a new sign-in from our apps**, and a CLI build for macOS and Linux scripts.
-4. **A full security pass over the whole stack** before the first company: server, web vault, extension, apps, CI and releases.
-5. **Website redesign** in the new look.
+2. **Approving a new sign-in from our apps**, and a CLI build for macOS and Linux scripts.
+3. **A full security pass over the whole stack** before the first company: server, web vault, extension, apps, CI and releases.
+4. **Website redesign** in the new look.
 
 ## Waiting on you
 
