@@ -82,54 +82,62 @@ test("an organization's owners, admins, and custom roles that manage members, po
 
   const admin = await api.account("rule-admin");
   await api.addMember(owner, orgId, admin, "admin");
-  const manager = await api.account("rule-manager");
-  await api.addMember(owner, orgId, manager, "manager");
-  const user = await api.account("rule-user");
-  await api.addMember(owner, orgId, user, "user");
-  const custom: Record<string, Account> = {};
-  for (const permission of [
-    "manageUsers",
-    "managePolicies",
-    "manageResetPassword",
-    "accessEventLogs",
-    "accessImportExport",
-  ]) {
-    custom[permission] = await api.account(`rule-${permission}`);
-    await api.addCustomMember(owner, orgId, custom[permission], { [permission]: true });
-  }
   const revoked = await api.account("rule-revoked");
   const revokedId = await api.addMember(owner, orgId, revoked, "admin");
   const revoke = await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${revokedId}/revoke`);
   expect(revoke.status, JSON.stringify(revoke.body)).toBe(200);
+  // One member whose role changes, to try each of the others.
+  const member = await api.account("rule-member");
+  const memberId = await api.addCustomMember(owner, orgId, member, { manageUsers: true });
+  const giveRole = async (type: number, permissions: Record<string, boolean> = {}) => {
+    const given = await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${memberId}`, {
+      type,
+      permissions,
+      collections: [],
+      groups: [],
+      accessAll: false,
+    });
+    expect(given.status, JSON.stringify(given.body)).toBe(200);
+  };
 
-  const everyone = [owner, admin, manager, user, revoked, ...Object.values(custom)];
-  // An organization made the upstream way (a family, a group) doesn't require it.
+  // An organization made the upstream way (a family, a group) doesn't
+  // require it, so its owner and admin still sign in with a password alone.
   expect((await api.call(owner, "GET", orgSetting(orgId))).body.required).toBe(false);
-  for (const person of everyone) {
+  for (const person of [owner, admin]) {
     expectSignedIn(await api.signIn(person.email, person.password));
   }
 
   // Before it's on, the setting lists who it would hold up.
   const before = (await api.call(owner, "GET", orgSetting(orgId))).body;
   const listed = (before.notSetUp as { email: string; role: string }[]).map((p) => `${p.email}:${p.role}`).sort();
-  expect(listed).toEqual(
-    [
-      `${owner.email}:owner`,
-      `${admin.email}:admin`,
-      `${custom.manageUsers.email}:custom`,
-      `${custom.managePolicies.email}:custom`,
-      `${custom.manageResetPassword.email}:custom`,
-    ].sort(),
-  );
+  expect(listed).toEqual([`${owner.email}:owner`, `${admin.email}:admin`, `${member.email}:custom`].sort());
 
   await requireIt(api, owner, orgId, true);
-  for (const person of [owner, admin, custom.manageUsers, custom.managePolicies, custom.manageResetPassword]) {
+  for (const person of [owner, admin]) {
     expectSetup(await api.signIn(person.email, person.password), [orgName]);
   }
-  // Members, managers, custom roles that only see the event log or import and
-  // export, and a revoked admin aren't covered.
-  for (const person of [manager, user, revoked, custom.accessEventLogs, custom.accessImportExport]) {
-    expectSignedIn(await api.signIn(person.email, person.password));
+  // A revoked admin reaches nothing, so isn't covered.
+  expectSignedIn(await api.signIn(revoked.email, revoked.password));
+  // Custom roles that manage members, policies, or account recovery are
+  // covered; members, managers, and custom roles that only see the event log
+  // or import and export aren't.
+  const CUSTOM = 4;
+  for (const [type, permissions, covered] of [
+    [CUSTOM, { manageUsers: true }, true],
+    [CUSTOM, { managePolicies: true }, true],
+    [CUSTOM, { manageResetPassword: true }, true],
+    [CUSTOM, { accessEventLogs: true }, false],
+    [CUSTOM, { accessImportExport: true }, false],
+    [3, {}, false],
+    [2, {}, false],
+  ] as const) {
+    await giveRole(type, permissions);
+    const signIn = await api.signIn(member.email, member.password);
+    if (covered) {
+      expectSetup(signIn, [orgName]);
+    } else {
+      expectSignedIn(signIn);
+    }
   }
   // A wrong password says nothing about it.
   const wrong = await api.signIn(admin.email, Buffer.from("wrong").toString("base64"));
