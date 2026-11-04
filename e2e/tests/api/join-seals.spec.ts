@@ -359,7 +359,7 @@ test.describe("on a server that sends no email", () => {
       collections: [],
       groups: [],
       permissions: {},
-      keykeeperSeals: { [invited.email]: seal(20) },
+      keykeeperSeals: { [invited.email]: expiringSeal(20) },
     });
     expect(invite.status, JSON.stringify(invite.body)).toBe(200);
     const pending = await api.call(owner, "GET", "/api/keykeeper/organizations/pending");
