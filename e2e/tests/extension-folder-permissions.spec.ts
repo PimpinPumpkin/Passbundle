@@ -26,7 +26,7 @@ import {
   test,
   userFor,
 } from "./support/extension";
-import { confirmMember, menu, signUp, webUserFor } from "./support/web";
+import { confirmMember, menu, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 const server = `https://127.0.0.1:${groupsServerPort}`;
 
@@ -104,7 +104,9 @@ async function setUpOrganization(
 ) {
   const ownerContext = await browser.newContext({ ignoreHTTPSErrors: true, baseURL: server });
   const owner = await ownerContext.newPage();
-  await signUp(owner, ownerUser);
+  // A business's owner signs in with two-step login (DESIGN.md, "Two-step
+  // login for admins").
+  await signUpWithAuthenticator(owner, ownerUser);
 
   await owner.goto("/#/create-organization");
   await owner.getByRole("textbox", { name: /Organization name/ }).fill("Lakeside Clinic");

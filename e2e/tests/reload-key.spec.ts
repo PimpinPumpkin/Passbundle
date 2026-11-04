@@ -25,7 +25,7 @@ import {
 
 import { fixturePort, hostResolverRules, port, restartServerPort } from "../paths.mjs";
 
-import { confirmMember, signUp, webUserFor, type WebUser } from "./support/web";
+import { confirmMember, signUp, signUpWithAuthenticator, webUserFor, type WebUser } from "./support/web";
 
 const e2eDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const RECORD = /_keykeeperReloadKey_reloadKey$/;
@@ -511,7 +511,9 @@ async function businessMember(
     await before(joining);
   }
 
-  await signUp(owner, webUserFor(`${prefix}-owner`, repeatIndex));
+  // A business's owner signs in with two-step login (DESIGN.md, "Two-step
+  // login for admins").
+  await signUpWithAuthenticator(owner, webUserFor(`${prefix}-owner`, repeatIndex));
   await owner.goto("/#/create-organization");
   await owner.getByRole("textbox", { name: /Organization name/ }).fill("Lakeside Clinic");
   await owner.getByRole("radio", { name: /A business/ }).check();

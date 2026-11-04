@@ -92,9 +92,12 @@ export default defineConfig({
       testDir: "tests/mail",
       use: { baseURL: `https://127.0.0.1:${mailServerPort}` },
     },
+    // The command-line tool (KK_CLI, a build of passbundle-clients apps/cli),
+    // against the main test server. No browser.
+    { name: "cli", testDir: "tests/cli" },
     {
       name: "chromium",
-      testIgnore: ["api/**", "mail/**"],
+      testIgnore: ["api/**", "mail/**", "cli/**"],
       use: { ...devices["Desktop Chrome"] },
     },
   ],

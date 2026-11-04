@@ -207,6 +207,49 @@ jobs:
           path: out
           retention-days: 3
 
+  # The command-line tool, branded and packed as one program the way the
+  # release packs it (tools/cli/pack.sh, docs/cli.md), for the end-to-end
+  # tests in tests/cli.
+  cli:
+    name: Command-line tool
+    needs: refs
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-clients
+          ref: ${{ needs.refs.outputs.clients }}
+          path: clients
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/Passbundle
+          ref: ${{ needs.refs.outputs.meta }}
+          path: meta
+          sparse-checkout: tools/cli
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # As the release builds it (cli-release.yml, BUILD_NODE_VERSION).
+          node-version: 24.21.0
+          cache: npm
+          cache-dependency-path: |
+            clients/package-lock.json
+            meta/tools/cli/package-lock.json
+      - name: Install dependencies
+        run: |
+          (cd clients && npm ci --no-audit --no-fund)
+          (cd meta/tools/cli && npm ci --no-audit --no-fund --ignore-scripts)
+      - name: Build and pack it
+        run: meta/tools/cli/pack.sh clients 0.0.0-test linux-x64 out
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cli
+          path: out/passbundle
+          if-no-files-found: error
+          retention-days: 3
+
   clients-unit:
     name: Clients unit tests
     needs: refs
@@ -267,6 +310,17 @@ jobs:
         run: node meta/docs/vectors/make-sso-client-secret-v1.mjs | cmp - meta/docs/vectors/sso-client-secret-v1.json
       - name: Site fix and install token key test vectors, as their generator makes them
         run: node meta/docs/vectors/make-server-derived-keys-v1.mjs | cmp - meta/docs/vectors/server-derived-keys-v1.json
+      # Seals a hacked server can't steer (DESIGN.md, "Joins a hacked server
+      # can't forge", and docs/script-access.md, "Version 2 seals"): the
+      # vectors as their generators make them, the clients' copies, and the
+      # script grant seals as upstream's own crypto opens them.
+      - name: The version 2 join and script grant seal test vectors, as their generators make them, the clients' copies, and as upstream's crypto opens them
+        run: |
+          node meta/docs/vectors/make-joins-v2.mjs | cmp - meta/docs/vectors/joins-v2.json
+          node meta/docs/vectors/make-script-grants-v2.mjs | cmp - meta/docs/vectors/script-grants-v2.json
+          cmp meta/docs/vectors/joins-v2.json libs/admin-console/src/common/keykeeper/joins-v2.vectors.json
+          cmp meta/docs/vectors/script-grants-v2.json libs/admin-console/src/common/keykeeper/script-grants-v2.vectors.json
+          node meta/docs/vectors/check-script-grants-vectors.mjs meta/docs/vectors/script-grants-v2.json .
       - name: Upstream unit tests for every file we changed
         run: |
           base=$(cat .keykeeper-base)
@@ -454,19 +508,21 @@ jobs:
 
   e2e:
     name: End-to-end (${{ matrix.part }})
-    needs: [refs, server, clients, chrome-extension, agent-test-build, core-interop]
+    needs: [refs, server, clients, chrome-extension, agent-test-build, core-interop, cli]
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Five machines share the suite, each with its own servers: the API
-    # tests split across two, and the browser and email tests across three.
+    # Six machines share the suite, each with its own servers: the API
+    # tests split across three, and the browser and email tests across three.
     strategy:
       fail-fast: false
       matrix:
         include:
-          - part: API 1 of 2
-            args: --project=api --shard=1/2
-          - part: API 2 of 2
-            args: --project=api --shard=2/2
+          - part: API 1 of 3
+            args: --project=api --project=cli --shard=1/3
+          - part: API 2 of 3
+            args: --project=api --project=cli --shard=2/3
+          - part: API 3 of 3
+            args: --project=api --project=cli --shard=3/3
           - part: browser 1 of 3
             args: --project=chromium --project=mail --shard=1/3
           - part: browser 2 of 3
@@ -499,6 +555,10 @@ jobs:
         with:
           name: core-interop
           path: build/core
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: cli
+          path: build/cli
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
@@ -516,8 +576,9 @@ jobs:
           KK_BRAND: ${{ github.workspace }}/build/clients/brand.json
           KK_AGENT: ${{ github.workspace }}/build/agent
           KK_CORE_INTEROP: ${{ github.workspace }}/build/core/interop
+          KK_CLI: ${{ github.workspace }}/build/cli/passbundle
           KK_SERVER_LOG: ${{ github.workspace }}/e2e/server-log/server.log
-        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" "$KK_AGENT"/* "$KK_CORE_INTEROP" && npx playwright test ${{ matrix.args }}
+        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" "$KK_AGENT"/* "$KK_CORE_INTEROP" "$KK_CLI" && npx playwright test ${{ matrix.args }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
@@ -529,7 +590,7 @@ jobs:
           retention-days: 14
 
   api-postgres:
-    name: API tests on PostgreSQL (${{ matrix.shard }}/2)
+    name: API tests on PostgreSQL (${{ matrix.shard }}/3)
     needs: [refs, server, clients]
     runs-on: ubuntu-latest
     # The second shard took 16 to 20 minutes once single sign-on's and
@@ -538,7 +599,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     services:
       postgres:
         image: postgres:16
@@ -583,7 +644,7 @@ jobs:
           KK_BRAND: ${{ github.workspace }}/build/clients/brand.json
           KK_DATABASE_URL: postgresql://keykeeper:keykeeper@localhost:5432/keykeeper
           KK_SERVER_LOG: ${{ github.workspace }}/e2e/server-log/server.log
-        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" && npx playwright test --project=api --shard=${{ matrix.shard }}/2
+        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" && npx playwright test --project=api --shard=${{ matrix.shard }}/3
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:

@@ -7,7 +7,7 @@ import { generateKeyPairSync } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 
 import { Api } from "./api/support";
-import { confirmMember, signUp, webUserFor } from "./support/web";
+import { confirmMember, signUp, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
@@ -34,7 +34,7 @@ test("a business's organization starts with its policies and an install command,
   request,
 }, testInfo) => {
   test.setTimeout(150_000);
-  await signUp(page, webUserFor("own-it-owner", testInfo.repeatEachIndex));
+  await signUpWithAuthenticator(page, webUserFor("own-it-owner", testInfo.repeatEachIndex));
   await page.goto("/#/create-organization");
   await expect(page.getByRole("radio", { name: /A business/ })).toBeChecked();
   const org = await newOrganization(page, "Northpoint Logistics", /A business/);

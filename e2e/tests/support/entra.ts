@@ -86,6 +86,8 @@ export function pkce() {
 export type SignIn = {
   /** Each step's status, for tests that stop early. */
   authorize: number;
+  /** For the command-line tool: the status of its page's Continue (303 to Microsoft). */
+  confirm?: number;
   callback?: number;
   callbackBody?: unknown;
   /** The connector URL the server sent the browser back to. */
@@ -102,15 +104,25 @@ export type SignIn = {
  * Signs in with an organization's single sign-on as the web vault does:
  * authorize, the stand-in's answer, this server's callback, then the token
  * request with the PKCE verifier. `origin` is the test server's own address.
+ * `listener` is where the app wants the answer instead of the web vault's
+ * connector page (the command-line tool's `http://localhost:<port>`);
+ * `redirectUri` and `redeemClientId` change only the token request.
  */
 export async function ssoSignIn(
   request: APIRequestContext,
   origin: string,
   identifier: string,
-  options: { verifier?: string; redeemWith?: string; redirectUri?: string; clientId?: string } = {},
+  options: {
+    verifier?: string;
+    redeemWith?: string;
+    redirectUri?: string;
+    clientId?: string;
+    listener?: string;
+    redeemClientId?: string;
+  } = {},
 ): Promise<SignIn> {
   const { verifier, challenge } = pkce();
-  const connector = `${origin}/sso-connector.html`;
+  const connector = options.listener ?? `${origin}/sso-connector.html`;
   const state = `${b64url(randomBytes(24))}_identifier=${identifier}`;
   const authorizeUrl =
     `${origin}/identity/connect/authorize?client_id=${options.clientId ?? "web"}` +
@@ -119,10 +131,22 @@ export async function ssoSignIn(
     `&response_mode=query&domain_hint=${encodeURIComponent(identifier)}&ssoToken=`;
   const authorize = await request.get(authorizeUrl, { maxRedirects: 0 });
   const result: SignIn = { authorize: authorize.status(), verifier };
-  if (authorize.status() !== 307) {
+  let toEntra: string;
+  if (options.clientId === "cli" && authorize.status() === 200) {
+    // The command-line tool's sign-in asks first, on a page of the server's
+    // own; its Continue posts the page's token back, from the same origin.
+    const asked = await confirmCli(request, origin, await authorize.text());
+    result.confirm = asked.status();
+    if (asked.status() !== 303) {
+      return result;
+    }
+    toEntra = asked.headers()["location"];
+  } else if (authorize.status() === 307) {
+    toEntra = authorize.headers()["location"];
+  } else {
     return result;
   }
-  const atEntra = await request.get(authorize.headers()["location"], { maxRedirects: 0 });
+  const atEntra = await request.get(toEntra, { maxRedirects: 0 });
   expect(atEntra.status(), await atEntra.text()).toBe(302);
   const callbackUrl = atEntra.headers()["location"];
   result.callbackUrl = callbackUrl;
@@ -134,10 +158,18 @@ export async function ssoSignIn(
   }
   const returned = new URL(callback.headers()["location"]);
   result.returned = returned;
-  expect(returned.origin + returned.pathname).toBe(connector);
+  // As a URL: "http://localhost:8065" comes back as "http://localhost:8065/".
+  const expected = new URL(connector);
+  expect(returned.origin + returned.pathname).toBe(expected.origin + expected.pathname);
   expect(returned.searchParams.get("state")).toBe(state);
   result.code = returned.searchParams.get("code")!;
-  result.token = await redeem(request, result.code, options.redeemWith ?? verifier, options.redirectUri ?? connector, options.clientId);
+  result.token = await redeem(
+    request,
+    result.code,
+    options.redeemWith ?? verifier,
+    options.redirectUri ?? connector,
+    options.redeemClientId ?? options.clientId,
+  );
   return result;
 }
 
@@ -222,6 +254,27 @@ export async function linkFromSession(
     code,
     pending,
   };
+}
+
+/** The one-time token on the command-line tool's sign-in page. */
+export function cliConfirmToken(page: string): string {
+  const token = /name="token" value="([^"]+)"/.exec(page)?.[1];
+  expect(token, page).toBeTruthy();
+  return token!;
+}
+
+/** The command-line tool's sign-in page's Continue, as the browser posts it from the page. */
+export async function confirmCli(
+  request: APIRequestContext,
+  origin: string,
+  page: string,
+  headers: Record<string, string> = { Origin: origin, "Sec-Fetch-Site": "same-origin" },
+) {
+  return request.post(`${origin}/identity/connect/authorize/confirm`, {
+    form: { token: cliConfirmToken(page) },
+    headers,
+    maxRedirects: 0,
+  });
 }
 
 /** Confirms a pending link (the linking page's button) as someone. */

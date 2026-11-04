@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
-import { menu, reloadVault, signUp, webUserFor } from "./support/web";
+import { menu, reloadVault, signUp, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 const sha1 = (text: string) => createHash("sha1").update(text).digest("hex").toUpperCase();
 
@@ -164,7 +164,7 @@ test("the MSP console counts each client's exposed passwords from hash prefixes,
   const asked = await pwnedPasswords(context, { [BREACHED]: BREACHED_TIMES });
   const page = await context.newPage();
   const user = webUserFor("exposed-msp", testInfo.repeatEachIndex);
-  await signUp(page, user);
+  await signUpWithAuthenticator(page, user);
 
   await page.goto("/#/msp");
   await page.getByRole("textbox", { name: "Your MSP's name" }).fill("Hollow Pine IT");
@@ -308,7 +308,8 @@ test("with checking after unlocking turned off, nothing goes to the breach servi
   const asked = await pwnedPasswords(context, { [BREACHED]: BREACHED_TIMES });
   const page = await context.newPage();
   const user = webUserFor("exposed-off", testInfo.repeatEachIndex);
-  await signUp(page, user);
+  // They make an MSP later, whose staff sign in with two-step login.
+  await signUpWithAuthenticator(page, user);
 
   // The switch, on by default, per account.
   await page.goto("/#/settings/appearance");

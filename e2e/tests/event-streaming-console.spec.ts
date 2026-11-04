@@ -9,7 +9,7 @@ import fs from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
 import { httpsReceiver, throwawayCert, verifyWebhook, waitFor } from "./api/siem";
-import { confirmWithPassword, signUp, webUserFor } from "./support/web";
+import { confirmWithPassword, signUp, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
 
@@ -154,7 +154,7 @@ test("an MSP's admin sets up the MSP's feed in the console", async ({ page }, te
   const receiver = await httpsReceiver(cert);
   try {
     const admin = webUserFor("stream-console-msp", testInfo.repeatEachIndex);
-    await signUp(page, admin);
+    await signUpWithAuthenticator(page, admin);
     await page.goto("/#/msp");
     await page.getByRole("textbox", { name: "Your MSP's name" }).fill("Northwind IT");
     await page.getByRole("button", { name: "Create MSP" }).click();

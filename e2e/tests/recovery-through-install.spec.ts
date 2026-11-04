@@ -20,7 +20,7 @@ import {
   test,
   userFor,
 } from "./support/extension";
-import { confirmMember, signUp, webUserFor } from "./support/web";
+import { confirmMember, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 const mailServer = `https://127.0.0.1:${mailServerPort}`;
 const newPassword = "a brand new passphrase for 2026";
@@ -38,7 +38,7 @@ test("an MSP admin recovers the account of someone who joined through the instal
     ignoreHTTPSErrors: true,
   });
   const admin = await adminContext.newPage();
-  await signUp(admin, webUserFor("recovery-admin", testInfo.repeatEachIndex));
+  await signUpWithAuthenticator(admin, webUserFor("recovery-admin", testInfo.repeatEachIndex));
   await admin.goto("/#/msp");
   await admin
     .getByRole("textbox", { name: "Your MSP's name" })

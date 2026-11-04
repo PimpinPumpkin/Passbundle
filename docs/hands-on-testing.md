@@ -20,6 +20,7 @@ What CI can't check: real devices, real sites, and how it feels. Work through it
 - [ ] **Search** finds items by name, username, and website.
 - [ ] **Generator:** default 20 characters; change the length on one device and see it follow you to another.
 - [ ] **Sign in with a device:** in a browser where you've signed in before, sign out of the web vault (or the extension), type your email, and choose "Log in with device". The Mac app (and the Pixel, with PassBundle open) shows "Approve sign-in?" within about 10 seconds: check its fingerprint phrase matches the browser's, approve with Touch ID, your fingerprint, or your master password, and the browser signs in. Try Deny once too, and leave one to expire (15 minutes): it should disappear.
+- [ ] **Command-line tool:** install the newest `cli-v` release for your Mac (docs/cli.md, "Install"), `passbundle config server https://test.passbundle.com`, sign in with your API key (web vault, Settings, Security, Keys), unlock, then `passbundle list items` and `passbundle get password` on one of your logins. As your second person, `get password` on an item in their "Can view but not see passwords" folder is refused, and `get item` shows it without the password.
 
 ## Autofill (the part people judge us on)
 
@@ -44,6 +45,7 @@ On a real computer and the Pixel, with logins saved for each:
 - [ ] **Remove your second person:** the confirmation says what they had, then the "Passwords they could see" list appears; open one and change it.
 - [ ] **Item history:** change a password twice, open History, compare, restore the first.
 - [ ] **Account recovery:** as the organization's admin, reset your second person's master password; they sign in with the new one.
+- [ ] **Two-step login for admins:** make your second person an admin of a Business organization while they have no authenticator app (or only email codes). If they're signed in somewhere, that session ends as you save. They sign in on the web: "Set up two-step login to continue" with a QR code; scan it with a real authenticator app (and once, a security key or passkey), save the recovery code, and sign in with the code. In the extension and the Pixel before they set it up, the message says to use the web vault. The organization's Settings page lists them until they're done.
 - [ ] **MSP console:** add a client, look at its health numbers, push a template, check the activity log.
 - [ ] **Event log** shows what you just did.
 - [ ] **Event streaming** (Reporting > Event streaming, and the MSP console's section): send events to a real SIEM you have (Huntress, Blumira, or a Sentinel workspace, set up as docs/event-streaming.md says), press Test, do something in the organization, and find both in the SIEM.

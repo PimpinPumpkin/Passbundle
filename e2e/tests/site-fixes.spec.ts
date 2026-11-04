@@ -7,6 +7,7 @@
 import type { BrowserContext, Page } from "@playwright/test";
 
 import { addLogin, chooseFirstInlineMenuItem, waitForExtensionScan } from "./support/autofill";
+import { giveAuthenticator } from "./support/two-step";
 import {
   createAccount,
   expect,
@@ -43,11 +44,14 @@ async function pickFromMenu(context: BrowserContext, page: Page, itemName: strin
 test("a fix an MSP admin shares from the fill picker, used for every client, fills for logins without a rule", async ({
   context,
   extensionId,
+  request,
 }, testInfo) => {
   const host = `site-fixes-${testInfo.repeatEachIndex}.example.test`;
   const site = `https://${host}`;
   const user = userFor("site-fixes", testInfo.repeatEachIndex);
   const web = await createAccount(context, user);
+  // An MSP's staff sign in with two-step login (DESIGN.md, "Two-step login for admins").
+  await giveAuthenticator(request, user);
   await web.goto(`${serverUrl}/#/msp`);
   await web.getByRole("textbox", { name: "Your MSP's name" }).fill("Fixing IT");
   await web.getByRole("button", { name: "Create MSP" }).click();

@@ -23,6 +23,8 @@
     "chrome": "",
     "edge": "",
     "firefox": "",
-    "apps": "https://github.com/PimpinPumpkin/passbundle-apps/releases"
+    "apps": "https://github.com/PimpinPumpkin/passbundle-apps/releases",
+    "cli": "https://github.com/PimpinPumpkin/Passbundle/releases?q=cli-v&expanded=true",
+    "cliGuide": "https://github.com/PimpinPumpkin/Passbundle/blob/main/docs/cli.md"
   }
 }
