@@ -200,10 +200,10 @@ async function addSecurityKey(context: BrowserContext, page: Page, user: WebUser
   await dialog.getByRole("textbox", { name: /^Name/ }).fill("Test key");
   await dialog.getByRole("button", { name: "Read key" }).click();
   await expect(dialog.getByText('Use the "Save" button below to activate this security key')).toBeVisible();
+  // Saved, the dialog closes and the list says it's on.
   await dialog.getByRole("button", { name: "Save" }).click();
-  await expect(dialog.getByText("Test key")).toBeVisible();
-  await dialog.getByRole("button", { name: "Close" }).first().click();
   await expect(dialog).toBeHidden();
+  await expect(page.getByRole("heading", { name: /^Passkey\s+Turned on/ })).toBeVisible();
   return key.credential();
 }
 
