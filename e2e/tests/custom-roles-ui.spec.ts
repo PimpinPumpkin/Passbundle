@@ -9,23 +9,9 @@
 // with only those still opens the admin console's Vault tab.
 import { expect, test, type Page } from "@playwright/test";
 
-import { reloadVault, signUp, signUpWithAuthenticator, webUserFor } from "./support/web";
+import { acceptRole, reloadVault, signUp, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 const toast = (page: Page, text: string | RegExp) => page.getByText(text).first();
-
-/**
- * This test server sends no email, so an invitation joins an existing
- * account without asking, and a role that manages members waits for its
- * person to accept it on their vault page before anyone lets them in
- * (DESIGN.md, "Two-step login for admins"). They have two-step login, so
- * accepting leaves them signed in.
- */
-async function acceptRole(page: Page) {
-  await reloadVault(page);
-  const role = page.getByTestId("accept-role");
-  await role.getByRole("button", { name: "Accept the role" }).click();
-  await expect(role).toHaveCount(0);
-}
 
 /**
  * The API calls the server refused as unauthorized or forbidden. The web vault
