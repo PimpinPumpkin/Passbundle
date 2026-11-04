@@ -195,6 +195,9 @@ extension_settings() {
 
 policy() { # extension update-url
   printf '{\n  "ExtensionInstallForcelist": ["%s;%s"]' "$1" "$2"
+  # Native-messaging hosts from the machine only, not one a program running
+  # as the person put in their own profile (enrollment hands it the user key).
+  printf ',\n  "NativeMessagingUserLevelHosts": false'
   [ -n "$keep_password_manager" ] || printf ',\n  "PasswordManagerEnabled": false'
   [ -z "$card" ] || printf ',\n  "AutofillCreditCardEnabled": false'
   [ -z "$address" ] || printf ',\n  "AutofillAddressEnabled": false'

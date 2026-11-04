@@ -49,8 +49,9 @@ test("the extension reminds once, on the device, when an item is about to expire
   });
 
   // A check every six hours, one notification, and no repeat for the same step.
+  // It says how many items, never which: the system shows it outside the vault.
   expect(result.periodInMinutes).toBe(360);
-  expect(result.first).toEqual(["Example certificate: expires in 5 days"]);
+  expect(result.first).toEqual(["1 item expires soon"]);
   expect(result.second).toEqual([]);
   expect(result.shown.filter((id) => id.startsWith("keykeeper-expiration-reminders-"))).toHaveLength(1);
 });

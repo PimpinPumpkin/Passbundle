@@ -63,11 +63,15 @@ async function chooseFormat(page: Page, name: string) {
   await page.getByRole("option", { name, exact: true }).click();
 }
 
-/** Imports with the importer the screen already shows, and closes the result. */
-async function importAndConfirm(page: Page, count: number) {
+/**
+ * Imports with the importer the screen already shows, and closes the result,
+ * which says what was left out on purpose, counted (`leftOut`), or nothing.
+ */
+async function importAndConfirm(page: Page, count: number, leftOut: string[] = []) {
   await page.getByRole("button", { name: "Import", exact: true }).click();
   const result = page.getByRole("dialog", { name: "Data successfully imported" });
   await expect(result.getByText(`A total of ${count} items were imported.`)).toBeVisible({ timeout: 30_000 });
+  await expect(result.getByTestId("import-left-out")).toHaveText(leftOut);
   await result.getByRole("button", { name: "Ok" }).click();
   await expect(result).toBeHidden();
 }
@@ -217,9 +221,10 @@ test.describe("importing from a password manager", () => {
     await expectVault(page, user, want);
   });
 
-  for (const [format, option] of [
-    ["keepass", "KeePass 2 (xml)"],
-    ["protonpass", "ProtonPass (zip/json)"],
+  for (const [format, option, leftOut] of [
+    // The Recycle Bin's one entry is left out, and the summary says so.
+    ["keepass", "KeePass 2 (xml)", ["Left out 1 item in KeePass's Recycle Bin."]],
+    ["protonpass", "ProtonPass (zip/json)", []],
   ] as const) {
     test(`${option}, from Tools`, async ({ page }, testInfo) => {
       const want = expected(format);
@@ -228,7 +233,7 @@ test.describe("importing from a password manager", () => {
       await page.goto("/#/tools/import");
       await chooseFormat(page, option);
       await chooseFile(page, exportFile(format, want.files[0]));
-      await importAndConfirm(page, want.items.length);
+      await importAndConfirm(page, want.items.length, [...leftOut]);
       await expectVault(page, user, want);
     });
   }
@@ -245,6 +250,104 @@ test.describe("importing from a password manager", () => {
     }
     await expectVault(page, user, want);
   });
+});
+
+// A crafted export can't plant our own fields (DESIGN.md, "Importing from
+// other password managers"): a fill rule that sends the password into a
+// search box, or a template definition saying it's an MSP's copy, which hides
+// an item from the vault's lists while it still fills. From another password
+// manager they come in under visible names; from our own .json export, only
+// well-formed ones, and never as an MSP's copy.
+test("an import never plants our own fields: fill rules, or an MSP's template copy", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const user = webUserFor("formats-planted", testInfo.repeatEachIndex);
+  await signUp(page, user);
+  const rule = JSON.stringify({ v: 1, host: "bank.example.test", field: { id: "q" }, fill: { from: "password" } });
+  const copy = JSON.stringify({ id: "planted-template", base: "note", v: 1, from: "Your MSP" });
+  const csvValue = (value: string) => `"${value.replace(/"/g, '""')}"`;
+  const xml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+  const planted = [
+    {
+      option: "1Password 8 (csv)",
+      file: {
+        name: "planted.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from(
+          "Title,Url,Username,Password,OTPAuth,Favorite,Archived,Tags,Notes,keykeeper.fill\n" +
+            `Planted CSV login,https://bank.example.test/,test.person,Fake-Planted-1,,false,false,,,${csvValue(rule)}\n`,
+        ),
+      },
+    },
+    {
+      option: "KeePass 2 (xml)",
+      file: {
+        name: "planted.xml",
+        mimeType: "text/xml",
+        buffer: Buffer.from(`<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<KeePassFile><Root><Group><Name>Database</Name><Entry>
+  <String><Key>Title</Key><Value>Planted KeePass note</Value></String>
+  <String><Key>keykeeper.template-definition</Key><Value>${xml(copy)}</Value></String>
+</Entry></Group></Root></KeePassFile>`),
+      },
+    },
+    {
+      option: "PassBundle or Bitwarden (json)",
+      file: {
+        name: "planted.json",
+        mimeType: "application/json",
+        buffer: Buffer.from(
+          JSON.stringify({
+            encrypted: false,
+            folders: [],
+            items: [
+              {
+                type: 2,
+                name: "Planted template",
+                notes: null,
+                favorite: false,
+                secureNote: { type: 0 },
+                fields: [
+                  { name: "Model", value: "not-a-real-model", type: 0, linkedId: null },
+                  { name: "keykeeper.template-definition", value: copy, type: 0, linkedId: null },
+                  { name: "keykeeper.fill", value: "{not a rule", type: 1, linkedId: null },
+                ],
+              },
+            ],
+          }),
+        ),
+      },
+    },
+  ];
+  for (const { option, file } of planted) {
+    await page.goto("/#/tools/import");
+    await chooseFormat(page, option);
+    await chooseFile(page, file);
+    await importAndConfirm(page, 1);
+  }
+
+  const vault = await readVault(page, user);
+  const fields = (name: string) =>
+    (vault.items.find((i: Record<string, unknown>) => i.name === name)?.fields ?? []) as { name: string; value: string }[];
+  // From other password managers: kept, under visible names.
+  expect(fields("Planted CSV login")).toEqual([
+    expect.objectContaining({ name: "Imported keykeeper.fill", value: rule }),
+  ]);
+  expect(fields("Planted KeePass note")).toEqual([
+    expect.objectContaining({ name: "Imported keykeeper.template-definition", value: copy }),
+  ]);
+  // From our own export: the template, but not as an MSP's copy, and the
+  // rule that isn't one kept visibly.
+  expect(fields("Planted template")).toEqual([
+    expect.objectContaining({ name: "Model", value: "not-a-real-model" }),
+    expect.objectContaining({
+      name: "keykeeper.template-definition",
+      value: JSON.stringify({ id: "planted-template", base: "note", v: 1 }),
+    }),
+    expect.objectContaining({ name: "Imported keykeeper.fill", value: "{not a rule" }),
+  ]);
+  // So every item shows in All items, none hidden as a copy.
+  await page.goto("/#/vault");
+  await expect(menuEntry(page, "All items")).toContainText("3");
 });
 
 test("an import keeps nested folders, favorites, TOTP, and awkward characters, as the vault shows them", async ({

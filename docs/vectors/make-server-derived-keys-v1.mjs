@@ -1,6 +1,6 @@
 // Makes docs/vectors/server-derived-keys-v1.json
 // (node docs/vectors/make-server-derived-keys-v1.mjs > docs/vectors/server-derived-keys-v1.json):
-// fixed inputs and what the server must compute from them for two keys it
+// fixed inputs and what the server must compute from them for the keys it
 // derives from its private RSA key, as it derives event streaming's
 // (event-streaming-secrets-v1.json), each over a label of its own, so they're
 // never kept in the database:
@@ -11,6 +11,11 @@
 //   that seals a token for the database, so admins can see the command again,
 //   with AES-256-GCM bound to its organization by associated data. The
 //   server finds a token by its SHA-256 in base64.
+// - Two-step login settings (DESIGN.md, "Two-step login settings"): the key
+//   for the token a settings dialog sends instead of the master password,
+//   "v1." and base64url (no padding) of when it stops working (seconds since
+//   1970, 8 bytes big-endian) and HMAC-SHA256 over "two-step settings", the
+//   account id, its security stamp, and that time, each after a zero byte.
 // Uses only Node's crypto, independently of the server's code (ring), whose
 // unit tests check their own results against a copy of the file
 // (passbundle-server, src/db/models/vectors/server-derived-keys-v1.json).
@@ -95,6 +100,27 @@ if (
   throw new Error("A token opened where it mustn't, or didn't where it must");
 }
 
+// Two-step login settings.
+const settingsLabel = "passbundle two-step settings verification v1";
+const settingsKey = deriveKey(settingsLabel);
+const settingsToken = (user, stamp, expires) => {
+  const tag = createHmac("sha256", settingsKey)
+    .update(`two-step settings\u0000${user}\u0000${stamp}\u0000${expires}`, "utf8")
+    .digest();
+  const time = Buffer.alloc(8);
+  time.writeBigInt64BE(BigInt(expires));
+  return `v1.${Buffer.concat([time, tag]).toString("base64url")}`;
+};
+const settingsCases = [
+  { user: "5b1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c4d", securityStamp: "0f9e8d7c-6b5a-4938-8271-605f4e3d2c1b", expires: 1800000600 },
+  // The same person after their security stamp changed (a new password, say).
+  { user: "5b1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c4d", securityStamp: "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d", expires: 1800000600 },
+  { user: "6c2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d5e", securityStamp: "0f9e8d7c-6b5a-4938-8271-605f4e3d2c1b", expires: 1900000000 },
+].map((c) => ({ ...c, token: settingsToken(c.user, c.securityStamp, c.expires) }));
+if (new Set(settingsCases.map((c) => c.token)).size !== settingsCases.length || settingsKey.equals(reportersKey)) {
+  throw new Error("Tokens must differ across people and security stamps");
+}
+
 const vectors = {
   version: 1,
   rsaPkcs1Der: der.toString("base64"),
@@ -116,6 +142,11 @@ const vectors = {
     })),
     // The first case's sealed token must not open as these organizations'.
     wrongOrganizations,
+  },
+  twoStepSettings: {
+    label: settingsLabel,
+    key: settingsKey.toString("hex"),
+    cases: settingsCases,
   },
 };
 
