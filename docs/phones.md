@@ -122,7 +122,7 @@ The same as on a computer (`docs/core.md`, "Approving a sign-in"; DESIGN.md, "Ap
 - **When the phone locks** (on by default): Android's screen-off broadcast; iOS's notice that protected data is about to become unavailable.
 - **Back in front:** the app checks the wait the moment it's shown again, before the vault is in front of anyone.
 - **Out of screenshots:** the vault stays out of screenshots, screen recordings, and the app switcher's preview (`FLAG_SECURE` on Android).
-- **On Android, autofill follows the app's lock;** on iOS the extension locks when it closes.
+- **On Android, autofill follows the app's lock;** on iOS the extension locks when it closes. Autofill and passkeys can unlock with biometrics while the app's screens aren't running, or show the vault as locked, and then nothing on the screens asks whether it's time to lock. So the core checks the wait itself before each fill, copy, passkey, and master password check from the phone's native code (counting from that unlock, or from when the app last left the screen), and the screen-off broadcast is heard for the whole process (`Core.start`), not only while the screens run (security pass, November 2026).
 
 ## Order and tests
 
