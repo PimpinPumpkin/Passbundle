@@ -134,6 +134,9 @@ text() {
 browser() {
   payload_start "$1" "$2" "$3" "$4"
   printf '\t\t\t<key>ExtensionInstallForcelist</key>\n\t\t\t<array>\n\t\t\t\t<string>%s;%s</string>\n\t\t\t</array>\n' "$5" "$6"
+  # Native-messaging hosts from /Library only, not one a program running as
+  # the person put in ~/Library (enrollment hands it the user key).
+  off NativeMessagingUserLevelHosts
   [ -n "$keep_password_manager" ] || off PasswordManagerEnabled
   [ -z "$card" ] || off AutofillCreditCardEnabled
   [ -z "$address" ] || off AutofillAddressEnabled

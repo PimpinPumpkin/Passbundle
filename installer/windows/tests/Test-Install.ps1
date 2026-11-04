@@ -43,6 +43,8 @@ Check "Chrome forces nothing else of ours" { $chromeList.Count -eq 2 }
 Check "Edge forces our extension exactly once" { @($edgeList | Where-Object { $_ -like "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;*" }).Count -eq 1 }
 Check "Chrome password manager off" { (Dword $chromeRoot "PasswordManagerEnabled") -eq 0 }
 Check "Edge password manager off" { (Dword $edgeRoot "PasswordManagerEnabled") -eq 0 }
+Check "Chrome takes native-messaging hosts from the machine only" { (Dword $chromeRoot "NativeMessagingUserLevelHosts") -eq 0 }
+Check "Edge takes native-messaging hosts from the machine only" { (Dword $edgeRoot "NativeMessagingUserLevelHosts") -eq 0 }
 Check "Chrome card autofill off" { (Dword $chromeRoot "AutofillCreditCardEnabled") -eq 0 }
 Check "Address autofill untouched" { $null -eq (Dword $chromeRoot "AutofillAddressEnabled") }
 
@@ -196,6 +198,7 @@ if ($env:KK_SKIP_REMOVE -ne "1") {
   Check "Remove drops our Chrome extension" { -not ((Forcelist $chromeRoot) -like "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;*") }
   Check "Remove drops our Edge extension" { -not ((Forcelist $edgeRoot) -like "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;*") }
   Check "Remove restores the password manager setting" { $null -eq (Dword $chromeRoot "PasswordManagerEnabled") }
+  Check "Remove restores user-level native-messaging hosts" { $null -eq (Dword $edgeRoot "NativeMessagingUserLevelHosts") }
   Check "Remove drops the extension's settings" { -not (Test-Path "$chromeRoot\3rdparty\extensions\aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") }
   if ($haveAgent) {
     Check "Remove uninstalls the agent" { -not (Test-Path $installDir) }

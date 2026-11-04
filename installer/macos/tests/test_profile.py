@@ -84,6 +84,12 @@ check(
 )
 check("Chrome password manager off", items["com.google.Chrome"]["PasswordManagerEnabled"] is False)
 check("Edge password manager off", items["com.microsoft.Edge"]["PasswordManagerEnabled"] is False)
+# A program running as the person could put its own com.passbundle.agent in ~/Library.
+for browser in ("com.google.Chrome", "com.microsoft.Edge"):
+    check(
+        f"{browser} takes native-messaging hosts from /Library only",
+        items[browser]["NativeMessagingUserLevelHosts"] is False,
+    )
 check("card autofill untouched", "AutofillCreditCardEnabled" not in items["com.google.Chrome"])
 check("address autofill untouched", "AutofillAddressEnabled" not in items["com.google.Chrome"])
 check("the same options make the same profile", make().stdout == text)
@@ -124,6 +130,7 @@ _, p = profile("--keep-browser-password-manager", "--browsers", "edge")
 items = payloads(p)
 check("one browser only", set(items) == {"com.microsoft.Edge"})
 check("its password manager kept", "PasswordManagerEnabled" not in items["com.microsoft.Edge"])
+check("its native-messaging hosts still from /Library only", items["com.microsoft.Edge"]["NativeMessagingUserLevelHosts"] is False)
 
 # Refused, before anything is written.
 for args, why in [

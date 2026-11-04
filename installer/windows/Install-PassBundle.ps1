@@ -270,7 +270,7 @@ foreach ($browser in $Browsers) {
   if ($Remove) {
     Remove-ForcedExtension $browser
     Remove-ManagedSettings $browser
-    foreach ($name in "PasswordManagerEnabled", "AutofillCreditCardEnabled", "AutofillAddressEnabled") {
+    foreach ($name in "PasswordManagerEnabled", "AutofillCreditCardEnabled", "AutofillAddressEnabled", "NativeMessagingUserLevelHosts") {
       if ((Test-Path $root) -and ((Get-Item $root).GetValueNames() -contains $name)) {
         Remove-ItemProperty -Path $root -Name $name
       }
@@ -281,6 +281,10 @@ foreach ($browser in $Browsers) {
 
   Add-ForcedExtension $browser
   Set-ManagedSettings $browser
+  # Native-messaging hosts from the machine only: Chrome and Edge look in
+  # HKCU before HKLM, so a program running as the person could otherwise
+  # register its own com.passbundle.agent, which enrollment hands the user key.
+  Set-Dword $root "NativeMessagingUserLevelHosts" 0
   if (-not $KeepBrowserPasswordManager) { Set-Dword $root "PasswordManagerEnabled" 0 }
   if ($DisableCardAutofill) { Set-Dword $root "AutofillCreditCardEnabled" 0 }
   if ($DisableAddressAutofill) { Set-Dword $root "AutofillAddressEnabled" 0 }

@@ -176,61 +176,34 @@ async function securityKey(context: BrowserContext, page: Page, credential?: Cre
 }
 
 /**
- * Adds a security key for two-step login, through the API with the key in
- * this vault tab; returns the key's credential, to copy into other tabs.
+ * Adds a security key for two-step login in the vault's own settings, as a
+ * person does (Settings, Security, Two-step login, Passkey's Manage, the
+ * master password, Read key, Save), with the key in this vault tab; returns
+ * the key's credential, to copy into other tabs. The dialog confirms with the
+ * master password once and then sends the token the server gave it
+ * (DESIGN.md, "Two-step login settings").
  */
 async function addSecurityKey(context: BrowserContext, page: Page, user: WebUser): Promise<Credential> {
   const key = await securityKey(context, page);
-  const http = await apiClient();
-  const hash = await masterPasswordHash(http, user);
-  const signedIn = await http.post("/identity/connect/token", { form: signInForm(user, hash) });
-  expect(signedIn.status(), await signedIn.text()).toBe(200);
-  const headers = { Authorization: `Bearer ${(await signedIn.json()).access_token}` };
-  const challenge = await http.post("/api/two-factor/get-webauthn-challenge", {
-    data: { masterPasswordHash: hash },
-    headers,
-  });
-  expect(challenge.status(), await challenge.text()).toBe(200);
-  const options = await challenge.json();
   // Chromium asks a security key only for the focused tab.
   await page.bringToFront();
-  const deviceResponse = await page.evaluate(async (options) => {
-    const bytes = (s: string) =>
-      Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
-    const text = (b: ArrayBuffer) =>
-      btoa(String.fromCharCode(...new Uint8Array(b)))
-        .replace(/\+/g, "-")
-        .replace(/\//g, "_")
-        .replace(/=+$/, "");
-    const { status: _status, errorMessage: _errorMessage, ...publicKey } = options;
-    const made = (await navigator.credentials.create({
-      publicKey: {
-        ...publicKey,
-        challenge: bytes(options.challenge),
-        user: { ...options.user, id: bytes(options.user.id) },
-        excludeCredentials: (options.excludeCredentials ?? []).map((c: { id: string }) => ({
-          ...c,
-          id: bytes(c.id),
-        })),
-      },
-    })) as PublicKeyCredential;
-    const response = made.response as AuthenticatorAttestationResponse;
-    return {
-      id: made.id,
-      rawId: text(made.rawId),
-      type: made.type,
-      response: {
-        attestationObject: text(response.attestationObject),
-        clientDataJSON: text(response.clientDataJSON),
-      },
-    };
-  }, options);
-  const added = await http.put("/api/two-factor/webauthn", {
-    data: { id: 1, name: "Test key", masterPasswordHash: hash, deviceResponse },
-    headers,
-  });
-  expect(added.status(), await added.text()).toBe(200);
-  await http.dispose();
+  await page.goto("/#/settings/security/two-factor");
+  await page
+    .locator("bit-item")
+    .filter({ has: page.getByRole("heading", { name: /^Passkey/ }) })
+    .getByRole("button", { name: "Manage" })
+    .click();
+  const confirm = page.getByRole("dialog").filter({ has: page.getByRole("button", { name: "Continue" }) });
+  await confirm.getByRole("textbox", { name: /Master password/ }).fill(user.password);
+  await confirm.getByRole("button", { name: "Continue" }).click();
+  const dialog = page.getByRole("dialog").filter({ has: page.getByRole("button", { name: "Read key" }) });
+  await dialog.getByRole("textbox", { name: /^Name/ }).fill("Test key");
+  await dialog.getByRole("button", { name: "Read key" }).click();
+  await expect(dialog.getByText('Use the "Save" button below to activate this security key')).toBeVisible();
+  // Saved, the dialog closes and the list says it's on.
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("heading", { name: /^Passkey\s+Turned on/ })).toBeVisible();
   return key.credential();
 }
 

@@ -72,6 +72,8 @@ check "Edge forces our extension" policy_is "$edge/passbundle.json" \
   'p["ExtensionInstallForcelist"] == ["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;https://edge.microsoft.com/extensionwebstorebase/v1/crx"]'
 check "Chrome password manager off" policy_is "$chrome/passbundle.json" 'p["PasswordManagerEnabled"] is False'
 check "Edge password manager off" policy_is "$edge/passbundle.json" 'p["PasswordManagerEnabled"] is False'
+check "Chrome takes native-messaging hosts from the machine only" policy_is "$chrome/passbundle.json" 'p["NativeMessagingUserLevelHosts"] is False'
+check "Edge takes native-messaging hosts from the machine only" policy_is "$edge/passbundle.json" 'p["NativeMessagingUserLevelHosts"] is False'
 check "Chrome card autofill off" policy_is "$chrome/passbundle.json" 'p["AutofillCreditCardEnabled"] is False'
 check "address autofill untouched" policy_is "$chrome/passbundle.json" '"AutofillAddressEnabled" not in p'
 check "no extension settings without the console's values" policy_is "$chrome/passbundle.json" '"3rdparty" not in p'
