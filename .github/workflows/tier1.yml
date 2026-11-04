@@ -117,6 +117,10 @@ jobs:
         run: cmp meta/docs/vectors/sso-client-secret-v1.json src/api/core/keykeeper_sso/vectors/sso-client-secret-v1.json
       - name: The server's site fix and install token key test vectors are the meta repo's
         run: cmp meta/docs/vectors/server-derived-keys-v1.json src/db/models/vectors/server-derived-keys-v1.json
+      - name: The server's joining seal and script grant seal test vectors are the meta repo's
+        run: |
+          cmp meta/docs/vectors/joining-v2.json src/db/models/vectors/joining-v2.json
+          cmp meta/docs/vectors/script-grants-v3.json src/db/models/vectors/script-grants-v3.json
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       # One binary for both supported databases (SQLite and PostgreSQL); the
       # database URL picks which one at startup.
@@ -311,16 +315,22 @@ jobs:
       - name: Site fix and install token key test vectors, as their generator makes them
         run: node meta/docs/vectors/make-server-derived-keys-v1.mjs | cmp - meta/docs/vectors/server-derived-keys-v1.json
       # Seals a hacked server can't steer (DESIGN.md, "Joins a hacked server
-      # can't forge", and docs/script-access.md, "Version 2 seals"): the
+      # can't forge", and docs/script-access.md, "Version 3 seals"): the
       # vectors as their generators make them, the clients' copies, and the
-      # script grant seals as upstream's own crypto opens them.
-      - name: The version 2 join and script grant seal test vectors, as their generators make them, the clients' copies, and as upstream's crypto opens them
+      # script grant seals as upstream's own crypto opens them. The apps
+      # refuse version 2 script grant seals now, and check that against them.
+      - name: The join, joining, and script grant seal test vectors, as their generators make them, the clients' copies, and as upstream's crypto opens them
         run: |
           node meta/docs/vectors/make-joins-v2.mjs | cmp - meta/docs/vectors/joins-v2.json
+          node meta/docs/vectors/make-joining-v2.mjs | cmp - meta/docs/vectors/joining-v2.json
           node meta/docs/vectors/make-script-grants-v2.mjs | cmp - meta/docs/vectors/script-grants-v2.json
+          node meta/docs/vectors/make-script-grants-v3.mjs | cmp - meta/docs/vectors/script-grants-v3.json
           cmp meta/docs/vectors/joins-v2.json libs/admin-console/src/common/keykeeper/joins-v2.vectors.json
+          cmp meta/docs/vectors/joining-v2.json libs/admin-console/src/common/keykeeper/joining-v2.vectors.json
           cmp meta/docs/vectors/script-grants-v2.json libs/admin-console/src/common/keykeeper/script-grants-v2.vectors.json
+          cmp meta/docs/vectors/script-grants-v3.json libs/admin-console/src/common/keykeeper/script-grants-v3.vectors.json
           node meta/docs/vectors/check-script-grants-vectors.mjs meta/docs/vectors/script-grants-v2.json .
+          node meta/docs/vectors/check-script-grants-v3-vectors.mjs meta/docs/vectors/script-grants-v3.json .
       - name: Upstream unit tests for every file we changed
         run: |
           base=$(cat .keykeeper-base)

@@ -14,7 +14,7 @@ import { type APIRequestContext, expect, test, type Page } from "@playwright/tes
 import { groupsServerPort } from "../paths.mjs";
 
 import { Api } from "./api/support";
-import { confirmMember, reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
+import { acceptRole, confirmMember, reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 test.use({ baseURL: `https://127.0.0.1:${groupsServerPort}` });
 
@@ -260,6 +260,7 @@ test("a custom role that manages members sees the shared folders it opens itself
     permissions: { manageUsers: true },
     collections: [{ id: everyone, readOnly: true, hidePasswords: false, manage: false }],
   });
+  await acceptRole(poc);
   await page.goto("/#/vault");
   await page.goto(`${org}/members`);
   await confirmMember(page, pocUser.email);

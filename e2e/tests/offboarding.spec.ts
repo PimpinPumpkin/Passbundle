@@ -6,7 +6,7 @@
 // real, made through the UI, since confirming encrypts the org key to them.
 import { expect, test, type Page } from "@playwright/test";
 
-import { reloadVault, signUp, signUpWithAuthenticator, webUserFor } from "./support/web";
+import { acceptRole, reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
@@ -24,7 +24,7 @@ test("a client's owner removes one of its MSP's technicians: the Members page of
   const ownerContext = await browser.newContext();
   const owner = await ownerContext.newPage();
   const ownerUser = webUserFor("offboard-owner", testInfo.repeatEachIndex);
-  await signUp(owner, ownerUser);
+  await signUpWithAuthenticator(owner, ownerUser);
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
   await signUpWithAuthenticator(admin, webUserFor("offboard-admin", testInfo.repeatEachIndex));
@@ -54,6 +54,7 @@ test("a client's owner removes one of its MSP's technicians: the Members page of
   await invite.getByRole("radio", { name: /^Owner/ }).check();
   await invite.getByRole("button", { name: "Save" }).click();
   await expect(invite).toBeHidden();
+  await acceptRole(owner);
   // Opening the console (or the Members page) confirms whoever is waiting.
   await expect(async () => {
     await admin.goto("/#/vault");

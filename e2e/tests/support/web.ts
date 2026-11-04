@@ -107,6 +107,21 @@ export async function reloadVault(page: Page) {
 }
 
 /**
+ * Accepts a role on the vault page. The test servers send no email, so an
+ * invitation joins an existing account without asking, and a role that
+ * requires two-step login for admins (an owner, an admin, or a custom role
+ * that manages members, policies, or account recovery) waits for its person
+ * to accept it before anyone lets them in (DESIGN.md, "Two-step login for
+ * admins"). With two-step login set up, accepting leaves them signed in.
+ */
+export async function acceptRole(page: Page) {
+  await reloadVault(page);
+  const role = page.getByTestId("accept-role");
+  await role.getByRole("button", { name: "Accept the role" }).click();
+  await expect(role).toHaveCount(0);
+}
+
+/**
  * The web vault's one left menu: search, the categories, and the folders
  * (Personal's, then each organization's), then the tools (DESIGN.md, "The
  * left menu").

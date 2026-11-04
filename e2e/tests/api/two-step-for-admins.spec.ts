@@ -544,10 +544,12 @@ test("single sign-on meets the rule for its own organization's admins, never for
   const beforeJoining = await ssoSignIn(request, origin, identifier);
   expectSignedIn(beforeJoining.token!);
   // (They accept the role with the session they have, since this test
-  // server's invitation joined them without asking.)
+  // server's invitation joined them without asking; until then nobody lets
+  // them in.)
   const otherMemberId = await api.addMember(otherOwner, otherId, admin, "admin", {
     authenticator: false,
     accept: false,
+    confirm: false,
   });
   expect(await works(api, beforeJoining.token!.body.access_token)).toBe(true);
   await api.acceptRole({ token: beforeJoining.token!.body.access_token }, otherId);
@@ -855,12 +857,29 @@ test("on a server without email, an invitation signs nobody out: a role counts o
 
   // This test server sends no email, so an invitation joins an account at
   // once, without asking. Invited as an admin, someone without two-step
-  // login keeps their session and signs in as before.
+  // login keeps their session and signs in as before, and nobody lets them
+  // in until they accept the role: they'd hold it without two-step login.
   const person = await api.account("unasked-admin");
-  await api.addMember(owner, orgId, person, "admin", { authenticator: false, accept: false });
+  const personId = await api.addMember(owner, orgId, person, "admin", {
+    authenticator: false,
+    accept: false,
+    confirm: false,
+  });
   expect(await works(api, person.token)).toBe(true);
   expectSignedIn(await api.signIn(person.email, person.password));
-  // So does a member made an owner afterwards.
+  const confirm = () =>
+    api.call(owner, "POST", `/api/organizations/${orgId}/users/${personId}/confirm`, {
+      key: encString(`org-key-for-${person.email}`),
+    });
+  const early = await confirm();
+  expect(early.status).toBe(400);
+  expect(early.body.message).toMatch(/hasn't accepted their role yet/);
+  const waiting = await api.call(owner, "GET", "/api/keykeeper/organizations/pending");
+  expect(waiting.body.data.find((p: { email: string }) => p.email === person.email)).toMatchObject({
+    autoConfirm: false,
+  });
+  // Nor is a member let in before, who hasn't accepted their place, made an
+  // owner: they'd be invited in that role instead.
   const other = await api.account("unasked-owner-made");
   const otherId = await api.addMember(owner, orgId, other, "user", { accept: false });
   const promoted = await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${otherId}`, {
@@ -870,7 +889,8 @@ test("on a server without email, an invitation signs nobody out: a role counts o
     accessAll: true,
     permissions: {},
   });
-  expect(promoted.status, JSON.stringify(promoted.body)).toBe(200);
+  expect(promoted.status).toBe(400);
+  expect(promoted.body.message).toMatch(/hasn't accepted their place here yet/);
   expect(await works(api, other.token)).toBe(true);
   expectSignedIn(await api.signIn(other.email, other.password));
   const listed = (await api.call(owner, "GET", orgSetting(orgId))).body.notSetUp as { email: string }[];
@@ -887,6 +907,8 @@ test("on a server without email, an invitation signs nobody out: a role counts o
   expectSetup(await api.signIn(person.email, person.password), [orgName]);
   const after = (await api.call(owner, "GET", orgSetting(orgId))).body.notSetUp as { email: string }[];
   expect(after.map((p) => p.email)).toEqual([person.email]);
+  // Accepted, they're let in as anyone is.
+  expect((await confirm()).status).toBe(200);
   // The other one hasn't accepted, and still signs in as before.
   expectSignedIn(await api.signIn(other.email, other.password));
 });

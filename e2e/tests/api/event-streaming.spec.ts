@@ -328,7 +328,7 @@ test("one person's many slow destinations don't hold up anyone else's, and get t
   }
 });
 
-test("a destination stays, and keeps sending, when the person who set it up deletes their account", async ({
+test("a destination stays when the person who set it up deletes their account, but sends nothing more", async ({
   request,
 }) => {
   const api = new Api(request);
@@ -339,16 +339,23 @@ test("a destination stays, and keeps sending, when the person who set it up dele
     const leaver = await api.account("leaver");
     await api.addMember(owner, orgId, leaver, "admin");
     const d = await create(api, leaver, orgPath(orgId), webhook(receiver.url("/leaver")));
+    const own = await create(api, owner, orgPath(orgId), { ...webhook(receiver.url("/owner")), name: "Owner's SIEM" });
     const gone = await api.call(leaver, "DELETE", "/api/accounts", { masterPasswordHash: leaver.password });
     expect(gone.status, JSON.stringify(gone.body)).toBe(200);
-    expect((await list(api, owner, orgPath(orgId))).find((x) => x.id === d.id)).toMatchObject({ status: "on" });
+    // It stays with the organization, but a destination sends only while
+    // whoever set it up has access (DESIGN.md, "Offboarding"), and says so.
+    const theirs = async () => (await list(api, owner, orgPath(orgId))).find((x) => x.id === d.id)!;
+    expect(await theirs()).toMatchObject({ status: "stopped" });
     await touch(api, owner, orgId, "Leaver Org renamed");
-    const later = await waitFor(
-      receiver.received,
-      (all) => all.map((r) => verifyWebhook(r, d.signingSecret!)).find((e) => e.type === 1600),
-      "an event after the account was deleted",
-    );
+    const renamed = (secret: string, path: string) =>
+      receiver.received
+        .filter((r) => r.path === path)
+        .map((r) => verifyWebhook(r, secret))
+        .find((e) => e.type === 1600);
+    const later = await waitFor(receiver.received, () => renamed(own.signingSecret!, "/owner"), "the owner's event");
     expect(later.organization.name).toBe("Leaver Org renamed");
+    await expect.poll(async () => (await theirs()).queued, { timeout: 20_000 }).toBe(0);
+    expect(renamed(d.signingSecret!, "/leaver")).toBeUndefined();
   } finally {
     await receiver.close();
   }

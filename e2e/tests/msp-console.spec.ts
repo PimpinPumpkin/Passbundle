@@ -6,7 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { brand } from "../paths.mjs";
 
-import { reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
+import { acceptRole, reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) =>
@@ -216,6 +216,7 @@ test("a client's own owner sees its MSP on the Members page and removes it; the 
   await invite.getByRole("radio", { name: /^Owner/ }).check();
   await invite.getByRole("button", { name: "Save" }).click();
   await expect(invite).toBeHidden();
+  await acceptRole(owner);
   await admin.goto("/#/msp");
   await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
 

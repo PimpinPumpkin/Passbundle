@@ -577,6 +577,12 @@ test("under the Business preset, a member's own On browser refresh still asks at
     },
   );
   const sent = watch(page);
+  // The policy reaches the Settings page still open from before she joined
+  // (her web vault syncs when she's confirmed). The page then shows the
+  // timeout as the policy's minutes, and must not save them over her own
+  // "On browser refresh": that race, with this wait left to chance, made
+  // this test fail now and then.
+  await expect(page.getByText(SYSTEM_LOCK_MESSAGE)).toBeVisible({ timeout: 30_000 });
 
   // The unlock after the next reload brings the organization's policy.
   await page.goto("/#/vault");
