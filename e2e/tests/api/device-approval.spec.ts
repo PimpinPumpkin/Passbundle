@@ -5,7 +5,9 @@
 // it (not the device that asked, a session that itself came from an
 // approval, an API key, another account, or no one); an approval carries only
 // a type 4 key, never a master password hash; an approval signs in the device
-// that asked, once; a denial signs nothing in; a request lasts 15 minutes; a
+// that asked, once; a denial signs nothing in; a request lasts 15 minutes, and
+// one that's gone (expired, denied, replaced, or purged) answers 404 whenever
+// the purge runs; a
 // device asks five times an hour at most; an organization's "Require single
 // sign-on" holds for it too; and a session an approval began can't use
 // emergency access on either side, while a password's or single sign-on's
@@ -139,14 +141,15 @@ test("a known device asks, only the account's other devices see it, and an appro
   expect(await pending(api, asking)).toEqual([]);
   expect(await pending(api, ben)).toEqual([]);
   expect((await api.call(null, "GET", "/api/auth-requests/pending")).status).toBe(401);
-  expect((await api.call(ben, "GET", `/api/auth-requests/${a.id}`)).status).toBe(400);
+  // Another account's request is as good as gone to them.
+  expect((await api.call(ben, "GET", `/api/auth-requests/${a.id}`)).status).toBe(404);
   expect((await api.call(null, "GET", `/api/auth-requests/${a.id}`)).status).toBe(401);
   expect((await api.call(laptop, "GET", `/api/auth-requests/${a.id}`)).status).toBe(200);
 
   // Nobody else answers it, the device asking can't answer its own, and an
   // approval carries a key.
   const benLaptop = await session(request, ben);
-  expect((await answer(api, benLaptop, benLaptop.device, a, true)).status).toBe(400);
+  expect((await answer(api, benLaptop, benLaptop.device, a, true)).status).toBe(404);
   expect((await answer(api, null, laptop.device, a, true)).status).toBe(401);
   const own = await answer(api, asking, asking.device, a, true);
   expect(own.status).toBe(400);
@@ -230,7 +233,7 @@ test("only a session that signed in with the master password approves", async ({
 
   // A denial from it is fine: it hands nothing out. The request is gone.
   expect((await answer(api, approvedPhone, phone.device, second, false)).status).toBe(200);
-  expect((await api.call(laptop, "GET", `/api/auth-requests/${second.id}`)).status).toBe(400);
+  expect((await api.call(laptop, "GET", `/api/auth-requests/${second.id}`)).status).toBe(404);
   // The device that signed in with the master password still approves.
   const third = await asked(request, ana, tablet.device);
   expect((await answer(api, laptop, laptop.device, third, true)).status).toBe(200);
@@ -246,10 +249,10 @@ test("a denied request is gone and signs nothing in", async ({ request }) => {
   const denied = await answer(api, laptop, laptop.device, a, false, null);
   expect(denied.status, JSON.stringify(denied.body)).toBe(200);
   expect(await pending(api, laptop)).toEqual([]);
-  expect((await api.call(laptop, "GET", `/api/auth-requests/${a.id}`)).status).toBe(400);
+  expect((await api.call(laptop, "GET", `/api/auth-requests/${a.id}`)).status).toBe(404);
   expect((await poll(request, a)).status).toBe(400);
   expect((await signIn(request, ana, asking.device, a)).status).toBe(400);
-  expect((await answer(api, laptop, laptop.device, a, true)).status).toBe(400);
+  expect((await answer(api, laptop, laptop.device, a, true)).status).toBe(404);
 });
 
 test("a request lasts fifteen minutes", async ({ request }) => {
@@ -261,6 +264,8 @@ test("a request lasts fifteen minutes", async ({ request }) => {
   const aged = await ageSignInRequests(ana.email, 16);
   test.skip(aged === null, "the test server runs on PostgreSQL");
   expect(aged).toBe(1);
+  // From here the server's purge (every minute, at :30) may delete it at any
+  // moment; an expired request and a purged one answer the same.
   expect(await pending(api, laptop)).toEqual([]);
   expect((await api.call(laptop, "GET", `/api/auth-requests/${a.id}`)).status).toBe(404);
   expect((await answer(api, laptop, laptop.device, a, true)).status).toBe(404);
@@ -282,7 +287,7 @@ test("a device has one request waiting, an account a few, and only a known devic
   const replaced = await asked(request, ana, first.device);
   const again = await asked(request, ana, first.device);
   expect(await pending(api, laptop)).toEqual([again.id]);
-  expect((await api.call(laptop, "GET", `/api/auth-requests/${replaced.id}`)).status).toBe(400);
+  expect((await api.call(laptop, "GET", `/api/auth-requests/${replaced.id}`)).status).toBe(404);
 
   for (let i = 0; i < 4; i++) {
     await asked(request, ana, (await session(request, ana)).device);

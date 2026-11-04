@@ -49,11 +49,11 @@ test("an admin without two-step login is taken to set it up, then signs in with 
   await invite.getByRole("radio", { name: /^Admin/ }).check();
   await invite.getByRole("button", { name: "Save" }).click();
   await expect(invite).toBeHidden();
-  await confirmMember(owner, adminUser.email);
 
   // This test server sends no email, so the invitation joined them without
-  // asking: the rule leaves them alone until they accept the role. They sign
-  // in to their vault, which asks them to.
+  // asking: the rule leaves them alone until they accept the role, and
+  // nobody lets them in before then. They sign in to their vault, which
+  // asks them to.
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
   await enterPassword(admin, adminUser);
@@ -61,8 +61,9 @@ test("an admin without two-step login is taken to set it up, then signs in with 
   const acceptRole = admin.getByTestId("accept-role");
   await expect(acceptRole).toContainText("Acme Dental made you an admin");
   await acceptRole.getByRole("button", { name: "Accept the role" }).click();
-  // Without two-step login, accepting signs them out.
+  // Without two-step login, accepting signs them out. The owner lets them in.
   await admin.waitForURL(/#\/login/);
+  await confirmMember(owner, adminUser.email);
 
   // The Settings page says it's on and who hasn't set it up.
   await owner.goto(`${org}/settings/account`);

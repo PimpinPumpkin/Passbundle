@@ -9,7 +9,7 @@
 // with only those still opens the admin console's Vault tab.
 import { expect, test, type Page } from "@playwright/test";
 
-import { reloadVault, signUp, signUpWithAuthenticator, webUserFor } from "./support/web";
+import { acceptRole, reloadVault, signUp, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 const toast = (page: Page, text: string | RegExp) => page.getByText(text).first();
 
@@ -67,6 +67,7 @@ test("an MSP admin gives a client's point of contact a custom role that manages 
   );
   await invite.getByRole("button", { name: "Save" }).click();
   await expect(invite).toBeHidden();
+  await acceptRole(poc);
   await admin.goto("/#/msp");
   await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
 
@@ -252,6 +253,7 @@ test("a custom role that manages members and views event logs opens a member's e
   await invite.getByRole("checkbox", { name: /event logs/i }).check();
   await invite.getByRole("button", { name: "Save" }).click();
   await expect(invite).toBeHidden();
+  await acceptRole(poc);
   await admin.goto("/#/msp");
   await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
 
