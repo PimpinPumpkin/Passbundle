@@ -8,6 +8,8 @@
 // vouch for is confirmed.
 import { expect, test } from "@playwright/test";
 
+import { limitsServerPort } from "../../paths.mjs";
+
 import { type Account, Api, encString, expiringSeal } from "./support";
 
 /** A version 1 seal-shaped value (joining seals, client seals, proofs): the server can't tell a real one from this. */
@@ -337,4 +339,34 @@ test("a company's own owners and admins seal their organization; an MSP's client
     joining: seal(14),
   });
   expect(refused.status).toBe(403);
+});
+
+// The limits server sends no email and keeps the default for it
+// (INVITE_JOINS_WITHOUT_EMAIL off, e2e/server.mjs): nothing proves who owns
+// an invited address there, since upstream lets an invited address sign up
+// without a link, so whoever signs up with it first would be vouched for.
+test.describe("on a server that sends no email", () => {
+  test.use({ baseURL: `https://127.0.0.1:${limitsServerPort}` });
+
+  test("an invitation's seal doesn't vouch for anyone: an owner or admin approves the join", async ({ request }) => {
+    const api = new Api(request);
+    const owner = await api.account("no-mail-owner");
+    const orgId = await api.organization(owner, "No Mail Co");
+    const invited = await api.account("no-mail-invited");
+    const invite = await api.call(owner, "POST", `/api/organizations/${orgId}/users/invite`, {
+      emails: [invited.email],
+      type: 2,
+      collections: [],
+      groups: [],
+      permissions: {},
+      keykeeperSeals: { [invited.email]: expiringSeal(20) },
+    });
+    expect(invite.status, JSON.stringify(invite.body)).toBe(200);
+    const pending = await api.call(owner, "GET", "/api/keykeeper/organizations/pending");
+    expect(pending.status, JSON.stringify(pending.body)).toBe(200);
+    expect(pending.body.data.find((p: { email: string }) => p.email === invited.email)).toMatchObject({
+      organizationId: orgId,
+      inviteSeal: null,
+    });
+  });
 });

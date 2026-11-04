@@ -8,7 +8,12 @@ import { createHash, hkdfSync, randomBytes, randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
 
-import { Api, encString, type Account } from "./support";
+import { Api, withMasterPassword, encString, type Account } from "./support";
+
+// The master password these changes need is checked the way a sign-in is
+// (600,000 rounds of PBKDF2 on the server, slow in its debug build), so tests
+// that make several get more time.
+test.describe.configure({ timeout: 120_000 });
 
 const USER = 2;
 
@@ -64,16 +69,21 @@ async function createToken(
   for (const item of items) {
     grants.push(await grantFor(api, who, item));
   }
-  const created = await api.call(who, "POST", `/api/keykeeper/organizations/${orgId}/script-tokens`, {
-    id: token.id,
-    name: "Join domain",
-    expiresAt: inDays(90),
-    networks: [],
-    authHash: token.authHash,
-    sealedKey: encString(`sealed-key-${token.id}`),
-    grants,
-    ...more,
-  });
+  const created = await api.call(
+    who,
+    "POST",
+    `/api/keykeeper/organizations/${orgId}/script-tokens`,
+    withMasterPassword(who, {
+      id: token.id,
+      name: "Join domain",
+      expiresAt: inDays(90),
+      networks: [],
+      authHash: token.authHash,
+      sealedKey: encString(`sealed-key-${token.id}`),
+      grants,
+      ...more,
+    }),
+  );
   return { ...token, created };
 }
 
@@ -239,14 +249,19 @@ test("anyone who can edit a granted item refreshes its copy for the item's curre
   // Regular members can't list, make, or revoke tokens.
   expect((await api.call(member, "GET", `/api/keykeeper/organizations/${orgId}/script-tokens`)).status).toBe(404);
   const asMember = newToken();
-  const memberMade = await api.call(member, "POST", `/api/keykeeper/organizations/${orgId}/script-tokens`, {
-    id: asMember.id,
-    name: "Not theirs",
-    expiresAt: inDays(30),
-    authHash: asMember.authHash,
-    sealedKey: encString("sealed"),
-    grants: [await grantFor(api, owner, item)],
-  });
+  const memberMade = await api.call(
+    member,
+    "POST",
+    `/api/keykeeper/organizations/${orgId}/script-tokens`,
+    withMasterPassword(member, {
+      id: asMember.id,
+      name: "Not theirs",
+      expiresAt: inDays(30),
+      authHash: asMember.authHash,
+      sealedKey: encString("sealed"),
+      grants: [await grantFor(api, owner, item)],
+    }),
+  );
   expect(memberMade.status).toBe(404);
   expect((await api.call(member, "DELETE", `/api/keykeeper/organizations/${orgId}/script-tokens/${token.id}`)).status).toBe(404);
 

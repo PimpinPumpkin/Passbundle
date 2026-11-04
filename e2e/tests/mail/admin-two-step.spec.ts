@@ -6,7 +6,13 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 import { mailHttpPort } from "../../paths.mjs";
-import { type Account, Api, type Result, encString, nextTotp, totp } from "../api/support";
+import { type Account, Api, type Result, encString, nextTotp, totp, withMasterPassword } from "../api/support";
+
+// The master password these changes need is checked the way a sign-in is
+// (600,000 rounds of PBKDF2 on the server, slow in its debug build), so tests
+// that make several get more time.
+test.describe.configure({ timeout: 120_000 });
+
 
 import { joinByEmail, waitForMessage } from "./mailbox";
 
@@ -34,7 +40,12 @@ function expectSetup(result: Result) {
 }
 
 async function requireIt(api: Api, owner: Account, orgId: string) {
-  const on = await api.call(owner, "PUT", `/api/keykeeper/organizations/${orgId}/admin-two-step`, { required: true });
+  const on = await api.call(
+    owner,
+    "PUT",
+    `/api/keykeeper/organizations/${orgId}/admin-two-step`,
+    withMasterPassword(owner, { required: true }),
+  );
   expect(on.status, JSON.stringify(on.body)).toBe(200);
 }
 

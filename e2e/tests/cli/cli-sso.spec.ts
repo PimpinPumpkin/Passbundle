@@ -72,7 +72,9 @@ test("a member signs in from the command-line tool with her organization's singl
     `/api/keykeeper/organizations/${org.id}/sso`,
     {
       headers: { Authorization: `Bearer ${owner.token}` },
-      data: settings(tenant, identifier),
+      // The master password, as the web vault asks for it (DESIGN.md,
+      // "Confirming sensitive changes").
+      data: { ...settings(tenant, identifier), masterPasswordHash: owner.passwordHash },
     },
   );
   expect(saved.status(), await saved.text()).toBe(200);
@@ -233,7 +235,7 @@ test("with Require single sign-on, the tool says how to sign in, and an API key 
     (
       await request.put(`/api/keykeeper/organizations/${org.id}/sso`, {
         headers: auth,
-        data: settings(tenant, identifier),
+        data: { ...settings(tenant, identifier), masterPasswordHash: owner.passwordHash },
       })
     ).status(),
   ).toBe(200);

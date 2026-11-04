@@ -4,7 +4,7 @@
 // and goes in the MSP's audit log; MSP admins stay owners of every client.
 import { expect, test } from "@playwright/test";
 
-import { type Account, Api } from "./support";
+import { type Account, Api, withMasterPassword } from "./support";
 
 const OWNER = 0;
 const ADMIN = 1;
@@ -623,10 +623,20 @@ test("a technician with a custom role works in every Business client: single org
   // Two-step login for admins is off here (the MSP's for its staff, and each
   // client's for its admins), so the technician, who has none, keeps their
   // session, and only the clients' policies apply.
-  const staffRule = await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/two-step`, { staffRequired: false });
+  const staffRule = await api.call(
+    admin,
+    "PUT",
+    `/api/keykeeper/msp/${mspId}/two-step`,
+    withMasterPassword(admin, { staffRequired: false }),
+  );
   expect(staffRule.status, JSON.stringify(staffRule.body)).toBe(200);
   for (const org of [dental, law]) {
-    const off = await api.call(admin, "PUT", `/api/keykeeper/organizations/${org}/admin-two-step`, { required: false });
+    const off = await api.call(
+      admin,
+      "PUT",
+      `/api/keykeeper/organizations/${org}/admin-two-step`,
+      withMasterPassword(admin, { required: false }),
+    );
     expect(off.status, JSON.stringify(off.body)).toBe(200);
   }
 

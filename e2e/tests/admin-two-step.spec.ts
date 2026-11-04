@@ -10,7 +10,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { totp } from "./api/support";
 import { giveAuthenticator } from "./support/two-step";
-import { confirmMember, signUp, webUserFor, type WebUser } from "./support/web";
+import { confirmMember, confirmWithPassword, signUp, webUserFor, type WebUser } from "./support/web";
 
 async function enterPassword(page: Page, user: WebUser) {
   await page.goto("/#/login");
@@ -112,6 +112,8 @@ test("an admin without two-step login is taken to set it up, then signs in with 
   await card.getByRole("button", { name: "Save" }).click();
   const confirm = owner.getByRole("dialog", { name: /Turn off two-step login for admins/ });
   await confirm.getByRole("button", { name: "Turn it off" }).click();
+  // Then the master password (DESIGN.md, "Confirming sensitive changes").
+  await confirmWithPassword(owner, ownerUser.password);
   await expect(card.getByRole("checkbox", { name: "Require two-step login for admins" })).not.toBeChecked();
 
   await adminContext.close();

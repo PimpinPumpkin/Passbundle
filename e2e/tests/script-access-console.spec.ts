@@ -3,12 +3,13 @@
 // login. The token string shows once, with how to use it; a script with it
 // reads a copy of just those fields, encrypted with a key the server never
 // had; an edit to the login reaches the script; the owner sees the reads, and
-// revokes the token. Real keys throughout.
+// revokes the token. Making it asks for the owner's master password first.
+// Real keys throughout.
 import { createDecipheriv, createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { newItem, signUp, webUserFor } from "./support/web";
+import { confirmWithPassword, newItem, signUp, webUserFor } from "./support/web";
 
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
 
@@ -46,7 +47,8 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
   request,
 }, testInfo) => {
   test.setTimeout(180_000);
-  await signUp(page, webUserFor("script-owner", testInfo.repeatEachIndex));
+  const owner = webUserFor("script-owner", testInfo.repeatEachIndex);
+  await signUp(page, owner);
   const orgId = await createOrganization(page, "Contoso");
 
   // A login in the organization, with a note the token isn't granted.
@@ -77,6 +79,7 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
   await expect(fields.getByRole("checkbox", { name: "Password" })).toBeChecked();
   await dialog.getByRole("button", { name: "Make token" }).click();
   await expect(dialog).toBeHidden();
+  await confirmWithPassword(page, owner.password);
 
   // Shown once, with how to use it.
   const made = section.getByTestId("script-token-made");

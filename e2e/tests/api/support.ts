@@ -40,6 +40,17 @@ export type Account = {
 
 export type Result = { status: number; body: any };
 
+/**
+ * A change's body with the caller's master password hash, as the web vault
+ * sends it after asking: making a provisioning token, saving single sign-on,
+ * adding or changing an event destination or its signing secret, and making
+ * a script token need it (DESIGN.md, "Confirming sensitive changes").
+ */
+export const withMasterPassword = (
+  who: { password?: string } | null,
+  data: Record<string, unknown> = {},
+): Record<string, unknown> => ({ ...data, ...(who?.password ? { masterPasswordHash: who.password } : {}) });
+
 /** The code for an authenticator key at a time (RFC 6238: SHA-1, 30 seconds, 6 digits). */
 export function totp(base32Key: string, now = Date.now()): string {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";

@@ -3,7 +3,7 @@
 // clients stay in control; and upstream deletes are never blocked by MSP data.
 import { expect, test } from "@playwright/test";
 
-import { Api } from "./support";
+import { Api, withMasterPassword } from "./support";
 
 const OWNER = 0;
 const ADMIN = 1;
@@ -309,7 +309,12 @@ test("a client's single-organization policy doesn't lock its MSP out, and its tw
   const other = await api.client(admin, mspId, "Other Co");
   // The MSP doesn't require two-step login of its staff here, nor do these
   // clients of their admins, so only the clients' policies apply.
-  const staffRule = await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/two-step`, { staffRequired: false });
+  const staffRule = await api.call(
+    admin,
+    "PUT",
+    `/api/keykeeper/msp/${mspId}/two-step`,
+    withMasterPassword(admin, { staffRequired: false }),
+  );
   expect(staffRule.status, JSON.stringify(staffRule.body)).toBe(200);
   await api.addStaff(admin, mspId, tech, "technician", undefined, { authenticator: false });
   await api.confirmPending(admin, mspId);

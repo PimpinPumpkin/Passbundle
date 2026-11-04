@@ -2,10 +2,11 @@
 // makes the token Microsoft Entra ID uses, shown once; Entra's request adds
 // someone; the owner lets them in from the page, and their own web vault then
 // confirms them in the background with the organization's real key. The SCIM
-// requests stand in for Entra's, in the shapes Microsoft documents.
+// requests stand in for Entra's, in the shapes Microsoft documents. Making or
+// replacing the token asks for the owner's master password first.
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUp, webUserFor } from "./support/web";
+import { confirmWithPassword, signUp, verificationPrompt, webUserFor } from "./support/web";
 
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
 
@@ -29,7 +30,8 @@ test("an owner connects Entra, and lets in the person it adds", async ({ browser
   await signUp(hire, newHire);
 
   const owner = await (await browser.newContext()).newPage();
-  await signUp(owner, webUserFor("provisioning-owner", index));
+  const ownerUser = webUserFor("provisioning-owner", index);
+  await signUp(owner, ownerUser);
   const orgId = await createOrganization(owner, "Lakeside Clinic");
 
   // Settings, then Provisioning.
@@ -46,7 +48,24 @@ test("an owner connects Entra, and lets in the person it adds", async ({ browser
   };
   await expect(page.getByTestId("provisioning-url")).toHaveText(`${baseURL}/scim/v2/${orgId}`);
   await expect(page.getByTestId("provisioning-steps")).toContainText("Create your own application");
+  // Making the token asks for the master password first (DESIGN.md,
+  // "Confirming sensitive changes"): cancelling makes none, and a wrong
+  // password keeps the prompt open.
+  const prompt = verificationPrompt(owner);
   await page.getByRole("button", { name: "Create token" }).click();
+  await expect(prompt).toContainText("Whoever has it can add and remove people in this organization.");
+  await prompt.getByRole("button", { name: "Cancel" }).click();
+  await expect(prompt).toBeHidden();
+  await openPage();
+  await expect(page.getByRole("button", { name: "Create token" })).toBeVisible();
+  await expect(page.getByTestId("provisioning-token-info")).toHaveCount(0);
+  await page.getByRole("button", { name: "Create token" }).click();
+  await prompt.getByLabel(/Master password/).fill("not the master password");
+  await prompt.getByRole("button", { name: "Continue" }).click();
+  await expect(toast(owner, "User verification failed.")).toBeVisible();
+  await expect(prompt).toBeVisible();
+  await expect(page.getByTestId("provisioning-token")).toHaveCount(0);
+  await confirmWithPassword(owner, ownerUser.password);
   const shown = page.getByTestId("provisioning-token");
   await expect(shown).toHaveText(/^pbscim1_[A-Za-z0-9_-]{43}$/);
   const token = (await shown.textContent())!.trim();
@@ -96,6 +115,7 @@ test("an owner connects Entra, and lets in the person it adds", async ({ browser
   await openPage();
   await page.getByRole("button", { name: "Replace token" }).click();
   await owner.getByRole("dialog").getByRole("button", { name: "Replace token" }).click();
+  await confirmWithPassword(owner, ownerUser.password);
   await expect(page.getByTestId("provisioning-token")).toHaveText(/^pbscim1_/);
   const replaced = (await page.getByTestId("provisioning-token").textContent())!.trim();
   expect(replaced).not.toBe(token);

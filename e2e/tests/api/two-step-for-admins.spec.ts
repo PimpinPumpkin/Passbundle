@@ -16,7 +16,13 @@ import { linkFromSession, settings, ssoOrg, ssoSignIn } from "../support/entra";
 
 import { type MatrixRow, permissionMatrix } from "./matrix";
 import { type Cert, httpsReceiver, throwawayCert, waitFor } from "./siem";
-import { type Account, Api, type Result, encString, nextTotp, publicKey, totp } from "./support";
+import { type Account, Api, type Result, encString, nextTotp, publicKey, totp, withMasterPassword } from "./support";
+
+// The master password these changes need is checked the way a sign-in is
+// (600,000 rounds of PBKDF2 on the server, slow in its debug build), so tests
+// that make several get more time.
+test.describe.configure({ timeout: 120_000 });
+
 
 const origin = `https://127.0.0.1:${port}`;
 const ADMIN_TWO_STEP = 1000;
@@ -24,8 +30,8 @@ const ADMIN_TWO_STEP = 1000;
 const orgSetting = (orgId: string) => `/api/keykeeper/organizations/${orgId}/admin-two-step`;
 const mspSetting = (mspId: string) => `/api/keykeeper/msp/${mspId}/two-step`;
 
-async function requireIt(api: Api, as: { token: string }, orgId: string, required: boolean) {
-  const saved = await api.call(as, "PUT", orgSetting(orgId), { required });
+async function requireIt(api: Api, as: { token: string; password?: string }, orgId: string, required: boolean) {
+  const saved = await api.call(as, "PUT", orgSetting(orgId), withMasterPassword(as, { required }));
   expect(saved.status, JSON.stringify(saved.body)).toBe(200);
   expect(saved.body.required).toBe(required);
   return saved.body;
@@ -242,9 +248,14 @@ test("the Business preset and an MSP's clients have it on, an MSP needs it of it
 
   // Turning off the staff rule leaves the client's own rule, which covers
   // everyone the MSP brings in.
-  const technicianRefused = await api.call(technician, "PUT", mspSetting(mspId), { staffRequired: false });
+  const technicianRefused = await api.call(
+    technician,
+    "PUT",
+    mspSetting(mspId),
+    withMasterPassword(technician, { staffRequired: false }),
+  );
   expect(technicianRefused.status).toBe(403);
-  const off = await api.call(mspAdmin, "PUT", mspSetting(mspId), { staffRequired: false });
+  const off = await api.call(mspAdmin, "PUT", mspSetting(mspId), withMasterPassword(mspAdmin, { staffRequired: false }));
   expect(off.status, JSON.stringify(off.body)).toBe(200);
   expect(off.body.staffRequired).toBe(false);
   expectSetup(await api.signIn(newcomer.email, newcomer.password), [clientName]);
@@ -294,7 +305,7 @@ test("everyone an MSP brings into a client is covered by the client's setting, w
   const clientName = `Reach Client ${randomUUID().slice(0, 6)}`;
   const clientId = await api.client(mspAdmin, mspId, clientName, "business");
   // Only the client's rule, not the MSP's.
-  const off = await api.call(mspAdmin, "PUT", mspSetting(mspId), { staffRequired: false });
+  const off = await api.call(mspAdmin, "PUT", mspSetting(mspId), withMasterPassword(mspAdmin, { staffRequired: false }));
   expect(off.status, JSON.stringify(off.body)).toBe(200);
 
   // A technician whose custom role reaches every vault item and exports
@@ -555,15 +566,16 @@ test("single sign-on meets the rule for its own organization's admins, never for
   expectSignedIn(signedIn.token!);
   const session = { token: signedIn.token!.body.access_token as string };
   const ssoPath = `/api/keykeeper/organizations/${orgId}/sso`;
-  const ssoOff = await api.call(owner, "PUT", ssoPath, settings(tenant, identifier, false, false));
+  const ssoOff = await api.call(owner, "PUT", ssoPath, withMasterPassword(owner, settings(tenant, identifier, false, false)));
   expect(ssoOff.status, JSON.stringify(ssoOff.body)).toBe(200);
   const refused = await api.call(session, "PUT", orgSetting(orgId), { required: false });
   expect(refused.status, JSON.stringify(refused.body)).toBe(400);
   expect(refused.body.message).toMatch(/Set up two-step login for your own account before you turn this off/);
   expect((await api.call(owner, "GET", orgSetting(orgId))).body.required).toBe(true);
-  const ssoOn = await api.call(owner, "PUT", ssoPath, settings(tenant, identifier, true, false));
+  const ssoOn = await api.call(owner, "PUT", ssoPath, withMasterPassword(owner, settings(tenant, identifier, true, false)));
   expect(ssoOn.status, JSON.stringify(ssoOn.body)).toBe(200);
-  await requireIt(api, session, orgId, false);
+  // (The web vault asks for the master password before the change.)
+  await requireIt(api, { ...session, password: admin.password }, orgId, false);
 });
 
 test("a session ends at once when its person no longer meets the rule, and goes on when they still do", async ({
@@ -700,11 +712,16 @@ test("turning it on or off is in the organization's event log, and high for its 
     const owner = await api.account("logged-owner");
     await api.giveAuthenticator(owner);
     const orgId = await api.organization(owner, `Logged Co ${randomUUID().slice(0, 6)}`);
-    const destination = await api.call(owner, "POST", `/api/keykeeper/organizations/${orgId}/event-streaming`, {
-      name: "SIEM",
-      kind: "webhook",
-      webhook: { url: receiver.url("/events"), caCertificate: cert.cert },
-    });
+    const destination = await api.call(
+      owner,
+      "POST",
+      `/api/keykeeper/organizations/${orgId}/event-streaming`,
+      withMasterPassword(owner, {
+        name: "SIEM",
+        kind: "webhook",
+        webhook: { url: receiver.url("/events"), caCertificate: cert.cert },
+      }),
+    );
     expect(destination.status, JSON.stringify(destination.body)).toBe(200);
     await requireIt(api, owner, orgId, true);
     await requireIt(api, owner, orgId, false);
@@ -999,12 +1016,12 @@ const rows: MatrixRow<Actor, Ctx>[] = [
   {
     name: "change a client's setting",
     allowed: ["owner", "admin", "mspAdmin"],
-    request: async (ctx) => {
-      await ctx.api.call(ctx.mspAdmin, "PUT", orgSetting(ctx.orgId), { required: true });
+    request: async (ctx, _, account) => {
+      await ctx.api.call(ctx.mspAdmin, "PUT", orgSetting(ctx.orgId), withMasterPassword(ctx.mspAdmin, { required: true }));
       return {
         method: "PUT",
         path: orgSetting(ctx.orgId),
-        data: { required: false },
+        data: withMasterPassword(account, { required: false }),
         check: async (allowed) => {
           const now = await ctx.api.call(ctx.mspAdmin, "GET", orgSetting(ctx.orgId));
           expect(now.body.required).toBe(!allowed);
@@ -1020,12 +1037,12 @@ const rows: MatrixRow<Actor, Ctx>[] = [
   {
     name: "change the MSP's setting for its staff",
     allowed: ["mspAdmin"],
-    request: async (ctx) => {
-      await ctx.api.call(ctx.mspAdmin, "PUT", mspSetting(ctx.mspId), { staffRequired: true });
+    request: async (ctx, _, account) => {
+      await ctx.api.call(ctx.mspAdmin, "PUT", mspSetting(ctx.mspId), withMasterPassword(ctx.mspAdmin, { staffRequired: true }));
       return {
         method: "PUT",
         path: mspSetting(ctx.mspId),
-        data: { staffRequired: false },
+        data: withMasterPassword(account, { staffRequired: false }),
         check: async (allowed) => {
           const now = await ctx.api.call(ctx.mspAdmin, "GET", mspSetting(ctx.mspId));
           expect(now.body.staffRequired).toBe(!allowed);
