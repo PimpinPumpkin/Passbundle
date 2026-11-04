@@ -1,6 +1,6 @@
 # Script access
 
-Design, October 2026, with the decisions at the end made on October 20. It changes how keys are handled, so per the rule in DESIGN.md, this note and its test vectors (`docs/vectors/script-access-v1.json`) come before the code.
+Design, October 2026, with the decisions at the end made on October 20, and version 3 seals in November. It changes how keys are handled, so per the rule in DESIGN.md, this note and its test vectors (`docs/vectors/script-access-v1.json`, `script-grants-v3.json`) come before the code.
 
 Designed from public descriptions of how such tools work in general. Never from Bitwarden's Secrets Manager code or SDK, which we don't read (CLEAN_ROOM.md).
 
@@ -47,7 +47,7 @@ All in the admin's browser when the token is made; the server never sees the see
 - **Seed:** 32 random bytes. The token string is `pbs1_<token id, 32 hex digits>_<seed, base64url>`.
 - **Auth secret:** HKDF-SHA256(seed, no salt, "passbundle script auth v1", 32 bytes). The script sends it to prove it holds the token. The server stores only its SHA-256.
 - **Token key:** HKDF-SHA256(seed, no salt, "passbundle script key v1", 64 bytes), used as upstream's symmetric key (AES-256-CBC with HMAC-SHA256, the "type 2" encrypted string every PassBundle app already reads). It never leaves the admin's browser and the script's machine, except sealed (next).
-- **Sealed token key:** the token key encrypted with the organization key, stored on the server, so any app that holds the organization key can write and refresh the token's copies later. This exposes nothing new: whoever holds the organization key can already decrypt every item in the organization. Version 2 (below) seals it together with the token's id.
+- **Sealed token key:** the token key encrypted with the organization key, stored on the server, so any app that holds the organization key can write and refresh the token's copies later. This exposes nothing new: whoever holds the organization key can already decrypt every item in the organization. Version 3 (below) seals it together with the token's id and when the token ends.
 
 Deriving the auth secret and the token key separately from the seed means the server, which sees the auth secret on every request, still can't compute the token key.
 
@@ -69,24 +69,40 @@ Version 1 sealed the token key and the spec on their own: `{"v":1,"username":…
 
 - **Sealed token key:** the organization key's encryption (upstream's type 2 encrypted string) of `{"v":2,"token":"<token id>","key":"<the 64-byte token key, base64>"}`.
 - **Sealed spec:** the organization key's encryption of `{"v":2,"token":"<token id>","item":"<item id>","username":…,"password":…,"totp":…,"fields":[…]}`.
-- **An app refreshing a copy** opens both with the key of the item's own organization and goes on only if both are version 2, both name the grant's token, and the spec names the item it's about to copy. It refuses version 1 seals: nothing was made with them that needs keeping (no one uses PassBundle yet), so tokens made before this need making again.
+- **An app refreshing a copy** opened both with the key of the item's own organization and went on only if both were version 2, both named the grant's token, and the spec named the item it was about to copy, refusing version 1 seals. Version 3 (below) keeps these checks and adds the token's end.
 - **The copy** is unchanged (version 1 above), so scripts and the module are unchanged.
 
-The test vectors are `docs/vectors/script-grants-v2.json` (made by `make-script-grants-v2.mjs`, checked with upstream's own crypto by `check-script-grants-vectors.mjs`): the token key and spec sealed for their token and item, and pairs an app must refuse (a spec for another item, a spec for another token, another token's key, version 1 seals, seals with another organization's key).
+The test vectors are `docs/vectors/script-grants-v2.json` (made by `make-script-grants-v2.mjs`, checked with upstream's own crypto by `check-script-grants-vectors.mjs`; the apps now check they refuse all of them): the token key and spec sealed for their token and item, and pairs an app must refuse (a spec for another item, a spec for another token, another token's key, version 1 seals, seals with another organization's key).
+
+### Version 3 seals: when the token ends (November 2026)
+
+Version 2 bound a grant to its token and item but not to a time, so a hacked server could keep listing a grant as behind long after its token ended, and apps that hold the organization key would keep refreshing its copy with the item's current values, for whoever holds the token's seed. Version 3 binds the token's end into both seals:
+
+- **Sealed token key:** `{"v":3,"token":"<token id>","expires":<Unix seconds>,"key":"<the 64-byte token key, base64>"}`, encrypted with the organization key.
+- **Sealed spec:** `{"v":3,"token":"<token id>","item":"<item id>","expires":<Unix seconds>,"username":…,"password":…,"totp":…,"fields":[…]}`.
+- `expires` is the token's expiry as the admin chose it (the `expiresAt` the server keeps, in whole seconds), sealed by the admin's browser when it makes the token. The token's scope is then all in the seals: its id, each grant's item and fields, and its end; the organization is the key that opens them.
+- **An app refreshing a copy** opens both with the key of the item's own organization and goes on only if both are version 3, both name the grant's token, the spec names the item it's about to copy, both say the same end, that end hasn't come, and it isn't more than a year and a day from now (no token lasts longer; a day's slack for a sealing device whose clock runs ahead). It refuses version 1 and 2 seals.
+- **Not bound, and why:** revoking a token and taking an item out of it. A seal is a fixed value the server keeps, so the server can always hand back an older one; telling a newer seal from an older one would need state that every app refreshing copies shares, which apps don't have. Those stay the server's to enforce, and the sealed end bounds what a hacked server can do with them: at most until the token would have ended, a year at most.
+- **The copy, scripts, and the module** are unchanged.
+
+The test vectors are `docs/vectors/script-grants-v3.json` (made by `make-script-grants-v3.mjs`, checked with upstream's own crypto by `check-script-grants-v3-vectors.mjs`): the token key and spec sealed for their token, item, and end, and checks at a given time that an app must make: the pair before its end and a second before it, once ended and long after, a spec for another item or token, another token's key, a spec that ends later than its key, a pair that says it lasts longer than any token, version 2 seals, and seals with another organization's key. The server keeps a copy (`src/db/models/vectors/script-grants-v3.json`) to check that it takes version 3 seals within its limits, and the web vault another (`libs/admin-console/src/common/keykeeper/script-grants-v3.vectors.json`).
+
+**For the test server:** tokens made before this have version 2 seals, which the apps no longer refresh: their scripts keep reading the copies they have, which go out of date after the next edit. Make them again (there are no users yet, so nothing else needs moving).
 
 ### Keeping copies current
 
 - **When someone edits a granted item in a PassBundle app**, the app updates that item's copies right after saving: it can, since it holds the organization key, and the server lets it only if the person can edit the item and the copy is for the item's new revision. Someone who can edit the item could put a different password in the copy, but they could equally change the password itself.
 - **When an item changes elsewhere** (an upstream app, the CLI), the background work that already runs in owners', admins', and MSP admins' apps (every five minutes and on unlock, see "MSP templates") refreshes copies whose revision is behind. Until then the script gets the previous value, and the console marks the grant out of date.
-- **What an app refreshes, whatever the server lists:** the server says which grants are behind, and a hacked one could list anything. An app remakes a copy only from an item that is in the grant's organization (never the person's own item or another organization's), not in the trash, that the person can edit and see the passwords of, with version 2 seals for that token and that item. Anything else is left as it is.
+- **What an app refreshes, whatever the server lists:** the server says which grants are behind, and a hacked one could list anything. An app remakes a copy only from an item that is in the grant's organization (never the person's own item or another organization's), not in the trash, that the person can edit and see the passwords of, with version 3 seals for that token and that item, before the token's sealed end. Anything else is left as it is.
 - **Making a token** offers only items whose passwords the admin can see, since the token's copy would show them.
 - **A deleted or trashed item** loses its copies; its grants say so in the console.
 
 ### What a hacked server can and can't do
 
 - It can't read copies or the token key, and can't make copies a script accepts.
-- It can't have an app copy an item to a token it wasn't granted to, or with another token's key (version 2 seals), or copy someone's own items or another organization's.
-- It can keep a grant alive that was ended. Revoking a token, taking an item out of it (narrowing), and its expiry are enforced by the server only: version 2 seals bind a grant to its token and item, not to a time or to the token still being live. So a hacked server can keep listing an old version 2 grant as behind, and apps that hold the organization key keep refreshing its copy with the item's current values, for whoever holds that token's seed, until an expiry is bound into the seal (planned, with the token's expiry inside the sealed spec and key).
+- It can't have an app copy an item to a token it wasn't granted to, or with another token's key, or copy someone's own items or another organization's.
+- It can't keep a token's copies current past the token's end: version 3 seals carry it, and apps stop at it.
+- It can keep a revoked or narrowed grant alive until then. Revoking a token and taking an item out of it (narrowing) are enforced by the server only, since the server can always hand back the older seals (above). So a hacked server can keep listing such a grant as behind, and apps that hold the organization key keep refreshing its copy with the item's current values, for whoever holds that token's seed, until the token's sealed end, at most a year after it was made.
 - It can refuse requests, or serve an older copy of the right item. Scripts can't tell an old copy from the latest; the console's read log and "out of date" marks are the check.
 - It learns which items are granted to which tokens, and when scripts read them. That's inherent in a server that logs reads.
 - Someone who steals the token string from the RMM can read its grants until it expires or is revoked, from its allowed networks. That's the cost of any credential in an RMM; the limits are the scope, the networks, the expiry, and the read log.
@@ -108,7 +124,7 @@ The test vectors are `docs/vectors/script-grants-v2.json` (made by `make-script-
 ## Tests
 
 - The vectors: the token string, the auth secret and its hash, the token key, a sealed token key and spec, a copy, and copies the script must refuse (tampered, sealed with the wrong key, another item's, another token's). `node docs/vectors/make-script-access-v1.mjs` makes them with plain Node; upstream's own crypto opens them (the clients' tests check that, as for the native-messaging vectors).
-- Clients: unit tests for making a token, copies, specs, and refreshing, against both sets of vectors: each pair `script-grants-v2.json` refuses, and each item a hacked server could list (the person's own, another organization's, in the trash, not editable, passwords hidden, another item under a grant's seals) is left alone (`script-refresh.spec.ts`). The lines the settings page shows for a script name the item by its id, single-quoted, with its name only in a comment of letters, digits, and plain punctuation, tested with hostile names (`script-usage.spec.ts`).
+- Clients: unit tests for making a token, copies, specs, and refreshing, against both sets of vectors: each check in `script-grants-v3.json` (refreshing before the token's end, and each pair refused), and each item a hacked server could list (the person's own, another organization's, in the trash, not editable, passwords hidden, another item under a grant's seals) is left alone (`script-refresh.spec.ts`). The lines the settings page shows for a script name the item by its id, single-quoted, with its name only in a comment of letters, digits, and plain punctuation, tested with hostile names (`script-usage.spec.ts`).
 - Server: unit tests for the checks; API tests for every endpoint against every role, a token reading only its grants, expiry, revocation, networks, the rate limit, and refresh permissions.
 - The module: tier 1 runs it under PowerShell 7 on Linux against the test server, decrypting real copies and refusing bad ones and a revoked token. `docs/vectors/check-script-module.ps1` checks it against the vectors and RFC 6238's codes, on Windows under Windows PowerShell 5.1 and PowerShell 7.
 - End to end: an owner makes a token in the web vault with real keys, a script reads just the granted fields, an edit in the web vault reaches the script, the reads show, and revoking stops it. The API tests cover MSP admins and everyone else.

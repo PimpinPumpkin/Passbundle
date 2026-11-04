@@ -5,11 +5,15 @@
 // client removed coming back with the next staff change, an MSP admin the
 // client revoked still running it from the console, and a removed member
 // rejoining with the install command they kept (tests/mail/offboarding.spec.ts).
+// The follow-ups after it: leaving remembered as a removal, an MSP admin's
+// second account made an owner, event destinations outliving their maker,
+// and a revoked MSP admin's new staff reaching the client through another
+// admin's changes, and their reading its activity.
 import { createHash, hkdfSync, randomBytes, randomUUID } from "node:crypto";
 
 import { type APIRequestContext, expect, test } from "@playwright/test";
 
-import { type Cert, httpsReceiver, throwawayCert } from "./siem";
+import { type Cert, httpsReceiver, throwawayCert, waitFor } from "./siem";
 import { type Account, Api, encString, expiringSeal, serverDatabase, withMasterPassword } from "./support";
 
 // The master password these changes need is checked the way a sign-in is
@@ -125,6 +129,8 @@ async function membership(api: Api, owner: Account, orgId: string, who: Account)
 
 /** An MSP seal stand-in: 32 bytes, base64, as an admin's browser sends one. */
 const seal = () => randomBytes(32).toString("base64");
+/** A joining seal stand-in (version 2) for a client that follows its MSP's default. */
+const joiningSeal = () => `v2.default.${randomBytes(32).toString("base64url")}`;
 
 async function overview(api: Api, who: Account, mspId: string) {
   const seen = await api.call(who, "GET", `/api/keykeeper/msp/${mspId}`);
@@ -314,6 +320,80 @@ test("a script or provisioning token works only while whoever made it manages th
   expect(await scimRead(request, orgId, scimToken)).toBe(401);
 });
 
+test("an event destination sends only while whoever set it up still has access, checked on every delivery", async ({
+  request,
+}) => {
+  test.setTimeout(120_000);
+  const api = new Api(request);
+  const receiver = await httpsReceiver(cert);
+  try {
+    const owner = await api.account("owner");
+    const maker = await api.account("maker");
+    const orgId = await api.organization(owner, "Contoso");
+    const makerId = await api.addMember(owner, orgId, maker, "admin");
+    const add = async (who: Account, name: string) => {
+      const made = await api.call(
+        who,
+        "POST",
+        `/api/keykeeper/organizations/${orgId}/event-streaming`,
+        withMasterPassword(who, {
+          name,
+          kind: "webhook",
+          webhook: { url: receiver.url(`/${name}`), caCertificate: cert.cert },
+        }),
+      );
+      expect(made.status, JSON.stringify(made.body)).toBe(200);
+      return made.body.id as string;
+    };
+    const theirs = await add(maker, "made-by-admin");
+    await add(owner, "made-by-owner");
+    const destination = async () =>
+      (await api.call(owner, "GET", `/api/keykeeper/organizations/${orgId}/event-streaming`)).body.data.find(
+        (d: { id: string }) => d.id === theirs,
+      );
+    /** Renames the organization, and says which destinations got the rename's event. */
+    const renamed = async (name: string) => {
+      const edited = await api.call(owner, "PUT", `/api/organizations/${orgId}`, { name, billingEmail: owner.email });
+      expect(edited.status, JSON.stringify(edited.body)).toBe(200);
+      const got = (path: string) =>
+        receiver.received.some((r) => r.path === path && JSON.parse(r.body).organization?.name === name);
+      // The owner's destination gets it; then the admin's has nothing left
+      // waiting, sent or not.
+      await waitFor(receiver.received, () => (got("/made-by-owner") ? [true] : undefined), `the rename to ${name}`);
+      await expect.poll(async () => (await destination()).queued, { timeout: 20_000 }).toBe(0);
+      return got("/made-by-admin");
+    };
+    const setRole = async (type: number) => {
+      const edited = await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${makerId}`, {
+        type,
+        collections: [],
+        groups: [],
+        permissions: {},
+      });
+      expect(edited.status, JSON.stringify(edited.body)).toBe(200);
+    };
+
+    expect(await renamed("Contoso one")).toBe(true);
+    expect((await destination()).status).toBe("on");
+
+    // Made a regular member, their destination sends nothing, and says why.
+    await setRole(USER);
+    expect((await destination()).status).toBe("stopped");
+    expect(await renamed("Contoso two")).toBe(false);
+
+    // An admin again, it sends again: checked on every delivery.
+    await setRole(ADMIN);
+    expect(await renamed("Contoso three")).toBe(true);
+
+    // Gone from the organization, it stops for good.
+    expect((await api.call(owner, "DELETE", `/api/organizations/${orgId}/users/${makerId}`)).status).toBe(200);
+    expect(await renamed("Contoso four")).toBe(false);
+    expect((await destination()).status).toBe("stopped");
+  } finally {
+    await receiver.close();
+  }
+});
+
 test("someone the client removes from its MSP's people stays out: staff changes don't add them back, their seal is gone, and only the client invites them again", async ({
   request,
 }) => {
@@ -478,7 +558,7 @@ test("an MSP admin the client revoked can't act on it from the MSP console, whil
     staff: [{ organizationId: orgId, email: bob.email, seal: expiringSeal(1) }],
   });
   await refusedForMia("PUT", `/api/keykeeper/msp/${mspId}/seals`, {
-    joining: [{ organizationId: orgId, seal: seal() }],
+    joining: [{ organizationId: orgId, seal: joiningSeal() }],
   });
   await refusedForMia("PUT", `/api/keykeeper/msp/${mspId}/clients/${orgId}/templates-collection`, {
     name: encString("Templates"),
@@ -537,6 +617,31 @@ test("an MSP admin the client revoked can't act on it from the MSP console, whil
   expect(pending.body.data).toEqual([]);
   // Nor can they make a provisioning token there.
   expect((await api.call(mia, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`)).status).toBe(404);
+  // Nor does the staff member she brought in get there through another
+  // admin's change: the client's revocation holds for them too.
+  const toTechnician = await api.call(bob, "PUT", `/api/keykeeper/msp/${mspId}/staff/${eve.userId}`, {
+    role: "technician",
+  });
+  expect(toTechnician.status, JSON.stringify(toTechnician.body)).toBe(200);
+  const everyClient = await api.call(bob, "PUT", `/api/keykeeper/msp/${mspId}/staff/${eve.userId}/access`, {
+    allClients: true,
+    clients: [],
+    custom: null,
+    installCommands: true,
+  });
+  expect(everyClient.status, JSON.stringify(everyClient.body)).toBe(200);
+  expect(await membership(api, owner, orgId, eve)).toBeUndefined();
+  expect((await overview(api, bob, mspId)).clients[0].removedByClient).toContainEqual(
+    expect.objectContaining({ email: eve.email }),
+  );
+  // And the MSP's activity no longer shows her what happens in the client,
+  // while it still shows the MSP's other admins.
+  const activityAbout = async (who: Account) =>
+    (await api.call(who, "GET", `/api/keykeeper/msp/${mspId}/events`)).body.data.filter(
+      (e: { organizationId: string | null }) => e.organizationId === orgId,
+    );
+  expect(await activityAbout(mia)).toEqual([]);
+  expect((await activityAbout(bob)).length).toBeGreaterThan(0);
 
   // The MSP's other admin, whom the client didn't revoke, still can.
   expect((await api.call(bob, "GET", enrollment)).status).toBe(200);
@@ -570,6 +675,38 @@ test("the MSP's people can't remove, revoke, demote, or delete the client's own 
   const bulk = await api.call(admin, "DELETE", `/api/organizations/${orgId}/users`, { ids: [ownerId] });
   expect(bulk.body.data[0].error).not.toBe("");
   expect(await membership(api, owner, orgId, owner)).toMatchObject({ type: OWNER, status: CONFIRMED });
+
+  // Nor make another account of theirs an owner, which would count as the
+  // client's own: once the client has an owner of its own, only its own
+  // owners invite owners or make someone one.
+  const second = await api.account("msp-admin-second");
+  const inviteOwner = (who: Account) =>
+    api.call(who, "POST", `/api/organizations/${orgId}/users/invite`, {
+      emails: [second.email],
+      type: OWNER,
+      collections: [],
+      groups: [],
+      permissions: {},
+    });
+  const invitedByMsp = await inviteOwner(admin);
+  expect(invitedByMsp.status).toBe(400);
+  expect(invitedByMsp.body.message).toMatch(/Only the organization's own owners can make someone an owner/);
+  expect(await membership(api, owner, orgId, second)).toBeUndefined();
+  const secondId = await api.addMember(admin, orgId, second, "admin");
+  const makeOwner = (who: Account) =>
+    api.call(who, "PUT", `/api/organizations/${orgId}/users/${secondId}`, {
+      type: OWNER,
+      collections: [],
+      groups: [],
+      permissions: {},
+    });
+  const promotedByMsp = await makeOwner(admin);
+  expect(promotedByMsp.status).toBe(400);
+  expect(promotedByMsp.body.message).toMatch(/Only the organization's own owners can make someone an owner/);
+  expect(await membership(api, owner, orgId, second)).toMatchObject({ type: ADMIN });
+  const promotedByOwner = await makeOwner(owner);
+  expect(promotedByOwner.status, JSON.stringify(promotedByOwner.body)).toBe(200);
+  expect(await membership(api, owner, orgId, second)).toMatchObject({ type: OWNER });
 
   // The client's own owner can still do all of it, starting with the MSP's admin.
   const adminId = (await memberId(api, owner, orgId, admin))!;
@@ -711,6 +848,14 @@ test("after someone is removed, the install command offers to be replaced, until
   const member = await api.account("member");
   const memberIdInOrg = await api.addMember(owner, orgId, member, "user");
   expect((await api.call(owner, "DELETE", `/api/organizations/${orgId}/users/${memberIdInOrg}`)).status).toBe(200);
+  expect((await api.call(owner, "GET", command)).body.removedSinceToken).toBe(1);
+  expect((await api.call(owner, "POST", command)).body.removedSinceToken).toBe(0);
+  // Someone who leaves on their own counts too: they may still have the
+  // command, and asking to join again with it waits for an admin.
+  const leaving = await api.account("leaving");
+  await api.addMember(owner, orgId, leaving, "user");
+  const left = await api.call(leaving, "POST", `/api/organizations/${orgId}/leave`);
+  expect(left.status, JSON.stringify(left.body)).toBe(200);
   expect((await api.call(owner, "GET", command)).body.removedSinceToken).toBe(1);
   expect((await api.call(owner, "POST", command)).body.removedSinceToken).toBe(0);
 

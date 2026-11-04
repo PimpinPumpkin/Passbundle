@@ -14,6 +14,20 @@ import { reloadVault, signUp, signUpWithAuthenticator, webUserFor } from "./supp
 const toast = (page: Page, text: string | RegExp) => page.getByText(text).first();
 
 /**
+ * This test server sends no email, so an invitation joins an existing
+ * account without asking, and a role that manages members waits for its
+ * person to accept it on their vault page before anyone lets them in
+ * (DESIGN.md, "Two-step login for admins"). They have two-step login, so
+ * accepting leaves them signed in.
+ */
+async function acceptRole(page: Page) {
+  await reloadVault(page);
+  const role = page.getByTestId("accept-role");
+  await role.getByRole("button", { name: "Accept the role" }).click();
+  await expect(role).toHaveCount(0);
+}
+
+/**
  * The API calls the server refused as unauthorized or forbidden. The web vault
  * signs out on either, so a page that makes one is broken for that person.
  */
@@ -67,6 +81,7 @@ test("an MSP admin gives a client's point of contact a custom role that manages 
   );
   await invite.getByRole("button", { name: "Save" }).click();
   await expect(invite).toBeHidden();
+  await acceptRole(poc);
   await admin.goto("/#/msp");
   await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
 
@@ -252,6 +267,7 @@ test("a custom role that manages members and views event logs opens a member's e
   await invite.getByRole("checkbox", { name: /event logs/i }).check();
   await invite.getByRole("button", { name: "Save" }).click();
   await expect(invite).toBeHidden();
+  await acceptRole(poc);
   await admin.goto("/#/msp");
   await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
 

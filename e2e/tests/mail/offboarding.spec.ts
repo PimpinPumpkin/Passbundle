@@ -51,7 +51,7 @@ async function provision(request: APIRequestContext, token: string, orgId: strin
   return (await response.json()).id as string;
 }
 
-test("someone removed who rejoins with the install command they kept waits for an admin, until the client invites them again, and so does someone the directory removed", async ({
+test("someone removed, or who left, who rejoins with the install command they kept waits for an admin, until the client invites them again, and so does someone the directory removed", async ({
   request,
 }) => {
   test.setTimeout(120_000);
@@ -91,6 +91,15 @@ test("someone removed who rejoins with the install command they kept waits for a
   expect((await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}/clients/${orgId}/enrollment`)).body.removedSinceToken).toBe(1);
 
   // An admin's approval settles it.
+  await confirm(ana);
+
+  // Leaving on her own is remembered the same way: back with the command,
+  // she waits for an admin again.
+  expect((await api.call(ana, "POST", `/api/organizations/${orgId}/leave`)).status).toBe(200);
+  const rejoined = await join(ana);
+  expect(rejoined.status, JSON.stringify(rejoined.body)).toBe(200);
+  expect(rejoined.body.status).toBe(ACCEPTED);
+  expect(await letInAlone(api, admin, mspId, ana)).toBe(false);
   const approvedId = await confirm(ana);
   expect((await api.call(admin, "DELETE", `/api/organizations/${orgId}/users/${approvedId}`)).status).toBe(200);
 

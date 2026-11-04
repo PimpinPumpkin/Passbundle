@@ -305,7 +305,7 @@ export class Api {
     orgId: string,
     member: Account,
     type: "admin" | "user" | "manager" | "owner",
-    options: { authenticator?: boolean; accept?: boolean } = {},
+    options: { authenticator?: boolean; accept?: boolean; confirm?: boolean } = {},
   ) {
     if (
       options.authenticator !== false &&
@@ -340,6 +340,9 @@ export class Api {
     expect(membership, `membership for ${member.email}`).toBeTruthy();
     if (options.accept !== false) {
       await this.acceptRole(member, orgId);
+    }
+    if (options.confirm === false) {
+      return membership.id as string;
     }
     const confirmed = await this.call(
       owner,
