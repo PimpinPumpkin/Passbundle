@@ -1,6 +1,6 @@
 # Before launching to companies
 
-The work queue between now and selling PassBundle to MSPs and their clients. Background jobs take items from the top of "Next"; each lands as a pull request that merges when CI is green, after a security review when it touches permissions, keys, sign-in, or updates. The gap ranking comes from docs/parity.md.
+The work queue between now and selling PassBundle to MSPs and their clients. Background jobs take items from the top of "Next"; each lands as a pull request, which you review for security and merge once CI is green. The gap ranking comes from docs/parity.md.
 
 ## Done
 
@@ -11,26 +11,25 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 - **Hands-on test checklist** for the owner: docs/hands-on-testing.md.
 - **Extension redesign** from the approved mockups: jewel-tone categories, site icons, the "Where's your vault?" sign-in, and an item view with big copy buttons.
 - **Approving a new sign-in from our apps** (DESIGN.md, "Approving a sign-in from another device"): "Log in with device" on the web vault or the extension, approved on the phone or computer after comparing the fingerprint phrase, with the security review's fixes. Later: a notice on a closed phone (push), and SSO sessions approving.
+- **Self-updating Windows and Linux apps** (October 26): test releases on GitHub with a signed manifest, which the apps update themselves from, as the Mac and Android ones do (DESIGN.md, "Desktop updates (Windows and Linux)"; the newest are windows-v0.1.8 and linux-v0.1.8).
+- **Desktop and phone parity with the web vault**: folders and their permissions, templates, site icons, item history, password health, and a Generator tab on phones, with the security review's fixes.
+- **Web vault redesign** from the approved mockups: the menu as a card with jewel tiles, rows of site icons and tiles, the selected item in a side panel beside the list, and graphite glass, a neutral dark mode, for the web vault and the extension.
+- **Exposed passwords in the MSP health view**, using the k-anonymity range check, with an off switch for the check after unlocking.
+- **Events to security tools**: a signed webhook, syslog over TLS (JSON or CEF), and Microsoft Sentinel, per organization or one feed for an MSP.
+- **Two-step login for admins** (DESIGN.md, "Two-step login for admins"): a client's owners, admins, custom roles that manage members, policies, or account recovery, and every MSP's staff sign in with an authenticator app, a security key or passkey, Duo, or the client's own single sign-on. On by default for the Business preset and every MSP.
+- **Item history and the new folders in the extension**: version history with restore, folders by owner, and see passwords, export, and share enforced on every extension path.
+- **Command-line tool** (`passbundle`, docs/cli.md) for macOS, Linux, and Windows scripts, with folder permissions enforced on every command, released from this repository (`cli-release.yml`). Its releases are signed once the CLI release key is made (below).
+- **Offboarding that holds** (DESIGN.md, "Offboarding"): removing an MSP, or one of its people, revokes what they made and holds; a client's own owners stay the client's; joining seals (version 2) and script grant seals (version 3) a hacked server can't steer.
+- **Sign in with Entra (SSO) per organization** (DESIGN.md, "Sign in with Microsoft Entra ID"; setup in docs/sso-entra.md), tested against a stand-in for Entra. Checking it with a real tenant waits on a Microsoft 365 tenant. Later: trusted-device unlock, as its own design with test vectors.
+- **The pre-launch security pass** (October 27 to November 4) over the server, web vault, extension, apps, CI, and releases, with its fixes merged: connector pages that refuse other sites, PassBundle's own extension IDs, HSTS, the server's pass (DESIGN.md, "Running the server safely"), autofill, import, and extension hardening, offboarding and seal follow-ups, and Android vaults that autofill unlocked locking on time. Its low findings followed in pull requests of their own.
 
 ## In progress
 
-- **Pre-launch security pass** (started October 27, 2026), fixes as pull requests: a page on another site could receive a security key's answer through the web vault's connector pages (DESIGN.md, "Connector pages"), now refused by the connector, the browser (frame-ancestors), and the server (crossOrigin and topOrigin); the extension has PassBundle's own IDs (Chrome and Edge `cenoidjoogmoieibpcokkafjnaabhokg`, Firefox `extension@passbundle.com`); HSTS on the server (host names only, subdomains by setting) and the test server; connector pages with a policy of their own; every security key answer made in a frame refused; upstream's deep links gone; branded links no longer mangled; no "Rate the extension"; node-forge 1.4.1.
-- **Desktop and phone parity with the web vault**: folders and their permissions, templates, site icons, item history, password health, and a Generator tab on phones. Security review fixes in progress.
-- **Web vault redesign** from the approved mockups: the menu as a card with jewel tiles, rows of site icons and tiles, the selected item in a side panel beside the list, and graphite glass, a neutral dark mode, for the web vault and the extension. Pull requests open.
-- **Exposed passwords in the MSP health view**, using the k-anonymity range check, with an off switch for the check after unlocking. Security review fixes in progress.
-- **Events to security tools**: a signed webhook, syslog over TLS (JSON or CEF), and Microsoft Sentinel, per organization or one feed for an MSP. Security review fixes in progress.
-- **Two-step login for admins** (DESIGN.md, "Two-step login for admins"): a client's owners, admins, custom roles that manage members, policies, or account recovery, and everyone its MSP brings in, and every MSP's staff, sign in with an authenticator app, a security key or passkey, or Duo with the server's own Duo account (not email codes), or the client's own single sign-on (with MFA) for its admins. On by default for the Business preset and every MSP; anyone without it is signed out as the rule comes to cover them and taken to setting it up in the web vault, and an API key does no admin work for them. Pull requests open, after a security review's fixes.
-- **Item history and the new folders in the extension**: version history with restore, folders by owner with counts, the grouped Folder picker, and see passwords, export, and share enforced on every extension path. Security review fixes in progress.
-- **Command-line tool** (`passbundle`, docs/cli.md): the GPL Bitwarden command-line tool under PassBundle's name and rules, for macOS, Linux, and Windows scripts: API key, password, and single sign-on, folder permissions with "see passwords" enforced on every command, templates, item history, and releases from this repository (`cli-release.yml`), signed once the CLI release key is made. Pull requests open; a security review next.
-- **Offboarding that holds** (DESIGN.md, "Offboarding"), from the server security pass: removing an MSP revokes the tokens and event destinations its people made and tells the owner what went; a client's removal or revoke of one of the MSP's people holds; MSP-console actions need a place of your own in the client; the MSP can't remove or demote the client's own owners; tokens and event destinations stop when their maker loses access; someone removed, or who left, rejoins only with an admin's approval; only a client's own owners make owners; a client's revocation holds against the MSP's staff changes and its activity log. Joining seals say where the setting comes from (version 2), and script grant seals when their token ends (version 3). A verification review next.
-- **The server's security pass** (DESIGN.md, "Running the server safely"): the visitor's address only from a trusted proxy (the hosted service believes Cloudflare's header from its tunnel alone, and a public server won't start without choosing), the master password for changes that reach outside PassBundle, safer defaults on public servers, history, SCIM, logs, and token fixes. Pull requests open; a verification review next.
-- **Sign in with Entra (SSO) per organization**: built and tested against a stand-in for Entra (DESIGN.md, "Sign in with Microsoft Entra ID"; setup in docs/sso-entra.md): each client's own tenant, domain verification, Require single sign-on, the master password still unlocking. Its client secret is sealed with event streaming's module under a key of its own; a verification review next. Trusted-device unlock after, as its own design with test vectors.
+Nothing right now.
 
 ## Next
 
-1. **Self-updating Windows and Linux apps**, like the Mac and Android ones.
-2. **A full security pass over the whole stack** before the first company: server, web vault, extension, apps, CI and releases.
-3. **Website redesign** in the new look.
+1. **Website redesign** in the new look.
 
 ## Waiting on you
 
@@ -43,3 +42,6 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 - **Business details for the site and legal pages**: legal name, payment processor, refunds, governing law, prices (marked as placeholders in site/).
 - **A paid Have I Been Pwned key** for the report of breached accounts at a client's email domain.
 - **MSP billing**: Stripe and the pricing model.
+- **GitHub environments for the signing secrets**: `android-release`, `macos-release`, and `desktop-release` in passbundle-apps, and `cli-release` here, each holding its release workflow's signing secrets and deployable only from `main`; then uncomment the `environment:` line in each sign job. Until then only the way the workflows are written keeps other workflows from reading them (DESIGN.md, "Desktop updates (Windows and Linux)", "The key").
+- **Approval for every outside contributor's pull request** to run workflows (each repository's Settings, Actions, General), so a fork's pull request runs nothing until you've looked at it.
+- **Versioning on the backups bucket**, once it's made, so a backup that's overwritten or deleted can still be got back.

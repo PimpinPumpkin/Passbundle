@@ -246,7 +246,7 @@ Design, October 21, 2026. The desktop agent already unlocks the browser extensio
 - **Tests:**
   - The core's client against the protocol's vectors (`agent/tests/vectors/native-messaging.json`, in this same repo now). It opens every message and re-encrypts each, with its IV, to the identical string, and unwraps the session key with the vectors' RSA key. Upstream's crypto already checks the same vectors.
   - The core's client against a real agent, built with its stand-in authenticator (the agent's test feature, which release builds refuse), over a real socket: turning it on, unlocking, a wrong user, a cancelled prompt, and a program pretending to be the agent.
-  - Real Windows Hello, by hand with the Windows Hello test kit, at each release.
+  - Real Windows Hello, by hand with the Windows Hello test kit (downloaded only from a run on `main`; DESIGN.md, "Biometric unlock"), at each release.
 
 ## Approving a sign-in
 
