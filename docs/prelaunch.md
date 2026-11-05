@@ -1,6 +1,6 @@
 # Before launching to companies
 
-The work queue between now and selling PassBundle to MSPs and their clients. Background jobs take items from the top of "Next"; each lands as a pull request, which you review for security and merge once CI is green. The gap ranking comes from docs/parity.md.
+The work queue between now and selling PassBundle to MSPs and their clients. Background jobs take items from the top of "Next"; each lands as a pull request that merges when CI is green, after a security review when it touches permissions, keys, sign-in, or updates. The gap ranking comes from docs/parity.md.
 
 ## Done
 
@@ -21,6 +21,7 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 - **Command-line tool** (`passbundle`, docs/cli.md) for macOS, Linux, and Windows scripts, with folder permissions enforced on every command, released from this repository (`cli-release.yml`). Its releases are signed once the CLI release key is made (below).
 - **Offboarding that holds** (DESIGN.md, "Offboarding"): removing an MSP, or one of its people, revokes what they made and holds; a client's own owners stay the client's; joining seals (version 2) and script grant seals (version 3) a hacked server can't steer.
 - **Sign in with Entra (SSO) per organization** (DESIGN.md, "Sign in with Microsoft Entra ID"; setup in docs/sso-entra.md), tested against a stand-in for Entra. Checking it with a real tenant waits on a Microsoft 365 tenant. Later: trusted-device unlock, as its own design with test vectors.
+- **Website redesign** in the new look (October 27): passbundle.com's pages in the apps' look, with the MSP story up front, on the preview address (https://preview.passbundle.pages.dev) until launch.
 - **The pre-launch security pass** (October 27 to November 4) over the server, web vault, extension, apps, CI, and releases, with its fixes merged: connector pages that refuse other sites, PassBundle's own extension IDs, HSTS, the server's pass (DESIGN.md, "Running the server safely"), autofill, import, and extension hardening, offboarding and seal follow-ups, and Android vaults that autofill unlocked locking on time. Its low findings followed in pull requests of their own.
 
 ## In progress
@@ -29,7 +30,7 @@ Nothing right now.
 
 ## Next
 
-1. **Website redesign** in the new look.
+Fixes from the owner's hands-on testing (docs/hands-on-testing.md) come first.
 
 ## Waiting on you
 
