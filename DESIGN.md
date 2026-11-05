@@ -135,6 +135,8 @@ Unlock the browser extension with Windows Hello or Touch ID, through the desktop
   - Tier 1 lints the scripts and reads the profile back.
   - Tier 2 builds the app on a Mac, installs it as an RMM would, and checks every piece. It checks the agent is running and listening, that launchd restarts it after a crash, and that the app opens. Then it updates and removes it.
 
+  The app needs macOS 14 or later: test builds have no Apple team ID, so the app turns library validation off and relies on a library load constraint instead, which macOS 14 and later enforce (passbundle-apps README, "Mac test releases"); Apple stopped security updates for macOS 13 in 2025. The script doesn't check the version; macOS won't open the app on an earlier one.
+
   Not yet: a signed and notarized app and a download with a pinned signer (waits on the Apple Developer account), Touch ID unlock, Firefox, and the app updating itself.
 - **Status, Linux:** `installer/linux/install-passbundle.sh` is run as root by the RMM. With the app's bundle in a `passbundle` folder next to it, it installs the app to /opt/passbundle, with a desktop entry and icon so it's in the applications menu.
   - Linux browsers read managed policies from files, so the script sets the Windows script's policies itself, with the same options: one file of our own in Chrome's and Edge's managed policies folders.
@@ -1129,6 +1131,16 @@ The setting people reach for is the generator's: how long, which kinds of charac
 - **Conflicts:** last save wins. A change on this device that isn't saved yet (offline, or made just before closing) wins over the server's copy at the next sync; each app keeps what the server had, as far as it knows, across sign-outs to tell the two apart. A document that isn't PassBundle's settings (something else encrypted with the account's key) is replaced with this device's.
 - **A server handing back an old copy** (security review, October 2026): each save numbers the document (`rev`: after every number the app has seen, and the time in milliseconds), and an app refuses a copy numbered lower than one it has seen, saving its own again. A server could otherwise bring back settings someone chose before, say a short one for a picky site, without their noticing. What it can't do is make settings up: they're encrypted and authenticated with the account's key.
 - **Tests:** unit tests for the mapping, limits, numbering, and each sync case (the server has none, has some, has an older copy, has something else; a change here first, during a sync, before closing; after signing out and in; other apps' settings kept); the core's against a real server, from one device to another and back; API tests (per account, only encrypted, no vault download, forgotten when the key changes); and an end-to-end test that a length chosen in the web vault is the extension's.
+
+## Screenshots
+
+PassBundle's windows stay out of screenshots, screen recordings, and screen sharing on macOS and Windows, as the phone apps already keep the vault out of them (Android's `FLAG_SECURE`; docs/phones.md, "Locking"). A screen shared in a meeting, or a recording tool, doesn't pick up a vault.
+
+- **How:** on macOS `NSWindow.sharingType = .none`; on Windows `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)` on Windows 10 2004 and later, and before that `WDA_MONITOR`, which shows the window black in captures. Each runner sets it as the window is made, before anything is drawn (`MainFlutterWindow.swift`, `flutter_window.cpp` in passbundle-apps).
+- **"Allow screenshots of PassBundle"** in Settings, off by default and kept on the device (`screenshots.json` in the app's folder), for someone who wants PassBundle in a screenshot, a recording, or a screen they share. Remote support tools capture the screen too, so a technician helping someone remotely sees PassBundle's window only once that person allows screenshots.
+- **Linux** has no way for a window to keep itself out (on X11 any program can read the screen; on Wayland it's the compositor's to decide), so the switch doesn't show there.
+- **What it isn't:** a guarantee. It keeps the window out of captures that go through the OS's own capture, as screenshots, recording, and screen sharing apps do; a program that reads the screen some other way, or a camera, still can.
+- **Tests:** the window tests check the window is kept out by default and taken once allowed (Windows' display affinity, the Mac window server's sharing state), and the app's tests check the switch. CI's screenshots come from builds with the core's test hooks, which allow capture with `PB_ALLOW_SCREENSHOTS=1`; a release's core can't read it, and the release jobs check the name isn't in it.
 
 ## Staying unlocked across a reload
 
