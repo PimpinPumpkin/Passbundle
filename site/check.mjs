@@ -6,9 +6,12 @@
 //   node site/check.mjs --launch   also refuses what isn't ready for
 //                                  passbundle.com: highlighted placeholders
 //                                  and links in site.json still empty
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { THEME_SCRIPT } from "./theme.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.join(here, "dist");
@@ -64,11 +67,13 @@ for (const file of htmlFiles(dist)) {
     if (!url.startsWith("/")) problems.push(`${rel}: relative link ${url}`);
     else if (!resolves(url)) problems.push(`${rel}: broken link ${url}`);
   }
-  // Only our own script files, loaded with defer: nothing inline, nothing from
-  // anyone else (the CSP allows script-src 'self' and nothing more).
+  // Only our own scripts: files loaded with defer, and the theme script inline
+  // (allowed by its hash in _headers). Nothing else inline, nothing from
+  // anyone else.
   const scripts = html.match(/<script\b[^>]*>[\s\S]*?<\/script>/gi) ?? [];
   if (scripts.length !== (html.match(/<script\b/gi) ?? []).length) problems.push(`${rel}: has a script tag that isn't closed`);
   for (const tag of scripts) {
+    if (tag === `<script>${THEME_SCRIPT}</script>`) continue;
     if (!/^<script src="\/[a-z-]+\.js" defer><\/script>$/.test(tag)) problems.push(`${rel}: has a script that isn't one of our own files: ${tag.slice(0, 60)}`);
   }
   if (/\son[a-z]+=/i.test(html)) problems.push(`${rel}: has an inline event handler, which the site's CSP blocks`);
@@ -76,6 +81,12 @@ for (const file of htmlFiles(dist)) {
   if (/—/.test(html)) problems.push(`${rel}: has an em dash`);
   if (/\{\{|<x-/.test(html)) problems.push(`${rel}: has a placeholder build.mjs didn't fill in`);
   for (const [, text] of html.matchAll(/<mark class="todo">([\s\S]*?)<\/mark>/g)) todos.push(`${rel}: ${text}`);
+}
+
+// The CSP allows the inline theme script by its hash, and nothing else inline.
+const hash = crypto.createHash("sha256").update(THEME_SCRIPT).digest("base64");
+if (!fs.readFileSync(path.join(dist, "_headers"), "utf8").includes(`script-src 'self' 'sha256-${hash}';`)) {
+  problems.push("_headers: the CSP doesn't allow the theme script by its hash");
 }
 
 const site = JSON.parse(fs.readFileSync(path.join(here, "site.json"), "utf8"));

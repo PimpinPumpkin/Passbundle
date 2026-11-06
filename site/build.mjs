@@ -1,8 +1,9 @@
 // Builds passbundle.com into site/dist: each page in site/pages is wrapped in
 // the shared layout, and everything in site/static is copied as is. No
 // framework, nothing loaded from anyone else, which the privacy policy
-// promises, and no scripts but our own: a page whose header has
-// "script: demo" loads /demo.js. Run: node site/build.mjs
+// promises, and no scripts but our own: the light or dark switch, inline in
+// every page (theme.mjs), and a page whose header has "script: demo" loads
+// /demo.js. Run: node site/build.mjs
 //
 // Pages can use:
 //   {{prices.premium}}, {{links.vault}}: values from site.json. An empty link
@@ -18,11 +19,13 @@
 //     means beside it. `class` sizes it (small, large).
 //   <x-art name="LockIcon"></x-art>: one of the apps' drawings from art/,
 //     inline so it takes the page's colors.
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ICONS } from "./icons.mjs";
+import { THEME_BUTTON, THEME_SCRIPT, themeable } from "./theme.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pagesDir = path.join(here, "pages");
@@ -166,6 +169,7 @@ function layout({ meta, body, file }, route) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>${THEME_SCRIPT}</script>
 <title>${escape(title)}</title>
 <meta name="description" content="${escape(meta.description)}">
 <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
@@ -185,6 +189,7 @@ function layout({ meta, body, file }, route) {
     <nav class="nav" aria-label="Main">
         ${links}
     </nav>
+    ${THEME_BUTTON}
     <div class="header-actions">
       <a class="login" href="${vault}">Log in</a>
       <a class="button primary small" href="/download/">Get PassBundle</a>
@@ -261,6 +266,17 @@ function copyDir(from, to) {
 
 fs.rmSync(dist, { recursive: true, force: true });
 copyDir(staticDir, dist);
+
+// The light or dark button: every dark-mode rule also answers to the
+// visitor's pick (theme.mjs), and the CSP allows the inline theme script by
+// its hash and nothing else inline.
+const cssFile = path.join(dist, "styles.css");
+fs.writeFileSync(cssFile, themeable(fs.readFileSync(cssFile, "utf8")));
+const themeHash = crypto.createHash("sha256").update(THEME_SCRIPT).digest("base64");
+const headersFile = path.join(dist, "_headers");
+const headers = fs.readFileSync(headersFile, "utf8");
+if (headers.split("script-src 'self';").length !== 2) throw new Error("_headers: expected one script-src 'self'; in the CSP");
+fs.writeFileSync(headersFile, headers.replace("script-src 'self';", `script-src 'self' 'sha256-${themeHash}';`));
 let pages = 0;
 for (const rel of fs.readdirSync(pagesDir).filter((f) => f.endsWith(".html"))) {
   const route = routeOf(rel);
