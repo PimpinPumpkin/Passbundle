@@ -1,7 +1,8 @@
 // Builds passbundle.com into site/dist: each page in site/pages is wrapped in
 // the shared layout, and everything in site/static is copied as is. No
-// framework, no scripts, and nothing loaded from anyone else, which the
-// privacy policy promises. Run: node site/build.mjs
+// framework, nothing loaded from anyone else, which the privacy policy
+// promises, and no scripts but our own: a page whose header has
+// "script: demo" loads /demo.js. Run: node site/build.mjs
 //
 // Pages can use:
 //   {{prices.premium}}, {{links.vault}}: values from site.json. An empty link
@@ -12,9 +13,9 @@
 //     style it. Until e2e/site-shots has made it, it's a placeholder the size
 //     of its `frame` (desktop, popup, or panel), which check.mjs --launch
 //     refuses.
-//   <x-tile icon="console" tone="sapphire"></x-tile>: a jewel tile, as in the
-//     apps, with a glyph from icons.mjs. Decorative: say what it means beside
-//     it. `class` sizes it (small, large).
+//   <x-tile icon="console" tone="sapphire"></x-tile>: a tile tinted with its
+//     tone, with a glyph from icons.mjs in that tone. Decorative: say what it
+//     means beside it. `class` sizes it (small, large).
 //   <x-art name="LockIcon"></x-art>: one of the apps' drawings from art/,
 //     inline so it takes the page's colors.
 import fs from "node:fs";
@@ -32,7 +33,7 @@ const site = JSON.parse(fs.readFileSync(path.join(here, "site.json"), "utf8"));
 
 const MARK =
   "M4.5 13V8.5a8.5 8.5 0 0 1 17 0V13h-4V8.5a4.5 4.5 0 0 0-9 0V13ZM4.5 13h17a4.5 4.5 0 0 1 4.5 4.5V18H0v-.5A4.5 4.5 0 0 1 4.5 13ZM0 20h26v5H0ZM0 27h26v.5a4.5 4.5 0 0 1-4.5 4.5h-17A4.5 4.5 0 0 1 0 27.5Z";
-// The logo: the emerald jewel tile with the lock in white, then the name in
+// The logo: the solid emerald tile with the lock in white, then the name in
 // lower case, two-tone, "pass" bold and "bundle" lighter (styles.css, .brand).
 // Its accessible name is the link's, "PassBundle home".
 const brandMark = `
@@ -104,7 +105,7 @@ function shot(tag, file) {
   return `<picture class="shot${cls}">${source}<img src="/shots/${light}" width="${w / 2}" height="${h / 2}" alt="${escape(a.alt)}" ${loading}></picture>`;
 }
 
-/** <x-tile>: a jewel tile with a white glyph, decorative. */
+/** <x-tile>: a tinted tile with its glyph in the tone's color, decorative. */
 const TONES = [
   "brand", "sapphire", "topaz", "amethyst", "turquoise", "onyx", "aquamarine", "garnet", "emerald", "ruby", "gold",
 ];
@@ -112,7 +113,7 @@ function tile(tag, file) {
   const { icon, tone, class: cls } = attrs(tag);
   if (!ICONS[icon]) throw new Error(`${file}: no icon ${icon} in icons.mjs`);
   if (!TONES.includes(tone)) throw new Error(`${file}: tile ${icon} has an unknown tone ${tone}`);
-  return `<span class="tile ${tone}${cls ? ` ${cls}` : ""}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="${ICONS[icon]}"/></svg></span>`;
+  return `<span class="tile ${tone}${cls ? ` ${cls}` : ""}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="${ICONS[icon]}"/></svg></span>`;
 }
 
 /** <x-art>: an inline drawing, decorative. */
@@ -156,6 +157,10 @@ function layout({ meta, body, file }, route) {
   const current = (href) => (route.startsWith(href) ? ' aria-current="page"' : "");
   const links = NAV.map(([href, label]) => `<a href="${href}"${current(href)}>${label}</a>`).join("\n        ");
   const vault = value("links.vault", file);
+  // Our own scripts only, by name, from static/: "script: demo" is /demo.js.
+  if (meta.script && !/^[a-z-]+$/.test(meta.script)) throw new Error(`${file}: script must be a name like demo`);
+  if (meta.script && !fs.existsSync(path.join(staticDir, `${meta.script}.js`))) throw new Error(`${file}: no static/${meta.script}.js`);
+  const script = meta.script ? `\n<script src="/${meta.script}.js" defer></script>` : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -163,13 +168,13 @@ function layout({ meta, body, file }, route) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escape(title)}</title>
 <meta name="description" content="${escape(meta.description)}">
-<meta name="theme-color" content="#EEF2F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#111318" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0D0E" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="/fonts/google-sans-flex-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/styles.css">
-<link rel="canonical" href="https://passbundle.com${route}">
+<link rel="canonical" href="https://passbundle.com${route}">${script}
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -203,7 +208,7 @@ ${kind === "doc" ? `<div class="paper">\n${expand(body.trim(), file)}\n</div>` :
       <a class="brand" href="/" aria-label="PassBundle home">${brandMark}
       </a>
       <p>The password manager for MSPs and every client they look after, for businesses with their own IT, and for everyone at home.</p>
-      <p class="quiet">This site has no cookies, no trackers, and no scripts.</p>
+      <p class="quiet">This site has no cookies and no trackers, and loads nothing from anyone else.</p>
     </div>
     <nav aria-label="Product">
       <h2>Product</h2>

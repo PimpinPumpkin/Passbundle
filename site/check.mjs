@@ -1,6 +1,7 @@
 // Checks the built site: every internal link and image resolves to a file,
 // every path the PassBundle apps link to exists, and nothing breaks the
-// site's promises (no scripts, no em dashes). Run after build.mjs:
+// site's promises (no scripts but our own files, no em dashes). Run after
+// build.mjs:
 //   node site/check.mjs            the preview
 //   node site/check.mjs --launch   also refuses what isn't ready for
 //                                  passbundle.com: highlighted placeholders
@@ -63,7 +64,14 @@ for (const file of htmlFiles(dist)) {
     if (!url.startsWith("/")) problems.push(`${rel}: relative link ${url}`);
     else if (!resolves(url)) problems.push(`${rel}: broken link ${url}`);
   }
-  if (/<script/i.test(html)) problems.push(`${rel}: has a script`);
+  // Only our own script files, loaded with defer: nothing inline, nothing from
+  // anyone else (the CSP allows script-src 'self' and nothing more).
+  const scripts = html.match(/<script\b[^>]*>[\s\S]*?<\/script>/gi) ?? [];
+  if (scripts.length !== (html.match(/<script\b/gi) ?? []).length) problems.push(`${rel}: has a script tag that isn't closed`);
+  for (const tag of scripts) {
+    if (!/^<script src="\/[a-z-]+\.js" defer><\/script>$/.test(tag)) problems.push(`${rel}: has a script that isn't one of our own files: ${tag.slice(0, 60)}`);
+  }
+  if (/\son[a-z]+=/i.test(html)) problems.push(`${rel}: has an inline event handler, which the site's CSP blocks`);
   if (/\sstyle="/i.test(html)) problems.push(`${rel}: has an inline style, which the site's CSP blocks`);
   if (/—/.test(html)) problems.push(`${rel}: has an em dash`);
   if (/\{\{|<x-/.test(html)) problems.push(`${rel}: has a placeholder build.mjs didn't fill in`);
