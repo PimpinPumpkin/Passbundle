@@ -38,7 +38,8 @@ import {
 import { brand, paths, siteHost, siteHostRules } from "../paths.mjs";
 import { Api, encString } from "../tests/api/support";
 import { verifyEmail } from "../tests/mail/mailbox";
-import { confirmMember, confirmWithPassword, signUp, type WebUser } from "../tests/support/web";
+import { giveAuthenticator } from "../tests/support/two-step";
+import { confirmMember, confirmWithPassword, reloadVault, signUp, type WebUser } from "../tests/support/web";
 
 import { breached, clientVault, clients, emailOf, personalVault } from "./data";
 
@@ -157,9 +158,12 @@ async function webPage(browser: Browser) {
 /**
  * Signs up in the web vault and verifies the email address from the link the
  * server emails, as a person would, so the vault doesn't ask them to. The web
- * vault learns it at its next unlock.
+ * vault stays unlocked across a reload (DESIGN.md) and learns the address is
+ * verified when it reloads. Someone who will own a business or run an MSP
+ * gets an authenticator app first, or their session ends at its next refresh
+ * (DESIGN.md, "Two-step login for admins").
  */
-async function signUpVerified(page: Page, request: APIRequestContext, user: WebUser) {
+async function signUpVerified(page: Page, request: APIRequestContext, user: WebUser, admin = false) {
   let token = "";
   page.on("request", (r) => {
     const header = r.headers()["authorization"];
@@ -168,10 +172,9 @@ async function signUpVerified(page: Page, request: APIRequestContext, user: WebU
   await signUp(page, user);
   await expect.poll(() => token).not.toBe("");
   await verifyEmail(new Api(request), { email: user.email, password: user.password, token, userId: "" });
-  await page.reload();
-  await page.getByRole("textbox", { name: /^Master password/ }).fill(user.password);
-  await page.getByRole("button", { name: "Unlock", exact: true }).click();
-  await page.waitForURL(/#\/vault/);
+  if (admin) await giveAuthenticator(request, user);
+  await reloadVault(page);
+  await expect(page.getByText(/Verify your account's email address/)).toHaveCount(0, { timeout: 30_000 });
 }
 
 /**
@@ -316,7 +319,7 @@ test("an MSP's console with five clients, a client's passwords to fix, Entra, an
   const started = Date.now();
   const log = (what: string) => console.log(`${((Date.now() - started) / 1000).toFixed(0)}s ${what}`);
   const web = await webPage(browser);
-  await signUpVerified(web, request, jordan);
+  await signUpVerified(web, request, jordan, true);
   await web.goto("/#/msp");
   await web.getByRole("textbox", { name: "Your MSP's name" }).fill("Harbor IT");
   await web.getByRole("button", { name: "Create MSP" }).click();
@@ -492,7 +495,7 @@ test("a company with its own IT: its members, policies, install command, and a s
 
   // New organization, for a business: the Business preset and an install command.
   const web = await webPage(browser);
-  await signUpVerified(web, request, pat);
+  await signUpVerified(web, request, pat, true);
   await web.goto("/#/create-organization");
   await web.getByRole("textbox", { name: /Organization name/ }).fill(company.name);
   await web.getByRole("radio", { name: /A business/ }).check();
