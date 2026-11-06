@@ -1,6 +1,6 @@
 <!--
 title: See how PassBundle works
-description: An interactive tour of PassBundle, with a tip at every step: the browser extension, the web vault, the desktop app, sharing with your family, and the MSP console. Made-up data, all in your browser.
+description: An interactive tour of PassBundle, with a tip at every step: the browser extension, the web vault, the desktop app, the phone app, sharing with your family, and the MSP console. Made-up data, all in your browser.
 layout: wide
 script: tour
 -->
@@ -17,6 +17,7 @@ script: tour
     <a href="#extension" data-tour-tab="extension">Browser extension</a>
     <a href="#web" data-tour-tab="web">Web vault</a>
     <a href="#desktop" data-tour-tab="desktop">Desktop app</a>
+    <a href="#phone" data-tour-tab="phone">Phone</a>
     <a href="#family" data-tour-tab="family">Family</a>
     <a href="#msp" data-tour-tab="msp">MSP console</a>
   </nav>
@@ -199,6 +200,62 @@ script: tour
     <li data-target="timer" data-state="unlocked" data-place="top"><strong>It locks itself.</strong> After the time you choose, PassBundle locks again, and the vault stays encrypted on your computer.</li>
     <li data-target="approve" data-anchor="request" data-state="unlocked request" data-advance="click" data-place="left"><strong>Approve a new sign-in.</strong> Signing in on another computer? Approve it here, after checking the fingerprint phrase matches the one on the other screen.</li>
     <li data-target="approved" data-anchor="request" data-state="unlocked request approved" data-place="left"><strong>Signed in, without typing a password there.</strong> The other computer opens your vault, and your master password never left this one.</li>
+  </ol>
+</section>
+
+<section class="tour-part" id="phone" aria-labelledby="phone-title" data-label="Phone">
+  <div class="tour-head">
+    <h2 id="phone-title">The phone app</h2>
+    <p>Fills logins and passkeys in your apps and browsers on Android. The iPhone app is coming.</p>
+  </div>
+  <div class="tour-frame">
+    <div class="tour-stage" role="region" aria-label="A sample Android phone with PassBundle">
+      <div class="mock-phone">
+        <div class="phone-screen phone-settings" data-show="settings">
+          <span class="phone-bar"><svg class="mock-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6"/></svg><b>Autofill service</b></span>
+          <span class="phone-option"><span class="phone-radio" aria-hidden="true"></span><span>None</span></span>
+          <button type="button" class="phone-option" data-x="pb-option"><span class="phone-radio" data-hide="chosen" aria-hidden="true"></span><span class="phone-radio on" data-show="chosen" hidden aria-hidden="true"></span><span class="brand-tile mini" aria-hidden="true"><svg viewBox="0 0 26 32"><path fill-rule="evenodd" d="M4.5 13V8.5a8.5 8.5 0 0 1 17 0V13h-4V8.5a4.5 4.5 0 0 0-9 0V13ZM4.5 13h17a4.5 4.5 0 0 1 4.5 4.5V18H0v-.5A4.5 4.5 0 0 1 4.5 13ZM0 20h26v5H0ZM0 27h26v.5a4.5 4.5 0 0 1-4.5 4.5h-17A4.5 4.5 0 0 1 0 27.5Z"/></svg></span><span>PassBundle</span></button>
+          <p class="phone-hint">The service fills passwords, passkeys, and addresses in apps and browsers.</p>
+          <div class="phone-scrim" data-show="confirm" hidden>
+            <div class="phone-dialog">
+              <b>Use PassBundle?</b>
+              <p>PassBundle will look at what's on the screen to know what it can fill.</p>
+              <span class="phone-dialog-buttons"><span>Cancel</span><button type="button" data-x="ok">OK</button></span>
+            </div>
+          </div>
+        </div>
+        <div class="phone-screen phone-app" data-show="app" hidden>
+          <span class="phone-appbar"><x-tile icon="bank" tone="sapphire" class="small"></x-tile><b>Hometown Credit Union</b></span>
+          <div class="phone-form">
+            <span class="ui-label">Username</span>
+            <span class="ui-field focus" data-x="user"><span data-show="filled" hidden>sam.rivera</span></span>
+            <span class="phone-suggest" data-hide="filled"><button type="button" class="phone-suggest-row" data-x="unlock"><span class="brand-tile mini" aria-hidden="true"><svg viewBox="0 0 26 32"><path fill-rule="evenodd" d="M4.5 13V8.5a8.5 8.5 0 0 1 17 0V13h-4V8.5a4.5 4.5 0 0 0-9 0V13ZM4.5 13h17a4.5 4.5 0 0 1 4.5 4.5V18H0v-.5A4.5 4.5 0 0 1 4.5 13ZM0 20h26v5H0ZM0 27h26v.5a4.5 4.5 0 0 1-4.5 4.5h-17A4.5 4.5 0 0 1 0 27.5Z"/></svg></span><span class="ui-who"><b>Unlock PassBundle</b><span>to fill this sign-in</span></span></button></span>
+            <span class="ui-label">Password</span>
+            <span class="ui-field" data-x="pass"><span data-show="filled" hidden>••••••••••••••••</span></span>
+            <span class="mock-submit">Sign in</span>
+          </div>
+          <div class="phone-sheet" data-show="bio" hidden>
+            <b>Unlock PassBundle</b>
+            <span class="mock-note">Use your fingerprint</span>
+            <button type="button" class="phone-finger" data-x="finger" aria-label="Touch the fingerprint sensor"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 8.5a6.5 6.5 0 0 1 11 2.5 M5 13.5c.3-1.2.3-2.4 0-3.5 M12 9.5a3 3 0 0 1 3 3c0 2.5-.5 4.6-1.6 6.5 M9 12.5a3 3 0 0 1 .4-1.5 M9 15.5c.1-1 .1-2 0-3 M12 12.5c0 3-.6 5.6-2 8 M18 14.5c-.2 2-.8 3.8-1.6 5.5 M7.5 18c.6-.9 1-1.9 1.3-3"/></svg></button>
+            <span class="demo-btn">Use master password</span>
+          </div>
+          <div class="phone-sheet" data-show="passkey" hidden>
+            <b>Use your passkey for bank.example?</b>
+            <span class="mock-row"><span class="brand-tile mini" aria-hidden="true"><svg viewBox="0 0 26 32"><path fill-rule="evenodd" d="M4.5 13V8.5a8.5 8.5 0 0 1 17 0V13h-4V8.5a4.5 4.5 0 0 0-9 0V13ZM4.5 13h17a4.5 4.5 0 0 1 4.5 4.5V18H0v-.5A4.5 4.5 0 0 1 4.5 13ZM0 20h26v5H0ZM0 27h26v.5a4.5 4.5 0 0 1-4.5 4.5h-17A4.5 4.5 0 0 1 0 27.5Z"/></svg></span><span class="ui-who"><b>sam.rivera</b><span>PassBundle</span></span></span>
+            <span class="demo-btn primary" data-x="passkey">Continue</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <ol class="tour-steps">
+    <li data-target="pb-option" data-state="settings" data-advance="click" data-place="right"><strong>Turn on autofill once.</strong> In Android's settings, search for Autofill service, and choose PassBundle.</li>
+    <li data-target="ok" data-state="settings chosen confirm" data-advance="click" data-place="right"><strong>Android checks you trust it.</strong> Press OK. That's the whole setup.</li>
+    <li data-target="unlock" data-state="app" data-advance="click" data-place="right"><strong>Tap a sign-in field.</strong> In any app or browser, PassBundle offers to fill it. When your vault is locked, it asks you to unlock first.</li>
+    <li data-target="finger" data-state="app bio" data-advance="click" data-place="right"><strong>Unlock with your fingerprint or face.</strong> Touch the sensor.</li>
+    <li data-target="pass" data-state="app filled" data-place="right"><strong>Filled.</strong> An app only gets a website's logins when the app and the site both say they belong together, so a look-alike app gets nothing.</li>
+    <li data-target="passkey" data-state="app filled passkey" data-place="right"><strong>Passkeys too.</strong> On Android 14 and later, choose PassBundle when an app or a site asks for a passkey.</li>
   </ol>
 </section>
 
