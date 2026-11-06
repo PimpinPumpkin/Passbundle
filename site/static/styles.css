@@ -2594,6 +2594,10 @@ main.wide .demo h3 {
 }
 
 .demo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   height: 32px;
   padding: 0 10px;
   border: 1px solid var(--field-border);
@@ -3248,6 +3252,109 @@ main.wide .tour-head h2 {
   color: var(--on-brand);
 }
 
+/* A browser's top: the tab strip, then the toolbar with the address bar
+   between the page buttons and the extensions. */
+.mock-tabstrip {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 8px 12px 0;
+  background: var(--sunken);
+}
+
+.mock-tabstrip .mock-dots {
+  align-self: center;
+  margin-right: 6px;
+}
+
+.mock-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 240px;
+  height: 34px;
+  padding: 0 10px 0 12px;
+  border-radius: 10px 10px 0 0;
+  background: var(--inset);
+  font-size: 13px;
+  color: var(--label);
+}
+
+.mock-tab-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mock-favicon {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 4px;
+  background: #2448b8;
+}
+
+.mock-tabstrip > .mock-icon {
+  align-self: center;
+}
+
+.mock-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mock-icon.small {
+  width: 14px;
+  height: 14px;
+}
+
+.mock-icon.faint {
+  opacity: 0.45;
+}
+
+.mock-icon.dots {
+  stroke-width: 3;
+}
+
+.mock-icon.push {
+  margin-left: auto;
+}
+
+.mock-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  flex: none;
+}
+
+.mock-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #b01e54;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.mock-url {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .mock-bar,
 .mock-top,
 .mock-titlebar {
@@ -3258,7 +3365,12 @@ main.wide .tour-head h2 {
   border-bottom: 1px solid var(--line);
 }
 
-.mock-bar,
+.mock-bar {
+  background: var(--inset);
+  gap: 14px;
+  padding: 8px 14px;
+}
+
 .mock-titlebar {
   background: var(--inset);
 }
@@ -3284,13 +3396,14 @@ main.wide .tour-head h2 {
 .mock-address {
   flex: 1 1 auto;
   min-width: 0;
-  height: 30px;
+  height: 34px;
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  gap: 8px;
+  padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--field);
+  border: 0;
+  background: var(--sunken);
   color: var(--muted);
   font-size: 13px;
   white-space: nowrap;
@@ -3668,6 +3781,18 @@ main.wide .mock h3 {
 
 span.demo-row {
   border-top: 1px solid var(--line);
+}
+
+/* A phone's browser keeps back, the address, PassBundle, and the menu. */
+@media (max-width: 640px) {
+  .mock .wide {
+    display: none;
+  }
+
+  .mock-bar,
+  .mock-buttons {
+    gap: 10px;
+  }
 }
 
 /* ======================================================================
