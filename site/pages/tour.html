@@ -211,7 +211,22 @@ script: tour
   <div class="tour-frame">
     <div class="tour-stage" role="region" aria-label="A sample Android phone with PassBundle">
       <div class="mock-phone">
-        <div class="phone-screen phone-settings" data-show="settings">
+        <div class="phone-screen phone-vault" data-show="card">
+          <span class="phone-appbar"><span class="brand-tile mini" aria-hidden="true"><svg viewBox="0 0 26 32"><path fill-rule="evenodd" d="M4.5 13V8.5a8.5 8.5 0 0 1 17 0V13h-4V8.5a4.5 4.5 0 0 0-9 0V13ZM4.5 13h17a4.5 4.5 0 0 1 4.5 4.5V18H0v-.5A4.5 4.5 0 0 1 4.5 13ZM0 20h26v5H0ZM0 27h26v.5a4.5 4.5 0 0 1-4.5 4.5h-17A4.5 4.5 0 0 1 0 27.5Z"/></svg></span><b>PassBundle</b></span>
+          <div class="ui-list lined">
+            <span class="ui-list-row"><x-tile icon="key" tone="sapphire"></x-tile><span class="ui-name"><b>Hometown Credit Union</b><small>sam.rivera</small></span></span>
+            <span class="ui-list-row"><x-tile icon="key" tone="sapphire"></x-tile><span class="ui-name"><b>Family email</b><small>sam@example.com</small></span></span>
+            <span class="ui-list-row"><x-tile icon="wifi" tone="turquoise"></x-tile><span class="ui-name"><b>Home Wi-Fi</b><small>Rivera-Home</small></span></span>
+          </div>
+          <div class="phone-sheet phone-setup">
+            <b>Turn on autofill</b>
+            <span class="mock-note">So PassBundle can fill your sign-ins in apps and browsers.</span>
+            <span class="phone-setup-row" data-x="autofill-row"><span>Use PassBundle for autofill</span><button type="button" class="demo-btn primary" data-x="turn-on" data-hide="on">Turn on</button><span class="phone-on" data-show="on" hidden><svg class="mock-icon on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>On</span></span>
+            <span class="phone-setup-row"><span>Use PassBundle for passkeys</span><span class="demo-btn" data-hide="on">Turn on</span><span class="phone-on" data-show="on" hidden><svg class="mock-icon on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>On</span></span>
+            <span class="demo-btn" data-hide="on">Later</span>
+          </div>
+        </div>
+        <div class="phone-screen phone-settings" data-show="settings" hidden>
           <span class="phone-bar"><svg class="mock-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6"/></svg><b>Autofill service</b></span>
           <span class="phone-option"><span class="phone-radio" aria-hidden="true"></span><span>None</span></span>
           <button type="button" class="phone-option" data-x="pb-option"><span class="phone-radio" data-hide="chosen" aria-hidden="true"></span><span class="phone-radio on" data-show="chosen" hidden aria-hidden="true"></span><span class="brand-tile mini" aria-hidden="true"><svg viewBox="0 0 26 32"><path fill-rule="evenodd" d="M4.5 13V8.5a8.5 8.5 0 0 1 17 0V13h-4V8.5a4.5 4.5 0 0 0-9 0V13ZM4.5 13h17a4.5 4.5 0 0 1 4.5 4.5V18H0v-.5A4.5 4.5 0 0 1 4.5 13ZM0 20h26v5H0ZM0 27h26v.5a4.5 4.5 0 0 1-4.5 4.5h-17A4.5 4.5 0 0 1 0 27.5Z"/></svg></span><span>PassBundle</span></button>
@@ -250,8 +265,10 @@ script: tour
     </div>
   </div>
   <ol class="tour-steps">
-    <li data-target="pb-option" data-state="settings" data-advance="click" data-place="right"><strong>Turn on autofill once.</strong> In Android's settings, search for Autofill service, and choose PassBundle.</li>
-    <li data-target="ok" data-state="settings chosen confirm" data-advance="click" data-place="right"><strong>Android checks you trust it.</strong> Press OK. That's the whole setup.</li>
+    <li data-target="turn-on" data-state="card" data-advance="click" data-place="right"><strong>PassBundle offers to turn it on.</strong> The first time you unlock it, a card asks to fill your sign-ins in apps and browsers. Tap Turn on.</li>
+    <li data-target="pb-option" data-state="settings" data-advance="click" data-place="right"><strong>Android lists its autofill services.</strong> Tap PassBundle.</li>
+    <li data-target="ok" data-state="settings chosen confirm" data-advance="click" data-place="right"><strong>Android checks you trust it.</strong> Press OK.</li>
+    <li data-target="autofill-row" data-state="card on" data-place="right"><strong>That's the whole setup.</strong> Back in PassBundle, it shows On. On Android 14 and later, the passkeys row works the same way, and on Android 15 one choice turns on both.</li>
     <li data-target="unlock" data-state="app" data-advance="click" data-place="right"><strong>Tap a sign-in field.</strong> In any app or browser, PassBundle offers to fill it. When your vault is locked, it asks you to unlock first.</li>
     <li data-target="finger" data-state="app bio" data-advance="click" data-place="right"><strong>Unlock with your fingerprint or face.</strong> Touch the sensor.</li>
     <li data-target="pass" data-state="app filled" data-place="right"><strong>Filled.</strong> An app only gets a website's logins when the app and the site both say they belong together, so a look-alike app gets nothing.</li>

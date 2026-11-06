@@ -3725,6 +3725,51 @@ span.demo-row {
   stroke-linecap: round;
 }
 
+.phone-vault .ui-list {
+  padding: 4px 0;
+}
+
+.phone-setup {
+  align-items: stretch;
+  text-align: left;
+}
+
+.phone-setup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.phone-setup .demo-btn {
+  height: 34px;
+  align-self: auto;
+}
+
+.phone-setup > .demo-btn {
+  align-self: stretch;
+}
+
+.phone-on {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--link);
+}
+
+.mock-icon.on {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2.4;
+}
+
 @media (prefers-color-scheme: dark) {
   .mock-phone {
     border-color: #2a2f33;
