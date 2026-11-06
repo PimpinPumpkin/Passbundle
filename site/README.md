@@ -24,7 +24,9 @@ CI runs the build and check on every change to `site/`.
 
 Every screenshot is made from the real apps by `e2e/site-shots/`, with made-up people and data (`e2e/site-shots/data.ts`), on a local test server that sends email to the test mail catcher (as the hosted service does, so account recovery shows) and answers as vault.passbundle.com, so no local address shows on screen. The list, and the page each one is on, is at the top of `site-shots.spec.ts`: a person's vault in the web vault and the extension, signing in to one's own server, an MSP with five clients (the console, a client's passwords to fix, default policies, an install command, Entra provisioning, and an item's history), and a company with its own IT (members, policies, install command, and a shared folder's permissions).
 
-Build the server from passbundle-server's `keykeeper` branch and the web vault and extension from passbundle-clients' `keykeeper` branch (see `e2e/README.md`), never from a branch that isn't merged, so every shot shows the look people get. Then run it, and commit the images:
+On GitHub, the **Site screenshots** workflow (`.github/workflows/site-shots.yml`) does all of this: start it from the Actions tab after the apps' look changes (it also runs on the first of each month). It builds both from their `keykeeper` branches with Tier 1, without its tests, takes the shots, and when they changed, pushes them to the branch `site-shots-update` with a link in the run's summary to open the pull request. Open it, merge it, and deploy.
+
+To take them on your own computer, build the server from passbundle-server's `keykeeper` branch and the web vault and extension from passbundle-clients' `keykeeper` branch (see `e2e/README.md`), never from a branch that isn't merged, so every shot shows the look people get. Then run it, and commit the images:
 
 ```sh
 cd e2e && npx playwright test -c playwright.site.config.ts
