@@ -3,203 +3,136 @@ title: PassBundle for business
 description: A password manager your whole company will use. Sensible policies from day one, rollout from Intune, group policy, or your RMM, provisioning from Entra ID, folders with permissions, item history, and account recovery for forgotten master passwords.
 layout: wide
 -->
-<section class="hero side">
-  <div>
-    <span class="eyebrow">PassBundle for business</span>
-    <h1>A password manager your whole company will actually use.</h1>
-    <p class="lead">
-      PassBundle comes set up the way a business needs it. Roll it out with the tools you already
-      use, people join without anyone clicking Confirm, and you can get someone back in when they
-      forget their master password.
-    </p>
+<section class="page-hero">
+  <span class="eyebrow">PassBundle for business</span>
+  <h1>A password manager your whole company will actually use.</h1>
+  <div class="home-hero-side">
+    <p class="lead">PassBundle comes set up the way a business needs it. Roll it out with the tools you already use, people join without anyone clicking Confirm, and you can get someone back in when they forget their master password.</p>
     <div class="actions">
       <a class="button primary" href="{{links.signup}}">Start a {{prices.trialDays}}-day trial</a>
       <a class="button" href="mailto:hello@passbundle.com?subject=PassBundle%20for%20business">Talk to us</a>
     </div>
-    <p class="fine">{{prices.business}} per person per month. No card for the trial.</p>
   </div>
-  <div class="window">
-    <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span>vault.passbundle.com</span></div>
+  <p class="fine">{{prices.business}} per person per month. No card for the trial.</p>
+</section>
+
+<section class="page-shot" aria-label="The admin console">
+  <div class="stage wide">
     <x-shot name="business-members" frame="desktop" alt="The PassBundle admin console, listing a company's members" eager></x-shot>
   </div>
 </section>
 
-<section class="tight">
-  <div class="grid three">
-    <div class="card">
-      <x-tile icon="sliders" tone="brand"></x-tile>
-      <h3>Set up from the start</h3>
-      <p>Account recovery, strong master passwords, one work account per person, and shared folders for everyone and for admins are on before anyone joins. Change any of them in one place.</p>
-    </div>
-    <div class="card">
-      <x-tile icon="bolt" tone="gold"></x-tile>
-      <h3>No confirm step</h3>
-      <p>Invite someone, or let them join from the extension your rollout installed, and they're in. Your admins' apps finish the job in the background, and the owners get an email saying who joined.</p>
-    </div>
-    <div class="card">
-      <x-tile icon="lifebuoy" tone="turquoise"></x-tile>
-      <h3>Forgotten master passwords</h3>
-      <p>With account recovery, an admin can reset a member's master password and the vault comes back intact. Everyone is told about it when they join.</p>
-    </div>
-  </div>
+<section class="flow" aria-label="The basics">
+  <ul class="lines">
+    <li><strong>Set up from the start</strong><span>Account recovery, strong master passwords, one work account per person, and shared folders for everyone and for admins are on before anyone joins.</span></li>
+    <li><strong>No confirm step</strong><span>Invite someone, or let them join from the extension your rollout installed, and they're in. Your owners get an email saying who joined.</span></li>
+    <li><strong>Forgotten master passwords</strong><span>With account recovery, an admin can reset a member's master password and the vault comes back intact. Everyone is told about it when they join.</span></li>
+  </ul>
 </section>
 
-<section>
-  <div class="split">
-    <div>
+<section class="flow" aria-label="How it works">
+  <div class="row">
+    <div class="row-text">
       <span class="eyebrow">Rollout</span>
-      <h2>Every computer, in an afternoon</h2>
-      <p class="lead">
-        Your organization's Settings page has an install command: one PowerShell line that sets up a
-        Windows computer. Run it from Intune, group policy, or any RMM.
-      </p>
+      <h2>Every computer, in an afternoon.</h2>
+      <p class="lead">Your organization's Settings page has an install command: one PowerShell line that sets up a Windows computer. Run it from Intune, group policy, or any RMM.</p>
       <ul class="checks">
         <li>Installs the extension in Chrome and Edge, with your server already filled in</li>
         <li>Turns off the browsers' own password managers, without deleting what's in them</li>
-        <li>Anyone who then signs in joins your organization, and your owners get an email saying who</li>
         <li>Limit it to your email domains, so only your own people can use it</li>
-        <li>Built for rollout day: a whole office behind one internet connection can sign up at once</li>
+        <li>A whole office behind one internet connection can sign up at once</li>
       </ul>
     </div>
-    <x-shot name="business-install" frame="panel" alt="A company's install command on its Settings page, with how many people joined with it"></x-shot>
+    <div class="stage">
+      <x-shot name="business-install" frame="panel" alt="A company's install command on its Settings page, with how many people joined with it"></x-shot>
+    </div>
   </div>
-</section>
 
-<section>
-  <div class="split flip">
-    <div>
+  <div class="row flip">
+    <div class="row-text">
       <span class="eyebrow">Policies</span>
-      <h2>Rules that explain themselves</h2>
-      <p class="lead">
-        Require two-step login, set master password strength, keep work accounts separate from
-        personal ones, and decide whether people can export vaults. Every policy says in a sentence
-        what it does.
-      </p>
+      <h2>Rules that explain themselves.</h2>
+      <p class="lead">Require two-step login, set master password strength, keep work accounts separate from personal ones, and decide whether people can export vaults. Every policy says in a sentence what it does.</p>
       <ul class="checks">
         <li>Account recovery with automatic enrollment, on by default</li>
         <li>Master passwords of at least 12 characters, checked for strength</li>
         <li>Custom roles, for a manager who handles people but not policies</li>
       </ul>
     </div>
-    <div class="window">
-      <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span>vault.passbundle.com</span></div>
+    <div class="stage bleed">
       <x-shot name="business-policies" frame="desktop" alt="The policies page of the PassBundle admin console"></x-shot>
     </div>
   </div>
-</section>
 
-<section>
-  <div class="split">
-    <div>
+  <div class="row">
+    <div class="row-text">
       <span class="eyebrow">Microsoft Entra ID</span>
-      <h2>Your directory does the joining and leaving</h2>
-      <p class="lead">
-        Connect PassBundle to Microsoft Entra ID from your organization's settings. People you
-        assign there are invited, people you turn off lose access, and Entra's groups become
-        PassBundle groups with the same members.
-      </p>
+      <h2>Your directory does the joining and leaving.</h2>
+      <p class="lead">Connect PassBundle to Microsoft Entra ID from your organization's settings. People you assign there are invited, people you turn off lose access, and Entra's groups become PassBundle groups with the same members.</p>
       <ul class="checks">
         <li>Standard SCIM, set up in Entra in a few steps</li>
         <li>Give a group a shared folder once, and everyone Entra adds to it gets it</li>
         <li>Sign in with Entra <span class="chip soon">Coming soon</span></li>
       </ul>
     </div>
-    <div class="window">
-      <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span>vault.passbundle.com</span></div>
+    <div class="stage bleed">
       <x-shot name="admin-provisioning" frame="desktop" alt="An organization's Provisioning page, with its SCIM address and token for Microsoft Entra ID"></x-shot>
     </div>
   </div>
-</section>
 
-<section>
-  <div class="split flip">
-    <div>
+  <div class="row flip">
+    <div class="row-text">
       <span class="eyebrow">Folders and permissions</span>
-      <h2>Share by team, down to the capability</h2>
-      <p class="lead">
-        Everything your company shares lives in its folders. Give a person or a group a preset, such
-        as Can view or Can edit, or choose exactly what they can do in a grid.
-      </p>
+      <h2>Share by team, down to the capability.</h2>
+      <p class="lead">Everything your company shares lives in its folders. Give a person or a group a preset, such as Can view or Can edit, or choose exactly what they can do in a grid.</p>
       <ul class="checks">
         <li>Let a team see a folder's items without their passwords</li>
         <li>A drop folder people can add to but not change</li>
         <li>The Access page shows who reaches what, and how</li>
       </ul>
     </div>
-    <div class="window">
-      <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span>vault.passbundle.com</span></div>
+    <div class="stage bleed">
       <x-shot name="folder-permissions" frame="desktop" alt="A shared folder's access, with a group's capabilities chosen one by one"></x-shot>
     </div>
   </div>
-</section>
 
-<section>
-  <div class="head center">
+  <div class="also">
     <h2>Everything else you'd expect</h2>
+    <ul>
+      <li><strong>Item history</strong><span>Every edit keeps the version before, with who saved it. See what changed and restore an earlier version.</span></li>
+      <li><strong>Reports and event logs</strong><span>See weak, reused, and exposed passwords in shared folders, and who viewed or changed what.</span></li>
+      <li><strong>Events to your security tools</strong><span>Send your events as they happen to Microsoft Sentinel, to syslog over TLS, or to a signed webhook.</span></li>
+      <li><strong>Templates for your team</strong><span>Share item templates for vendor portals, servers, and licenses, so everyone starts from the same fields.</span></li>
+      <li><strong>Expiring credentials</strong><span>Certificates, API keys, and domains carry their expiration date, and the people who use them are reminded before it passes.</span></li>
+      <li><strong>End-to-end encrypted</strong><span>Shared items are encrypted with your organization's key, which only your members' devices hold. We never have a key that can open your vault.</span></li>
+      <li><strong>Work and personal stay apart</strong><span>A work account belongs to one organization. When someone leaves, shared passwords stay with the company.</span></li>
+      <li><strong>Premium for every member</strong><span>Built-in two-step codes, file attachments, and file Sends for everyone in your organization.</span></li>
+      <li><strong>Run it yourself if you like</strong><span>PassBundle is open source. Use our hosted service, or run the server on your own hardware.</span></li>
+    </ul>
   </div>
-  <div class="features">
-    <div class="feature">
-      <x-tile icon="history" tone="amethyst"></x-tile>
-      <h3>Item history</h3>
-      <p>Every edit keeps the version before, with who saved it. See what changed and restore an earlier version.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="shield" tone="emerald"></x-tile>
-      <h3>Reports and event logs</h3>
-      <p>See weak, reused, and exposed passwords in shared folders, and who viewed or changed what.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="pulse" tone="onyx"></x-tile>
-      <h3>Events to your security tools</h3>
-      <p>Send your events as they happen to Microsoft Sentinel, to syslog over TLS, or to a signed webhook, from Reporting, Event streaming.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="layers" tone="topaz"></x-tile>
-      <h3>Templates for your team</h3>
-      <p>Share item templates for the things your company keeps: vendor portals, servers, licenses. Everyone starts from the same fields.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="clock" tone="onyx"></x-tile>
-      <h3>Expiring credentials</h3>
-      <p>Certificates, API keys, and domains carry their expiration date, and the people who use them are reminded before it passes.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="lock" tone="sapphire"></x-tile>
-      <h3>End-to-end encrypted</h3>
-      <p>Shared items are encrypted with your organization's key, which only your members' devices hold. We never have a key that can open your company's vault.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="identity" tone="turquoise"></x-tile>
-      <h3>Work and personal stay apart</h3>
-      <p>A work account belongs to one organization, so people keep their own passwords in a separate personal account. When someone leaves, shared passwords stay with the company.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="key" tone="sapphire"></x-tile>
-      <h3>Premium for every member</h3>
-      <p>Built-in two-step codes, file attachments, and file Sends for everyone in your organization.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="server" tone="garnet"></x-tile>
-      <h3>Run it yourself if you like</h3>
-      <p>PassBundle is open source. Use our hosted service, or run the server on your own hardware.</p>
+</section>
+
+<section class="band" aria-labelledby="msp-title">
+  <div class="band-inner">
+    <div class="split-head">
+      <div>
+        <span class="eyebrow">For MSPs and IT providers</span>
+        <h2 id="msp-title">Running IT for more than one company?</h2>
+      </div>
+      <div class="split-side">
+        <p class="lead">If you look after several companies or locations, the MSP console runs all of them from one place, with one pool of seats.</p>
+        <div class="actions">
+          <a class="button primary" href="/msp/">PassBundle for MSPs</a>
+          <a class="button" href="/pricing/#compare">Compare plans</a>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<section>
-  <div class="cta">
-    <h2>Running IT for more than one company?</h2>
-    <p>If you look after several companies or locations, the MSP console runs all of them from one place, with one pool of seats.</p>
-    <div class="actions">
-      <a class="button primary" href="/msp/">PassBundle for MSPs</a>
-      <a class="button" href="/pricing/#compare">Compare plans</a>
-    </div>
-  </div>
-</section>
-
-<section>
-  <div class="head center">
-    <h2>Questions</h2>
+<section class="flow last" aria-labelledby="faq-title">
+  <div class="split-head page-head">
+    <h2 id="faq-title">Questions</h2>
   </div>
   <div class="faq">
     <details>
