@@ -148,6 +148,7 @@ function expand(html, file) {
 const NAV = [
   ["/msp/", "For MSPs"],
   ["/business/", "Business"],
+  ["/tour/", "Tour"],
   ["/pricing/", "Pricing"],
   ["/download/", "Download"],
   ["/security/", "Security"],
@@ -220,6 +221,7 @@ ${kind === "doc" ? `<div class="paper">\n${expand(body.trim(), file)}\n</div>` :
       <a href="/msp/">For MSPs</a>
       <a href="/business/">Business</a>
       <a href="/#personal">Personal and families</a>
+      <a href="/tour/">Tour</a>
       <a href="/pricing/">Pricing</a>
       <a href="/download/">Download</a>
     </nav>
