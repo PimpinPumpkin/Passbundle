@@ -363,7 +363,6 @@ mark.todo {
   color: var(--wordmark-pass);
 }
 
-
 /* ======================================================================
    Tiles: a rounded square tinted with the tone, and the glyph in the tone
    itself, a step lighter in dark mode. Flat: no sheen, no shadow.
@@ -421,14 +420,6 @@ mark.todo {
     color: var(--tone-dark);
     background: color-mix(in srgb, var(--tone-dark) var(--tile-tint), transparent);
   }
-}
-
-/* A row of the apps' category tiles: everything a vault holds. */
-.jewels {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
 }
 
 /* ======================================================================
@@ -752,10 +743,6 @@ main.wide > section.tight {
   padding-top: 32px;
 }
 
-main.wide > section.snug {
-  padding-bottom: 32px;
-}
-
 main.wide h2 {
   font-size: clamp(30px, 1.6rem + 1.4vw, 42px);
 }
@@ -857,52 +844,6 @@ main.wide > section.hero {
   box-shadow: var(--shadow-shot);
 }
 
-/* A screenshot of the web vault or the console, in a browser window. */
-.window {
-  border-radius: 14px;
-  overflow: hidden;
-  background: var(--floating);
-  box-shadow: var(--shadow-shot);
-}
-
-.window-bar {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  height: 38px;
-  padding: 0 14px;
-  border-bottom: 1px solid var(--line);
-}
-
-.window-bar i {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--sunken);
-}
-
-@media (prefers-color-scheme: dark) {
-  .window-bar i {
-    background: rgb(255 255 255 / 0.14);
-  }
-}
-
-.window-bar span {
-  margin: 0 auto;
-  font-size: 13px;
-  font-weight: 550;
-  color: var(--muted);
-  background: var(--inset);
-  border-radius: 7px;
-  padding: 3px 14px;
-  transform: translateX(-20px);
-}
-
-.window .shot img {
-  border-radius: 0;
-  box-shadow: none;
-}
-
 /* Where e2e/site-shots hasn't made a screenshot yet. */
 .shot.placeholder {
   display: grid;
@@ -926,56 +867,6 @@ main.wide > section.hero {
 
 .shot.placeholder.panel {
   aspect-ratio: 16 / 7;
-}
-
-.window .shot.placeholder {
-  border-radius: 0;
-}
-
-/* The home page's showcase: the web vault, with the extension in front. */
-.showcase {
-  position: relative;
-  max-width: 1080px;
-  margin: 56px auto 0;
-  padding-right: 64px;
-}
-
-.showcase .popup {
-  position: absolute;
-  right: 0;
-  bottom: -40px;
-  width: 27%;
-  max-width: 290px;
-}
-
-.showcase .popup img {
-  border-radius: 14px;
-}
-
-/* A popup or phone-sized shot standing alone. */
-.popup-frame {
-  max-width: 340px;
-  margin: 0 auto;
-}
-
-.popup-frame img {
-  border-radius: 14px;
-}
-
-.pair {
-  display: flex;
-  gap: 24px;
-  justify-content: center;
-  align-items: flex-start;
-}
-
-.pair .shot {
-  flex: 1;
-  max-width: 300px;
-}
-
-.pair .shot + .shot {
-  margin-top: 48px;
 }
 
 /* ----- Facts: a row of plain statements under the hero. ----- */
@@ -1113,20 +1004,6 @@ a.card .more {
   font-size: 16px;
 }
 
-.features.stacked .feature {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-}
-
-.features.stacked .feature .tile {
-  grid-row: auto;
-  margin-bottom: 16px;
-}
-
-.features.stacked .feature h3 + p {
-  margin-top: 6px;
-}
-
 /* ----- Splits: words beside a screenshot ----- */
 .split {
   display: grid;
@@ -1210,112 +1087,12 @@ a.card .more {
 }
 
 /* ----- Spotlight: a section raised onto a big card ----- */
-.spotlight {
-  background: var(--surface);
-  border-radius: 24px;
-  box-shadow: var(--shadow-raised);
-  padding: 56px;
-}
-
-@media (prefers-color-scheme: dark) {
-  .spotlight {
-    background: var(--raised);
-  }
-}
 
 /* ----- Steps: 01, 02, 03 ----- */
-.steps-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-  counter-reset: step;
-}
-
-.steps-row.four {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.steps-row > div {
-  counter-increment: step;
-  background: var(--surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-resting);
-  padding: 26px;
-}
-
-.steps-row > div::before {
-  content: counter(step, decimal-leading-zero);
-  display: block;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--brand-strong);
-  letter-spacing: 0.04em;
-  margin-bottom: 12px;
-}
-
-@media (prefers-color-scheme: dark) {
-  .steps-row > div::before {
-    color: var(--brand);
-  }
-}
-
-.steps-row h3 {
-  font-size: 18px;
-}
-
-.steps-row p {
-  margin-top: 8px;
-  color: var(--label);
-  font-size: 16px;
-}
 
 /* ----- Audiences: who PassBundle is for ----- */
-.paths .card {
-  padding: 30px;
-}
-
-.paths h3 {
-  font-size: 22px;
-}
-
-.paths .fine {
-  margin-top: 6px;
-}
 
 /* ----- Platforms ----- */
-.platforms {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
-  gap: 12px;
-}
-
-.platforms > a,
-.platforms > div {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: var(--surface);
-  border-radius: 14px;
-  box-shadow: var(--shadow-resting);
-  color: var(--text);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 16px;
-  line-height: 1.25;
-}
-
-.platforms > a:hover {
-  box-shadow: var(--shadow-raised);
-  color: var(--text);
-}
-
-.platforms small {
-  display: block;
-  font-weight: 500;
-  font-size: 13px;
-  color: var(--muted);
-}
 
 /* ----- Plans ----- */
 .plans {
@@ -1633,42 +1410,6 @@ th.num {
 }
 
 /* ----- Call to action ----- */
-.cta {
-  position: relative;
-  text-align: center;
-  background: var(--surface);
-  border-radius: 24px;
-  box-shadow: var(--shadow-raised);
-  padding: 64px 32px;
-  overflow: hidden;
-}
-
-@media (prefers-color-scheme: dark) {
-  .cta {
-    background: var(--raised);
-  }
-}
-
-.cta h2 {
-  max-width: 760px;
-  margin: 0 auto;
-}
-
-.cta p {
-  max-width: 640px;
-  margin: 14px auto 0;
-  color: var(--label);
-  font-size: 18px;
-}
-
-.cta .actions {
-  justify-content: center;
-  margin-top: 28px;
-}
-
-.cta .jewels {
-  margin-bottom: 28px;
-}
 
 /* ----- Callouts inside wide pages ----- */
 .note {
@@ -4106,17 +3847,6 @@ main.doc > .paper {
   }
 }
 
-/* A guide's heading with its tile (switching guides). */
-.paper .titled {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.paper .titled .tile {
-  margin: 0;
-}
-
 /* The art: the apps' drawings in their illustration colors. */
 .art {
   width: 88px;
@@ -4238,8 +3968,7 @@ main.doc > .paper {
   }
 
   .features.four,
-  .plans.four,
-  .steps-row.four {
+  .plans.four {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -4282,14 +4011,6 @@ main.doc > .paper {
 
   .facts > div:nth-child(n + 3) {
     border-top: 1px solid var(--divider);
-  }
-
-  .steps-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .spotlight {
-    padding: 36px;
   }
 
   .footer-grid {
@@ -4338,8 +4059,7 @@ main.doc > .paper {
     padding-top: 48px;
   }
 
-  .hero .actions .button,
-  .cta .actions .button {
+  .hero .actions .button {
     width: 100%;
   }
 
@@ -4351,8 +4071,7 @@ main.doc > .paper {
   .downloads,
   .plans,
   .plans.two,
-  .plans.four,
-  .steps-row.four {
+  .plans.four {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -4371,38 +4090,6 @@ main.doc > .paper {
 
   .facts > div + div {
     border-top: 1px solid var(--divider);
-  }
-
-  .showcase {
-    padding-right: 0;
-    margin-top: 40px;
-  }
-
-  .showcase .popup {
-    position: relative;
-    right: auto;
-    bottom: auto;
-    width: 72%;
-    max-width: 280px;
-    margin: -64px 0 0 auto;
-  }
-
-  .window-bar span {
-    transform: none;
-  }
-
-  .pair {
-    gap: 12px;
-  }
-
-  .pair .shot + .shot {
-    margin-top: 24px;
-  }
-
-  .spotlight,
-  .cta {
-    padding: 32px 20px;
-    border-radius: 20px;
   }
 
   .card,
