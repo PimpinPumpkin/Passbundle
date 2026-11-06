@@ -2041,7 +2041,7 @@ main.wide .row-text h2 {
   margin-top: 4px;
 }
 
-.ui-buttons span {
+.ui-buttons > span {
   flex: 1 1 0;
   height: 44px;
   border-radius: 10px;
@@ -3003,6 +3003,671 @@ main.wide .page-head h2 {
   .page-hero .actions .button {
     flex: 1 1 100%;
   }
+}
+
+/* ======================================================================
+   The tour (/tour/, static/tour.js): pieces of the apps drawn for the
+   page, a ring on what to try, and a deep green tip that points at it.
+   ====================================================================== */
+main.wide > section.tour-nav-wrap {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.tour-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tour-tabs a {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--field-border);
+  color: var(--label);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tour-tabs a:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.tour-tabs a[aria-current="true"] {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--ground);
+}
+
+main.wide > section.tour-part {
+  padding-top: 40px;
+  padding-bottom: clamp(56px, 7vw, 96px);
+}
+
+.tour-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 32px;
+  margin-bottom: 24px;
+}
+
+main.wide .tour-head h2 {
+  font-size: clamp(28px, 1.2rem + 1.6vw, 40px);
+  letter-spacing: -0.03em;
+  font-weight: 640;
+}
+
+.tour-head p {
+  max-width: 520px;
+  color: var(--muted);
+}
+
+.tour-frame {
+  position: relative;
+}
+
+.tour-stage {
+  display: flex;
+  justify-content: center;
+  padding: clamp(16px, 3vw, 40px);
+  border-radius: 22px;
+  background: var(--sunken);
+}
+
+.tour-stage [hidden],
+.tour-steps[hidden],
+.tour-part[hidden] {
+  display: none !important;
+}
+
+.tour-steps {
+  margin: 20px 0 0;
+  padding-left: 1.4em;
+  display: grid;
+  gap: 8px;
+  color: var(--label);
+}
+
+.tour-focus {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
+  border-radius: 10px;
+  animation: tour-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes tour-pulse {
+  50% {
+    outline-offset: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-focus {
+    animation: none;
+  }
+}
+
+.tour-bubble {
+  position: absolute;
+  z-index: 5;
+  width: 300px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--band);
+  color: var(--band-text);
+  box-shadow: var(--shadow-floating);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.tour-bubble::before {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: var(--band);
+  transform: rotate(45deg);
+}
+
+.tour-bubble[data-place="bottom"]::before {
+  top: -7px;
+  left: calc(var(--arrow, 50%) - 7px);
+}
+
+.tour-bubble[data-place="top"]::before {
+  bottom: -7px;
+  left: calc(var(--arrow, 50%) - 7px);
+}
+
+.tour-bubble[data-place="right"]::before {
+  left: -7px;
+  top: calc(var(--arrow, 50%) - 7px);
+}
+
+.tour-bubble[data-place="left"]::before {
+  right: -7px;
+  top: calc(var(--arrow, 50%) - 7px);
+}
+
+.tour-bubble.docked {
+  position: static;
+  width: auto;
+  margin-top: 14px;
+}
+
+.tour-bubble.docked::before {
+  display: none;
+}
+
+.tour-count {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--band-accent);
+}
+
+.tour-text strong {
+  color: var(--band-text);
+}
+
+.tour-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.tour-buttons button {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--band-line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--band-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tour-buttons button[hidden] {
+  display: none;
+}
+
+.tour-buttons .go {
+  background: #ffffff;
+  border-color: transparent;
+  color: var(--band);
+}
+
+.tour-bubble :focus-visible {
+  outline-color: var(--band-accent);
+}
+
+@media (prefers-color-scheme: dark) {
+  .tour-buttons .go {
+    background: var(--brand);
+    color: var(--on-brand);
+  }
+
+  .tour-bubble {
+    border: 1px solid rgb(255 255 255 / 0.12);
+  }
+}
+
+/* ----- The screens ----- */
+.mock {
+  width: 100%;
+  max-width: 980px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-floating);
+  overflow: hidden;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.mock.mock-narrow {
+  max-width: 720px;
+}
+
+.mock button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.mock .demo-btn.primary {
+  color: var(--on-brand);
+}
+
+.mock-bar,
+.mock-top,
+.mock-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.mock-bar,
+.mock-titlebar {
+  background: var(--inset);
+}
+
+.mock-titlebar {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.mock-dots {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.mock-dots i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--field-border);
+}
+
+.mock-address {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--field);
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mock-ext {
+  display: inline-flex;
+  padding: 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+}
+
+.brand-tile.mini {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+}
+
+.brand-tile.mini svg {
+  width: 11px;
+  height: 14px;
+}
+
+.brand-tile.big {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+}
+
+.brand-tile.big svg {
+  width: 24px;
+  height: 30px;
+}
+
+.mock-page {
+  position: relative;
+  min-height: 440px;
+  padding: clamp(16px, 4vw, 40px);
+}
+
+.mock-signin {
+  max-width: 360px;
+  box-shadow: none;
+}
+
+.mock-signin .ui-field {
+  color: var(--text);
+}
+
+button.ui-menu-item {
+  width: 100%;
+  border: 0;
+  text-align: left;
+}
+
+.mock-submit {
+  margin-top: 6px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--text);
+  color: var(--ground);
+  font-weight: 600;
+}
+
+.mock-popup {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  width: min(340px, calc(100% - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--floating);
+  box-shadow: var(--shadow-floating);
+}
+
+.mock-popup-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mock-popup-head b {
+  flex: 1 1 auto;
+}
+
+.mock-label {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+.mock-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--inset);
+}
+
+.mock-gen {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--inset);
+}
+
+.mock-gen .demo-value {
+  font-size: 16px;
+}
+
+.mock-gen .demo-btn {
+  align-self: flex-start;
+}
+
+.mock-note {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.mock-tabs {
+  display: flex;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.mock-tabs > * {
+  flex: 1 1 0;
+  padding: 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.mock-search {
+  flex: 1 1 200px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--field-border);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.mock-push {
+  margin-left: auto;
+}
+
+.mock .demo-body,
+.mock .demo-msp {
+  min-height: 440px;
+}
+
+.mock .demo-list {
+  max-height: none;
+}
+
+.mock-empty {
+  margin: auto;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.mock-history {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--inset);
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.mock-health {
+  flex: 8 1 600px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.mock-health .ui {
+  max-width: none;
+  box-shadow: none;
+}
+
+main.wide .mock h3 {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  font-weight: 640;
+}
+
+.mock-lock {
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.mock-lock .ui-field {
+  width: min(320px, 100%);
+}
+
+.mock-lock .demo-btn.primary {
+  height: 42px;
+  padding: 0 20px;
+  font-size: 15px;
+}
+
+.mock-desk {
+  min-height: 380px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 20px;
+}
+
+.mock-desk > .ui {
+  flex: 1 1 260px;
+  box-shadow: none;
+}
+
+.mock-desk > .ui-approve {
+  border: 1px solid var(--line);
+}
+
+.ui-buttons > * {
+  flex: 1 1 0;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--field-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.ui-buttons button.go {
+  background: var(--brand);
+  border-color: transparent;
+  color: var(--on-brand);
+}
+
+.mock-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.mock-grid {
+  position: relative;
+  min-height: 420px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-content: start;
+  gap: 16px;
+  padding: 20px;
+}
+
+.mock-panel {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.mock-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.mock-msp {
+  position: relative;
+}
+
+.mock-dialog {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 0.3);
+}
+
+.mock-dialog-card {
+  width: min(380px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--floating);
+  box-shadow: var(--shadow-floating);
+}
+
+.mock-dialog-title {
+  font-size: 18px;
+  font-weight: 640;
+}
+
+.mock-select {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--field-border);
+  font-size: 14px;
+}
+
+.mock-select span:last-child {
+  color: var(--muted);
+  text-align: right;
+}
+
+.mock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.mock-actions.start {
+  justify-content: flex-start;
+}
+
+.mock-code {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--inset);
+  color: var(--label);
+  font: 12px/1.5 var(--mono);
+  overflow-wrap: anywhere;
+}
+
+span.demo-row {
+  border-top: 1px solid var(--line);
 }
 
 /* ======================================================================
