@@ -35,7 +35,7 @@ jobs:
     name: Take the screenshots
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -72,7 +72,10 @@ jobs:
       - name: Install test dependencies
         working-directory: e2e
         run: sudo apt-get install -y --no-install-recommends libpq5 && npm ci --no-audit --no-fund && npx playwright install --with-deps chromium
+      # Under the job's limit, so a hang fails this step and the report below
+      # still uploads.
       - name: Take the screenshots
+        timeout-minutes: 45
         working-directory: e2e
         env:
           KK_SERVER_BIN: ${{ github.workspace }}/build/server/vaultwarden
@@ -83,7 +86,7 @@ jobs:
           KK_CORE_INTEROP: ${{ github.workspace }}/build/core/interop
           KK_CLI: ${{ github.workspace }}/build/cli/passbundle
           KK_SERVER_LOG: ${{ github.workspace }}/e2e/server-log/server.log
-        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" "$KK_AGENT"/* "$KK_CORE_INTEROP" "$KK_CLI" && npx playwright test -c playwright.site.config.ts
+        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" "$KK_AGENT"/* "$KK_CORE_INTEROP" "$KK_CLI" && npx playwright test -c playwright.site.config.ts --trace=retain-on-failure
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: site-shots
