@@ -1,295 +1,185 @@
 <!--
-title: PassBundle: the open-source password manager for MSPs, businesses, and you
-description: Run every client's passwords from one console, roll PassBundle out from the tools you already use, and give everyone at home a free, end-to-end encrypted vault. Open source.
+title: PassBundle: the open-source password manager for you, your family, and your clients
+description: One password to remember. PassBundle fills in your logins, passkeys, and cards on every device, free, end-to-end encrypted, and open source, with plans for families, businesses, and MSPs.
 layout: wide
+script: demo
 -->
-<section class="hero">
-  <span class="eyebrow">Open source. End-to-end encrypted.</span>
-  <h1>The password manager built for the people who run IT.</h1>
-  <p class="lead">
-    Run every client's passwords from one console, roll PassBundle out from the tools you already
-    use, and get anyone back in when they forget their master password. For everyone at home, it's
-    free for every password and every device.
-  </p>
-  <div class="actions">
-    <a class="button primary" href="/msp/">PassBundle for MSPs</a>
-    <a class="button" href="/download/">Get PassBundle, free</a>
-  </div>
-  <p class="fine">In Chrome, Edge, and Firefox, on Windows, Mac, Linux, and Android, and in any browser on the web.</p>
-  <div class="showcase">
-    <div class="window">
-      <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span>vault.passbundle.com</span></div>
-      <x-shot name="web-vault" frame="desktop" alt="The PassBundle web vault: a family's logins, cards, and notes, each with its colored tile, and a login open beside the list" eager></x-shot>
+<section class="home-hero">
+  <h1>One password to remember. PassBundle handles the rest.</h1>
+  <div class="home-hero-side">
+    <p class="lead">Free on every device. Your passwords, passkeys, and cards are encrypted on your device before they go anywhere, so only you can read them.</p>
+    <div class="actions">
+      <a class="button primary" href="/download/">Get PassBundle, free</a>
+      <a class="button" href="#demo">Try the demo</a>
     </div>
-    <x-shot name="popup-vault" frame="popup" class="popup" alt="The PassBundle browser extension, with the logins for the site in the current tab ready to fill" eager></x-shot>
   </div>
 </section>
 
-<section class="tight">
-  <div class="facts">
-    <div><strong>Open source</strong><span>Every line is public, under the GPL and AGPL.</span></div>
-    <div><strong>End-to-end encrypted</strong><span>Your vault is locked on your device. We never hold a key.</span></div>
-    <div><strong>Free for people</strong><span>Every password and every device, for as long as you like.</span></div>
-    <div><strong>Hosted or yours</strong><span>Use our service, or run the server yourself.</span></div>
+<section class="home-demo" id="demo" aria-label="Try PassBundle">
+  <div class="demo" data-demo>
+    <x-shot name="web-vault" frame="desktop" alt="The PassBundle web vault: a family's logins, cards, and notes, with a login open beside the list" eager></x-shot>
   </div>
+  <p class="fine">This demo runs in your browser with made-up data. Nothing you type leaves the page.</p>
 </section>
 
-<section class="snug">
-  <div class="head center">
-    <h2>One app, wherever you need it</h2>
-    <p class="lead">The same PassBundle your clients' people use at work, a company's own IT team runs, and your family uses at home.</p>
-  </div>
-  <div class="grid three paths">
-    <a class="card" href="/msp/">
-      <x-tile icon="console" tone="brand" class="large"></x-tile>
-      <h3>For MSPs</h3>
-      <p>Every client in one console, with policies, templates, and password health for all of them, rollout from your RMM, and one pool of seats across every client.</p>
-      <span class="more">PassBundle for MSPs</span>
+<section class="home-doors" aria-label="Plans">
+  <div class="doors">
+    <a class="door" href="#personal">
+      <span class="door-who">For you</span>
+      <span class="door-price">Free</span>
+      <span class="door-what">Every password on every device, for as long as you like.</span>
+      <span class="more">What you get</span>
     </a>
-    <a class="card" href="/business/">
-      <x-tile icon="people" tone="turquoise" class="large"></x-tile>
-      <h3>For your business</h3>
-      <p>For companies with their own IT. Sensible policies from day one, rollout from the tools you already use, and account recovery when someone forgets their master password.</p>
+    <a class="door" href="/pricing/#personal">
+      <span class="door-who">For families</span>
+      <span class="door-price">{{prices.families}} a year</span>
+      <span class="door-what">Shared folders and Premium for up to {{prices.familiesPeople}} people.</span>
+      <span class="more">Families plan</span>
+    </a>
+    <a class="door" href="/business/">
+      <span class="door-who">For businesses</span>
+      <span class="door-price">{{prices.business}} a person</span>
+      <span class="door-what">Sensible policies from day one, rolled out with the tools you already use.</span>
       <span class="more">PassBundle for business</span>
     </a>
-    <a class="card" href="#personal">
-      <x-tile icon="key" tone="sapphire" class="large"></x-tile>
-      <h3>For you and your family</h3>
-      <p>Free for every password and every device. Families adds shared vaults and Premium for up to {{prices.familiesPeople}} people.</p>
-      <span class="more">What you get, free</span>
+    <a class="door" href="/msp/">
+      <span class="door-who">For MSPs</span>
+      <span class="door-price">{{prices.msp1}} a seat</span>
+      <span class="door-what">Every client in one console, and one pool of seats across all of them.</span>
+      <span class="more">PassBundle for MSPs</span>
     </a>
   </div>
 </section>
 
-<section>
-  <div class="spotlight">
-    <div class="split">
-      <div>
-        <span class="eyebrow">For MSPs and IT providers</span>
-        <h2>Every client, one console</h2>
-        <p class="lead">
-          Add a client in one step, set your policies once for all of them, and see each client's
-          members, expiring credentials, and passwords to fix, side by side.
-        </p>
-        <ul class="checks">
-          <li>Account recovery on from day one, so a forgotten master password isn't a lost vault</li>
-          <li>People added and removed from Microsoft Entra ID, automatically</li>
-          <li>Your staff are free, and every client shares one pool of seats</li>
-        </ul>
-        <div class="actions">
-          <a class="button primary" href="/msp/">See the MSP console</a>
-          <a class="button" href="/pricing/#msp">MSP pricing</a>
-        </div>
-      </div>
-      <div class="window">
-        <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span>vault.passbundle.com</span></div>
-        <x-shot name="msp-console" frame="desktop" alt="The PassBundle MSP console: five clients with their members, expiring items, and weak, reused, and exposed passwords"></x-shot>
+<section class="home-rows" id="personal">
+  <div class="row">
+    <div class="row-text">
+      <h2>Sign in without typing.</h2>
+      <p class="lead">Logins, passkeys, cards, and addresses, filled in your browser and on your Android phone, and only on the sites they belong to.</p>
+    </div>
+    <div class="stage" role="img" aria-label="A bank's sign-in page, with PassBundle offering the login saved for it under the username field">
+      <div class="ui ui-signin">
+        <span class="ui-site">bank.example</span>
+        <span class="ui-title">Sign in to online banking</span>
+        <span class="ui-label">Username</span>
+        <span class="ui-field focus">sam.rivera</span>
+        <span class="ui-menu">
+          <span class="ui-menu-item"><x-tile icon="key" tone="sapphire" class="small"></x-tile><span class="ui-who"><b>Hometown Credit Union</b><span>sam.rivera</span></span><span class="ui-key">Enter</span></span>
+        </span>
+        <span class="ui-label">Password</span>
+        <span class="ui-field"></span>
       </div>
     </div>
   </div>
-</section>
 
-<section class="tight">
-  <div class="head">
-    <h2>What MSPs get, for every client</h2>
-    <p class="lead">Everything a client's admins expect, and the tools to run all of them at once.</p>
-  </div>
-  <div class="features">
-    <div class="feature">
-      <x-tile icon="console" tone="brand"></x-tile>
-      <h3>One console for every client</h3>
-      <p>Add clients, staff, policies, and templates in one place, and open any client's admin console with the same sign-in.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="lifebuoy" tone="turquoise"></x-tile>
-      <h3>Account recovery, on by default</h3>
-      <p>Every new client starts with it, and people are enrolled as they join, so you can reset a forgotten master password with the vault intact.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="people" tone="sapphire"></x-tile>
-      <h3>Provisioning from Entra ID</h3>
-      <p>People assigned in a client's Microsoft Entra ID are invited, and people turned off there lose access, without anyone lifting a finger.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="signin" tone="aquamarine"></x-tile>
-      <h3>Sign in with Entra <span class="chip soon">Coming soon</span></h3>
-      <p>Each client's people sign in with their own Microsoft 365 account.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="pulse" tone="onyx"></x-tile>
-      <h3>Events to your security tools</h3>
-      <p>A client's events as they happen, or every client's in one feed, to Microsoft Sentinel, syslog over TLS, or a signed webhook.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="shield" tone="emerald"></x-tile>
-      <h3>Passwords to fix, per client</h3>
-      <p>Exposed, weak, and reused passwords for every client, side by side, checked without any password leaving your browser.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="folder" tone="topaz"></x-tile>
-      <h3>Folders with permissions</h3>
-      <p>Say exactly what each person or group can do in a shared folder: see passwords, edit, delete, share, export, and more.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="history" tone="amethyst"></x-tile>
-      <h3>Item history</h3>
-      <p>Every edit keeps the version before, with who saved it. See what changed, and restore an earlier version in a click.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="server" tone="garnet"></x-tile>
-      <h3>Run it yourself</h3>
-      <p>Use our hosted service, or run the open-source server on your own hardware, for one client or all of them.</p>
-    </div>
-  </div>
-</section>
-
-<section id="personal">
-  <div class="head center">
-    <span class="eyebrow">For you and your family</span>
-    <h2>Everything a password manager should do. Free.</h2>
-    <p class="lead">Unlimited passwords, unlimited devices, and sync between them. No trial, no ads, and no limit that runs out next month. And a few things the others don't do.</p>
-  </div>
-  <div class="features">
-    <div class="feature">
-      <x-tile icon="fill" tone="sapphire"></x-tile>
-      <h3>Autofill that gets it right</h3>
-      <p>Logins, cards, and addresses filled in with a click. Right-click any field to choose what goes in it, or tell PassBundle never to fill it. A one-time code is never saved as your password.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="passkey" tone="sapphire"></x-tile>
-      <h3>Passkeys</h3>
-      <p>Save passkeys as you create them and sign in with them in the browser and on Android, right next to your passwords.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="layers" tone="topaz"></x-tile>
-      <h3>A template for everything</h3>
-      <p>Wi-Fi networks, software licenses, servers, routers, memberships, and more, with the right fields ready to fill. Make your own templates too.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="clock" tone="onyx"></x-tile>
-      <h3>Reminders before things expire</h3>
-      <p>Give a passport, card, or license its expiration date, and PassBundle reminds you 30 days, a week, and a day before. The reminders come from your own device.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="shield" tone="emerald"></x-tile>
-      <h3>A health check for your passwords</h3>
-      <p>See which passwords are weak, reused, or already in a known breach, and fix them one by one. Only a scrambled fragment of a password is ever checked, never the password.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="send" tone="aquamarine"></x-tile>
-      <h3>Share safely with Send</h3>
-      <p>Send a password or a note through an encrypted link that expires when you say. Add a password to the link, and limit how many times it opens.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="face" tone="turquoise"></x-tile>
-      <h3>Unlock with your face or finger</h3>
-      <p>Windows Hello on Windows, and your fingerprint or face on Android, instead of typing your master password every time.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="people" tone="amethyst"></x-tile>
-      <h3>Legacy contacts</h3>
-      <p>Name someone you trust to reach your vault if something happens to you. They ask, you have days to say no, and only then do they get in. Free in every plan.</p>
-    </div>
-    <div class="feature">
-      <x-tile icon="import" tone="ruby"></x-tile>
-      <h3>Move in, in minutes</h3>
-      <p>Bring your passwords from your browser or from 1Password, LastPass, and dozens of other apps. <a href="/switch/">See how</a>.</p>
-    </div>
-  </div>
-</section>
-
-<section class="tight">
-  <div class="split">
-    <div>
-      <span class="eyebrow">Families</span>
-      <h2>Share with the people you live with</h2>
-      <p class="lead">
-        The Wi-Fi password, the streaming login, the bank everyone pays bills from. Families gives
-        up to {{prices.familiesPeople}} people Premium and shared vaults for the things you all use.
-      </p>
-      <ul class="checks">
-        <li>Shared vaults for the whole family, or just the grown-ups</li>
-        <li>An organizer adds and removes people</li>
-        <li>Everyone keeps a private vault of their own</li>
-      </ul>
+  <div class="row">
+    <div class="row-text">
+      <h2>Share with the people you live with.</h2>
+      <p class="lead">The Wi-Fi, the streaming login, the bank everyone pays bills from. Families gives up to {{prices.familiesPeople}} people shared folders and Premium, and everyone keeps a private vault of their own.</p>
       <p><a class="more" href="/pricing/#personal">{{prices.families}} a year for the family</a></p>
     </div>
-    <div class="pair">
-      <x-shot name="popup-item" frame="popup" alt="A login in the PassBundle extension, with its username, password, and two-step code, each with a copy button"></x-shot>
-      <x-shot name="popup-generator" frame="popup" alt="The PassBundle password generator, making a strong password"></x-shot>
+    <div class="stage" role="img" aria-label="A shared folder called Bills: Sam owns it, Alex can edit it, and Jordan can only view it">
+      <div class="ui ui-list">
+        <span class="ui-list-head"><x-tile icon="folder" tone="brand"></x-tile><span class="ui-name"><b>Bills</b><small>Shared folder, 14 items</small></span></span>
+        <span class="ui-list-row"><span class="avatar a1">SR</span><span class="ui-name">Sam Rivera</span><span class="badge">Owner</span></span>
+        <span class="ui-list-row"><span class="avatar a2">AR</span><span class="ui-name">Alex Rivera</span><span class="badge">Can edit</span></span>
+        <span class="ui-list-row"><span class="avatar a3">JR</span><span class="ui-name">Jordan Rivera</span><span class="badge">Can view</span></span>
+      </div>
     </div>
+  </div>
+
+  <div class="row">
+    <div class="row-text">
+      <h2>Knows when something is wrong.</h2>
+      <p class="lead">PassBundle finds weak, reused, and breached passwords and helps you fix them one by one. Only a scrambled fragment of a password is ever checked, never the password. It reminds you before a passport or card expires, too.</p>
+    </div>
+    <div class="stage" role="img" aria-label="Three items that need attention: a patient portal password found in a data breach, a password used twice, and a passport that expires in 12 days">
+      <div class="ui ui-list lined">
+        <span class="ui-list-row"><x-tile icon="exposed" tone="garnet"></x-tile><span class="ui-name">Dr. Okafor's patient portal</span><span class="badge bad">In a data breach</span></span>
+        <span class="ui-list-row"><x-tile icon="reused" tone="topaz"></x-tile><span class="ui-name">Water and sewer</span><span class="badge warn">Used twice</span></span>
+        <span class="ui-list-row"><x-tile icon="clock" tone="amethyst"></x-tile><span class="ui-name">Passport</span><span class="badge">Expires in 12 days</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="row-text">
+      <h2>New devices need your OK.</h2>
+      <p class="lead">Signing in on a new computer? Choose Log in with device, then approve it in PassBundle on your phone or another computer. Both show the same fingerprint phrase, so you know the request is yours.</p>
+    </div>
+    <div class="stage" role="img" aria-label="A sign-in request from Chrome on Windows, showing its fingerprint phrase, with Deny and Approve buttons">
+      <div class="ui ui-approve">
+        <x-tile icon="desktop" tone="onyx"></x-tile>
+        <span class="ui-title">Sign-in request</span>
+        <span class="ui-text">Chrome on Windows wants to open your vault.</span>
+        <span class="ui-label">Fingerprint phrase</span>
+        <span class="ui-phrase">alpine-river-tiger-ladder-ember</span>
+        <span class="ui-buttons"><span>Deny</span><span class="go">Approve</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="also">
+    <h2>Also in PassBundle</h2>
+    <ul>
+      <li><strong>Passkeys</strong><span>Save them as you create them, and sign in with them in the browser and on Android.</span></li>
+      <li><strong>Send</strong><span>Share a password or a note through an encrypted link that expires when you say.</span></li>
+      <li><strong>A template for everything</strong><span>Wi-Fi, servers, software licenses, and memberships, with the right fields ready to fill.</span></li>
+      <li><strong>Unlock with your face or finger</strong><span>Windows Hello on Windows, and your fingerprint or face on Android.</span></li>
+      <li><strong>Legacy contacts</strong><span>Name someone you trust. If they ask for your vault, you have days to say no before they get in.</span></li>
+      <li><strong>Move in, in minutes</strong><span>Bring your passwords from your browser, 1Password, LastPass, and dozens of other apps. <a href="/switch/">See how</a>.</span></li>
+    </ul>
   </div>
 </section>
 
-<section>
-  <div class="head center">
-    <h2>Light or dark, like your device</h2>
-    <p class="lead">PassBundle follows your device's light or dark mode, or keeps one you pick in Settings. Every kind of item has its own color, so you find it at a glance.</p>
-  </div>
-  <div class="pair">
-    <x-shot name="popup-vault-light" frame="popup" alt="PassBundle in light mode"></x-shot>
-    <x-shot name="popup-vault-dark" frame="popup" alt="PassBundle in dark mode"></x-shot>
+<section class="band" id="msp" aria-labelledby="msp-title">
+  <div class="band-inner">
+    <div class="split-head">
+      <div>
+        <span class="eyebrow">For MSPs and IT providers</span>
+        <h2 id="msp-title">Every client, one console.</h2>
+      </div>
+      <div class="split-side">
+        <p class="lead">Add a client in one step, set your policies once for all of them, and see each client's people, expiring logins, and passwords to fix, side by side.</p>
+        <div class="actions">
+          <a class="button primary" href="/msp/">PassBundle for MSPs</a>
+          <a class="button" href="mailto:hello@passbundle.com?subject=PassBundle%20demo">Book a demo</a>
+        </div>
+      </div>
+    </div>
+    <x-shot name="msp-console" frame="desktop" class="band-shot" alt="The PassBundle MSP console: five clients with their members, expiring items, and weak, reused, and exposed passwords"></x-shot>
+    <ul class="band-facts">
+      <li><strong>Account recovery from day one</strong><span>A forgotten master password isn't a lost vault.</span></li>
+      <li><strong>Provisioning from Entra ID</strong><span>People added and removed for you, automatically.</span></li>
+      <li><strong>One pool of seats</strong><span>Your own staff are free, and every client shares the pool.</span></li>
+    </ul>
   </div>
 </section>
 
-<section class="tight">
-  <div class="head center">
-    <h2>On every device you use</h2>
-    <p class="lead">Your vault syncs between all of them, free.</p>
+<section class="home-security" aria-labelledby="security-title">
+  <div class="split-head">
+    <h2 id="security-title">Built so we can't see your passwords.</h2>
+    <div class="split-side">
+      <p class="lead">Everything in your vault is encrypted with a key made from your master password, on your device. Our servers only ever hold the encrypted result.</p>
+    </div>
   </div>
-  <div class="platforms">
-    <a href="/download/"><x-tile icon="browser" tone="sapphire" class="small"></x-tile><span>Chrome<small>Extension</small></span></a>
-    <a href="/download/"><x-tile icon="browser" tone="aquamarine" class="small"></x-tile><span>Edge<small>Extension</small></span></a>
-    <a href="/download/"><x-tile icon="browser" tone="topaz" class="small"></x-tile><span>Firefox<small>Extension</small></span></a>
-    <a href="/download/#apps"><x-tile icon="desktop" tone="onyx" class="small"></x-tile><span>Windows<small>App</small></span></a>
-    <a href="/download/#apps"><x-tile icon="laptop" tone="onyx" class="small"></x-tile><span>Mac<small>App</small></span></a>
-    <a href="/download/#apps"><x-tile icon="terminal" tone="onyx" class="small"></x-tile><span>Linux<small>App</small></span></a>
-    <a href="/download/#apps"><x-tile icon="phone" tone="emerald" class="small"></x-tile><span>Android<small>App</small></span></a>
-    <a href="{{links.vault}}"><x-tile icon="globe" tone="brand" class="small"></x-tile><span>Web vault<small>Any browser</small></span></a>
-  </div>
+  <ul class="lines">
+    <li><strong>No ads, no trackers</strong><span>And no selling data, ever.</span></li>
+    <li><strong>Open source</strong><span>All of our code is public, under the GPL and AGPL, so anyone can check it.</span></li>
+    <li><strong>Our server or yours</strong><span>Use our service, or run the open-source server yourself.</span></li>
+  </ul>
+  <p><a class="more" href="/security/">How PassBundle keeps your vault safe</a></p>
 </section>
 
-<section>
-  <div class="split flip">
-    <div>
-      <span class="eyebrow">Private by design</span>
-      <h2>Built so we can't see your passwords</h2>
-      <p class="lead">
-        Everything in your vault is encrypted with a key made from your master password, on your
-        device. Our servers only ever hold the encrypted result.
-      </p>
-      <ul class="checks">
-        <li>No ads, no trackers, and no selling data, ever</li>
-        <li>All of our code is public, so anyone can check it</li>
-        <li>Built on widely used open-source password manager apps and server, credited at the foot of every page</li>
-        <li>Your vault on our service, or on a server you run yourself</li>
-      </ul>
-      <p><a class="more" href="/security/">How PassBundle keeps your vault safe</a></p>
-    </div>
-    <div class="popup-frame">
-      <x-shot name="popup-signin" frame="popup" alt="Signing in to the PassBundle extension, which asks where your vault is: on PassBundle, or on your own server"></x-shot>
-    </div>
-  </div>
-</section>
-
-<section>
-  <div class="cta">
-    <div class="jewels" aria-hidden="true">
-      <x-tile icon="key" tone="sapphire"></x-tile>
-      <x-tile icon="note" tone="topaz"></x-tile>
-      <x-tile icon="card" tone="amethyst"></x-tile>
-      <x-tile icon="identity" tone="turquoise"></x-tile>
-      <x-tile icon="terminal" tone="onyx"></x-tile>
-      <x-tile icon="wifi" tone="aquamarine"></x-tile>
-      <x-tile icon="server" tone="garnet"></x-tile>
-      <x-tile icon="bank" tone="emerald"></x-tile>
-      <x-tile icon="license" tone="ruby"></x-tile>
-    </div>
-    <h2>Get PassBundle. It's free.</h2>
-    <p>Add it to your browser, make an account, and bring your passwords in. It takes about five minutes. Looking after clients? We'll show you the console.</p>
-    <div class="actions">
-      <a class="button primary" href="/download/">Get PassBundle</a>
-      <a class="button" href="mailto:hello@passbundle.com?subject=PassBundle%20demo">Book an MSP demo</a>
+<section class="home-get" aria-labelledby="get-title">
+  <div class="split-head">
+    <h2 id="get-title">Get PassBundle. It's free.</h2>
+    <div class="split-side">
+      <p class="lead">In Chrome, Edge, and Firefox, on Windows, Mac, Linux, and Android, and in any browser on the web.</p>
+      <div class="actions">
+        <a class="button primary" href="/download/">Get PassBundle</a>
+        <a class="button" href="{{links.vault}}">Open the web vault</a>
+      </div>
     </div>
   </div>
 </section>
