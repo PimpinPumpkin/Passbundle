@@ -7,8 +7,11 @@
    - Deep green bands where a page changes the subject (the home page's
      part for MSPs).
    - Flat tinted tiles: each kind of item keeps its color as a soft tint
-     with the glyph in that color, and the logo is a solid emerald tile with
-     the two-tone name.
+     with the glyph in that color. The logo's emerald tile is the one glossy
+     tile, as the app icon, beside the two-tone name.
+   - Light or dark follows the device, or the visitor's pick from the
+     header's button: build.mjs scopes every dark-mode block below so it
+     answers to both (theme.mjs).
    - Google Sans Flex, self-hosted (its license is in fonts/OFL.txt).
 
    Every text color passes WCAG AA on what it sits on, in both themes. No
@@ -302,8 +305,9 @@ mark.todo {
 }
 
 /* ======================================================================
-   The logo: the solid emerald tile with the lock, then "pass" bold and
-   "bundle" lighter, in lower case.
+   The logo: the emerald tile with the lock, the one glossy tile on the site
+   (a soft sheen, a light top edge, a shaded bottom edge, as the app icon),
+   then "pass" bold and "bundle" lighter, in lower case.
    ====================================================================== */
 .brand {
   display: inline-flex;
@@ -321,7 +325,21 @@ mark.todo {
   height: 34px;
   border-radius: 10px;
   flex: none;
-  background: #0e7a5a;
+  background:
+    radial-gradient(120% 90% at 28% 18%, rgb(255 255 255 / 0.32), rgb(255 255 255 / 0) 58%),
+    #0e7a5a;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    inset 0 -2px 3px rgb(0 0 0 / 0.2),
+    0 2px 6px rgb(14 19 17 / 0.25);
+}
+
+@media (prefers-color-scheme: dark) {
+  .brand-tile {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.35),
+      inset 0 -2px 3px rgb(0 0 0 / 0.2);
+  }
 }
 
 .brand-tile svg {
@@ -462,6 +480,51 @@ mark.todo {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Light or dark (theme.mjs). Hidden until its script runs; a moon in light
+   mode, a sun in dark mode. It stays in the bar at every width. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid var(--field-border);
+  background: var(--field);
+  color: var(--label);
+  cursor: pointer;
+}
+
+.theme-toggle[hidden] {
+  display: none;
+}
+
+.theme-toggle:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.theme-toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.theme-toggle .sun,
+:root[data-mode="dark"] .theme-toggle .moon {
+  display: none;
+}
+
+:root[data-mode="dark"] .theme-toggle .sun {
+  display: block;
 }
 
 .menu {
@@ -3154,6 +3217,15 @@ main.doc > .paper {
    Narrower screens
    ====================================================================== */
 @media (max-width: 1100px) {
+  .site-header .bar .theme-toggle {
+    margin-left: auto;
+  }
+
+  .site-header .bar .header-actions,
+  .site-header .bar .menu {
+    margin-left: 0;
+  }
+
   .nav,
   .header-actions .login {
     display: none;
