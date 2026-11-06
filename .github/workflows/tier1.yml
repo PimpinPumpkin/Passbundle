@@ -20,6 +20,11 @@ on:
       server-ref:
         type: string
         default: keykeeper
+      # The website's screenshots (site-shots.yml) need the builds, not the
+      # end-to-end runs, so they skip those.
+      skip-tests:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -519,6 +524,7 @@ jobs:
   e2e:
     name: End-to-end (${{ matrix.part }})
     needs: [refs, server, clients, chrome-extension, agent-test-build, core-interop, cli]
+    if: ${{ !inputs.skip-tests }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # Six machines share the suite, each with its own servers: the API
@@ -602,6 +608,7 @@ jobs:
   api-postgres:
     name: API tests on PostgreSQL (${{ matrix.shard }}/3)
     needs: [refs, server, clients]
+    if: ${{ !inputs.skip-tests }}
     runs-on: ubuntu-latest
     # The second shard took 16 to 20 minutes once single sign-on's and
     # signing in with a device's tests joined it, and a slow runner ran out.
