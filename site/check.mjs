@@ -22,6 +22,7 @@ const launch = process.argv.includes("--launch");
 // and the pages the site is built around.
 const REQUIRED = [
   "/",
+  "/personal/",
   "/business/",
   "/msp/",
   "/pricing/",

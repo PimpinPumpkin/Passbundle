@@ -146,8 +146,9 @@ function expand(html, file) {
 }
 
 const NAV = [
-  ["/msp/", "For MSPs"],
+  ["/personal/", "Personal"],
   ["/business/", "Business"],
+  ["/msp/", "For MSPs"],
   ["/tour/", "Tour"],
   ["/pricing/", "Pricing"],
   ["/download/", "Download"],
@@ -218,9 +219,9 @@ ${kind === "doc" ? `<div class="paper">\n${expand(body.trim(), file)}\n</div>` :
     </div>
     <nav aria-label="Product">
       <h2>Product</h2>
-      <a href="/msp/">For MSPs</a>
+      <a href="/personal/">Personal and families</a>
       <a href="/business/">Business</a>
-      <a href="/#personal">Personal and families</a>
+      <a href="/msp/">For MSPs</a>
       <a href="/tour/">Tour</a>
       <a href="/pricing/">Pricing</a>
       <a href="/download/">Download</a>

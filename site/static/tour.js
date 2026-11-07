@@ -9,8 +9,10 @@
 //   data-place    where the tip sits: top, bottom, left, or right
 //   data-anchor   optional: the [data-x] the tip sits beside, when that
 //                 isn't the target (so it doesn't cover what it explains)
-// Nothing is stored or sent anywhere. No innerHTML: the tip's words are
-// copied from the step's own nodes.
+// The Tips switch hides the tips and rings and leaves a slim Back / Next
+// bar under the screen. The browser remembers "off" on the device (the
+// privacy policy says so); nothing is sent anywhere. No innerHTML: the
+// tip's words are copied from the step's own nodes.
 (() => {
   "use strict";
 
@@ -18,6 +20,17 @@
   if (parts.length === 0) return;
   const tabs = [...document.querySelectorAll("[data-tour-tab]")];
   const NARROW = 720;
+  // How far the ring reaches past its element: outline-offset, width, and
+  // the pulse.
+  const RING = 9;
+  const main = parts[0].parentElement;
+
+  let tips = true;
+  try {
+    tips = localStorage.getItem("tourTips") !== "off";
+  } catch {
+    // Storage blocked: tips stay on.
+  }
 
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(n, Math.max(lo, hi)));
 
@@ -57,15 +70,46 @@
     let target = null;
     const following = parts[index + 1];
 
+    // On a narrow screen, a target can sit partly outside a strip that
+    // scrolls sideways (a sidebar, a table): scroll the strip, not the page.
+    function reveal(el) {
+      for (let a = el.parentElement; a && a !== frame; a = a.parentElement) {
+        const s = getComputedStyle(a);
+        const across = /auto|scroll/.test(s.overflowX) && a.scrollWidth > a.clientWidth;
+        const down = /auto|scroll/.test(s.overflowY) && a.scrollHeight > a.clientHeight;
+        if (!across && !down) continue;
+        const r = el.getBoundingClientRect();
+        const c = a.getBoundingClientRect();
+        if (across && r.left - RING < c.left) a.scrollLeft -= c.left - r.left + RING;
+        else if (across && r.right + RING > c.right) a.scrollLeft += r.right - c.right + RING;
+        if (down && r.top - RING < c.top) a.scrollTop -= c.top - r.top + RING;
+        else if (down && r.bottom + RING > c.bottom) a.scrollTop += r.bottom - c.bottom + RING;
+      }
+    }
+
+    // Whether something between the target and the frame cuts off the
+    // ring (a screen's rounded, clipped edge): then it's drawn inside.
+    function clipped(el) {
+      const r = el.getBoundingClientRect();
+      for (let a = el.parentElement; a && a !== frame; a = a.parentElement) {
+        const s = getComputedStyle(a);
+        if (s.overflowX === "visible" && s.overflowY === "visible") continue;
+        const c = a.getBoundingClientRect();
+        if (r.left - RING < c.left || r.right + RING > c.right || r.top - RING < c.top || r.bottom + RING > c.bottom) {
+          return true;
+        }
+      }
+      return false;
+    }
+
     function go(i, fromTarget) {
       at = clamp(i, 0, steps.length - 1);
       const step = steps[at];
       const words = (step.dataset.state || "").split(/\s+/).filter(Boolean);
       for (const el of stage.querySelectorAll("[data-show]")) el.hidden = !words.includes(el.dataset.show);
       for (const el of stage.querySelectorAll("[data-hide]")) el.hidden = words.includes(el.dataset.hide);
-      target?.classList.remove("tour-focus");
+      target?.classList.remove("tour-focus", "inset");
       target = stage.querySelector(`[data-x="${step.dataset.target}"]`);
-      target?.classList.add("tour-focus");
       count.textContent = `${at + 1} of ${steps.length}`;
       text.replaceChildren(...[...step.childNodes].map((n) => n.cloneNode(true)));
       back.hidden = at === 0;
@@ -83,7 +127,12 @@
     function place() {
       if (part.hidden) return;
       const step = steps[at];
-      if (!target || frame.clientWidth < NARROW) {
+      if (target) {
+        reveal(target);
+        target.classList.toggle("tour-focus", tips);
+        target.classList.toggle("inset", tips && clipped(target));
+      }
+      if (!target || !tips || frame.clientWidth < NARROW) {
         bubble.classList.add("docked");
         bubble.style.left = "";
         bubble.style.top = "";
@@ -135,6 +184,30 @@
 
     return { id: part.id, go, place, started: false };
   });
+
+  // The Tips switch, beside the parts' tabs.
+  const tabsNav = document.querySelector(".tour-tabs");
+  const switcher = h(
+    "button",
+    { type: "button", class: "tour-tips", "aria-pressed": String(tips) },
+    "Tips",
+    h("span", { class: "tour-tips-switch", "aria-hidden": "true" }),
+  );
+  tabsNav?.after(switcher);
+  function setTips(on) {
+    tips = on;
+    switcher.setAttribute("aria-pressed", String(on));
+    main.dataset.tips = on ? "on" : "off";
+    try {
+      if (on) localStorage.removeItem("tourTips");
+      else localStorage.setItem("tourTips", "off");
+    } catch {
+      // Storage blocked: the choice lasts until the page closes.
+    }
+    tours.forEach((t) => t.place());
+  }
+  switcher.addEventListener("click", () => setTips(!tips));
+  main.dataset.tips = tips ? "on" : "off";
 
   function show(id, fromButton) {
     for (const part of parts) part.hidden = part.id !== id;
