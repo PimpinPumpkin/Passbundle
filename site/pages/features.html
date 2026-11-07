@@ -7,7 +7,7 @@ layout: wide
   <span class="eyebrow">Features</span>
   <h1>The parts other password managers leave to you.</h1>
   <div class="home-hero-side">
-    <p class="lead">Everything you'd expect is here: autofill, passkeys, sharing, two-step login, and reports. These are the things we built because nobody else had, from filling the odd field on your bank's sign-in page to rolling out a whole office in one line.</p>
+    <p class="lead">Everything you'd expect is here: autofill, passkeys, sharing, two-step login, and reports. These are the things we built because nobody else had, from filling the odd field on your bank's sign-in page to rolling out a whole office with one command.</p>
     <div class="actions">
       <a class="button primary" href="/download/">Get PassBundle, free</a>
       <a class="button" href="/#demo">Try the demo</a>
@@ -45,8 +45,8 @@ layout: wide
   <div class="row flip">
     <div class="row-text">
       <span class="eyebrow">Rollout</span>
-      <h2>One line sets up every computer, browsers included.</h2>
-      <p class="lead">Run the install command from your RMM, Intune, or group policy. It installs the extension in Chrome and Edge with your server filled in, turns off the browsers' own password saving, and puts each person in the right organization when they sign up.</p>
+      <h2>One command sets up every computer, browsers included.</h2>
+      <p class="lead">Run the install command, with our install script, from your RMM, Intune, or group policy. It turns off the browsers' own password saving, and once the extension is in the Chrome and Edge stores, it installs it with your server filled in and puts each person in the right organization when they sign up.</p>
       <ul class="checks">
         <li>Turns saving off without deleting anything, so people can import first</li>
         <li>Card and address autofill too, if you choose</li>
@@ -92,7 +92,7 @@ layout: wide
       <ul class="checks">
         <li>Tokens expire, can be limited to your networks, and stop the moment you revoke them</li>
         <li>End-to-end encrypted: the server can't read what a token reads</li>
-        <li>Nothing to install: Windows PowerShell 5.1 or PowerShell 7</li>
+        <li>Nothing to install, on Windows PowerShell 5.1 or PowerShell 7. It isn't code-signed yet, so computers that run only signed scripts refuse it</li>
       </ul>
     </div>
     <div class="stage" role="img" aria-label="A script token that reads the Domain admin login in Linden Realty, with its last read and when it expires">
@@ -112,10 +112,10 @@ layout: wide
       <li><strong>Site fixes</strong><span>Fix a site with the fill picker and, if you like, share the fix. Once three people make the same one, it fills for everyone on the server; MSPs can apply their staff's fixes to every client.</span></li>
       <li><strong>Folders down to the capability</strong><span>Let a team see a folder's items without their passwords, or add to a folder without changing it.</span></li>
       <li><strong>Item history</strong><span>Every edit keeps the version before, with who saved it, and you can restore it.</span></li>
-      <li><strong>Templates and expiration dates</strong><span>Wi-Fi, servers, licenses, certificates, and your own, with reminders before something expires.</span></li>
+      <li><strong>Templates and expiration dates</strong><span>Wi-Fi, servers, licenses, certificates, and your own, with reminders from the browser extension before something expires.</span></li>
       <li><strong>One-time codes stay codes</strong><span>A code typed into a sign-in page is never saved as your password.</span></li>
-      <li><strong>Events to your security tools</strong><span>Microsoft Sentinel, syslog over TLS, or a signed webhook, from one client or every client at once.</span></li>
-      <li><strong>Private by default on the desktop</strong><span>The desktop app keeps itself out of screenshots and screen sharing unless you allow them.</span></li>
+      <li><strong>Events to your security tools</strong><span>Microsoft Sentinel, syslog over TLS, or a signed webhook, from one client or every client at once. Not yet tried with Sentinel, Huntress, or Blumira themselves.</span></li>
+      <li><strong>Private by default on the desktop</strong><span>On Windows and Mac, the desktop app keeps itself out of screenshots and screen sharing unless you allow them.</span></li>
     </ul>
   </div>
 </section>
@@ -124,7 +124,7 @@ layout: wide
   <div class="split-head page-head">
     <h2 id="everything-title">And everything you'd expect.</h2>
     <div class="split-side">
-      <p class="lead">Passkeys, autofill in the browser and on Android, the password generator, every two-step login method, weak, reused, and exposed password reports, legacy contacts, Send, unlock with Windows Hello or your fingerprint, and imports from about 70 other apps.</p>
+      <p class="lead">Passkeys, autofill in the browser and on Android, the password generator, two-step login with an authenticator app, a security key, or email, weak, reused, and exposed password reports, legacy contacts, Send, fingerprint or face unlock on Android, and imports from about 70 other apps.</p>
       <p><a class="more" href="/pricing/#compare">Every feature, plan by plan</a></p>
     </div>
   </div>
@@ -134,12 +134,12 @@ layout: wide
   <div class="split-head page-head">
     <h2 id="next-title">Coming next</h2>
     <div class="split-side">
-      <p class="lead">Built into the plan, not built yet.</p>
+      <p class="lead">In the plan and not built yet, or built and not yet checked for real.</p>
     </div>
   </div>
   <ul class="lines">
     <li><strong>Browser extensions report</strong><span>Every other extension installed on your computers and what it can read, with an alert when one with broad access appears.</span></li>
     <li><strong>Import on its own</strong><span>The desktop app brings in the browsers' saved passwords after you sign in, with no export file, once it's signed for Windows and Mac.</span></li>
-    <li><strong>Sign in with Microsoft Entra ID</strong><span>Built, and being checked against real Microsoft 365 tenants.</span></li>
+    <li><strong>Sign in with Microsoft Entra ID</strong><span>Built, and not yet checked with a real Microsoft 365 tenant.</span></li>
   </ul>
 </section>

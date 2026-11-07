@@ -9,11 +9,11 @@ layout: wide
   <div class="home-hero-side">
     <p class="lead">PassBundle comes set up the way a business needs it. Roll it out with the tools you already use, people join without anyone clicking Confirm, and you can get someone back in when they forget their master password.</p>
     <div class="actions">
-      <a class="button primary" href="{{links.signup}}">Start a {{prices.trialDays}}-day trial</a>
-      <a class="button" href="mailto:hello@passbundle.com?subject=PassBundle%20for%20business">Talk to us</a>
+      <a class="button primary" href="/#demo">Try the demo</a>
+      <a class="button" href="/contact/">Talk to us</a>
     </div>
   </div>
-  <p class="fine">{{prices.business}} per person per month. No card for the trial.</p>
+  <p class="fine">{{prices.business}} per person per month, with a {{prices.trialDays}}-day trial and no card, once paid plans start at launch. Until then, there's nothing to buy.</p>
 </section>
 
 <section class="page-shot" aria-label="The admin console">
@@ -25,7 +25,7 @@ layout: wide
 <section class="flow" aria-label="The basics">
   <ul class="lines">
     <li><strong>Set up from the start</strong><span>Account recovery, strong master passwords, one work account per person, and shared folders for everyone and for admins are on before anyone joins.</span></li>
-    <li><strong>No confirm step</strong><span>Invite someone, or let them join from the extension your rollout installed, and they're in. Your owners get an email saying who joined.</span></li>
+    <li><strong>No confirm step</strong><span>Invite someone and they're in, with nobody clicking Confirm. Your owners get an email saying who joined.</span></li>
     <li><strong>Forgotten master passwords</strong><span>With account recovery, an admin can reset a member's master password and the vault comes back intact. Everyone is told about it when they join.</span></li>
   </ul>
 </section>
@@ -35,9 +35,9 @@ layout: wide
     <div class="row-text">
       <span class="eyebrow">Rollout</span>
       <h2>Every computer, in an afternoon.</h2>
-      <p class="lead">Your organization's Settings page has an install command: one PowerShell line that sets up a Windows computer. Run it from Intune, group policy, or any RMM.</p>
+      <p class="lead">Your organization's Settings page has an install command: one PowerShell line that runs our install script on a Windows computer. Run it from Intune, group policy, or any RMM.</p>
       <ul class="checks">
-        <li>Installs the extension in Chrome and Edge, with your server already filled in</li>
+        <li>Installs the extension in Chrome and Edge once it's in their stores, with your server already filled in</li>
         <li>Turns off the browsers' own password managers, without deleting what's in them</li>
         <li>Limit it to your email domains, so only your own people can use it</li>
         <li>A whole office behind one internet connection can sign up at once</li>
@@ -72,7 +72,7 @@ layout: wide
       <ul class="checks">
         <li>Standard SCIM, set up in Entra in a few steps</li>
         <li>Give a group a shared folder once, and everyone Entra adds to it gets it</li>
-        <li>Sign in with Entra <span class="chip soon">Coming soon</span></li>
+        <li>Sign in with Entra: built, and not yet checked with a real Microsoft 365 tenant</li>
       </ul>
     </div>
     <div class="stage bleed">
@@ -101,13 +101,13 @@ layout: wide
     <ul>
       <li><strong>Item history</strong><span>Every edit keeps the version before, with who saved it. See what changed and restore an earlier version.</span></li>
       <li><strong>Reports and event logs</strong><span>See weak, reused, and exposed passwords in shared folders, and who viewed or changed what.</span></li>
-      <li><strong>Events to your security tools</strong><span>Send your events as they happen to Microsoft Sentinel, to syslog over TLS, or to a signed webhook.</span></li>
+      <li><strong>Events to your security tools</strong><span>Send your events as they happen to Microsoft Sentinel, to syslog over TLS, or to a signed webhook. Not yet tried with Sentinel, Huntress, or Blumira themselves.</span></li>
       <li><strong>Templates for your team</strong><span>Share item templates for vendor portals, servers, and licenses, so everyone starts from the same fields.</span></li>
-      <li><strong>Expiring credentials</strong><span>Certificates, API keys, and domains carry their expiration date, and the people who use them are reminded before it passes.</span></li>
+      <li><strong>Expiring credentials</strong><span>Certificates, API keys, and domains carry their expiration date, and the browser extension reminds whoever has it unlocked 30, 7, and 1 days before.</span></li>
       <li><strong>End-to-end encrypted</strong><span>Shared items are encrypted with your organization's key, which only your members' devices hold. We never have a key that can open your vault.</span></li>
       <li><strong>Work and personal stay apart</strong><span>A work account belongs to one organization. When someone leaves, shared passwords stay with the company.</span></li>
       <li><strong>Premium for every member</strong><span>Built-in two-step codes, file attachments, and file Sends for everyone in your organization.</span></li>
-      <li><strong>Run it yourself if you like</strong><span>PassBundle is open source. Use our hosted service, or run the server on your own hardware.</span></li>
+      <li><strong>Run it yourself if you like</strong><span>PassBundle is open source. Run the server on your own hardware, or use our hosted service once it opens at launch.</span></li>
     </ul>
   </div>
 </section>
@@ -137,11 +137,11 @@ layout: wide
   <div class="faq">
     <details>
       <summary>What does it cost?</summary>
-      <p>{{prices.business}} per person per month, or {{prices.businessLarge}} from {{prices.businessLargeFrom}} people. Every feature is included. See <a href="/pricing/#business">pricing</a>.</p>
+      <p>{{prices.business}} per person per month, or {{prices.businessLarge}} from {{prices.businessLargeFrom}} people, once paid plans start at launch. Every feature is included. See <a href="/pricing/#business">pricing</a>.</p>
     </details>
     <details>
       <summary>Does it work on Macs?</summary>
-      <p>Yes. The extension and the web vault work on Mac, Windows, and Linux, and there are test builds of the PassBundle app for all three. The rollout command and Windows Hello unlock are for Windows today; Mac rollout and Touch ID are next.</p>
+      <p>Yes. The extension and the web vault work on Mac, Windows, and Linux, and there are test builds of the PassBundle app for all three. The install command in your settings is for Windows. Install scripts for Mac (with a profile for your MDM) and Linux are in <a href="https://github.com/PimpinPumpkin/Passbundle/tree/main/installer">our repository</a>, though the settings page doesn't make their command yet. Windows Hello unlock is built, not yet tried on a real Windows Hello device; Touch ID waits until the app is signed by Apple.</p>
     </details>
     <details>
       <summary>Is there an app for phones?</summary>
@@ -153,7 +153,7 @@ layout: wide
     </details>
     <details>
       <summary>Do you support single sign-on or directory sync?</summary>
-      <p>Directory sync, yes: provisioning from Microsoft Entra ID adds, updates, and removes people and groups for you. Signing in with Entra is coming soon; until then, people sign in with their own master password.</p>
+      <p>Directory sync, yes: provisioning from Microsoft Entra ID adds, updates, and removes people and groups for you. Signing in with Entra is built too. Neither has been checked with a real Microsoft 365 tenant yet. Signing in with Entra doesn't replace the master password, which still unlocks the vault.</p>
     </details>
     <details>
       <summary>Can we move from another password manager?</summary>

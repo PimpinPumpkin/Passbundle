@@ -9,8 +9,8 @@ layout: wide
   <div class="home-hero-side">
     <p class="lead">Add a client in one step, set your policies and templates once for all of them, and roll out from your RMM. Your staff are free, and every user in every client shares one pool of seats.</p>
     <div class="actions">
-      <a class="button primary" href="mailto:hello@passbundle.com?subject=PassBundle%20demo">Book a demo</a>
-      <a class="button" href="/#msp">Try the console</a>
+      <a class="button primary" href="/#msp">Try the console</a>
+      <a class="button" href="/contact/">Talk to us</a>
     </div>
   </div>
 </section>
@@ -84,9 +84,9 @@ layout: wide
     <div class="row-text">
       <span class="eyebrow">Rollout</span>
       <h2>Onboard an office from your RMM.</h2>
-      <p class="lead">Each client has its own install command. Run it on the client's Windows computers from your RMM, and people land in the right client when they sign in.</p>
+      <p class="lead">Each client has its own install command, which runs our install script. Run it on the client's Windows computers from your RMM, and once the extension is in the Chrome and Edge stores, people land in the right client when they sign in.</p>
       <ul class="checks">
-        <li>Installs the extension in Chrome and Edge, with the server filled in</li>
+        <li>Installs the extension in Chrome and Edge once it's in their stores, with the server filled in</li>
         <li>Turns off the browsers' own password managers</li>
         <li>Limit it to the client's email domains, and people join with no click from you</li>
         <li>A whole office can sign up at once without tripping login limits</li>
@@ -138,12 +138,12 @@ layout: wide
       <li><strong>Access that fits each technician</strong><span>Limit a technician to chosen clients or a helpdesk role, and choose whether they see vault items.</span></li>
       <li><strong>Your client's point of contact</strong><span>Give someone at the client just enough to manage their own people, and keep the rest with your team.</span></li>
       <li><strong>Private, even from you</strong><span>Your staff are never part of a client's account recovery, so a technician can't take over a client's accounts.</span></li>
-      <li><strong>Events to your security tools</strong><span>A client's events, or every client's in one feed for your SOC, to Microsoft Sentinel, syslog over TLS, or a signed webhook.</span></li>
+      <li><strong>Events to your security tools</strong><span>A client's events, or every client's in one feed for your SOC, to Microsoft Sentinel, syslog over TLS, or a signed webhook. Not yet tried with Sentinel, Huntress, or Blumira themselves.</span></li>
       <li><strong>A record of everything</strong><span>Every MSP action is logged with who did it, from where, and in which client.</span></li>
-      <li><strong>Sign in with Entra <span class="chip soon">Coming soon</span></strong><span>Each client's people sign in with their own Microsoft 365 account, set up per client.</span></li>
-      <li><strong>Bring clients over</strong><span>Import a client's shared passwords from about 70 password managers. Moving from Passportal or IT Glue? We'll help you plan it.</span></li>
+      <li><strong>Sign in with Entra <span class="chip soon">Not yet checked</span></strong><span>Each client's people sign in with their own Microsoft 365 account, set up per client. Built, and waiting on a check with a real Microsoft 365 tenant.</span></li>
+      <li><strong>Bring clients over</strong><span>Import a client's shared passwords from about 70 password managers. Passportal and IT Glue have no importer yet: a CSV with a name, website, username, and password per line imports.</span></li>
       <li><strong>Expiring credentials</strong><span>Certificates, domains, and API keys carry their expiration date, and the console counts what's expiring in each client.</span></li>
-      <li><strong>Self-hosting</strong><span>Use our hosted service, or run the open-source server yourself, with SQLite or PostgreSQL, in one container.</span></li>
+      <li><strong>Self-hosting</strong><span>Run the open-source server yourself, with SQLite or PostgreSQL, in one container, or use our hosted service once it opens at launch.</span></li>
     </ul>
   </div>
 </section>
@@ -152,7 +152,7 @@ layout: wide
   <div class="split-head page-head">
     <h2 id="seats-title">One pool of seats.</h2>
     <div class="split-side">
-      <p class="lead">Every user in every client counts toward one pool, billed monthly on the seats in use. The price drops as the pool grows. No per-client minimums, and your own staff are free.</p>
+      <p class="lead">Every user in every client counts toward one pool, billed monthly on the seats in use. The price drops as the pool grows. No per-client minimums, and your own staff are free. Billing starts at launch, with our hosted service; until then, there's nothing to pay.</p>
     </div>
   </div>
   <div class="table-box">
@@ -178,9 +178,9 @@ layout: wide
         <h2 id="partner-title">Be one of our first MSPs.</h2>
       </div>
       <div class="split-side">
-        <p class="lead">We're working closely with a handful of MSPs as we launch. You get six months free and a direct line to us; we get to hear what your clients need.</p>
+        <p class="lead">We're looking for a handful of MSPs to work closely with as we launch. You get six months free once billing starts and a direct line to us; we get to hear what your clients need.</p>
         <div class="actions">
-          <a class="button primary" href="mailto:hello@passbundle.com?subject=PassBundle%20design%20partner">Talk to us</a>
+          <a class="button primary" href="/contact/">Talk to us</a>
           <a class="button" href="/pricing/#compare">Compare plans</a>
         </div>
       </div>
@@ -211,11 +211,11 @@ layout: wide
     </details>
     <details>
       <summary>Do you work with Microsoft Entra ID?</summary>
-      <p>Yes. Provisioning from Entra ID keeps each client's people and groups in step over SCIM, set up per client. Signing in with Entra, per client, is coming soon; at first, the master password still unlocks the vault.</p>
+      <p>Yes. Provisioning from Entra ID keeps each client's people and groups in step over SCIM, and signing in with Entra is built too, each set up per client. Neither has been checked with a real Microsoft 365 tenant yet. Signing in with Entra doesn't replace the master password, which still unlocks the vault.</p>
     </details>
     <details>
       <summary>Can we send events to our SIEM?</summary>
-      <p>Yes. Send a client's events as they happen to Microsoft Sentinel, to syslog over TLS (JSON or CEF), or to a signed webhook, from Reporting, Event streaming in its admin console. Or add your SOC's tools in the MSP console, and they get every client's events, tagged with the client, and your own staff's activity, in one feed. Events never include item names, passwords, or anything else in a vault.</p>
+      <p>Yes. Send a client's events as they happen to Microsoft Sentinel, to syslog over TLS (JSON or CEF), or to a signed webhook, from Reporting, Event streaming in its admin console. Or add your SOC's tools in the MSP console, and they get every client's events, tagged with the client, and your own staff's activity, in one feed. Events never include item names, passwords, or anything else in a vault. Each follows its service's published format, and none has been tried with Sentinel, Huntress, or Blumira themselves yet.</p>
     </details>
     <details>
       <summary>Can a client take its data with it?</summary>

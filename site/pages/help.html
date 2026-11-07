@@ -3,14 +3,14 @@ title: Help
 description: Getting started with PassBundle, for MSPs, their clients, and everyone else.
 -->
 <h1>Help</h1>
-<p class="lead">Answers to the questions people ask most. If yours isn't here, email <a href="mailto:hello@passbundle.com">hello@passbundle.com</a>.</p>
+<p class="lead">Answers to the questions people ask most. If yours isn't here, see <a href="/contact/">Contact</a>.</p>
 
 <h2>Getting started</h2>
 <h3>How do I start?</h3>
-<p>Add the extension to your browser from <a href="/download/">Get PassBundle</a>, select its icon, and create an account, or create one in the PassBundle app on your computer or phone. Then bring your passwords in: see <a href="/switch/">Switch to PassBundle</a>.</p>
+<p>Until launch, PassBundle runs on a server of your own: our hosted service opens at launch, and the extension isn't in the browsers' stores yet. Get the PassBundle app for your computer or phone from <a href="/download/">Get PassBundle</a>, sign in to your server, and bring your passwords in: see <a href="/switch/">Switch to PassBundle</a>.</p>
 
 <h3>Is there an app for my phone?</h3>
-<p>On Android, yes: a test build that fills your passwords in apps and browsers and unlocks with your fingerprint or face. Get it from <a href="/download/#apps">Get PassBundle</a>. The iPhone app is coming; until then, open the <a href="{{links.vault}}">web vault</a> in Safari.</p>
+<p>On Android, yes: a test build that fills your passwords in apps and browsers and unlocks with your fingerprint or face. Get it from <a href="/download/#apps">Get PassBundle</a>. The iPhone app is coming; until then, open your server's web vault in Safari.</p>
 
 <h3>Is there an app for my computer?</h3>
 <p>Yes, for Windows, Mac, and Linux, as test builds on <a href="/download/#apps">Get PassBundle</a>. They keep themselves up to date. The browser extension still does the filling in your browser.</p>
@@ -26,27 +26,27 @@ description: Getting started with PassBundle, for MSPs, their clients, and every
 <p>Your vault is encrypted with a key only your master password can unlock, so we can't reset it or recover your vault. If you belong to an organization that turned on account recovery, ask its admins to reset your master password. Otherwise, try your password hint, if you set one.</p>
 
 <h3>Is two-step login supported?</h3>
-<p>Yes: authenticator apps, security keys, and email codes. Turn it on in your account's security settings. Some organizations require it.</p>
+<p>Yes: authenticator apps, security keys, and email codes, in the web vault and the browser extension. Turn it on in your account's security settings. PassBundle's own apps take an authenticator app or an email code for now. Some organizations require it.</p>
 
 <h3>Can I get back an earlier version of an item?</h3>
 <p>Yes. Open the item and choose <strong>Version history</strong>: every edit keeps the version before, with who saved it. View one to see what changed, then restore it. In a shared folder, this follows the folder's permissions.</p>
 
 <h3>How do I move my passwords in?</h3>
-<p>Export them from your browser or your current password manager, then import the file under Tools, Import. PassBundle reads exports from about 70 password managers and every major browser; <a href="/switch/">here is how</a>.</p>
+<p>Export them from your browser or your current password manager, then import the file under Import and export, Import. PassBundle reads exports from about 70 password managers and every major browser; <a href="/switch/">here is how</a>.</p>
 
 <h2>Plans and billing</h2>
 <h3>What's free, and what's paid?</h3>
-<p>Everything that keeps you safe is free, with no limit on passwords or devices. Premium adds built-in two-step login codes, file attachments, file Sends, and email support. Families gives up to {{prices.familiesPeople}} people Premium and shared vaults. See <a href="/pricing/">Pricing</a>.</p>
+<p>Everything that keeps you safe is free, with no limit on passwords or devices. Paid plans start at launch: Premium adds built-in two-step login codes, file attachments, file Sends, and email support, and Families gives up to {{prices.familiesPeople}} people Premium and shared folders. Until then, there's nothing to buy. See <a href="/pricing/">Pricing</a>.</p>
 
 <h3>Can I cancel?</h3>
-<p>Any time, in your account settings. Your plan stays active until the end of the period you've paid for, then your account goes back to the free plan with everything in your vault.</p>
+<p>There's nothing to cancel yet: paid plans start at launch. Then you'll be able to cancel any time, in your account settings. Your plan will stay active until the end of the period you've paid for, then your account goes back to the free plan with everything in your vault.</p>
 
 <h2>For businesses</h2>
 <h3>How do I set PassBundle up for my company?</h3>
 <p>In the web vault, choose <strong>New organization</strong> and pick <strong>A business</strong>. It starts with account recovery, strong master passwords, one work account per person, and Everyone and Admins shared folders, and you can change any of them on its Settings and Policies pages.</p>
 
 <h3>How do I roll it out to our computers?</h3>
-<p>Your organization's Settings page has an install command. Run it as an administrator on each Windows computer, from Intune, group policy, or your RMM. It installs the extension in Chrome and Edge, turns off the browsers' own password managers, and anyone who then signs in joins your organization. Your owners get an email for each person who joins, and you can limit the command to your email domains.</p>
+<p>Your organization's Settings page has an install command. Run it as an administrator on each Windows computer, next to our install script, from Intune, group policy, or your RMM. It turns off the browsers' own password managers. Once the extension is in the Chrome and Edge stores, it installs that too, and anyone who then signs in joins your organization. Your owners get an email for each person who joins, and you can limit the command to your email domains.</p>
 
 <h3>How do I connect Microsoft Entra ID?</h3>
 <p>In the organization's admin console, open <strong>Settings</strong>, then <strong>Provisioning</strong> (for an MSP's client, <strong>Entra ID sync</strong> in its row of the MSP console goes there too), and choose <strong>Create token</strong>. In Entra, add a new enterprise application of your own (not from the gallery), set its provisioning to Automatic, paste the page's address as the Tenant URL and the token as the Secret Token, and test the connection. Then assign the users and groups who should be in PassBundle, and start provisioning.</p>
@@ -56,10 +56,10 @@ description: Getting started with PassBundle, for MSPs, their clients, and every
 
 <h2>For MSPs</h2>
 <h3>How do I add a client?</h3>
-<p>In the MSP console, give the client a name and choose Add client. Its organization, default policies, and collections are created in one step, and your staff are added to it.</p>
+<p>In the MSP console, give the client a name and choose Add client. Its organization, default policies, and shared folders are created in one step, and your staff are added to it.</p>
 
 <h3>How do the client's people join?</h3>
-<p>Invite them by email from the client's admin console (<strong>Admin console</strong> in its row of the MSP console), or run the client's install command (<strong>Install command</strong>, in the same row) from your RMM on their computers. The command installs the extension and turns off the browser's own password manager; anyone who then signs in joins that client. Either way they get in without anyone clicking Confirm, and whoever invited them, or for the install command the client's own owners, gets an email saying who joined.</p>
+<p>Invite them by email from the client's admin console (<strong>Admin console</strong> in its row of the MSP console), or, once the extension is in the Chrome and Edge stores, run the client's install command (<strong>Install command</strong>, in the same row) from your RMM on their computers. The command installs the extension and turns off the browser's own password manager; anyone who then signs in joins that client. Either way they get in without anyone clicking Confirm, and whoever invited them, or for the install command the client's own owners, gets an email saying who joined.</p>
 
 <h3>Can I make sure only the client's staff join?</h3>
 <p>Yes. Next to a client's install command, list its email domains, and only accounts at those domains, with a verified email, can join with the command. People you invite by email can join from any address. A client that wants to approve each person can turn that on in its settings.</p>
@@ -74,7 +74,7 @@ description: Getting started with PassBundle, for MSPs, their clients, and every
 <p>In the MSP console, each client's row counts its weak, reused, and exposed passwords. Select a count to see which items to fix, by name. Exposed passwords are checked against Have I Been Pwned with five characters of each password's hash; you can turn the check after unlocking off in Settings, Appearance.</p>
 
 <h3>How do default policies and templates work?</h3>
-<p>Default policies apply to every client, including new ones. Change a policy in a client's own admin console and that client keeps its own setting. Templates you add in the console go into every client's Templates collection, and when you edit one, every copy is updated.</p>
+<p>Default policies apply to every client, including new ones. Change a policy in a client's own admin console and that client keeps its own setting. Templates you add in the console go into every client's Templates shared folder, and when you edit one, every copy is updated.</p>
 
 <h2>Security</h2>
 <h3>Can PassBundle see my passwords?</h3>
