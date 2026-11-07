@@ -1153,7 +1153,6 @@
     let clients = [...CLIENTS];
     const state = { sel: "", adding: false, name: "", err: "", admin: "" };
     let added = 0;
-    const slug = (c) => c.id.replace(/^new\d+$/, () => c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
 
     const status = h("span", { class: "demo-status" });
     const addButton = h("button", { type: "button", class: "demo-btn primary mock-push", "data-x": "add", "data-key": "add", text: "Add client", onclick: (e) => openAdd(e.isTrusted) });
@@ -1233,7 +1232,7 @@
         c.reused.length > 0 && [`${c.reused.length} with the same password, found in a data breach`, c.reused],
       ].filter(Boolean);
       const names = c.people.length > 5 ? `${c.people.slice(0, 4).join(", ")}, and ${c.people.length - 4} more` : c.people.join(", ");
-      const command = `iwr https://vault.example/install/${slug(c)} | iex`;
+      const command = `.\\Install-PassBundle.ps1 -ServerUrl 'https://vault.example' -EnrollmentToken '…' -JoinSecret '…' -OrgKey '…'`;
       const copy = h("button", {
         type: "button",
         class: "demo-btn",
@@ -1280,9 +1279,9 @@
             c.expiring.map(([name, days]) => h("li", {}, h("span", { class: "demo-dot", "aria-hidden": "true" }), h("span", { class: "ui-who" }, h("b", { text: name }), h("span", { text: `Expires in ${days} days` })))),
           ),
         h("h4", { text: "People" }),
-        h("p", { class: "demo-note", text: names || "No one yet. Run the install command on their computers, and people land here as they sign in." }),
+        h("p", { class: "demo-note", text: names || "No one yet. Invite people from its admin console, and they land here as they join." }),
         h("h4", { text: "Install command" }),
-        h("p", { class: "demo-note", text: `Run it from your RMM on their Windows computers: it adds PassBundle to Chrome and Edge, and whoever signs in joins ${c.name}.` }),
+        h("p", { class: "demo-note", text: `Run it with our install script from your RMM on their Windows computers. It turns off the browsers' own password saving, and once the extension is in the Chrome and Edge stores, it adds PassBundle to both, and whoever signs in joins ${c.name}.` }),
         h("span", { class: "mock-code", text: command }),
         h("span", { class: "mock-actions start" }, copy, h("span", { class: "demo-note", text: `${c.people.length} ${c.people.length === 1 ? "person has" : "people have"} joined with it.` })),
       );

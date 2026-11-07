@@ -1,14 +1,17 @@
 <!--
 title: Get PassBundle
-description: PassBundle for Chrome, Edge, and Firefox, apps for Windows, Mac, Linux, and Android, a command-line tool for scripts, and the web vault for any browser.
+description: Test builds of the PassBundle apps for Windows, Mac, Linux, and Android, the browser extension and command-line tool, and the open-source server to run them with until our hosted service opens.
 layout: wide
 -->
 <section class="hero solo">
   <h1>Get PassBundle</h1>
   <p class="lead">
-    Add PassBundle to your browser, install the app on your computer and phone, and make a free
-    account. Your vault syncs between all of them.
+    The app for your computer and phone, the browser extension, and the web vault. Your vault
+    syncs between all of them.
   </p>
+  <div class="note plans-note">
+    <p><strong>PassBundle is in testing.</strong> The apps are test builds, the extension isn't in the browsers' stores yet, and our hosted service, vault.passbundle.com, opens at launch. Until then, PassBundle signs in to a server you run yourself: see <a href="#server">Run your own server</a>.</p>
+  </div>
 </section>
 
 <section class="tight">
@@ -20,18 +23,21 @@ layout: wide
     <div class="card">
       <h3><x-tile icon="browser" tone="sapphire"></x-tile>Chrome</h3>
       <p>Also for Brave, Vivaldi, and other browsers that install from the Chrome Web Store.</p>
-      <div class="actions"><a class="button primary" href="{{links.chrome}}">Add to Chrome</a></div>
+      <p class="fine">Not in the Chrome Web Store yet.</p>
     </div>
     <div class="card">
       <h3><x-tile icon="browser" tone="aquamarine"></x-tile>Edge</h3>
       <p>From Microsoft Edge Add-ons.</p>
-      <div class="actions"><a class="button primary" href="{{links.edge}}">Add to Edge</a></div>
+      <p class="fine">Not in Edge Add-ons yet.</p>
     </div>
     <div class="card">
       <h3><x-tile icon="browser" tone="topaz"></x-tile>Firefox</h3>
       <p>From Firefox Add-ons.</p>
-      <div class="actions"><a class="button primary" href="{{links.firefox}}">Add to Firefox</a></div>
+      <p class="fine">Not in Firefox Add-ons yet.</p>
     </div>
+  </div>
+  <div class="note plans-note">
+    <p><strong>The extension isn't in the stores yet.</strong> Until it is, use the PassBundle app on your computer, or build the extension from <a href="https://github.com/PimpinPumpkin/passbundle-clients">its source code</a> and load it in Chrome or Edge as an unpacked extension.</p>
   </div>
 </section>
 
@@ -46,13 +52,13 @@ layout: wide
   <div class="downloads">
     <div class="card">
       <h3><x-tile icon="desktop" tone="onyx"></x-tile>Windows</h3>
-      <p>For 64-bit Windows 10 and 11. Unlock with Windows Hello. A zip: move the PassBundle folder into your programs, and open it.</p>
+      <p>For 64-bit Windows 10 and 11. A zip: move the PassBundle folder into your programs, and open it. Windows Hello unlock is in it, not yet tried on a real Windows Hello device.</p>
       <div class="actions"><a class="button primary" href="{{links.apps}}">Download for Windows</a></div>
       <p class="fine">Choose the newest release "for Windows".</p>
     </div>
     <div class="card">
       <h3><x-tile icon="laptop" tone="onyx"></x-tile>Mac</h3>
-      <p>For Macs with Apple silicon and with Intel.</p>
+      <p>For Macs with Apple silicon and with Intel, on macOS 14 or later. Touch ID unlock waits until the app is signed by Apple.</p>
       <div class="actions"><a class="button primary" href="{{links.apps}}">Download for Mac</a></div>
       <p class="fine">Choose the newest release "for Mac".</p>
     </div>
@@ -70,18 +76,18 @@ layout: wide
     </div>
     <div class="card">
       <h3><x-tile icon="phone" tone="sapphire"></x-tile>iPhone</h3>
-      <p>Coming next, with AutoFill. Until then, open the web vault in Safari.</p>
+      <p>Coming next, with AutoFill. Until then, open your server's web vault in Safari.</p>
     </div>
     <div class="card">
       <h3><x-tile icon="code" tone="onyx"></x-tile>Command line</h3>
       <p>The <code>passbundle</code> command, for IT scripts on Mac, Linux, and Windows: sign in with an API key, read the passwords your folders let you see, and make items from templates.</p>
-      <div class="actions"><a class="button primary" href="{{links.cli}}">Download the command-line tool</a></div>
-      <p class="fine">Choose the newest "PassBundle CLI" release. <a href="{{links.cliGuide}}">How to install and use it</a>.</p>
+      <div class="actions"><a class="button" href="{{links.cliGuide}}">How to build and use it</a></div>
+      <p class="fine">No release yet. Until the first one, build it from its source code, as the guide shows.</p>
     </div>
     <div class="card">
       <h3><x-tile icon="globe" tone="brand"></x-tile>Web vault</h3>
-      <p>Your whole vault in any browser, on any computer, with nothing to install. Make your account here, or sign in.</p>
-      <div class="actions"><a class="button" href="{{links.vault}}">Open the web vault</a></div>
+      <p>Your whole vault in any browser, on any computer, with nothing to install. Every PassBundle server has it, at the server's own address.</p>
+      <p class="fine">Ours, vault.passbundle.com, opens at launch.</p>
     </div>
   </div>
   <div class="note plans-note">
@@ -89,7 +95,7 @@ layout: wide
   </div>
 </section>
 
-<section>
+<section id="server">
   <div class="split even">
     <div>
       <h2>Then bring your passwords</h2>
@@ -102,7 +108,7 @@ layout: wide
     <div class="card">
       <x-tile icon="server" tone="garnet"></x-tile>
       <h3>Run your own server</h3>
-      <p>PassBundle is open source. Run the server on your own hardware and point the apps at it: the sign-in screen asks where your vault is.</p>
+      <p>PassBundle is open source. Run the server on your own hardware and point the apps at it: the sign-in screen asks where your vault is. It's in testing too: build the server and its web vault from the source code, as one container image (<a href="https://github.com/PimpinPumpkin/Passbundle/tree/main/deploy">how</a>).</p>
       <p class="actions"><a class="more" href="https://github.com/PimpinPumpkin/passbundle-server">PassBundle server</a> <a class="more" href="https://github.com/PimpinPumpkin/passbundle-clients">PassBundle web vault and extension</a> <a class="more" href="https://github.com/PimpinPumpkin/passbundle-apps">PassBundle apps</a></p>
     </div>
   </div>

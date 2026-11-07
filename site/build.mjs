@@ -191,7 +191,9 @@ function layout({ meta, body, file }, route) {
   const kind = meta.layout === "wide" ? "wide" : "doc";
   const current = (href) => (route.startsWith(href) ? ' aria-current="page"' : "");
   const links = NAV.map(([href, label]) => `<a href="${href}"${current(href)}>${label}</a>`).join("\n        ");
-  const vault = value("links.vault", file);
+  // "Log in" goes to the hosted web vault (links.vault), and isn't shown
+  // until that's filled in: before launch there's nothing there to log in to.
+  const vault = site.links.vault;
   // Our own scripts only, by name, from static/: "script: tour" is /tour.js.
   if (meta.script && !/^[a-z-]+$/.test(meta.script)) throw new Error(`${file}: script must be a name like demo`);
   if (meta.script && !fs.existsSync(path.join(staticDir, `${meta.script}.js`))) throw new Error(`${file}: no static/${meta.script}.js`);
@@ -222,15 +224,13 @@ function layout({ meta, body, file }, route) {
         ${links}
     </nav>
     ${THEME_BUTTON}
-    <div class="header-actions">
-      <a class="login" href="${vault}">Log in</a>
+    <div class="header-actions">${vault ? `\n      <a class="login" href="${vault}">Log in</a>` : ""}
       <a class="button primary small" href="/download/">Download</a>
     </div>
     <details class="menu">
       <summary>Menu</summary>
       <nav aria-label="Menu">
-        ${links}
-        <a href="${vault}">Log in</a>
+        ${links}${vault ? `\n        <a href="${vault}">Log in</a>` : ""}
         ${THEME_MENU_BUTTON}
         <a class="button primary" href="/download/">Download</a>
       </nav>

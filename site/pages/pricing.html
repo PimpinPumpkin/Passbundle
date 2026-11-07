@@ -9,6 +9,7 @@ layout: wide
     MSPs and businesses pay per person, with nothing held back for a pricier tier. For you and
     your family, everything that keeps you safe is free, and stays free.
   </p>
+  <p class="fine">These are the prices for launch, when paid plans, trials, and billing start, with our hosted service. Until then, there's nothing to buy.</p>
   <nav class="tabs" aria-label="Plans">
     <a href="#msp">MSPs</a>
     <a href="#business">Business</a>
@@ -27,7 +28,7 @@ layout: wide
       <h3><x-tile icon="console" tone="brand" class="small"></x-tile>MSPs</h3>
       <p class="for">For IT providers, and IT teams that run several companies, locations, or brands.</p>
       <p class="price">{{prices.msp1}}<small>per seat, monthly, and less as your pool grows</small></p>
-      <a class="button primary" href="mailto:hello@passbundle.com?subject=PassBundle%20demo">Book a demo</a>
+      <a class="button primary" href="/contact/">Talk to us</a>
       <p class="includes">Everything in Business, for every client, and:</p>
       <ul class="checks">
         <li>One console for every client</li>
@@ -41,7 +42,7 @@ layout: wide
       <h3><x-tile icon="people" tone="turquoise" class="small"></x-tile>Business</h3>
       <p class="for">For a business with its own IT. {{prices.businessLarge}} from {{prices.businessLargeFrom}} people.</p>
       <p class="price">{{prices.business}}<small>per person, monthly</small></p>
-      <a class="button primary" href="{{links.signup}}">Start a {{prices.trialDays}}-day trial</a>
+      <a class="button primary" href="/#demo">Try the demo</a>
       <p class="includes">Everything in Premium, for every member, and:</p>
       <ul class="checks">
         <li>Sensible policies from day one</li>
@@ -60,8 +61,9 @@ layout: wide
   <div class="head">
     <h2>The MSP seat pool</h2>
     <p class="lead">
-      Every user in every client counts toward one pool, billed monthly on the seats in use. The more
-      seats, the lower the price, for every client. Your staff are free.
+      Every user in every client counts toward one pool, billed monthly on the seats in use once
+      billing starts at launch. The more seats, the lower the price, for every client. Your staff
+      are free.
     </p>
   </div>
   <div class="table-box">
@@ -77,7 +79,7 @@ layout: wide
     </table>
   </div>
   <div class="actions plans-note">
-    <a class="button primary" href="mailto:hello@passbundle.com?subject=PassBundle%20demo">Book a demo</a>
+    <a class="button primary" href="/contact/">Talk to us</a>
     <a class="button" href="/msp/">What MSPs get</a>
   </div>
 </section>
@@ -96,8 +98,8 @@ layout: wide
       <ul class="checks">
         <li>Unlimited passwords, devices, and sync</li>
         <li>Autofill, the password generator, and passkeys</li>
-        <li>Every two-step login method, hardware keys included</li>
-        <li>Windows Hello unlock</li>
+        <li>Two-step login with an authenticator app, a security key, or email</li>
+        <li>Fingerprint or face unlock on Android</li>
         <li>Weak, reused, and exposed password reports</li>
         <li>Item templates and expiration reminders</li>
         <li>Legacy contacts</li>
@@ -109,13 +111,12 @@ layout: wide
       <h3><x-tile icon="star" tone="gold" class="small"></x-tile>Premium</h3>
       <p class="for">For one person</p>
       <p class="price">{{prices.premium}}<small>a year</small></p>
-      <a class="button primary" href="{{links.signup}}">Get Premium</a>
+      <a class="button primary" href="/#extension">Try the demo</a>
       <p class="includes">Everything in Free, and:</p>
       <ul class="checks">
         <li>Two-step login codes for your other accounts, built in</li>
         <li>Encrypted file attachments, 5 GB</li>
         <li>Send files, not just text</li>
-        <li>Data breach report for your email address</li>
         <li>Email support within one business day</li>
       </ul>
     </div>
@@ -123,11 +124,11 @@ layout: wide
       <h3><x-tile icon="people" tone="amethyst" class="small"></x-tile>Families</h3>
       <p class="for">For up to {{prices.familiesPeople}} people</p>
       <p class="price">{{prices.families}}<small>a year</small></p>
-      <a class="button" href="{{links.signup}}">Get Families</a>
+      <a class="button" href="/#family">Try the demo</a>
       <p class="includes">Premium for everyone, and:</p>
       <ul class="checks">
-        <li>Shared vaults, as many as you like</li>
-        <li>An organizer who adds and removes people</li>
+        <li>Shared folders, as many as you like</li>
+        <li>An owner who adds and removes people</li>
         <li>Everyone keeps a private vault</li>
       </ul>
     </div>
@@ -185,7 +186,7 @@ layout: wide
           <td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
         </tr>
         <tr>
-          <th scope="row">Every two-step login method<span>Hardware keys included</span></th>
+          <th scope="row">Two-step login<span>An authenticator app, a security key, or email; our own apps take an authenticator app or email for now</span></th>
           <td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
         </tr>
         <tr>
@@ -193,7 +194,7 @@ layout: wide
           <td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
         </tr>
         <tr>
-          <th scope="row">Windows Hello unlock</th>
+          <th scope="row">Fingerprint or face unlock<span>On Android; Windows Hello on Windows is built, not yet tried on a real device</span></th>
           <td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
         </tr>
         <tr>
@@ -205,7 +206,7 @@ layout: wide
           <td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
         </tr>
         <tr>
-          <th scope="row">Data breach report<span>For your email address</span></th>
+          <th scope="row">Data breach report<span>For your email address; for now, a link to check it on Have I Been Pwned</span></th>
           <td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
         </tr>
 
@@ -241,8 +242,8 @@ layout: wide
           <td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="yes"><span class="sr-only">Included</span></td><td class="yes"><span class="sr-only">Included</span></td>
         </tr>
         <tr>
-          <th scope="row">Sign in with Entra</th>
-          <td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td><span class="chip soon">Soon</span></td><td><span class="chip soon">Soon</span></td>
+          <th scope="row">Sign in with Entra<span>Built, and not yet checked with a real Microsoft 365 tenant</span></th>
+          <td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td class="no"><span class="sr-only">Not included</span></td><td><span class="chip soon">Not yet checked</span></td><td><span class="chip soon">Not yet checked</span></td>
         </tr>
         <tr>
           <th scope="row">Custom roles, groups, and event logs<span>And the Access page: who reaches what</span></th>
@@ -297,7 +298,7 @@ layout: wide
     </details>
     <details>
       <summary>Do I need a card for the trial?</summary>
-      <p>No. Business trials last {{prices.trialDays}} days without a card. Add one before the trial ends to keep going.</p>
+      <p>No. When paid plans start at launch, Business trials last {{prices.trialDays}} days without a card. Add one before the trial ends to keep going.</p>
     </details>
     <details>
       <summary>What happens if I stop paying?</summary>

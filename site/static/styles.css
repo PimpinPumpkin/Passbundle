@@ -839,6 +839,14 @@ main.wide > section.hero {
   margin-top: 16px;
 }
 
+/* A note under a centered hero (Download's "PassBundle is in testing") reads
+   as a paragraph, so it's left-aligned, as wide as the lead. */
+.hero .note {
+  max-width: 760px;
+  margin: 24px auto 0;
+  text-align: left;
+}
+
 /* A hero with the words beside a screenshot. */
 .hero.side {
   text-align: left;

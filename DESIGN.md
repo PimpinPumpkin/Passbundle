@@ -1,6 +1,6 @@
 # PassBundle design
 
-Status: draft, 2026-10-14. Decisions here are made unless marked "open".
+Status: kept up to date as work lands (last checked November 6, 2026). Each feature's section has its own Status. Decisions here are made unless marked "open".
 
 ## Goals
 
@@ -28,9 +28,9 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
   - **Small native pieces only where an OS insists**, such as the phones' autofill, drawn from the same design.
   - **Desktop:** the window is part of the tray app. Closing the window ends its process, leaving only the small agent.
   - **Order:** the core, then desktop (Windows, macOS, and Linux), then mobile (`docs/phones.md`: Android first, then iOS).
-  - **Status (October 21, 2026):** in the public repo `PimpinPumpkin/passbundle-apps`, whose CI builds, tests, and measures it on Linux, macOS, and Windows.
+  - **Status (November 6, 2026):** in the public repo `PimpinPumpkin/passbundle-apps`, whose CI builds, tests, and measures it on Linux, macOS, Windows, Android, and an iPhone simulator. Every commit on `main` that passes CI becomes a test release for Android, the Mac, Windows, and Linux, which update themselves (see "Updates").
     - **The core** follows its design and vectors, and signs in, syncs, saves, and does two-step login on a real server (see `docs/core.md`, "Tests").
-    - **The app** signs in to a PassBundle server, unlocks offline or with Windows Hello (through the desktop agent), copies through the core, adds, edits, and trashes items, and locks by itself after a chosen time or when the computer sleeps (`docs/core.md`, "Locking by itself").
+    - **The app** signs in to a PassBundle server, unlocks offline or with Windows Hello (through the desktop agent), copies through the core, adds, edits, and trashes items, and locks by itself after a chosen time or when the computer sleeps (`docs/core.md`, "Locking by itself"). It also has Personal and each organization's shared folders with what each lets the person do, templates, item history, Health, the generator, and approving a sign-in from another device (passbundle-apps README, "Status"). Two-step login there is an authenticator app or an email code; a security key, Duo, YubiKey, or a recovery code isn't in the apps yet.
     - **Android** (`docs/phones.md`):
       - The core is built with the NDK for phones and the emulator.
       - The app opens the vault kept in its own folder. It copies straight from the core to the clipboard through Kotlin, marked sensitive and cleared after 30 seconds. It checks certificates with Android's own verifier.
@@ -38,7 +38,8 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
       - It unlocks with the phone's biometrics. The user key is sealed with a Keystore key that needs the person's strong biometrics for each use and is voided when a fingerprint or face is added. It goes from the Keystore to the core without passing through Dart.
       - It locks the phone way: after a time away (5 minutes by default, or "Immediately"), when the phone locks, and it checks on coming back. The vault stays out of screenshots and the app switcher.
       - It fills other apps' and browsers' sign-in forms as Android's autofill service. Logins match by an app's `androidapp://` link or the page's registrable domain, the domain only from a browser on Google's privileged list (by signing certificate) or one the person trusted, so another app can't say it's a website. A password is taken from the core only once someone picks its login, and a locked PassBundle offers to unlock first. Signing in somewhere with something new, Android offers to save it to PassBundle, which opens the editor filled in, or the login it updates.
-      - CI runs it all on an Android 10 emulator: the core's tests, the app's own tests (signing in to a real server through adb), and filling a test app's sign-in form through autofill (and not giving its screen that says it's a website that website's login until it's trusted as a browser), then saving a new sign-in from it and a new password for it. Biometric unlock uses debug builds' stand-in for Android's prompt there. The app's tests also pass on a real Pixel.
+      - It provides passkeys on Android 14 and later through Credential Manager (`docs/phones.md`, "Passkeys"), and offers to turn on autofill and passkeys after unlocking.
+      - CI runs it all on Android 10 and Android 14 emulators (passkeys and the website checks on Android 14): the core's tests, the app's own tests (signing in to a real server through adb), and filling a test app's sign-in form through autofill (and not giving its screen that says it's a website that website's login until it's trusted as a browser), then saving a new sign-in from it and a new password for it. Biometric unlock uses debug builds' stand-in for Android's prompt there. The app's tests also pass on a real Pixel.
       - The real biometric prompt gets checked by hand on a phone.
     - **iOS** (`docs/phones.md`):
       - The core is a static library in an XCFramework, linked into the app, where Dart finds it in the process.
@@ -46,8 +47,8 @@ Status: draft, 2026-10-14. Decisions here are made unless marked "open".
       - It keeps the session's refresh token in the Keychain, and unlocks with Face ID or Touch ID: the user key is a Keychain item for this device only that needs the person's current biometrics, voided when a face or finger is added. It goes between the Keychain and the core without passing through Dart.
       - It locks the phone way, as on Android, including when the phone locks. The vault stays out of the app switcher's snapshot.
       - CI runs it on an iPhone simulator: the core's tests, and the app's own tests (signing in to a real server on the runner), with debug builds' stand-in for the Face ID prompt.
-      - Next: the AutoFill extension. The real prompt gets checked by hand on an iPhone.
-    - **The prototype, measured in CI** (first launch on CI machines; Linux in a virtual display with software rendering, which inflates its memory):
+      - Next: the AutoFill extension and passkeys, written on branches of passbundle-apps (`ios-autofill-pr`, `ios-passkeys2`, October 22) that aren't merged and need an Apple Developer account for a real run. The real prompt gets checked by hand on an iPhone.
+    - **The prototype, measured in CI** (October 21, 2026; first launch on CI machines; Linux in a virtual display with software rendering, which inflates its memory):
 
       | | Windows | macOS | Linux |
       |---|---|---|---|
@@ -1072,7 +1073,7 @@ Like 1Password's item types (API key, server, Wi-Fi, software license, passport,
 - **Creating items:** "New item from a template" lists each organization's templates, then the person's own, then built-in. An item from an organization's template still goes where the person is adding it (the open folder, organization, or collection), never into that organization by default, so a personal item can't land in a shared collection by surprise.
 - **Built:** ten built-in templates (API key, server, database, Wi-Fi network, router, software license, domain, certificate, email account, membership); upstream already has passport, driver's license, and bank account types. Custom templates for logins or notes, made from "Create template" in the same picker or with "Save as template" from a login or note (the web vault's item menu and the extension's; it opens a new template with the item's name and its custom fields' labels and kinds, never their values, unsaved), with defaults, a hint in the editor, a description in the item view, and a "Template" badge in lists. "From template" in the web vault's New menu and the browser extension's (`libs/common/src/vault/keykeeper/templates.ts`, `template-chooser.component.ts`). New items keep hidden fields editable (upstream locked them when there was no original item). Tier 1 covers built-in and custom templates in the web vault and the extension.
 - **MSP push to many orgs:** built; see "MSP templates".
-- **Not built yet:** giving every org member access to the templates collection automatically; typed fields beyond text, hidden, and yes/no (date, URL, email, phone, number, one-time code) and a date field that sets the expiration; a Templates view, so someone's own templates can leave "All items" too (an MSP's copies already stay in their collection); "From template" in a desktop vault window, if we build one; and an organization template test (needs org creation in the test rig).
+- **Not built yet:** giving every member of an organization its own templates collection automatically (an MSP's Templates collection already reaches every member of each client, read-only: "MSP templates"); typed fields beyond text, hidden, and yes/no (date, URL, email, phone, number, one-time code) and a date field that sets the expiration; a Templates view, so someone's own templates can leave "All items" too (an MSP's copies already stay in their collection); "From template" in a desktop vault window, if we build one; and an organization template test (needs org creation in the test rig).
 
 ## Expiration dates
 
@@ -1351,7 +1352,7 @@ Disable it, don't purge it.
 - Inherited from upstream GPL code: passkeys in the browser extension, the Windows 11 plugin authenticator and macOS AutoFill provider on desktop. Upstream's mobile apps have them too, but our phone apps are our own.
 - Our job: make sure the server stores and syncs passkey items correctly (verify against Vaultwarden), then cover registration and sign-in in tiers 1 and 2.
 - **Status, the extension:** tier 1 covers it (`e2e/tests/extension-passkeys.spec.ts`). A site makes a passkey through the extension, saved as a new login, and signs in with it; a second browser signed in to the same account gets it from the server and signs in with it too. The test site checks each answer as a site would. It found that the extension's passkey window never opened when Chrome refused its place (partly off the screen); every popout now falls back to the browser's place. Not yet: tier 2 (a real browser and a real site).
-- **Our apps (designed, not built):** `docs/core.md` "Passkeys" and `docs/phones.md` "Passkeys". The core signs and makes ES256 passkeys in upstream's format, the private key never leaving it. Android 14 and later get them through Credential Manager, with the site's Digital Asset Links checked for apps; iOS 17 and later through the AutoFill extension. Vectors fix the bytes (RFC 6979), and a real-server test runs passkeys both ways between the core and our extension.
+- **Our apps (Android built, iPhone next):** `docs/core.md` "Passkeys" and `docs/phones.md` "Passkeys". The core signs and makes ES256 passkeys in upstream's format, the private key never leaving it (`core/src/passkey.rs`). Android 14 and later get them through Credential Manager, with the site's Digital Asset Links checked for apps; that's built, and the emulator test makes a passkey and signs in with it. iOS 17 and later get them through the AutoFill extension, which isn't merged yet (see "Clients", "iOS"). Vectors fix the bytes (RFC 6979), and a real-server test runs passkeys both ways between the core and our extension (`e2e/tests/passkeys-interop.spec.ts`). Not yet: passkeys in the desktop apps (the extension has them in browsers), and on phones, replacing an account's old passkey and choosing an existing login when saving one.
 - **AAGUID:** our apps get PassBundle's own (`09c5ee5f-0845-48e6-aef4-c7c443317de5`). The browser extension still makes passkeys with upstream's, so sites that name a passkey's maker by its AAGUID name upstream's product for them. Moving the extension to ours, and listing ours where sites look it up, is the owner's call.
 
 ## Connector pages
@@ -1687,7 +1688,7 @@ Determinism rules:
 
 The maintainer gets a morning summary, with screenshots and video only for failures.
 
-**Changes that span repos** use the same branch name in each repo. Tier 1 tests a pull request together with the same-named branches of the other repos, so linked pull requests pass before any of them merges, and none of them goes red only because another hasn't merged yet. Branches are deleted when their pull request merges, so a stale one is never picked up.
+**Changes that span repos** use the same branch name in each repo. Tier 1 tests a pull request together with the same-named branches of the other repos, so linked pull requests pass before any of them merges, and none of them goes red only because another hasn't merged yet. A branch is deleted when its pull request merges, by merging with `--delete-branch`: none of the repos deletes a merged branch by itself, so each repo's branch of a change is deleted as it merges. A branch left in any repo is picked up by a new pull request that reuses its name, so check the name is free in every repo first (`git ls-remote --heads`).
 
 ## Known gaps
 
