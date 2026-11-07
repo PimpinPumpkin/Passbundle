@@ -216,3 +216,12 @@ export async function switchOn(control: Locator) {
   }
   await expect(control).toBeChecked();
 }
+
+/** Turns off one of upstream's switches, the same way. */
+export async function switchOff(control: Locator) {
+  if (await control.isChecked()) {
+    await control.focus();
+    await control.press("Space");
+  }
+  await expect(control).not.toBeChecked();
+}

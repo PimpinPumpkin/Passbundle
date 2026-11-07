@@ -8,7 +8,7 @@
 // client".
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUpWithAuthenticator, switchOn, webUserFor } from "./support/web";
+import { signUpWithAuthenticator, switchOff, switchOn, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) =>
@@ -187,7 +187,7 @@ test("an MSP admin requires a default for every client: it reaches a client with
   const lawPolicies = admin.url().replace(/\/members.*$/, "/settings/policies");
   await admin.goto(lawPolicies);
   await admin.getByRole("button", { name: /Single organization/ }).click();
-  await admin.getByRole("checkbox", { name: "Turn on" }).uncheck();
+  await switchOff(admin.getByRole("switch", { name: "Enable policy" }));
   await admin.getByRole("button", { name: "Save", exact: true }).click();
   const note = admin.getByTestId("client-msp-policies");
   await expect(note).toContainText("Own settings here: Single organization.");
