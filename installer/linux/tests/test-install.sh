@@ -52,6 +52,19 @@ check "refuses a server address that would break out of the JSON" refuses "https
 check "refuses an enrollment token of the wrong shape" refuses "43 letters" --enrollment-token short
 check "refuses a browser it doesn't manage" refuses "chrome, edge" --browsers firefox
 check "refuses an option it doesn't have" refuses "Unknown option" --surprise
+# A line break or other control character. grep checks line by line, so each
+# address, token, and secret here has a line that would pass alone.
+nl='
+'
+cr=$(printf '\r')
+tab=$(printf '\t')
+check "refuses a server address with a line break in it" refuses "https://" --server-url "$server_url$nl\"}, \"PasswordManagerEnabled\": true, \"x\": {\"y\": \""
+check "refuses a server address with a carriage return and line break in it" refuses "https://" --server-url "https://x.test$cr$nl$server_url"
+check "refuses an enrollment token with a line break in it" refuses "43 letters" --enrollment-token "$token$nl\", \"PasswordManagerEnabled\": true, \"x\": \""
+check "refuses a join secret with a line break in it" refuses "43 letters" --join-secret "x$nl$join_secret"
+check "refuses an organization key fingerprint with a line break after it" refuses "43 letters" --org-key "$org_key$nl"
+check "refuses a browser list with a line break in it" refuses "chrome, edge" --browsers "chrome${nl}edge"
+check "refuses a browser list with a tab in it" refuses "chrome, edge" --browsers "chrome${tab}edge"
 
 # Another vendor already has a policy file. We must not touch it.
 mkdir -p "$chrome"
