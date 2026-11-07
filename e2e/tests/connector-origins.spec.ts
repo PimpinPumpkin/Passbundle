@@ -199,7 +199,12 @@ async function addSecurityKey(context: BrowserContext, page: Page, user: WebUser
   const dialog = page.getByRole("dialog").filter({ has: page.getByRole("button", { name: "Read key" }) });
   await dialog.getByRole("textbox", { name: /^Name/ }).fill("Test key");
   await dialog.getByRole("button", { name: "Read key" }).click();
-  await expect(dialog.getByText('Use the "Save" button below to activate this security key')).toBeVisible();
+  // Reading the key asks the server for a challenge with the dialog's token,
+  // then the key; with the extension starting up beside it, a CI runner took
+  // longer than the default 5 seconds.
+  await expect(dialog.getByText('Use the "Save" button below to activate this security key')).toBeVisible({
+    timeout: 20_000,
+  });
   // Saved, the dialog closes and the list says it's on.
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog).toBeHidden();
