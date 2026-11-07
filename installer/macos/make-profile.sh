@@ -49,15 +49,29 @@ token=""
 join_secret=""
 org_key=""
 
+# True when $1 has no newline, carriage return, or other control character.
+plain() {
+  case "$1" in
+    *[[:cntrl:]]*) return 1 ;;
+  esac
+}
+
+# True when all of $2 matches the extended regex $1. grep matches line by
+# line, so without plain a value with a newline would pass if one line did.
+matches() {
+  plain "$2" && printf '%s' "$2" | grep -Eq "$1"
+}
+
 # A token, join secret, or key fingerprint: 32 bytes in unpadded base64url.
 check_secret() {
-  printf '%s' "$2" | grep -Eq '^[A-Za-z0-9_-]{43}$' || fail "$1 should be 43 letters, digits, - or _ (from the MSP console)."
+  matches '^[A-Za-z0-9_-]{43}$' "$2" || fail "$1 should be 43 letters, digits, - or _ (from the MSP console)."
 }
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --browsers)
       [ $# -ge 2 ] || fail "--browsers needs chrome, edge, or chrome,edge."
+      plain "$2" || fail "--browsers takes chrome, edge, or chrome,edge."
       browsers=$(printf '%s' "$2" | tr ',' ' ')
       for b in $browsers; do
         case "$b" in
@@ -73,7 +87,7 @@ while [ $# -gt 0 ]; do
     --server-url)
       [ $# -ge 2 ] || fail "--server-url needs the server's address."
       # HTTPS only, and nothing that could break out of the profile's XML.
-      printf '%s' "$2" | grep -Eq '^https://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~/-]*)?$' ||
+      matches '^https://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~/-]*)?$' "$2" ||
         fail "--server-url must be an https:// address, such as https://vault.example.com"
       server_url=$(printf '%s' "$2" | sed 's:/*$::')
       shift
@@ -126,7 +140,14 @@ off() {
   printf '\t\t\t<key>%s</key>\n\t\t\t<false/>\n' "$1"
 }
 
+# The options' values are checked again where they go into the profile: one
+# line each, with no control characters.
+one_line() { # key value
+  plain "$1$2" || fail "$1 has to be on one line, with no control characters."
+}
+
 text() {
+  one_line "$1" "$2"
   printf '\t\t\t<key>%s</key>\n\t\t\t<string>%s</string>\n' "$1" "$2"
 }
 
@@ -147,6 +168,7 @@ browser() {
 extension_settings() {
   payload_start "$1.extensions.$2" "$3" "$4" "$5"
   if [ -n "$server_url" ]; then
+    one_line base "$server_url"
     printf '\t\t\t<key>environment</key>\n\t\t\t<dict>\n\t\t\t\t<key>base</key>\n\t\t\t\t<string>%s</string>\n\t\t\t</dict>\n' "$server_url"
   fi
   [ -z "$token" ] || text enrollmentToken "$token"
