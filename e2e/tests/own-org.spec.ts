@@ -22,10 +22,10 @@ async function newOrganization(page: Page, name: string, kind: RegExp) {
   return page.url().replace(/\/members.*$/, "");
 }
 
-/** The organization's Settings page, opened afresh. */
+/** The organization's Joining and security settings, opened afresh. */
 async function openSettings(page: Page, org: string) {
   await page.goto("/#/vault");
-  await page.goto(`${org}/settings`);
+  await page.goto(`${org}/settings/joining`);
   await expect(page.getByRole("heading", { name: "Install command" })).toBeVisible();
 }
 

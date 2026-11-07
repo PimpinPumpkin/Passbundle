@@ -59,6 +59,8 @@ test("an MSP admin recovers the account of someone who joined through the instal
   const joinParts = { secret: part("JoinSecret"), orgKey: part("OrgKey") };
   expect(joinParts.secret).not.toBeNull();
   expect(joinParts.orgKey).not.toBeNull();
+  // Next to it, the fingerprint phrase the person will be shown, to compare.
+  const phrase = (await admin.getByTestId("msp-install-phrase").locator("span").textContent())!.trim();
 
   // The person has an account with an item, and signs in to the extension.
   const person = userFor("recovery-person", testInfo.repeatEachIndex);
@@ -114,6 +116,13 @@ test("an MSP admin recovers the account of someone who joined through the instal
   // Five words joined by dashes. Some words have a dash of their own ("yo-yo"),
   // so there can be more than five parts.
   await expect(prompt!.getByTestId("keykeeper-join-fingerprint")).toHaveText(/^\w+(-\w+){4,}$/);
+  // It's the one the MSP sees next to the install command, and the prompt
+  // says to compare them, and that Not now asks again in a week.
+  await expect(prompt!.getByTestId("keykeeper-join-fingerprint")).toHaveText(phrase);
+  await expect(prompt!.getByTestId("keykeeper-join-compare")).toHaveText(
+    "To be sure this is really Recovery Dental, ask your IT to read you the phrase they see next to its install command. If it doesn't match, choose Not now and tell them.",
+  );
+  await expect(prompt!.getByTestId("keykeeper-join-later")).toHaveText("Not now asks again in 7 days.");
   // The answer closes the window.
   await answerAndClose(prompt!, prompt!.getByRole("button", { name: "Join", exact: true }));
   expect(await outcome).toBe("joined");

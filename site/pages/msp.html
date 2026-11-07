@@ -84,7 +84,7 @@ layout: wide
     <div class="row-text">
       <span class="eyebrow">Rollout</span>
       <h2>Onboard an office from your RMM.</h2>
-      <p class="lead">Each client has its own install command, which runs our install script. Run it on the client's Windows computers from your RMM, and once the extension is in the Chrome and Edge stores, people land in the right client when they sign in.</p>
+      <p class="lead">Each client has its own install command, which runs our install script. Run it on the client's Windows or Linux computers from your RMM, or make a profile for your MDM on Macs, and once the extension is in the Chrome and Edge stores, people land in the right client when they sign in.</p>
       <ul class="checks">
         <li>Installs the extension in Chrome and Edge once it's in their stores, with the server filled in</li>
         <li>Turns off the browsers' own password managers</li>
@@ -203,7 +203,7 @@ layout: wide
     </details>
     <details>
       <summary>Which RMMs does the install command work with?</summary>
-      <p>Any RMM that can run a PowerShell command as an administrator on Windows, such as NinjaOne, ConnectWise Automate, Datto RMM, and N-able. Intune and group policy work too.</p>
+      <p>Any RMM that can run a PowerShell command as an administrator on Windows, such as NinjaOne, ConnectWise Automate, Datto RMM, and N-able, or a shell command as root on Linux. Intune and group policy work too. On Macs, macOS takes these settings only from a profile an MDM installs: the command makes it for you to upload to yours, such as Intune, Jamf, or Kandji.</p>
     </details>
     <details>
       <summary>Do clients need a domain, Active Directory, or an identity provider?</summary>

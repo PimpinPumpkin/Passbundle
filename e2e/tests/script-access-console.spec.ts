@@ -66,7 +66,7 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
   await view.getByRole("button", { name: "Close" }).first().click();
   await expect(view).toBeHidden();
 
-  await page.goto(`/#/organizations/${orgId}/settings/account`);
+  await page.goto(`/#/organizations/${orgId}/settings/joining`);
   const section = page.getByTestId("script-access");
   await expect(section.getByText("No tokens yet.")).toBeVisible();
   await section.getByRole("button", { name: "New token" }).click();
@@ -118,7 +118,7 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
   await expect(section.getByTestId("script-token-made")).toHaveCount(0);
   // Away and back (a reload would lock the vault).
   await page.goto("/#/vault");
-  await page.goto(`/#/organizations/${orgId}/settings/account`);
+  await page.goto(`/#/organizations/${orgId}/settings/joining`);
   await expect(page.getByTestId("script-token-Join domain")).toBeVisible();
   await expect(page.getByTestId("script-token-string")).toHaveCount(0);
 
@@ -146,7 +146,7 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
 
   // The list shows the token and its use.
   await page.goto("/#/vault");
-  await page.goto(`/#/organizations/${orgId}/settings/account`);
+  await page.goto(`/#/organizations/${orgId}/settings/joining`);
   const row = page.getByTestId("script-token-Join domain");
   await expect(row).toContainText("1 item");
   await expect(row).toContainText("from 127.0.0.1");
