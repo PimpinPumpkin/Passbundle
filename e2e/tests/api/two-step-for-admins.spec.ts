@@ -212,7 +212,9 @@ test("the Business preset and an MSP's clients have it on, an MSP needs it of it
   const mspId = await api.msp(mspAdmin, mspName);
   const defaults = await api.call(mspAdmin, "GET", `/api/keykeeper/msp/${mspId}/policies`);
   expect(defaults.body.types).toContain(ADMIN_TWO_STEP);
-  expect(defaults.body.defaults).toContainEqual({ type: ADMIN_TWO_STEP, enabled: true, data: null });
+  expect(defaults.body.defaults).toContainEqual(
+    expect.objectContaining({ type: ADMIN_TWO_STEP, enabled: true, data: null, required: false }),
+  );
   const clientName = `Northwind ${randomUUID().slice(0, 6)}`;
   const clientId = await api.client(mspAdmin, mspId, clientName, "business");
   expect((await api.call(mspAdmin, "GET", orgSetting(clientId))).body).toMatchObject({

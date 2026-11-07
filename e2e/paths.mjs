@@ -38,6 +38,10 @@ export const dnsPort = process.env.KK_DNS_PORT ?? "8102";
 // themselves: WebAuthn won't take an IP address as a site's name
 // (tests/connector-origins.spec.ts).
 export const connectorServerPort = process.env.KK_CONNECTOR_SERVER_PORT ?? "8103";
+// A server that sends email and needs single organization before account
+// recovery (ENFORCE_SINGLE_ORG_WITH_RESET_PW_POLICY), which the policy tests
+// start themselves (tests/api/msp-required-policies.spec.ts).
+export const singleOrgServerPort = process.env.KK_SINGLE_ORG_SERVER_PORT ?? "8104";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??

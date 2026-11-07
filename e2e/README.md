@@ -38,6 +38,8 @@ Single sign-on tests use `entra-standin.mjs`, a local stand-in for Microsoft Ent
 
 The security key tests (`tests/connector-origins.spec.ts`) start a server of their own named `vault.connectors.test`, since WebAuthn won't take an IP address as a site's name, on `KK_CONNECTOR_SERVER_PORT` (default 8103).
 
+The required policy tests (`tests/api/msp-required-policies.spec.ts`) start a server of their own that sends email and needs single organization before account recovery (`KK_SINGLE_ORG_FOR_RECOVERY=1`, upstream's `ENFORCE_SINGLE_ORG_WITH_RESET_PW_POLICY`), on `KK_SINGLE_ORG_SERVER_PORT` (default 8104).
+
 ## Website screenshots
 
 `site-shots/` makes the website's screenshots from the real apps (`npx playwright test -c playwright.site.config.ts`). It isn't a test and CI doesn't run it. See `site/README.md`.
