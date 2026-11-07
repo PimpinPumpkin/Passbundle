@@ -91,6 +91,8 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 3. The response carries the access token, the refresh token, the user key, and the private key. The core opens the user key with the stretched master key; a wrong password fails here, on the device, as well as on the server.
 4. Sync, then open the vault.
 
+**A wrong email or master password** is said the same way, "That email or master password isn't right." (`Error::WrongSignIn`): the server answers an email with no account and a wrong password alike ("Username or password is incorrect"), and a user key that doesn't open with what was typed says the same. So a typo in the email isn't called a wrong master password, and nothing tells anyone which emails have accounts. Unlocking, where the email is known, says "That master password isn't right."
+
 **Two-step login.** If the account has it on, the server answers step 2 with the methods it offers. The core does an authenticator app's code and an emailed code (it asks the server to send the email); the others come later.
 - The sign-in waits for the code holding the login hash and the stretched master key, in memory only, so the slow KDF runs once.
 - The code goes back with the same request.
@@ -100,6 +102,8 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 **The session.** The access token is refreshed with the refresh token a minute before it expires. When the server refuses the refresh token, the app is signed out and asks for the master password.
 
 **Saving an item** sends it encrypted, under its organization's key or the user key, with the revision it was edited from. The server refuses an edit made from a copy that's since changed (more than two seconds older), so one device can't overwrite another's newer edit; the app syncs and the person tries again.
+
+**Saving once.** An item the server took is saved, whatever happens next (`App::save`, which answers its id and whether the sync after it came through). If that sync fails (the connection dropped, the server had a problem), the item as the server saved it goes into the vault kept on this device, in place of the old one or as a new one, and the vault opens again with it, so it shows; the next sync brings the rest. The editor closes and says it's saved and that the rest syncs next time, so Save is never pressed again for a second copy. A new folder is kept the same way. A save that never reached the server (offline) saves nothing, and the editor keeps what was typed and says so. Tests: `core/tests/saving.rs` (a stand-in server that takes the save, then fails the sync with an error or a dropped connection: the item shows, keeps its password, and is still there after locking and unlocking; and one that can't be reached: nothing kept), and the app's `test/plain_errors_test.dart` (the editor closes once, the server is asked to save once).
 
 **Asking for the master password again.** An item can ask for the master password before its secrets are used (upstream's "master password re-prompt", which the web vault and the extension set and honor). The apps honor it the same way:
 
@@ -286,6 +290,27 @@ Where the apps sign in, so nobody types a server address who doesn't have to:
   Nothing the person, or something running as them, can write is read, so nobody can point the apps at another server this way.
 - **Someone hosting their own**: "Self-hosted?" on the sign-in screen shows the server field. Signing in to that server once keeps it showing, for next time.
 
+## Checking a server
+
+What's wrong with a server someone typed is said under the server field, not under the master password (`Server::check`, `pb_check_server`; the sign-in screen, `app/lib/sign_in.dart`):
+
+- **As they leave the field**, and before making an account (before the slow part), the core asks the address for the server's configuration (`GET /api/config`, which every upstream server answers without signing in), with no session and at most 15 seconds. A PassBundle server answers JSON with its `version`.
+- **Signing in** checks it on the way: the first call is the prelogin, and an answer that isn't a PassBundle server's (a web page, a page that isn't there, a site that wants its own sign-in: 401, 403, 404, or 405) is said to be no PassBundle server, never quoted.
+- **What's said** (`Error::BadAddress`, `Error::NotAServer`, and `Error::Network`, which the bridge marks `field: "server"`): nothing typed ("Enter your server's address, like vault.example.com."), plain HTTP to another computer ("Use an address that starts with https://..."), something that isn't an address, no PassBundle server there ("There's no PassBundle server at vault.example.com. Check the address: it's where you open your web vault."), or why it can't be reached (below). With PassBundle's own server or an organization's, where there's no field, it's said where the other errors are.
+- **Tests:** the core's (`server.rs`: a web page, a missing page, and a 405 at the prelogin, never quoted; the check taking a configuration and refusing a page; a server's own 503; nothing listening; each address refused and why), and the app's (`test/plain_errors_test.dart`, `test/app_test.dart`: a web server that answers every address with a page, said under the field as the person leaves it and again on Sign in, and gone as they type; nothing listening there, and plain HTTP, under the field).
+
+## What the apps say when something goes wrong
+
+The core's errors are the words the screens show (`core/src/error.rs`): plain words, and what to do next. Never a library's own text (io, TLS, or JSON errors, which can quote what a server sent), a status number on its own, or the OS's names for things.
+
+- **A server that can't be reached** names it and says why, from the HTTP library's error, without its words: it couldn't be found ("Check that this device is online and the address is right"), nothing answered or the connection dropped, it didn't answer in time, or its certificate isn't trusted on this device ("If it's your organization's server, ask your IT team"). The bridge marks these `offline: true`.
+- **The server's own words** are said as its ("Your server said: ..."); a status with none says what it means ("Your server isn't answering right now (error 503). Try again in a few minutes."), as does too many tries.
+- **Refusals** are their reasons as sentences ("A folder needs a name."). An encrypted value the core won't open says so and what to do ("PassBundle won't open this: its integrity check failed. Sync, then try again; if it keeps happening, open it in the web vault.").
+- **This device:** the clipboard, the desktop agent (not running, or stopped answering: quit PassBundle and open it again, which starts it), and what's kept here (out of space, or the folder can't be written) each say so, never as a network error. A crash inside the core, caught at the bridge, says to try again.
+- **Offline,** the vault says once, in a banner, that it shows the copy on this device and when it was synced ("Can't reach your server. You're seeing the copy on this device, synced 2 hours ago. Saving changes needs the server."), with Try again, instead of an error each time it opens (`pb_sync` answers how old the kept copy is, `keptSecondsAgo`). Saving offline says it wasn't saved and that what was typed is still there.
+- **Elsewhere:** Windows Hello's answers in the desktop agent, and Android's installer's when an update fails, are said in words, never their codes.
+- **Tests:** the core's (`error.rs`: every kind of failure the HTTP library has, said with the server's name and nothing of the library's; statuses with what they mean; every message a sentence), the app's (`test/plain_errors_test.dart`), and Android's (`InstallStatusTest`).
+
 ## Network
 
 - HTTPS only, to the server the person set, with the OS's own certificate checks (rustls with `rustls-platform-verifier`), so an office's own root certificate works as it does in their browser.
@@ -309,7 +334,7 @@ Where the apps sign in, so nobody types a server address who doesn't have to:
 - **The core's own tests** read the vectors and must produce or open every value.
 - **Against a real server** (`core/tests/server.rs` in `passbundle-apps`, run by its CI against the server's `keykeeper` branch), with real keys:
   - signing up as an app would;
-  - a wrong password, and two-step login with an authenticator code;
+  - a wrong password, said the same as an email with no account, and two-step login with an authenticator code;
   - sync, saving, editing, refusing an edit from a stale copy, trash, and refreshing the session;
   - an organization made with its key sealed to the owner's public key, and its items.
 - **With the web vault** (`e2e/tests/core-interop.spec.ts`, tier 1, with the core's `interop` tool built from `passbundle-apps`): the web vault makes an account, an organization, and an item in each, and the core opens them. The core saves its own item in each, and the web vault shows every field as the core wrote it. Real keys on both sides. The tool trusts the test server's throwaway certificate through a `test-trust` build feature the app never has.

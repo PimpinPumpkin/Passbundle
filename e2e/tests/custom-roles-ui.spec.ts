@@ -63,7 +63,7 @@ test("an MSP admin gives a client's point of contact a custom role that manages 
   await expect(invite.getByRole("checkbox", { name: "Manage groups" })).toHaveCount(0);
   await expect(allCollections).toHaveCount(0);
   await expect(invite.getByTestId("custom-role-no-collections")).toContainText(
-    "can't also manage all shared folders",
+    "gets its shared folders one by one",
   );
   await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();

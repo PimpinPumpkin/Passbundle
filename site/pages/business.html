@@ -35,7 +35,7 @@ layout: wide
     <div class="row-text">
       <span class="eyebrow">Rollout</span>
       <h2>Every computer, in an afternoon.</h2>
-      <p class="lead">Your organization's Settings page has an install command: one PowerShell line that runs our install script on a Windows computer. Run it from Intune, group policy, or any RMM.</p>
+      <p class="lead">Your organization's settings have an install command, under Joining and security: one line that runs our install script on a Windows or Linux computer, or makes a profile for your MDM on Macs. Run it from Intune, group policy, or any RMM.</p>
       <ul class="checks">
         <li>Installs the extension in Chrome and Edge once it's in their stores, with your server already filled in</li>
         <li>Turns off the browsers' own password managers, without deleting what's in them</li>
@@ -44,7 +44,7 @@ layout: wide
       </ul>
     </div>
     <div class="stage">
-      <x-shot name="business-install" frame="panel" alt="A company's install command on its Settings page, with how many people joined with it"></x-shot>
+      <x-shot name="business-install" frame="panel" alt="A company's install command in its settings, with how many people joined with it"></x-shot>
     </div>
   </div>
 
@@ -141,7 +141,7 @@ layout: wide
     </details>
     <details>
       <summary>Does it work on Macs?</summary>
-      <p>Yes. The extension and the web vault work on Mac, Windows, and Linux, and there are test builds of the PassBundle app for all three. The install command in your settings is for Windows. Install scripts for Mac (with a profile for your MDM) and Linux are in <a href="https://github.com/PimpinPumpkin/Passbundle/tree/main/installer">our repository</a>, though the settings page doesn't make their command yet. Windows Hello unlock is built, not yet tried on a real Windows Hello device; Touch ID waits until the app is signed by Apple.</p>
+      <p>Yes. The extension and the web vault work on Mac, Windows, and Linux, and there are test builds of the PassBundle app for all three. The install command in your settings comes for Windows, Linux, and Mac, where it makes a profile for your MDM and a second line installs the app; the scripts are in <a href="https://github.com/PimpinPumpkin/Passbundle/tree/main/installer">our repository</a>. Windows Hello unlock is built, not yet tried on a real Windows Hello device; Touch ID waits until the app is signed by Apple.</p>
     </details>
     <details>
       <summary>Is there an app for phones?</summary>

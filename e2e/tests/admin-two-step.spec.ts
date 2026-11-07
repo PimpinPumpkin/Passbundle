@@ -65,8 +65,8 @@ test("an admin without two-step login is taken to set it up, then signs in with 
   await admin.waitForURL(/#\/login/);
   await confirmMember(owner, adminUser.email);
 
-  // The Settings page says it's on and who hasn't set it up.
-  await owner.goto(`${org}/settings/account`);
+  // Settings, Joining and security, says it's on and who hasn't set it up.
+  await owner.goto(`${org}/settings/joining`);
   const card = owner.getByTestId("admin-two-step");
   await expect(card.getByRole("checkbox", { name: "Require two-step login for admins" })).toBeChecked();
   await expect(card.getByTestId("admin-two-step-not-set-up")).toContainText(adminUser.email);
@@ -107,7 +107,7 @@ test("an admin without two-step login is taken to set it up, then signs in with 
   // They're off the list; turning it off asks first, and then it's off.
   // (Reloading would lock the vault: move away and back instead.)
   await owner.goto(`${org}/members`);
-  await owner.goto(`${org}/settings/account`);
+  await owner.goto(`${org}/settings/joining`);
   await expect(card.getByTestId("admin-two-step-not-set-up")).not.toContainText(adminUser.email);
   await card.getByRole("checkbox", { name: "Require two-step login for admins" }).uncheck();
   await card.getByRole("button", { name: "Save" }).click();
