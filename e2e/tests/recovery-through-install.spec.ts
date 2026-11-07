@@ -152,7 +152,7 @@ test("an MSP admin recovers the account of someone who joined through the instal
   await later
     .getByRole("textbox", { name: /^Master password/ })
     .fill(newPassword);
-  await later.getByRole("button", { name: "Log in", exact: true }).click();
+  await later.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(later.getByText("Before recovery").first()).toBeVisible({
     timeout: 30_000,
   });
