@@ -260,7 +260,7 @@ test("a person's Health counts the items to fix beside it, and its exposed passw
   // weak one. Worked out after unlocking, without holding the vault up.
   const count = menu(page).getByTestId("keykeeper-health-count");
   await expect(count).toHaveText("4", { timeout: 30_000 });
-  await expect(count).toHaveAttribute("aria-label", "4 items to fix: weak, reused, or exposed passwords");
+  await expect(count).toHaveAttribute("aria-label", "4 items to fix: weak, reused, or exposed passwords, or items that expire soon");
 
   // The exposed passwords report says what it sends, and finds the breached one.
   await count.click();
@@ -289,7 +289,7 @@ test("a person's Health counts the items to fix beside it, and its exposed passw
   await expect(count.getByTestId("keykeeper-health-unchecked")).toBeVisible({ timeout: 30_000 });
   await expect(count).toHaveAttribute(
     "aria-label",
-    "3 items to fix: weak, reused, or exposed passwords. Couldn't check for breaches",
+    "3 items to fix: weak, reused, or exposed passwords, or items that expire soon. Couldn't check for breaches",
   );
   await page.goto("/#/reports/exposed-passwords-report");
   await expect(page.getByTestId("keykeeper-exposed-unchecked")).toContainText(
@@ -390,4 +390,46 @@ test("with checking after unlocking turned off, nothing goes to the breach servi
   await expect(page.getByTestId("msp-exposed-off")).toHaveCount(0);
 
   await context.close();
+});
+
+test("turning the check after unlocking off in one browser turns it off in the account's other browsers", async ({
+  browser,
+}, testInfo) => {
+  test.setTimeout(180_000);
+  const user = webUserFor("exposed-follows", testInfo.repeatEachIndex);
+  const settingIn = (page: Page) =>
+    page.getByRole("checkbox", { name: "Check my passwords against known breaches after unlocking" });
+
+  const first = await browser.newContext();
+  const page = await first.newPage();
+  await signUp(page, user);
+  await page.goto("/#/settings/appearance");
+  await expect(settingIn(page)).toBeChecked();
+  await settingIn(page).uncheck();
+  await expect(settingIn(page)).not.toBeChecked();
+  // Saved to the account's settings document a moment after the change.
+  await page.waitForTimeout(3_000);
+
+  // Another browser, never used before: off, from the account.
+  const second = await browser.newContext();
+  const other = await second.newPage();
+  await other.goto("/#/login");
+  await other.getByLabel(/Email address/).fill(user.email);
+  await other.getByRole("button", { name: "Continue" }).click();
+  await other.getByRole("textbox", { name: /Master password/ }).fill(user.password);
+  await other.getByRole("button", { name: "Log in", exact: true }).click();
+  await expect(menu(other)).toBeVisible({ timeout: 30_000 });
+  await other.goto("/#/settings/appearance");
+  await expect(settingIn(other)).not.toBeChecked();
+
+  // Turned back on there: the first browser follows at its next sync.
+  await settingIn(other).check();
+  await expect(settingIn(other)).toBeChecked();
+  await other.waitForTimeout(3_000);
+  await reloadVault(page);
+  await page.goto("/#/settings/appearance");
+  await expect(settingIn(page)).toBeChecked();
+
+  await second.close();
+  await first.close();
 });

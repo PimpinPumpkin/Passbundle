@@ -131,7 +131,7 @@ async function harborDental(page: Page, request: APIRequestContext) {
   });
   await page.goto(`${org}/members`);
   await confirmMember(page, alex.email);
-  return { org, everyone, alex, invite };
+  return { org, everyone, admins, alex, invite };
 }
 
 test("the Access page shows who reaches each shared folder and how, and removing someone lists the passwords they could see", async ({
@@ -236,6 +236,99 @@ test("the Access page shows who reaches each shared folder and how, and removing
   await expect(seen).toBeVisible();
   await seen.getByRole("button", { name: "Done" }).click();
   await expect(seen).toBeHidden();
+
+  await context.close();
+});
+
+test("revoking or removing several people at once says what each can open, then lists the passwords any of them could see", async ({
+  browser,
+  request,
+}, testInfo) => {
+  test.setTimeout(240_000);
+  const context = await browser.newContext();
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const page = await context.newPage();
+  const owner = webUserFor("access-bulk-owner", testInfo.repeatEachIndex);
+  await signUpWithAuthenticator(page, owner);
+  const { org, admins, alex, invite } = await harborDental(page, request);
+
+  // Sam can edit Admins directly, passwords and all.
+  const sam = await new Api(request).account(
+    "Sam Lee",
+    `sam.lee-${Date.now()}@api.example.test`,
+    publicKey(),
+  );
+  await invite(sam.email, 2, {
+    collections: [{ id: admins, readOnly: false, hidePasswords: false, manage: false }],
+  });
+  // The Members page is open already: reload it, so it lists Sam.
+  await page.goto(`${org}/members`);
+  await page.reload();
+  await confirmMember(page, sam.email);
+
+  /** Ticks Alex and Sam, and picks a bulk action from the list's Options. */
+  const bulk = async (action: string) => {
+    await page.getByPlaceholder("Search members").fill("@api.example.test");
+    await expect(page.getByRole("row").filter({ hasText: owner.email })).toHaveCount(0);
+    for (const email of [alex.email, sam.email]) {
+      await page.getByRole("row").filter({ hasText: email }).getByRole("checkbox").check();
+    }
+    await page.getByRole("columnheader").getByRole("button", { name: "Options" }).click();
+    await page.getByRole("menuitem", { name: action }).click();
+  };
+  const reach = (dialog: ReturnType<Page["getByRole"]>, email: string) =>
+    dialog.getByRole("row").filter({ hasText: email }).getByTestId("keykeeper-reach");
+
+  // Revoking says what each can open, as revoking one person does.
+  await bulk("Revoke access");
+  const revoking = page.getByRole("dialog").filter({ hasText: "Revoke members" });
+  await expect(reach(revoking, alex.email)).toHaveText(
+    "Alex Rivera can open 2 shared folders with 3 items.",
+  );
+  await expect(reach(revoking, sam.email)).toHaveText(
+    "Sam Lee can open 1 shared folder with 1 item.",
+  );
+  await revoking.getByRole("button", { name: "Revoke members" }).click();
+  await expect(revoking.getByText("Revoked organization access successfully")).toHaveCount(2);
+  await revoking.getByRole("button", { name: "Close" }).click();
+
+  // Then one list: the logins whose passwords either could see, and who could
+  // see each. Front desk PC (Everyone) was Alex's; Payroll portal (Admins)
+  // was Sam's, since the group hid its passwords from Alex.
+  const seen = page.getByRole("dialog", { name: "Passwords these 2 people could see" });
+  await expect(seen.getByTestId("seen-passwords-intro")).toHaveText(
+    "Alex Rivera and Sam Lee could see these logins' passwords in the shared folders they could open. They may still know them, so change them.",
+  );
+  const logins = seen.getByTestId("seen-password");
+  await expect(logins).toHaveCount(2);
+  const login = (name: string) => seen.locator(`[data-testid="seen-password"][data-name="${name}"]`);
+  await expect(login("Front desk PC").getByTestId("seen-password-who")).toHaveText("Alex Rivera");
+  await expect(login("Payroll portal").getByTestId("seen-password-who")).toHaveText("Sam Lee");
+  await expect(login("Payroll portal").getByTestId("seen-password-folders")).toHaveText("Admins");
+  await expect(seen).not.toContainText("Door codes");
+
+  // Copy list says who, and nothing from inside an item.
+  await seen.getByRole("button", { name: "Copy list" }).click();
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toBe(
+    "Name\tShared folders\tWho could see it\nFront desk PC\tEveryone\tAlex Rivera\nPayroll portal\tAdmins\tSam Lee\n",
+  );
+  await seen.getByRole("button", { name: "Done" }).click();
+  await expect(seen).toBeHidden();
+
+  // Removing them now says what they could open before they were revoked,
+  // and lists the same passwords once they're gone.
+  await bulk("Remove");
+  const removing = page.getByRole("dialog").filter({ hasText: "Remove members" });
+  await expect(reach(removing, sam.email)).toHaveText(
+    "Before they were revoked, Sam Lee could open 1 shared folder with 1 item.",
+  );
+  await removing.getByRole("button", { name: "Remove members" }).click();
+  await expect(removing.getByText("Removed successfully")).toHaveCount(2);
+  await removing.getByRole("button", { name: "Close" }).click();
+  const seenAgain = page.getByRole("dialog", { name: "Passwords these 2 people could see" });
+  await expect(seenAgain.getByTestId("seen-password")).toHaveCount(2);
+  await seenAgain.getByRole("button", { name: "Done" }).click();
 
   await context.close();
 });
