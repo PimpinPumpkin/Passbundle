@@ -10,6 +10,7 @@ Everything here is made up: `example.com`, `.example`, and `.test` addresses, do
 - `formats.mjs`: a writer for each format, and a model of what our importer does with it (`expect`), which reads the records the writer made the way the importer does.
 - `vault.mjs`: the one shape both sides are compared in.
 - `zip.mjs`: a small zip writer, for 1PUX and Proton Pass.
+- `kdbx.mjs`: a small KeePass database writer (KDBX 4: AES-KDF, AES-256-CBC, the HMAC block stream, ChaCha20 for protected values), from KeePass's published format. `import-formats.spec.ts` writes a .kdbx with PassBundle's own field names planted in it at test time, to check they don't come in as ours; the fake vault isn't written as a .kdbx.
 - `generate.mjs`: writes `files/` and `expected/`. Run `node fixtures/imports/generate.mjs` from `e2e/` after changing any of the above, and commit the result; the first test fails if they're out of date.
 - `files/<format>/`: the exports. Try them by hand too.
 - `expected/<format>.json`: what the vault should hold after importing that format, one item per line.

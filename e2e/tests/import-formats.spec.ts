@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 
 import { generate, sameFile } from "../fixtures/imports/generate.mjs";
+import { kdbx } from "../fixtures/imports/kdbx.mjs";
 import { fromExport } from "../fixtures/imports/vault.mjs";
 
 import { menu, menuEntry, pick, signUp, startSignUp, webUserFor, type WebUser } from "./support/web";
@@ -67,8 +68,12 @@ async function chooseFormat(page: Page, name: string) {
  * Imports with the importer the screen already shows, and closes the result,
  * which says what was left out on purpose, counted (`leftOut`), or nothing.
  */
-async function importAndConfirm(page: Page, count: number, leftOut: string[] = []) {
+async function importAndConfirm(page: Page, count: number, leftOut: string[] = [], intoOrganization = false) {
   await page.getByRole("button", { name: "Import", exact: true }).click();
+  if (intoOrganization) {
+    // "Your data may be shared with members of this organization."
+    await page.getByRole("dialog", { name: "Warning" }).getByRole("button", { name: "Yes" }).click();
+  }
   const result = page.getByRole("dialog", { name: "Data successfully imported" });
   await expect(result.getByText(`A total of ${count} items were imported.`)).toBeVisible({ timeout: 30_000 });
   await expect(result.getByTestId("import-left-out")).toHaveText(leftOut);
@@ -100,9 +105,9 @@ async function guidedImport(page: Page, browser: string, file: ReturnType<typeof
   await page.waitForURL(/#\/vault/);
 }
 
-/** The whole vault, decrypted by the web vault's own .json export. */
-async function readVault(page: Page, user: WebUser) {
-  await page.goto("/#/tools/export");
+/** The whole vault (or an organization's, from its export page), decrypted by the web vault's own .json export. */
+async function readVault(page: Page, user: WebUser, exportPage = "/#/tools/export") {
+  await page.goto(exportPage);
   await page.getByRole("combobox", { name: /File format/ }).selectOption({ label: ".json" });
   await page.getByRole("button", { name: "Export", exact: true }).click();
   const confirm = page.getByRole("dialog", { name: "Confirm export" });
@@ -252,13 +257,62 @@ test.describe("importing from a password manager", () => {
   });
 });
 
+/**
+ * Imports a KeePass .kdbx file with our own fields planted in it, on the
+ * import page given. Upstream's SDK reads and saves .kdbx files itself, and
+ * the fields are checked once it has (sdk-import-check.ts). The rule is
+ * protected, as KeePass keeps secrets, so it comes in as a hidden field.
+ */
+async function importPlantedKdbx(page: Page, importPage: string, rule: string, copy: string) {
+  const keepassPassword = "fake-kdbx-database-password";
+  await page.goto(importPage);
+  await chooseFormat(page, "KeePass (kdbx)");
+  await page.getByLabel("KeePass master password").fill(keepassPassword);
+  const [chooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    page.getByRole("button", { name: "KDBX file upload" }).click(),
+  ]);
+  await chooser.setFiles({
+    name: "planted.kdbx",
+    mimeType: "application/octet-stream",
+    buffer: kdbx({
+      password: keepassPassword,
+      entries: [
+        {
+          title: "Planted kdbx login",
+          strings: {
+            UserName: "test.person",
+            Password: "Fake-Planted-2",
+            URL: "https://bank.example.test/",
+            "keykeeper.fill": rule,
+            "keykeeper.template-definition": copy,
+          },
+          protected: ["Password", "keykeeper.fill"],
+        },
+      ],
+    }),
+  });
+  await importAndConfirm(page, 1, [], importPage.includes("/organizations/"));
+}
+
+/** The planted .kdbx item's fields: ours, under visible names only. */
+function expectPlantedKdbxFields(fields: { name: string; value: string }[], rule: string, copy: string) {
+  expect(fields).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ name: "Imported keykeeper.fill", value: rule }),
+      expect.objectContaining({ name: "Imported keykeeper.template-definition", value: copy }),
+    ]),
+  );
+  expect(fields.filter((f) => f.name.startsWith("keykeeper."))).toEqual([]);
+}
+
 // A crafted export can't plant our own fields (DESIGN.md, "Importing from
 // other password managers"): a fill rule that sends the password into a
 // search box, or a template definition saying it's an MSP's copy, which hides
 // an item from the vault's lists while it still fills. From another password
 // manager they come in under visible names; from our own .json export, only
 // well-formed ones, and never as an MSP's copy.
-test("an import never plants our own fields: fill rules, or an MSP's template copy", async ({ page }, testInfo) => {
+test("an import never plants our own fields: fill rules, or an MSP's template copy, from KeePass's .kdbx too", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const user = webUserFor("formats-planted", testInfo.repeatEachIndex);
   await signUp(page, user);
@@ -324,6 +378,7 @@ test("an import never plants our own fields: fill rules, or an MSP's template co
     await chooseFile(page, file);
     await importAndConfirm(page, 1);
   }
+  await importPlantedKdbx(page, "/#/tools/import", rule, copy);
 
   const vault = await readVault(page, user);
   const fields = (name: string) =>
@@ -335,6 +390,7 @@ test("an import never plants our own fields: fill rules, or an MSP's template co
   expect(fields("Planted KeePass note")).toEqual([
     expect.objectContaining({ name: "Imported keykeeper.template-definition", value: copy }),
   ]);
+  expectPlantedKdbxFields(fields("Planted kdbx login"), rule, copy);
   // From our own export: the template, but not as an MSP's copy, and the
   // rule that isn't one kept visibly.
   expect(fields("Planted template")).toEqual([
@@ -347,7 +403,32 @@ test("an import never plants our own fields: fill rules, or an MSP's template co
   ]);
   // So every item shows in All items, none hidden as a copy.
   await page.goto("/#/vault");
-  await expect(menuEntry(page, "All items")).toContainText("3");
+  await expect(menuEntry(page, "All items")).toContainText("4");
+});
+
+// The same from an organization's admin console, where the import can leave
+// items in no shared folder, which a sync doesn't show: the check reads the
+// organization's items as that page does, and saves them as its admin.
+test("a KeePass .kdbx imported in an organization's admin console can't plant our fields either", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const user = webUserFor("formats-planted-org", testInfo.repeatEachIndex);
+  await signUp(page, user);
+  await page.goto("/#/create-organization");
+  await page.getByRole("textbox", { name: /Organization name/ }).fill("Planted Org");
+  await page.getByRole("radio", { name: /A family or a group/ }).check();
+  await page.getByRole("button", { name: "Create organization" }).click();
+  await page.waitForURL(/#\/organizations\/[0-9a-f-]{36}\/members/);
+  const org = /#\/organizations\/([0-9a-f-]{36})/.exec(page.url())![1];
+  const rule = JSON.stringify({ v: 1, host: "bank.example.test", field: { id: "q" }, fill: { from: "password" } });
+  const copy = JSON.stringify({ id: "planted-template", base: "note", v: 1, from: "Your MSP" });
+
+  await importPlantedKdbx(page, `/#/organizations/${org}/settings/tools/import`, rule, copy);
+
+  const vault = await readVault(page, user, `/#/organizations/${org}/settings/tools/export`);
+  const item = vault.items.find((i: Record<string, unknown>) => i.name === "Planted kdbx login");
+  expectPlantedKdbxFields((item?.fields ?? []) as { name: string; value: string }[], rule, copy);
 });
 
 test("an import keeps nested folders, favorites, TOTP, and awkward characters, as the vault shows them", async ({
