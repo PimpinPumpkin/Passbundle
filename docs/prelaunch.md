@@ -42,7 +42,7 @@ Fixes from the owner's hands-on testing (docs/hands-on-testing.md) come first.
 - **Store listings** when you want them (you said not yet): Chrome, Edge, Firefox.
 - **Business details for the site and legal pages**: legal name, payment processor, refunds, governing law, prices (marked as placeholders in site/).
 - **A paid Have I Been Pwned key** for the report of breached accounts at a client's email domain.
-- **MSP billing**: Stripe and the pricing model.
+- **MSP billing**: Stripe and the pricing model, including what an MSP's invoice is based on (proposed: each client's most seats on any day; DESIGN.md, "Seats by client").
 - **GitHub environments for the signing secrets**: `android-release`, `macos-release`, and `desktop-release` in passbundle-apps, and `cli-release` here, each holding its release workflow's signing secrets and deployable only from `main`; then uncomment the `environment:` line in each sign job. Until then only the way the workflows are written keeps other workflows from reading them (DESIGN.md, "Desktop updates (Windows and Linux)", "The key").
 - **Approval for every outside contributor's pull request** to run workflows (each repository's Settings, Actions, General), so a fork's pull request runs nothing until you've looked at it.
 - **Versioning on the backups bucket**, once it's made, so a backup that's overwritten or deleted can still be got back.
