@@ -929,6 +929,9 @@ test("on a server without email, an admin confirmed before the setting was turne
   const personId = await api.addMember(owner, orgId, person, "admin", { authenticator: false, accept: false });
   const statusOf = async (id: string) => (await api.members(owner, orgId)).find((m) => m.id === id)!.status;
   expect(await statusOf(personId)).toBe(2);
+  // And another, whom an owner will revoke on purpose while they're on hold.
+  const revoked = await api.account("held-revoked");
+  const revokedId = await api.addMember(owner, orgId, revoked, "admin", { authenticator: false, accept: false });
   // Another admin who never accepted turns it on, and so accepts their own role.
   const turner = await api.account("held-turner");
   await api.giveAuthenticator(turner);
@@ -961,6 +964,24 @@ test("on a server without email, an admin confirmed before the setting was turne
   const asked = await api.call(person, "GET", "/api/keykeeper/organizations/unaccepted");
   expect(asked.status, JSON.stringify(asked.body)).toBe(200);
   expect(asked.body.data).toEqual([{ organizationId: orgId, name: orgName, role: "admin", revoked: true }]);
+
+  // An owner who revokes someone on hold (here with upstream's bulk revoke)
+  // makes it an ordinary revoke: their vault stops offering the role, and
+  // accepting it doesn't bring them back.
+  expect(await statusOf(revokedId)).toBe(-1);
+  const bulk = await api.call(owner, "PUT", `/api/organizations/${orgId}/users/revoke`, { ids: [revokedId] });
+  expect(bulk.status, JSON.stringify(bulk.body)).toBe(200);
+  expect(bulk.body.data).toEqual([expect.objectContaining({ id: revokedId, error: "" })]);
+  expect(
+    (await log())
+      .filter((e) => e.organizationUserId === revokedId && e.type === 1511)
+      .map((e) => e.actingUserId)
+      .sort(),
+  ).toEqual([turner.userId, owner.userId].sort());
+  expect((await api.call(revoked, "GET", "/api/keykeeper/organizations/unaccepted")).body.data).toEqual([]);
+  await api.acceptRole(revoked, orgId);
+  expect(await statusOf(revokedId)).toBe(-1);
+  expect(await api.orgsOf(revoked)).toEqual([]);
 
   // Accepting brings them back as they were, and the rule with it: without
   // two-step login, they're signed out, and set it up as they sign in again.
