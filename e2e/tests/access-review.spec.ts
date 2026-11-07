@@ -317,7 +317,9 @@ test("revoking or removing several people at once says what each can open, then 
   await expect(seen).toBeHidden();
 
   // Removing them now says what they could open before they were revoked,
-  // and lists the same passwords once they're gone.
+  // and lists the same passwords once they're gone. Revoked members are
+  // listed under Revoked.
+  await page.locator("label").filter({ hasText: /^\s*Revoked/ }).click();
   await bulk("Remove");
   const removing = page.getByRole("dialog").filter({ hasText: "Remove members" });
   await expect(reach(removing, sam.email)).toHaveText(
