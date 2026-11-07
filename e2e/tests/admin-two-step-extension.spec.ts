@@ -3,6 +3,7 @@
 // requires it and who hasn't set it up signs in, and the extension says who
 // requires it and that it's set up in the web vault, which it offers to open.
 import { createAccount, expect, openPopup, serverUrl, test, userFor } from "./support/extension";
+import { confirmWithPassword } from "./support/web";
 
 test("the extension sends an owner who hasn't set up two-step login to the web vault", async ({
   context,
@@ -10,15 +11,23 @@ test("the extension sends an owner who hasn't set up two-step login to the web v
 }, testInfo) => {
   test.setTimeout(150_000);
   const user = userFor("ext-two-step-owner", testInfo.repeatEachIndex);
-  // Someone without two-step login makes a business organization, which
-  // requires it of its owners and admins. The web vault says what happens
-  // first; once it's made, their session ends, at its next refresh.
+  // Someone without two-step login: a business, which requires it of its
+  // owners and admins, asks them to set it up first (first-run.spec.ts), so
+  // they make a group and require it of its admins themselves. That ends
+  // their session, at its next refresh.
   const web = await createAccount(context, user);
   await web.goto(`${serverUrl}/#/create-organization`);
   await web.getByRole("textbox", { name: /Organization name/ }).fill("Contoso Clinic");
-  await web.getByRole("radio", { name: /A business/ }).check();
-  await expect(web.getByTestId("create-org-two-step")).toContainText("you'll be signed out");
+  await web.getByRole("radio", { name: /A family or a group/ }).check();
   await web.getByRole("button", { name: "Create organization" }).click();
+  await web.waitForURL(/#\/organizations\/[0-9a-f-]{36}\/members/);
+  const org = web.url().replace(/\/members.*$/, "");
+  await web.goto(`${org}/settings/joining`);
+  const card = web.getByTestId("admin-two-step");
+  await card.getByRole("checkbox", { name: "Require two-step login for admins" }).check();
+  await card.getByRole("button", { name: "Save" }).click();
+  await confirmWithPassword(web, user.password);
+  await web.goto(`${org}/members`);
   await web.waitForURL(/#\/login/);
   await web.close();
 

@@ -46,7 +46,7 @@ description: Getting started with PassBundle, for MSPs, their clients, and every
 <p>In the web vault, choose <strong>New organization</strong> and pick <strong>A business</strong>. It starts with account recovery, strong master passwords, one work account per person, and Everyone and Admins shared folders, and you can change any of them on its Settings and Policies pages.</p>
 
 <h3>How do I roll it out to our computers?</h3>
-<p>Your organization's Settings page has an install command. Run it as an administrator on each Windows computer, next to our install script, from Intune, group policy, or your RMM. It turns off the browsers' own password managers. Once the extension is in the Chrome and Edge stores, it installs that too, and anyone who then signs in joins your organization. Your owners get an email for each person who joins, and you can limit the command to your email domains.</p>
+<p>Your organization's settings have an install command, under <strong>Joining and security</strong>, which its owners and admins can open. Choose Windows, Mac, or Linux. On Windows, run it as an administrator, next to our install script, from Intune, group policy, or your RMM; on Linux, as root from your RMM. macOS takes managed settings only from a profile your MDM installs, so on a Mac the command makes that profile for you to upload to your MDM, and a second line installs the app. It turns off the browsers' own password managers. Once the extension is in the Chrome and Edge stores, it installs that too, and anyone who then signs in joins your organization. Your owners get an email for each person who joins, and you can limit the command to your email domains.</p>
 
 <h3>How do I connect Microsoft Entra ID?</h3>
 <p>In the organization's admin console, open <strong>Settings</strong>, then <strong>Provisioning</strong> (for an MSP's client, <strong>Entra ID sync</strong> in its row of the MSP console goes there too), and choose <strong>Create token</strong>. In Entra, add a new enterprise application of your own (not from the gallery), set its provisioning to Automatic, paste the page's address as the Tenant URL and the token as the Secret Token, and test the connection. Then assign the users and groups who should be in PassBundle, and start provisioning.</p>
@@ -55,6 +55,9 @@ description: Getting started with PassBundle, for MSPs, their clients, and every
 <p>Your own items live in Personal, and each organization has its shared folders. For each shared folder, give a person or group a preset (Can view, Can view but not see passwords, Can edit, or Can manage), or choose Custom to pick from ten capabilities, such as see passwords, delete, share, or export. Someone who reaches a folder more than one way gets the most open of them.</p>
 
 <h2>For MSPs</h2>
+<h3>How do I set up my MSP?</h3>
+<p>In the web vault, choose <strong>New organization</strong>, then <strong>Set up your MSP</strong>, and give it a name; you're its admin, and you can add your technicians next. Your MSP's staff sign in with two-step login (an authenticator app, a security key or passkey, or Duo), so set that up first: the page offers to, and brings you back. Once you're on an MSP's staff, <strong>MSP console</strong> is in the menu.</p>
+
 <h3>How do I add a client?</h3>
 <p>In the MSP console, give the client a name and choose Add client. Its organization, default policies, and shared folders are created in one step, and your staff are added to it.</p>
 
