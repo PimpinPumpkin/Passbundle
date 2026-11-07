@@ -169,6 +169,13 @@ const child = spawn(paths.serverBin, [], {
     // people in, as most tests expect. The limits server keeps the default,
     // where an owner or admin approves those joins (tests/api/joining.spec.ts).
     ...(!withMail && !withLimits ? { INVITE_JOINS_WITHOUT_EMAIL: "true" } : {}),
+    // KK_SEATS_SCHEDULE: when the job that records MSP clients' seats runs
+    // (DESIGN.md, "Seats by client"), for a side server whose test needs it
+    // to run now and again (tests/api/msp-seats.spec.ts), so the scheduler
+    // checks four times a second there. Others keep the default, once a day.
+    ...(keptData && process.env.KK_SEATS_SCHEDULE
+      ? { MSP_SEATS_SCHEDULE: process.env.KK_SEATS_SCHEDULE, JOB_POLL_INTERVAL_MS: "250" }
+      : {}),
     SIGNUPS_ALLOWED: "true",
     SIGNUPS_VERIFY: "false",
     MSP_SIGNUPS_ALLOWED: "true",

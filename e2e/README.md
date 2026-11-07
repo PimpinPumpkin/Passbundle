@@ -36,6 +36,8 @@ The command-line tool's tests (`tests/cli`, project `cli`) run the packed progra
 
 Single sign-on tests use `entra-standin.mjs`, a local stand-in for Microsoft Entra ID's sign-in (an OpenID provider at Entra's per-tenant paths, with keys made when it starts) and a DNS server for domain checks, on `KK_ENTRA_PORT` (default 8101) and `KK_DNS_PORT` (UDP, default 8102). Every test server points at it.
 
+The seats tests (`tests/api/msp-seats.spec.ts`) start a server of their own whose seats job runs every second (`KK_SEATS_SCHEDULE`), and write earlier days into its SQLite database, on `KK_SEATS_SERVER_PORT` (default 8105).
+
 The security key tests (`tests/connector-origins.spec.ts`) start a server of their own named `vault.connectors.test`, since WebAuthn won't take an IP address as a site's name, on `KK_CONNECTOR_SERVER_PORT` (default 8103).
 
 ## Website screenshots
