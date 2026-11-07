@@ -19,8 +19,8 @@
 //     means beside it. `class` sizes it (small, large).
 //   <x-art name="LockIcon"></x-art>: one of the apps' drawings from art/,
 //     inline so it takes the page's colors.
-//   <x-part name="tour"></x-part>: parts/tour.html, shared by more than one
-//     page (its leading comment says how to use it). `first-only` hides
+//   <x-part name="tour"></x-part>: parts/tour.html, a piece of a page kept
+//     in its own file (its leading comment says how to use it). `first-only` hides
 //     every .tour-part but the first until static/tour.js runs.
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -28,7 +28,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ICONS } from "./icons.mjs";
-import { THEME_BUTTON, THEME_SCRIPT, themeable } from "./theme.mjs";
+import { THEME_BUTTON, THEME_MENU_BUTTON, THEME_SCRIPT, themeable } from "./theme.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pagesDir = path.join(here, "pages");
@@ -164,16 +164,16 @@ function expand(html, file) {
     .replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k) => value(k, file));
 }
 
-// Six links: who it's for, what it does, what it costs, and why to trust it.
-// The tour is on the homepage, "Get PassBundle" is the download, and Help,
-// the tour, and the rest are in the footer.
+// Six links: see it, what it does, who it's for, and what it costs. Demo is
+// the homepage's demo, from any page. Download is the button beside them;
+// Security, Help, and the rest are in the footer.
 const NAV = [
+  ["/#demo", "Demo"],
+  ["/features/", "Features"],
   ["/personal/", "Personal"],
   ["/business/", "Business"],
   ["/msp/", "MSPs"],
-  ["/features/", "Features"],
   ["/pricing/", "Pricing"],
-  ["/security/", "Security"],
 ];
 
 function layout({ meta, body, file }, route) {
@@ -214,14 +214,15 @@ function layout({ meta, body, file }, route) {
     ${THEME_BUTTON}
     <div class="header-actions">
       <a class="login" href="${vault}">Log in</a>
-      <a class="button primary small" href="/download/">Get PassBundle</a>
+      <a class="button primary small" href="/download/">Download</a>
     </div>
     <details class="menu">
       <summary>Menu</summary>
       <nav aria-label="Menu">
         ${links}
         <a href="${vault}">Log in</a>
-        <a class="button primary" href="/download/">Get PassBundle</a>
+        ${THEME_MENU_BUTTON}
+        <a class="button primary" href="/download/">Download</a>
       </nav>
     </details>
   </div>
@@ -242,8 +243,8 @@ ${kind === "doc" ? `<div class="paper">\n${expand(body.trim(), file)}\n</div>` :
       <a href="/personal/">Personal and families</a>
       <a href="/business/">Business</a>
       <a href="/msp/">For MSPs</a>
+      <a href="/#demo">Demo</a>
       <a href="/features/">Features</a>
-      <a href="/tour/">Tour</a>
       <a href="/pricing/">Pricing</a>
       <a href="/download/">Download</a>
     </nav>

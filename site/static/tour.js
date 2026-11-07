@@ -1,32 +1,39 @@
-// The tour (parts/tour.html, on the homepage and /tour/): pieces of the apps
-// drawn in the page, and a tip that points at what to try next. Each part's steps are the <ol class="tour-steps">
-// under it, so without scripts the page shows the screens and the steps as a
-// list. With it, one part shows at a time, and each step says:
+// The homepage's demo (parts/tour.html): pieces of the apps drawn in the
+// page, and a tip that points at what to try next. Each part's steps are the
+// <ol class="tour-steps"> under it, so without scripts the page shows the
+// first part's screen and steps as a list (and a part a link names, by
+// :target). With it, one part shows at a time, and each step says:
 //   data-target   the [data-x] it points at, ringed
-//   data-state    words for what's showing: elements with data-show="word"
-//                 appear, and elements with data-hide="word" go away
+//   data-state    words for what's showing: elements whose data-show has
+//                 one of them appear, and elements whose data-hide has one
+//                 of them go away
 //   data-advance  "click": clicking the target goes to the next step
 //   data-place    where the tip sits: top, bottom, left, or right
 //   data-anchor   optional: the [data-x] the tip sits beside, when that
 //                 isn't the target (so it doesn't cover what it explains)
-// The Tips switch hides the tips and rings and leaves a slim Back / Next
-// bar under the screen. The browser remembers "off" on the device (the
-// privacy policy says so); nothing is sent anywhere. No innerHTML: the
-// tip's words are copied from the step's own nodes.
+// A part with data-autoplay plays itself once when it comes into view, a
+// pointer clicking through its steps up to the one marked
+// data-autoplay-end, unless the device asks for less motion. It stops for
+// good the moment the visitor clicks or types in it, and the Pause / Play
+// button beside the tabs controls it. Links to /#family and the like open
+// that part. The Tips switch hides the tips and rings and leaves a slim
+// Back / Next bar under the screen; the browser remembers "off" on the
+// device (the privacy policy says so). Nothing is sent anywhere. No
+// innerHTML: the tip's words are copied from the step's own nodes.
 (() => {
   "use strict";
 
   const parts = [...document.querySelectorAll(".tour-part")];
   if (parts.length === 0) return;
+  // Without this, CSS shows a part a link names (:target), for no scripts.
+  document.documentElement.dataset.tour = "on";
   const tabs = [...document.querySelectorAll("[data-tour-tab]")];
   const NARROW = 720;
   // How far the ring reaches past its element: outline-offset, width, and
   // the pulse.
   const RING = 9;
   const main = parts[0].parentElement;
-  // Only the tour's own page keeps the part in the address (#family), so
-  // links can open it; on the homepage, #msp and the like are its own.
-  const ownPage = location.pathname.startsWith("/tour");
+  const lessMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
   let tips = true;
   try {
@@ -36,6 +43,8 @@
   }
 
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(n, Math.max(lo, hi)));
+  const wordsOf = (s) => (s || "").split(/\s+/).filter(Boolean);
+  const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
   function h(tag, props, ...kids) {
     const el = document.createElement(tag);
@@ -108,9 +117,10 @@
     function go(i, fromTarget) {
       at = clamp(i, 0, steps.length - 1);
       const step = steps[at];
-      const words = (step.dataset.state || "").split(/\s+/).filter(Boolean);
-      for (const el of stage.querySelectorAll("[data-show]")) el.hidden = !words.includes(el.dataset.show);
-      for (const el of stage.querySelectorAll("[data-hide]")) el.hidden = words.includes(el.dataset.hide);
+      const state = wordsOf(step.dataset.state);
+      const any = (attr) => wordsOf(attr).some((w) => state.includes(w));
+      for (const el of stage.querySelectorAll("[data-show]")) el.hidden = !any(el.dataset.show);
+      for (const el of stage.querySelectorAll("[data-hide]")) el.hidden = any(el.dataset.hide);
       target?.classList.remove("tour-focus", "inset");
       target = stage.querySelector(`[data-x="${step.dataset.target}"]`);
       count.textContent = `${at + 1} of ${steps.length}`;
@@ -119,6 +129,7 @@
       const last = at === steps.length - 1;
       next.textContent = !last ? "Next" : following ? `Next: ${following.dataset.label}` : "Start over";
       place();
+      auto?.onChange();
       // A click on the screen moved the tour on: keep the keyboard with the
       // tip, and on a phone, where the tip sits under the screen, show it.
       if (fromTarget) {
@@ -175,20 +186,127 @@
       bubble.style.setProperty("--arrow", `${arrow}px`);
     }
 
+    // Plays the part by itself: a pointer moves to each step's target and
+    // clicks it, with time to read each tip, up to data-autoplay-end.
+    function player() {
+      const marked = steps.findIndex((s) => s.hasAttribute("data-autoplay-end"));
+      const end = marked < 0 ? steps.length - 1 : marked;
+      const pointer = h("span", { class: "tour-pointer", "aria-hidden": "true" }, h("i"));
+      frame.append(pointer);
+      let run = 0;
+      let playing = false;
+      let wanted = true;
+      let seen = false;
+      const reading = (step) => Math.min(5200, 1600 + step.textContent.length * 26);
+
+      function aim(el) {
+        const f = frame.getBoundingClientRect();
+        const r = el.getBoundingClientRect();
+        const x = r.left - f.left + Math.min(r.width / 2, 48);
+        const y = r.top - f.top + r.height * 0.6;
+        pointer.style.transform = `translate(${x}px, ${y}px)`;
+      }
+
+      async function play() {
+        const mine = ++run;
+        const alive = () => mine === run;
+        playing = true;
+        auto.onChange();
+        if (!pointer.style.transform) {
+          pointer.style.transform = `translate(${frame.clientWidth * 0.7}px, ${frame.clientHeight * 0.75}px)`;
+        }
+        pointer.classList.add("on");
+        while (at < end) {
+          await sleep(reading(steps[at]));
+          if (!alive()) return;
+          const step = steps[at];
+          if (step.dataset.advance === "click" && target) {
+            aim(target);
+            await sleep(850);
+            if (!alive()) return;
+            pointer.classList.add("press");
+            await sleep(200);
+            pointer.classList.remove("press");
+            if (!alive()) return;
+          }
+          go(at + 1);
+        }
+        await sleep(1200);
+        if (!alive()) return;
+        playing = false;
+        wanted = false;
+        pointer.classList.remove("on");
+        auto.onChange();
+      }
+
+      function stop(forGood) {
+        run++;
+        if (forGood) wanted = false;
+        playing = false;
+        pointer.classList.remove("on", "press");
+        auto.onChange();
+      }
+
+      // Starts by itself only while it's on screen, showing, and wanted.
+      function maybe() {
+        if (wanted && !playing && seen && !part.hidden && !lessMotion.matches && !document.hidden) play();
+      }
+
+      const auto = {
+        onChange: () => {},
+        get playing() {
+          return playing;
+        },
+        get finished() {
+          return at >= end;
+        },
+        stop,
+        maybe,
+        // The Play button, or "Watch it work": from where it is, or from
+        // the start once it's done.
+        start() {
+          if (at >= end) go(0);
+          wanted = true;
+          play();
+        },
+      };
+
+      new IntersectionObserver(
+        ([entry]) => {
+          seen = entry.isIntersecting;
+          if (seen) setTimeout(maybe, 700);
+          else if (playing) stop(false);
+        },
+        { threshold: 0.5 },
+      ).observe(frame);
+      document.addEventListener("visibilitychange", () => (document.hidden ? playing && stop(false) : maybe()));
+
+      // The visitor takes over: their own clicks and keys end it.
+      const takeOver = (e) => {
+        if (e.isTrusted && (playing || wanted)) stop(true);
+      };
+      frame.addEventListener("pointerdown", takeOver, true);
+      frame.addEventListener("keydown", takeOver, true);
+
+      return auto;
+    }
+
     stage.addEventListener("click", (e) => {
       if (steps[at].dataset.advance === "click" && target && target.contains(e.target)) go(at + 1, true);
     });
     back.addEventListener("click", () => go(at - 1));
     next.addEventListener("click", () => {
       if (at < steps.length - 1) go(at + 1);
-      else if (following) show(following.id, true);
+      else if (following) show(following.id, { scroll: true, user: true });
       else go(0);
     });
 
-    return { id: part.id, go, place, started: false };
+    const auto = part.hasAttribute("data-autoplay") ? player() : null;
+    return { id: part.id, part, go, place, auto, started: false };
   });
 
-  // The Tips switch, beside the parts' tabs.
+  // Beside the parts' tabs: Pause / Play for a part that plays itself, and
+  // the Tips switch.
   const tabsNav = document.querySelector(".tour-tabs");
   const switcher = h(
     "button",
@@ -196,7 +314,27 @@
     "Tips",
     h("span", { class: "tour-tips-switch", "aria-hidden": "true" }),
   );
-  tabsNav?.after(switcher);
+  const playButton = h("button", { type: "button", class: "tour-play", hidden: "" });
+  tabsNav?.after(h("div", { class: "tour-controls" }, playButton, switcher));
+
+  const shown = () => tours.find((t) => !t.part.hidden);
+  function showPlayer() {
+    const auto = shown()?.auto;
+    playButton.hidden = !auto;
+    if (!auto) return;
+    const label = auto.playing ? "Pause" : auto.finished ? "Replay" : "Play";
+    playButton.dataset.state = label.toLowerCase();
+    playButton.textContent = label;
+    playButton.setAttribute("aria-label", `${label} the demo`);
+  }
+  for (const t of tours) if (t.auto) t.auto.onChange = showPlayer;
+  playButton.addEventListener("click", () => {
+    const auto = shown()?.auto;
+    if (!auto) return;
+    if (auto.playing) auto.stop(true);
+    else auto.start();
+  });
+
   function setTips(on) {
     tips = on;
     switcher.setAttribute("aria-pressed", String(on));
@@ -212,9 +350,21 @@
   switcher.addEventListener("click", () => setTips(!tips));
   main.dataset.tips = tips ? "on" : "off";
 
-  function show(id, fromButton) {
+  // how.user: the visitor chose it (the address names it, and a part that
+  // plays itself stops). how.scroll: bring the tabs into view.
+  function show(id, how = {}) {
     for (const part of parts) part.hidden = part.id !== id;
     for (const tab of tabs) tab.setAttribute("aria-current", String(tab.dataset.tourTab === id));
+    // On a phone the tabs are a strip that scrolls sideways: bring this one in.
+    const active = tabs.find((t) => t.dataset.tourTab === id);
+    if (active && tabsNav && tabsNav.scrollWidth > tabsNav.clientWidth) {
+      const a = active.getBoundingClientRect();
+      const n = tabsNav.getBoundingClientRect();
+      if (a.left < n.left) tabsNav.scrollLeft -= n.left - a.left + 16;
+      else if (a.right > n.right) tabsNav.scrollLeft += a.right - n.right + 16;
+    }
+    if (how.user) for (const t of tours) if (t.id !== id) t.auto?.stop(true);
+    for (const t of tours) if (t.id !== id && t.auto?.playing) t.auto.stop(false);
     const tour = tours.find((t) => t.id === id);
     if (!tour.started) {
       tour.started = true;
@@ -222,16 +372,35 @@
     } else {
       tour.place();
     }
-    if (ownPage && location.hash !== `#${id}`) history.replaceState(null, "", `#${id}`);
-    if (fromButton) document.getElementById(id)?.scrollIntoView({ block: "start" });
+    showPlayer();
+    if (how.user && location.hash !== `#${id}`) history.replaceState(null, "", `#${id}`);
+    if (how.scroll) (document.getElementById("demo") || tour.part).scrollIntoView({ block: "start" });
+    tour.auto?.maybe();
   }
 
   for (const tab of tabs) {
     tab.addEventListener("click", (e) => {
       e.preventDefault();
-      show(tab.dataset.tourTab);
+      show(tab.dataset.tourTab, { user: true });
     });
   }
+
+  // "Watch it work": the part that plays itself, from the start.
+  for (const link of document.querySelectorAll("[data-watch]")) {
+    link.addEventListener("click", () => {
+      const tour = tours.find((t) => t.auto);
+      if (!tour) return;
+      show(tour.id);
+      tour.auto.start();
+    });
+  }
+
+  // A link to /#family, from another page or this one, opens that part.
+  const named = () => parts.find((p) => `#${p.id}` === location.hash);
+  addEventListener("hashchange", () => {
+    const part = named();
+    if (part) show(part.id, { scroll: true, user: true });
+  });
 
   let frameRequest = 0;
   const replace = () => {
@@ -241,6 +410,7 @@
   addEventListener("resize", replace);
   document.fonts?.ready.then(replace);
 
-  const first = (ownPage && parts.find((p) => `#${p.id}` === location.hash)) || parts[0];
-  show(first.id);
+  const first = named();
+  if (first) show(first.id, { scroll: true, user: true });
+  else show(parts[0].id);
 })();

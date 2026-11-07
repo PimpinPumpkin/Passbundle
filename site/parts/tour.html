@@ -1,37 +1,37 @@
 <!--
-The tour's screens and steps (static/tour.js), shared by the homepage and
-/tour/: <x-part name="tour"></x-part>. Add `first-only` to show only the
-first part until the script runs, as the homepage does.
+The demo's screens and steps (static/tour.js), on the homepage:
+<x-part name="tour" first-only></x-part>. `first-only` shows only the first
+part until the script runs (or the part a link names, by :target).
 -->
 <section class="tour-nav-wrap" id="demo" aria-label="Parts of the tour">
   <div class="tour-nav">
   <nav class="tour-tabs" aria-label="Parts of PassBundle">
-    <a href="/tour/#extension" data-tour-tab="extension">Extension</a>
-    <a href="/tour/#web" data-tour-tab="web">Web vault</a>
-    <a href="/tour/#desktop" data-tour-tab="desktop">Desktop</a>
-    <a href="/tour/#phone" data-tour-tab="phone">Phone</a>
-    <a href="/tour/#family" data-tour-tab="family">Family</a>
-    <a href="/tour/#msp" data-tour-tab="msp">MSP console</a>
+    <a href="#extension" data-tour-tab="extension">Extension</a>
+    <a href="#web" data-tour-tab="web">Web vault</a>
+    <a href="#desktop" data-tour-tab="desktop">Desktop</a>
+    <a href="#phone" data-tour-tab="phone">Phone</a>
+    <a href="#family" data-tour-tab="family">Family</a>
+    <a href="#msp" data-tour-tab="msp">MSP console</a>
   </nav>
   </div>
 </section>
 
-<section class="tour-part" id="extension" aria-labelledby="extension-title" data-label="Browser extension">
+<section class="tour-part" id="extension" aria-labelledby="extension-title" data-label="Browser extension" data-autoplay>
   <div class="tour-head">
     <h2 id="extension-title">The browser extension</h2>
-    <p>Fills your logins on the right sites, and makes a strong password when you sign up somewhere new.</p>
+    <p>Your password, your two-step code, or your passkey: each one is a single click.</p>
   </div>
   <div class="tour-frame">
     <div class="tour-stage" role="region" aria-label="A sample browser with PassBundle">
       <div class="mock">
         <div class="mock-tabstrip">
           <span class="mock-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-          <span class="mock-tab"><span class="mock-favicon" aria-hidden="true"></span><span class="mock-tab-title">Hometown Credit Union</span><svg class="mock-icon small" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10 M17 7 7 17"/></svg></span>
+          <span class="mock-tab"><span class="mock-favicon" aria-hidden="true"></span><span class="mock-tab-title"><span data-hide="passkey">Hometown Credit Union</span><span data-show="passkey" hidden>Corner Market</span></span><svg class="mock-icon small" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10 M17 7 7 17"/></svg></span>
           <svg class="mock-icon small faint" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 6v12 M6 12h12"/></svg>
         </div>
         <div class="mock-bar">
           <span class="mock-buttons"><svg class="mock-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6"/></svg><svg class="mock-icon faint wide" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6"/></svg><svg class="mock-icon wide" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3 M19.5 4.5v4.5H15"/></svg></span>
-          <span class="mock-address"><svg class="mock-icon small" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7.5 11h9v8.5h-9Z M9.5 11V8.5a2.5 2.5 0 0 1 5 0V11"/></svg><span class="mock-url">bank.example/sign-in</span><svg class="mock-icon small push" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4.5l2.3 4.7 5.2.8-3.8 3.6.9 5.2-4.6-2.4-4.6 2.4.9-5.2-3.8-3.6 5.2-.8Z"/></svg></span>
+          <span class="mock-address"><svg class="mock-icon small" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7.5 11h9v8.5h-9Z M9.5 11V8.5a2.5 2.5 0 0 1 5 0V11"/></svg><span class="mock-url"><span data-hide="code passkey">bank.example/sign-in</span><span data-show="code" hidden>bank.example/verify</span><span data-show="passkey" hidden>market.example/sign-in</span></span><svg class="mock-icon small push" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4.5l2.3 4.7 5.2.8-3.8 3.6.9 5.2-4.6-2.4-4.6 2.4.9-5.2-3.8-3.6 5.2-.8Z"/></svg></span>
           <span class="mock-buttons">
             <svg class="mock-icon wide" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9.5 5.5a2 2 0 0 1 4 0V7H17v3.5h-1.5a2 2 0 0 0 0 4H17V18H13.5v-1.5a2 2 0 0 0-4 0V18H6v-3.5h1.5a2 2 0 0 0 0-4H6V7h3.5Z"/></svg>
             <button type="button" class="mock-ext" data-x="ext-icon" aria-label="PassBundle"><span class="brand-tile mini" aria-hidden="true"><svg viewBox="0 0 26 32"><path fill-rule="evenodd" d="M4.5 13V8.5a8.5 8.5 0 0 1 17 0V13h-4V8.5a4.5 4.5 0 0 0-9 0V13ZM4.5 13h17a4.5 4.5 0 0 1 4.5 4.5V18H0v-.5A4.5 4.5 0 0 1 4.5 13ZM0 20h26v5H0ZM0 27h26v.5a4.5 4.5 0 0 1-4.5 4.5h-17A4.5 4.5 0 0 1 0 27.5Z"/></svg></span></button>
@@ -40,7 +40,7 @@ first part until the script runs, as the homepage does.
           </span>
         </div>
         <div class="mock-page">
-          <div class="ui ui-signin mock-signin">
+          <div class="ui ui-signin mock-signin" data-hide="code passkey">
             <span class="ui-site">Hometown Credit Union</span>
             <span class="ui-title">Sign in to online banking</span>
             <span class="ui-label">Username</span>
@@ -50,7 +50,35 @@ first part until the script runs, as the homepage does.
             </span>
             <span class="ui-label">Password</span>
             <span class="ui-field" data-x="pass"><span data-show="filled" hidden>••••••••••••••••</span></span>
-            <span class="mock-submit">Sign in</span>
+            <button type="button" class="mock-submit" data-x="signin">Sign in</button>
+          </div>
+          <div class="ui ui-signin mock-signin" data-show="code" hidden>
+            <span class="ui-site">Hometown Credit Union</span>
+            <span class="ui-title">Enter your code</span>
+            <span class="ui-text">Enter the 6-digit code from your authenticator app.</span>
+            <span class="ui-label">Code</span>
+            <span class="ui-field focus" data-x="code-field"><span class="mock-code" data-show="coded" hidden>284 913</span></span>
+            <span class="ui-menu" data-show="codemenu" hidden>
+              <button type="button" class="ui-menu-item" data-x="code-item"><x-tile icon="clock" tone="sapphire" class="small"></x-tile><span class="ui-who"><b>Two-step code</b><span>284 913</span></span><span class="ui-key">Fill</span></button>
+            </span>
+            <button type="button" class="mock-submit" data-x="verify">Verify</button>
+          </div>
+          <div class="ui ui-signin mock-signin" data-show="passkey" hidden>
+            <span class="ui-site">Corner Market</span>
+            <span class="ui-title" data-hide="signedin">Sign in to Corner Market</span>
+            <span class="ui-text" data-hide="signedin">Pick up where you left off: your cart and your orders.</span>
+            <button type="button" class="mock-submit" data-x="pk-btn" data-hide="signedin">Sign in with a passkey</button>
+            <span class="ui-title" data-show="signedin" hidden data-x="pk-done">Welcome back, Sam</span>
+            <span class="ui-text" data-show="signedin" hidden>Signed in with your passkey. Nothing to type, nothing to remember.</span>
+          </div>
+          <div class="mock-popup" data-show="pkprompt" data-x="pk-popup" hidden>
+            <div class="mock-popup-head">
+              <span class="brand-tile mini" aria-hidden="true"><svg viewBox="0 0 26 32"><path fill-rule="evenodd" d="M4.5 13V8.5a8.5 8.5 0 0 1 17 0V13h-4V8.5a4.5 4.5 0 0 0-9 0V13ZM4.5 13h17a4.5 4.5 0 0 1 4.5 4.5V18H0v-.5A4.5 4.5 0 0 1 4.5 13ZM0 20h26v5H0ZM0 27h26v.5a4.5 4.5 0 0 1-4.5 4.5h-17A4.5 4.5 0 0 1 0 27.5Z"/></svg></span>
+              <b>PassBundle</b>
+              <span class="chip">market.example</span>
+            </div>
+            <span class="mock-label">Sign in with your passkey</span>
+            <span class="mock-row"><x-tile icon="passkey" tone="turquoise" class="small"></x-tile><span class="ui-who"><b>Corner Market</b><span>sam@example.com</span></span><button type="button" class="demo-btn primary" data-x="pk-use">Use passkey</button></span>
           </div>
           <div class="mock-popup" data-show="popup" hidden>
             <div class="mock-popup-head">
@@ -79,7 +107,12 @@ first part until the script runs, as the homepage does.
   </div>
   <ol class="tour-steps">
     <li data-target="inline-item" data-state="inline" data-advance="click" data-place="right"><strong>Pick your login.</strong> Click into a sign-in form, and PassBundle offers the login saved for this site, right under the field.</li>
-    <li data-target="pass" data-state="filled" data-place="right"><strong>Filled in.</strong> The username and the password, in one click. PassBundle only offers a login on the site it belongs to, so a look-alike site gets nothing.</li>
+    <li data-target="signin" data-anchor="pass" data-state="filled" data-advance="click" data-place="right"><strong>Both fields, one click.</strong> PassBundle only offers a login on the site it belongs to, so a look-alike site gets nothing. Now sign in.</li>
+    <li data-target="code-item" data-state="code codemenu" data-advance="click" data-place="right"><strong>Then the two-step code.</strong> The bank asks for a code, and PassBundle has that too. Built-in codes come with Premium, Families, and Business.</li>
+    <li data-target="verify" data-anchor="code-field" data-state="code coded" data-advance="click" data-place="right"><strong>No phone, no typing.</strong> The code is in. Verify, and you're signed in.</li>
+    <li data-target="pk-btn" data-state="passkey" data-advance="click" data-place="right"><strong>Some sites skip the password.</strong> With a passkey, there's nothing to type at all.</li>
+    <li data-target="pk-use" data-anchor="pk-popup" data-state="passkey pkprompt" data-advance="click" data-place="bottom"><strong>PassBundle keeps your passkeys.</strong> It saves each one as you make it, and has it on every device. One click to use it.</li>
+    <li data-target="pk-done" data-state="passkey signedin" data-place="right" data-autoplay-end><strong>Signed in.</strong> A password, a two-step code, or a passkey: one click each, on every site you use.</li>
     <li data-target="ext-icon" data-state="filled" data-advance="click" data-place="bottom"><strong>Everything else is in the toolbar.</strong> Click PassBundle to open it.</li>
     <li data-target="gen-tab" data-state="filled popup" data-advance="click" data-place="left"><strong>Signing up somewhere new?</strong> Your logins for this site are at the top. Open the generator for a new password.</li>
     <li data-target="gen" data-state="filled popup gen" data-place="left"><strong>A strong password, made for you.</strong> Use it on the sign-up form, and PassBundle offers to save the new login.</li>

@@ -511,12 +511,45 @@ mark.todo {
 }
 
 .theme-toggle .sun,
-:root[data-mode="dark"] .theme-toggle .moon {
+.theme-row .sun,
+:root[data-mode="dark"] .theme-toggle .moon,
+:root[data-mode="dark"] .theme-row .moon {
   display: none;
 }
 
-:root[data-mode="dark"] .theme-toggle .sun {
+:root[data-mode="dark"] .theme-toggle .sun,
+:root[data-mode="dark"] .theme-row .sun {
   display: block;
+}
+
+/* The phone menu's row for it (the bar has no room on a phone). */
+.theme-row {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+}
+
+.theme-row:hover {
+  background: var(--hover);
+}
+
+.theme-row svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .menu {
@@ -1328,6 +1361,11 @@ th.num {
   gap: 10px;
   max-width: 860px;
   margin: 0 auto;
+}
+
+.faq-more {
+  max-width: 860px;
+  margin: 20px auto 0;
 }
 
 .faq details {
@@ -2612,6 +2650,96 @@ main.wide > section.tour-nav-wrap {
   }
 }
 
+.tour-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Pause / Play / Replay for the part that plays itself. */
+.tour-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px 7px 14px;
+  border: 1px solid var(--field-border);
+  border-radius: 999px;
+  background: none;
+  color: var(--label);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tour-play:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.tour-play[hidden] {
+  display: none;
+}
+
+.tour-play::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  clip-path: polygon(15% 0, 100% 50%, 15% 100%);
+}
+
+.tour-play[data-state="pause"]::before {
+  clip-path: polygon(10% 0, 40% 0, 40% 100%, 10% 100%, 10% 0, 60% 0, 90% 0, 90% 100%, 60% 100%, 60% 0);
+}
+
+.tour-play[data-state="replay"]::before {
+  clip-path: none;
+  background: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  width: 9px;
+  height: 9px;
+}
+
+/* The pointer that clicks through a part that plays itself. */
+.tour-pointer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 7;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    transform 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease;
+  filter: drop-shadow(0 0 1px #ffffff) drop-shadow(0 2px 3px rgb(0 0 0 / 0.35));
+}
+
+.tour-pointer.on {
+  opacity: 1;
+}
+
+.tour-pointer i {
+  display: block;
+  width: 18px;
+  height: 26px;
+  background: #111416;
+  clip-path: polygon(0 0, 0 78%, 26% 60%, 44% 100%, 60% 93%, 42% 55%, 76% 55%);
+  transform-origin: 0 0;
+  transition: transform 0.12s ease;
+}
+
+.tour-pointer.press i {
+  transform: scale(0.82);
+}
+
+/* Without scripts, a link to one of the demo's parts shows it. */
+:root:not([data-tour]) .tour-part:target {
+  display: block !important;
+}
+
 /* The Tips switch: a pill with a small on/off track. */
 .tour-tips {
   display: inline-flex;
@@ -3159,8 +3287,10 @@ button.ui-menu-item {
   text-align: left;
 }
 
-.mock-submit {
+.mock-submit,
+.mock button.mock-submit {
   margin-top: 6px;
+  border: 0;
   height: 42px;
   display: flex;
   align-items: center;
@@ -3169,6 +3299,11 @@ button.ui-menu-item {
   background: var(--text);
   color: var(--ground);
   font-weight: 600;
+}
+
+.mock-code {
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
 }
 
 .mock-popup {
@@ -4028,12 +4163,45 @@ main.doc > .paper {
     gap: 12px;
   }
 
-  .header-actions {
+  /* A phone's bar: the logo, Download, and the menu as an icon. Light
+     or dark moves into the menu. */
+  .site-header .bar > .theme-toggle {
     display: none;
   }
 
-  .menu {
+  .menu .theme-row:not([hidden]) {
+    display: flex;
+  }
+
+  .header-actions {
     margin-left: auto;
+  }
+
+  .menu {
+    margin-left: 0;
+  }
+
+  .menu summary {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .menu summary::after,
+  .menu[open] summary::after {
+    width: 18px;
+    height: 2px;
+    margin: 0;
+    border: 0;
+    border-radius: 1px;
+    background: currentColor;
+    box-shadow:
+      0 -6px currentColor,
+      0 6px currentColor;
+    transform: none;
   }
 
   .brand-word {

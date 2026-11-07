@@ -110,3 +110,10 @@ function scope(rules, prefix) {
     return `${before}${ws}${scoped}${ws2}{`;
   });
 }
+
+/** The same switch in the phone menu, where the bar has no room for it. */
+export const THEME_MENU_BUTTON = `<button type="button" class="theme-row" data-theme-toggle aria-pressed="false" hidden>
+          <svg class="moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z"/></svg>
+          <svg class="sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M12 2.5v2 M12 19.5v2 M4.6 4.6l1.4 1.4 M18 18l1.4 1.4 M2.5 12h2 M19.5 12h2 M4.6 19.4 6 18 M18 6l1.4-1.4"/></svg>
+          <span>Dark mode</span>
+        </button>`;
