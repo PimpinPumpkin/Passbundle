@@ -55,13 +55,18 @@ test("the test kit's extension reaches the agent and the test server", async () 
     await popup.goto(`chrome-extension://${id}/popup/index.html`);
     // The carousel renders its buttons before Angular wires them up, and an
     // early click is dropped. Click until the app actually navigates.
+    // The kit builds the clients' base branch, which may not say "Sign in" yet.
     await expect(async () => {
-      await popup.getByRole("button", { name: "Sign in" }).click();
+      await popup.getByRole("button", { name: /^(Sign in|Log in)$/ }).click();
       await expect(popup).toHaveURL(/#\/login/, { timeout: 1000 });
     }).toPass({ timeout: 30_000 });
-    // A server from policy shows as "Accessing: self-hosted", and the popup
-    // gets its settings from it.
-    await expect(popup.getByRole("button", { name: "self-hosted" })).toBeVisible({ timeout: 15_000 });
+    // A server from policy shows as the self-hosted choice in "Where's your
+    // vault?", picked, and the popup gets its settings from it.
+    await expect(
+      popup
+        .getByRole("group", { name: "Where's your vault?" })
+        .getByRole("button", { name: /^(Self-hosted|My own server)$/ }),
+    ).toHaveAttribute("aria-pressed", "true", { timeout: 15_000 });
     await expect.poll(() => fromServer.length, { timeout: 30_000 }).toBeGreaterThan(0);
 
     // The agent, through Chromium's native messaging and the kit's host.
