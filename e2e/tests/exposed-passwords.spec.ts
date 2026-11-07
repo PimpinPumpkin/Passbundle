@@ -395,10 +395,26 @@ test("with checking after unlocking turned off, nothing goes to the breach servi
 test("turning the check after unlocking off in one browser turns it off in the account's other browsers", async ({
   browser,
 }, testInfo) => {
-  test.setTimeout(180_000);
+  test.setTimeout(240_000);
   const user = webUserFor("exposed-follows", testInfo.repeatEachIndex);
   const settingIn = (page: Page) =>
     page.getByRole("checkbox", { name: "Check my passwords against known breaches after unlocking" });
+  /**
+   * Syncs a browser again (a reload) until its switch is as the other
+   * browser left it: the change reaches the account's settings a moment
+   * after it's made, and this browser takes it at its next sync.
+   */
+  const followsTo = async (page: Page, on: boolean) => {
+    await expect(async () => {
+      await reloadVault(page);
+      await page.goto("/#/settings/appearance");
+      if (on) {
+        await expect(settingIn(page)).toBeChecked({ timeout: 3_000 });
+      } else {
+        await expect(settingIn(page)).not.toBeChecked({ timeout: 3_000 });
+      }
+    }).toPass({ timeout: 90_000 });
+  };
 
   const first = await browser.newContext();
   const page = await first.newPage();
@@ -407,8 +423,6 @@ test("turning the check after unlocking off in one browser turns it off in the a
   await expect(settingIn(page)).toBeChecked();
   await settingIn(page).uncheck();
   await expect(settingIn(page)).not.toBeChecked();
-  // Saved to the account's settings document a moment after the change.
-  await page.waitForTimeout(3_000);
 
   // Another browser, never used before: off, from the account.
   const second = await browser.newContext();
@@ -419,16 +433,15 @@ test("turning the check after unlocking off in one browser turns it off in the a
   await other.getByRole("textbox", { name: /Master password/ }).fill(user.password);
   await other.getByRole("button", { name: "Log in", exact: true }).click();
   await expect(menu(other)).toBeVisible({ timeout: 30_000 });
-  await other.goto("/#/settings/appearance");
-  await expect(settingIn(other)).not.toBeChecked();
+  await followsTo(other, false);
 
   // Turned back on there: the first browser follows at its next sync.
   await settingIn(other).check();
   await expect(settingIn(other)).toBeChecked();
-  await other.waitForTimeout(3_000);
-  await reloadVault(page);
-  await page.goto("/#/settings/appearance");
-  await expect(settingIn(page)).toBeChecked();
+  await followsTo(page, true);
+  // And the second keeps its own choice.
+  await other.goto("/#/settings/appearance");
+  await expect(settingIn(other)).toBeChecked();
 
   await second.close();
   await first.close();
