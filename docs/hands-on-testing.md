@@ -28,6 +28,7 @@ What CI can't check: real devices, real sites, and how it feels. Work through it
 On a real computer and the Pixel, with logins saved for each:
 - [ ] Your bank, your email (Gmail, Outlook), Microsoft 365 sign-in (email first, password on the next page), a site with a separate username and password page, a site with 2FA codes (the code fills or copies).
 - [ ] Your router's admin page (an IP address).
+- [ ] **Open and fill:** in the extension, the open button beside a login (or Open and fill beside a website in the item's page) opens the site in a new tab and fills it, once. Reload: it doesn't fill again. A login set to ask for the master password asks before the tab opens.
 - [ ] A site you've never saved: after you sign in, PassBundle offers to save it, in our colors.
 - [ ] Android apps: your bank's app, a social app, one that signs in with a WebView.
 - [ ] Passkeys: create one on a site that offers it (passkeys.io, or your Google/Microsoft account if you're willing), then sign in with it.
