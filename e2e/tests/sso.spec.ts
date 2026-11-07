@@ -261,7 +261,7 @@ test("with Require single sign-on, a member's password sends them to it, one not
   await expect(dialog).toContainText("IT provider's staff");
   await expect(dialog.getByTestId("require-sso-unlinked")).toContainText(dee.email);
   await expect(dialog.getByTestId("require-sso-unlinked")).not.toContainText(cy.email);
-  await dialog.getByRole("checkbox", { name: /Turn on/ }).check();
+  await dialog.getByRole("switch", { name: /Turn on/ }).check();
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(owner.getByRole("button", { name: /^Require single sign-on .* On$/ })).toBeVisible();
 

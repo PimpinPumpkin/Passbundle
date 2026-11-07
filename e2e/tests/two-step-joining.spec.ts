@@ -38,7 +38,7 @@ test("someone waiting to turn on two-step login is told so, and so is the owner"
   await owner.goto(`${org}/settings/policies`);
   await owner.getByRole("button", { name: /^Require two-step login .* Off$/ }).click();
   const policy = owner.getByRole("dialog", { name: /Require two-step login/ });
-  await policy.getByRole("checkbox", { name: /Turn on/ }).check();
+  await policy.getByRole("switch", { name: /Turn on/ }).check();
   await policy.getByRole("button", { name: "Save" }).click();
   await expect(owner.getByRole("button", { name: /^Require two-step login .* On$/ })).toBeVisible();
 
