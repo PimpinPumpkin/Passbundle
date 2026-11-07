@@ -362,7 +362,7 @@ test("an MSP's console with five clients, a client's passwords to fix, Entra, an
       });
       expect(joined.status, JSON.stringify(joined.body)).toBe(200);
     }
-    await row.getByRole("link", { name: "Open" }).click();
+    await row.getByRole("link", { name: "Admin console" }).click();
     await expect(web).toHaveURL(/#\/organizations\/[^/]+\/members/);
     urls.set(client.name, web.url().replace(/\/members.*$/, ""));
     log(`importing ${client.name}`);
@@ -506,7 +506,7 @@ test("a company with its own IT: its members, policies, install command, and a s
   await web.waitForURL(/#\/organizations\/[0-9a-f-]{36}\/members/);
   const org = web.url().replace(/\/members.*$/, "");
   await web.goto("/#/vault");
-  await web.goto(`${org}/settings`);
+  await web.goto(`${org}/settings/joining`);
   const command = await web.getByTestId("org-install-command").textContent();
   const token = /-EnrollmentToken '([A-Za-z0-9_-]{43})'/.exec(command!)![1];
 
@@ -547,7 +547,7 @@ test("a company with its own IT: its members, policies, install command, and a s
     await expect(web.getByText(/Master password requirements/).first()).toBeVisible();
     await shoot(web, `business-policies-${scheme}`);
     await web.goto("/#/vault");
-    await web.goto(`${org}/settings`);
+    await web.goto(`${org}/settings/joining`);
     await expect(web.getByTestId("org-install-joins")).toContainText("8 people have joined");
     await shootPanel(web.getByTestId("org-install"), `business-install-${scheme}`);
 

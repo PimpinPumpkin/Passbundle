@@ -1,0 +1,490 @@
+<!--
+The demo's screens and steps (static/tour.js), on the homepage:
+<x-part name="tour" first-only></x-part>. `first-only` shows only the first
+part until the script runs (or the part a link names, by :target).
+
+Each part's screen is a small app with made-up data that tour.js runs: the
+extension, desktop, phone, and family screens are drawn here, and tour.js
+turns their state into words (an element shows when its data-show has one
+of them and hides when its data-hide has one; data-pressed sets
+aria-pressed), and runs each data-act. The web vault and the MSP console are
+drawn by tour.js from its data; what's here is what shows without scripts.
+A step's data-state is a scene: the words each part's app reads to put its
+screen where that step is about (see tour.js). Elements that aren't on the
+first screen start with `hidden`.
+-->
+<section class="tour-nav-wrap" id="demo" aria-label="Parts of the tour">
+  <div class="tour-nav">
+  <nav class="tour-tabs" aria-label="Parts of PassBundle">
+    <a href="#extension" data-tour-tab="extension">Extension</a>
+    <a href="#web" data-tour-tab="web">Web vault</a>
+    <a href="#desktop" data-tour-tab="desktop">Desktop</a>
+    <a href="#phone" data-tour-tab="phone">Phone</a>
+    <a href="#family" data-tour-tab="family">Family</a>
+    <a href="#msp" data-tour-tab="msp">MSP console</a>
+  </nav>
+  </div>
+</section>
+
+<section class="tour-part" id="extension" aria-labelledby="extension-title" data-label="Browser extension" data-autoplay>
+  <div class="tour-head">
+    <h2 id="extension-title">The browser extension</h2>
+    <p>Your password, your two-step code, or your passkey: one click from PassBundle, and you're in.</p>
+  </div>
+  <div class="tour-frame">
+    <div class="tour-stage" role="region" aria-label="A sample browser with PassBundle">
+      <div class="mock">
+        <div class="mock-tabstrip">
+          <span class="mock-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <button type="button" class="mock-tab" data-act="tab" data-tab="bank" data-pressed="bank" aria-pressed="true"><span class="mock-favicon" aria-hidden="true"></span><span class="mock-tab-title">Hometown Credit Union</span></button>
+          <button type="button" class="mock-tab" data-act="tab" data-tab="bakery" data-pressed="bakery" aria-pressed="false" data-x="bakery-tab"><span class="mock-favicon bakery" aria-hidden="true"></span><span class="mock-tab-title">Juniper Bakery</span></button>
+        </div>
+        <div class="mock-bar">
+          <span class="mock-buttons" aria-hidden="true"><svg class="mock-icon" viewBox="0 0 24 24" focusable="false"><path d="M15 6l-6 6 6 6"/></svg><svg class="mock-icon faint wide" viewBox="0 0 24 24" focusable="false"><path d="M9 6l6 6-6 6"/></svg><svg class="mock-icon wide" viewBox="0 0 24 24" focusable="false"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3 M19.5 4.5v4.5H15"/></svg></span>
+          <span class="mock-address"><svg class="mock-icon small" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7.5 11h9v8.5h-9Z M9.5 11V8.5a2.5 2.5 0 0 1 5 0V11"/></svg><span class="mock-url"><span data-show="at-bank-signin">bank.example/sign-in</span><span data-show="at-bank-code" hidden>bank.example/verify</span><span data-show="at-bank-home" hidden>bank.example/accounts</span><span data-show="at-bakery-signin" hidden>bakery.example/sign-in</span><span data-show="at-bakery-home" hidden>bakery.example/account</span></span></span>
+          <span class="mock-buttons">
+            <svg class="mock-icon wide" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9.5 5.5a2 2 0 0 1 4 0V7H17v3.5h-1.5a2 2 0 0 0 0 4H17V18H13.5v-1.5a2 2 0 0 0-4 0V18H6v-3.5h1.5a2 2 0 0 0 0-4H6V7h3.5Z"/></svg>
+            <button type="button" class="mock-ext" data-x="ext-icon" data-act="popup" data-pressed="popup" aria-pressed="false" aria-label="PassBundle"><x-mark class="mini"></x-mark></button>
+            <span class="mock-avatar wide" aria-hidden="true">S</span>
+          </span>
+        </div>
+        <div class="mock-page">
+          <div class="ui ui-signin mock-signin" data-show="at-bank-signin">
+            <span class="ui-site">Hometown Credit Union</span>
+            <span class="ui-title">Sign in to online banking</span>
+            <span class="ui-label">Username</span>
+            <button type="button" class="ui-field focus" data-x="user" data-act="field" aria-label="Username"><span class="mock-fill" data-show="filled" hidden>sam.rivera</span></button>
+            <span class="ui-menu" data-show="menu" hidden>
+              <span class="ui-menu-head"><x-mark class="tiny"></x-mark>PassBundle</span>
+              <button type="button" class="ui-menu-item pb-pick" data-x="inline-item" data-act="fill"><x-tile icon="key" tone="sapphire" class="small"></x-tile><span class="ui-who"><b>Hometown Credit Union</b><span>sam.rivera</span></span><span class="ui-key">Fill</span></button>
+            </span>
+            <span class="ui-label">Password</span>
+            <button type="button" class="ui-field" data-x="pass" data-act="field" aria-label="Password"><span class="mock-fill later" data-show="filled" hidden>••••••••••••••••</span></button>
+            <span class="mock-error" data-show="err-signin" hidden>Enter your username and password.</span>
+            <button type="button" class="mock-submit" data-x="signin" data-act="signin">Sign in</button>
+          </div>
+          <div class="ui ui-signin mock-signin" data-show="at-bank-code" hidden>
+            <span class="ui-site">Hometown Credit Union</span>
+            <span class="ui-title">Enter your code</span>
+            <span class="ui-text">Enter the 6-digit code from your authenticator app.</span>
+            <span class="ui-label">Code</span>
+            <button type="button" class="ui-field focus" data-x="code-field" data-act="field" aria-label="Code"><span class="code-digits mock-fill" data-show="coded" data-code-fill hidden>284 913</span></button>
+            <span class="ui-menu" data-show="codemenu" hidden>
+              <span class="ui-menu-head"><x-mark class="tiny"></x-mark>PassBundle</span>
+              <button type="button" class="ui-menu-item pb-pick" data-x="code-item" data-act="fill"><x-tile icon="clock" tone="sapphire" class="small"></x-tile><span class="ui-who"><b>Two-step code</b><span class="code-digits" data-code>284 913</span></span><span class="ui-key">Fill</span></button>
+            </span>
+            <span class="mock-error" data-show="err-code" hidden>Enter the 6-digit code.</span>
+            <button type="button" class="mock-submit" data-x="verify" data-act="verify">Verify</button>
+          </div>
+          <div class="site-home" data-show="at-bank-home" hidden>
+            <span class="ui-site">Hometown Credit Union</span>
+            <span class="ui-title" data-x="bank-hello">Good morning, Sam</span>
+            <span class="site-card">
+              <span class="ui-label">Everyday Checking, ending 4821</span>
+              <b class="site-big">$2,418.36</b>
+              <span class="mock-note">Available balance</span>
+            </span>
+            <span class="ui-label">Recent activity</span>
+            <span class="site-list">
+              <span><span>Paycheck</span><span>+$1,940.00</span></span>
+              <span><span>City Power &amp; Light</span><span>−$84.20</span></span>
+              <span><span>Juniper Bakery</span><span>−$32.50</span></span>
+            </span>
+            <button type="button" class="mock-link" data-act="bank-out">Sign out</button>
+          </div>
+          <div class="ui ui-signin mock-signin" data-show="at-bakery-signin" hidden>
+            <span class="ui-site">Juniper Bakery</span>
+            <span class="ui-title">Sign in to Juniper Bakery</span>
+            <span class="ui-text">Pick up where you left off: your order and your favorite cakes.</span>
+            <button type="button" class="mock-submit" data-x="pk-btn" data-act="pk">Sign in with a passkey</button>
+          </div>
+          <div class="site-home" data-show="at-bakery-home" hidden>
+            <span class="ui-site">Juniper Bakery</span>
+            <span class="ui-title" data-x="cake-hello">Welcome back, Sam</span>
+            <span class="site-card site-order"><span class="cake lemon" aria-hidden="true"></span><span class="ui-who"><b>Your order: a lemon cake</b><span>Ready Saturday at 10 a.m.</span></span></span>
+            <span class="ui-label">Baking this week</span>
+            <span class="cakes">
+              <span><span class="cake lemon" aria-hidden="true"></span><b>Lemon</b><span>$32</span></span>
+              <span><span class="cake carrot" aria-hidden="true"></span><b>Carrot</b><span>$28</span></span>
+              <span><span class="cake chocolate" aria-hidden="true"></span><b>Chocolate</b><span>$34</span></span>
+            </span>
+            <button type="button" class="mock-link" data-act="bakery-out">Sign out</button>
+          </div>
+          <div class="mock-popup" data-show="pkprompt" data-x="pk-popup" role="dialog" aria-label="PassBundle: sign in with your passkey" hidden>
+            <div class="mock-popup-head"><x-mark class="mini"></x-mark><b>PassBundle</b><span class="chip">bakery.example</span></div>
+            <span class="mock-label">Sign in with your passkey</span>
+            <span class="mock-row"><x-tile icon="passkey" tone="turquoise" class="small"></x-tile><span class="ui-who"><b>Juniper Bakery</b><span>sam@example.com</span></span><button type="button" class="demo-btn primary pb-pick" data-x="pk-use" data-act="pk-use">Use passkey</button></span>
+            <button type="button" class="mock-link" data-act="pk-cancel">Cancel</button>
+          </div>
+          <div class="mock-popup pop" data-show="popup" data-x="popup" role="dialog" aria-label="PassBundle" hidden>
+            <div class="mock-popup-head"><x-mark class="mini"></x-mark><b>PassBundle</b><span class="chip"><span data-show="bank">bank.example</span><span data-show="bakery" hidden>bakery.example</span></span></div>
+            <div class="pop-pane" data-show="pop-vault">
+              <input type="search" class="pop-search" placeholder="Search" aria-label="Search the vault" autocomplete="off">
+              <span class="mock-label"><span data-show="bank">For bank.example</span><span data-show="bakery" hidden>For bakery.example</span></span>
+              <span class="mock-row" data-show="bank"><x-tile icon="key" tone="sapphire" class="small"></x-tile><span class="ui-who"><b>Hometown Credit Union</b><span>sam.rivera</span></span><button type="button" class="demo-btn primary pb-pick" data-act="pop-fill" data-show="fillable">Fill</button><span class="mock-note" data-hide="fillable" hidden>Signed in</span></span>
+              <span class="mock-row" data-show="bakery" hidden><x-tile icon="passkey" tone="turquoise" class="small"></x-tile><span class="ui-who"><b>Juniper Bakery</b><span>Passkey</span></span><button type="button" class="demo-btn primary pb-pick" data-act="pop-passkey" data-show="fillable">Sign in</button><span class="mock-note" data-hide="fillable" hidden>Signed in</span></span>
+              <span class="mock-label">All items</span>
+              <span class="pop-list">
+                <span class="pop-item" data-name="hometown credit union sam.rivera bank.example"><x-tile icon="key" tone="sapphire" class="small"></x-tile><span class="ui-who"><b>Hometown Credit Union</b><span>sam.rivera</span></span><button type="button" class="demo-btn" data-act="copy" data-value="Tq7#vP2m!Lr9xWc4" data-label="password" aria-label="Copy the password for Hometown Credit Union">Copy</button></span>
+                <span class="pop-item" data-name="juniper bakery sam@example.com bakery.example passkey"><x-tile icon="passkey" tone="turquoise" class="small"></x-tile><span class="ui-who"><b>Juniper Bakery</b><span>sam@example.com</span></span><button type="button" class="demo-btn" data-act="copy" data-value="sam@example.com" data-label="username" aria-label="Copy the username for Juniper Bakery">Copy</button></span>
+                <span class="pop-item" data-name="family email sam@example.com mail.example.com"><x-tile icon="key" tone="sapphire" class="small"></x-tile><span class="ui-who"><b>Family email</b><span>sam@example.com</span></span><button type="button" class="demo-btn" data-act="copy" data-value="orbit-canyon-velvet-73" data-label="password" aria-label="Copy the password for Family email">Copy</button></span>
+                <span class="pop-item" data-name="city power &amp; light sam@example.com power.example"><x-tile icon="key" tone="sapphire" class="small"></x-tile><span class="ui-who"><b>City Power &amp; Light</b><span>sam@example.com</span></span><button type="button" class="demo-btn" data-act="copy" data-value="Hk4$wN8q@Zp2" data-label="password" aria-label="Copy the password for City Power &amp; Light">Copy</button></span>
+                <span class="pop-item" data-name="home wi-fi rivera home"><x-tile icon="wifi" tone="turquoise" class="small"></x-tile><span class="ui-who"><b>Home Wi-Fi</b><span>Rivera Home</span></span><button type="button" class="demo-btn" data-act="copy" data-value="lantern-meadow-ripple-42" data-label="password" aria-label="Copy the password for Home Wi-Fi">Copy</button></span>
+              </span>
+              <span class="mock-note" data-pop-empty hidden>Nothing matches.</span>
+            </div>
+            <div class="pop-pane mock-gen" data-show="pop-gen" data-x="gen" hidden>
+              <span class="seg" role="group" aria-label="Make a"><button type="button" data-act="gen-kind" data-kind="password" data-pressed="gen-password" aria-pressed="true">Password</button><button type="button" data-act="gen-kind" data-kind="passphrase" data-pressed="gen-passphrase" aria-pressed="false">Passphrase</button></span>
+              <span class="demo-value mono gen-out" data-gen-out>vR7#kq2!Lm9zX4$wPtE3</span>
+              <span class="mock-note" data-gen-note>20 characters, very strong</span>
+              <label class="gen-len"><span data-gen-len-label>20 characters</span><input type="range" min="8" max="64" value="20" data-gen-len></label>
+              <span class="mock-actions start"><button type="button" class="demo-btn" data-act="regen">Make another</button><button type="button" class="demo-btn primary" data-act="copy-gen">Copy</button></span>
+            </div>
+            <div class="pop-pane" data-show="pop-send" hidden>
+              <span class="mock-note">Share text with an encrypted link that expires when you say.</span>
+              <span class="pop-list" data-send-list>
+                <span class="pop-item"><x-tile icon="send" tone="sapphire" class="small"></x-tile><span class="ui-who"><b>Wi-Fi for the sitter</b><span>Deletes in 6 days</span></span><button type="button" class="demo-btn" data-act="copy" data-value="https://vault.passbundle.com/#/send/q8Zr2LmT0w/Xc4pN7vB1sKd9fH3jQ6yWe" data-label="link" aria-label="Copy the link to Wi-Fi for the sitter">Copy link</button></span>
+              </span>
+              <button type="button" class="demo-btn primary" data-act="new-send">New Send</button>
+            </div>
+            <div class="pop-pane" data-show="pop-settings" hidden>
+              <button type="button" class="pop-switch" role="switch" aria-checked="true" data-act="switch" data-setting="menu"><span>Show the menu in sign-in fields</span><span class="switch" aria-hidden="true"></span></button>
+              <button type="button" class="pop-switch" role="switch" aria-checked="true" data-act="switch"><span>Offer to save new logins</span><span class="switch" aria-hidden="true"></span></button>
+              <button type="button" class="pop-switch" role="switch" aria-checked="true" data-act="switch"><span>Unlock with biometrics</span><span class="switch" aria-hidden="true"></span></button>
+            </div>
+            <div class="mock-tabs" role="group" aria-label="PassBundle">
+              <button type="button" data-act="pop-tab" data-pop="vault" data-pressed="pop-vault" aria-pressed="true">Vault</button>
+              <button type="button" data-act="pop-tab" data-pop="gen" data-pressed="pop-gen" aria-pressed="false" data-x="gen-tab">Generator</button>
+              <button type="button" data-act="pop-tab" data-pop="send" data-pressed="pop-send" aria-pressed="false">Send</button>
+              <button type="button" data-act="pop-tab" data-pop="settings" data-pressed="pop-settings" aria-pressed="false">Settings</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <ol class="tour-steps">
+    <li data-target="inline-item" data-state="menu" data-advance="click" data-pick data-place="right"><strong>Pick your login.</strong> Click into a sign-in form, and PassBundle offers the login saved for this site, right under the field.</li>
+    <li data-target="signin" data-anchor="pass" data-state="filled" data-advance="click" data-place="right"><strong>Every field, one click.</strong> The username and the password went in together, and only on the site the login belongs to, so a look-alike site gets nothing. Now the bank's own Sign in.</li>
+    <li data-target="code-item" data-state="code codemenu" data-advance="click" data-pick data-place="right"><strong>Then the two-step code.</strong> The bank asks for a code, and PassBundle has it too: one click, no phone. Built-in codes come with Premium, Families, and Business.</li>
+    <li data-target="verify" data-anchor="code-field" data-state="code coded" data-advance="click" data-place="right"><strong>The code is in.</strong> Verify, as you would anyway.</li>
+    <li data-target="bakery-tab" data-anchor="bank-hello" data-state="bankhome" data-advance="click" data-place="right"><strong>One click, and you're in.</strong> PassBundle's part was two clicks: your login and your code. Sign in and Verify are the bank's own. Next, a site with no password at all: open Juniper Bakery.</li>
+    <li data-target="pk-btn" data-state="bakery" data-advance="click" data-place="right"><strong>No password at all.</strong> The bakery takes a passkey. Sign in with it.</li>
+    <li data-target="pk-use" data-anchor="pk-popup" data-state="bakery pkprompt" data-advance="click" data-pick data-place="bottom"><strong>One click, and you're in.</strong> PassBundle keeps your passkeys: it saves each one as you make it, and has it on every device.</li>
+    <li data-target="cake-hello" data-state="cake" data-place="right" data-autoplay-end><strong>Signed in.</strong> A password, a two-step code, or a passkey: one click from PassBundle each time, on every site you use.</li>
+    <li data-target="ext-icon" data-state="cake" data-advance="click" data-place="bottom"><strong>Everything else is in the toolbar.</strong> Click PassBundle to open your vault.</li>
+    <li data-target="gen-tab" data-anchor="popup" data-state="cake popup" data-advance="click" data-place="left"><strong>Your vault, a click away.</strong> The logins for this site come first, and every item has Copy. Signing up somewhere new? Open the generator.</li>
+    <li data-target="gen" data-state="cake popup gen" data-place="left"><strong>A strong password, made for you.</strong> Make another, or change the length. Use it on a sign-up form, and PassBundle offers to save the new login.</li>
+  </ol>
+</section>
+
+<section class="tour-part" id="web" aria-labelledby="web-title" data-label="Web vault">
+  <div class="tour-head">
+    <h2 id="web-title">The web vault</h2>
+    <p>Your whole vault in any browser, on any computer.</p>
+  </div>
+  <div class="tour-frame">
+    <div class="tour-stage" role="region" aria-label="A sample web vault">
+      <div class="mock">
+        <div class="mock-top">
+          <x-mark class="mini"></x-mark>
+          <span class="mock-search">Search the vault</span>
+        </div>
+        <div class="demo-body mock-body">
+          <div class="demo-nav">
+            <span class="demo-nav-row on"><span>All items</span><span class="demo-count">12</span></span>
+            <span class="demo-nav-row"><span>Favorites</span><span class="demo-count">2</span></span>
+            <span class="demo-nav-row"><span>Health</span><span class="demo-count alert">3</span></span>
+            <p>Folders</p>
+            <span class="demo-nav-row"><span>Bills</span><span class="demo-count">3</span></span>
+            <span class="demo-nav-row"><span>Family</span><span class="demo-count">3</span></span>
+          </div>
+          <div class="demo-list">
+            <span class="demo-item"><x-tile icon="exposed" tone="garnet"></x-tile><span class="demo-item-text"><b>Dr. Okafor's patient portal</b><span>sam.rivera</span></span><span class="badge bad">Breach</span></span>
+            <span class="demo-item"><x-tile icon="key" tone="sapphire"></x-tile><span class="demo-item-text"><b>Hometown Credit Union</b><span>sam.rivera</span></span></span>
+            <span class="demo-item"><x-tile icon="key" tone="sapphire"></x-tile><span class="demo-item-text"><b>City Power &amp; Light</b><span>sam@example.com</span></span><span class="badge warn">Reused</span></span>
+            <span class="demo-item"><x-tile icon="key" tone="sapphire"></x-tile><span class="demo-item-text"><b>Water and sewer</b><span>sam@example.com</span></span><span class="badge warn">Reused</span></span>
+            <span class="demo-item"><x-tile icon="card" tone="amethyst"></x-tile><span class="demo-item-text"><b>Everyday Visa</b><span>Visa, ending 1111</span></span></span>
+          </div>
+          <div class="demo-detail">
+            <p class="mock-empty">Pick an item to see it.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <ol class="tour-steps">
+    <li data-target="search" data-place="bottom"><strong>Your vault, in any browser.</strong> Sign in from any computer. Search finds items by name, username, or website: try it.</li>
+    <li data-target="item-power" data-advance="click" data-place="right"><strong>Open an item.</strong> Click City Power &amp; Light.</li>
+    <li data-target="copy" data-state="item" data-advance="click" data-place="bottom"><strong>Copy in one click.</strong> The password stays hidden until you show it. Copy it now.</li>
+    <li data-target="history" data-state="item" data-advance="click" data-place="bottom"><strong>Every version, kept.</strong> Each edit keeps the version before, with who made it, so you can restore an old password in a click. Open the history.</li>
+    <li data-target="health" data-state="item history" data-advance="click" data-place="right"><strong>Passwords to fix.</strong> Open Health to see which passwords need attention.</li>
+    <li data-target="fix" data-state="health" data-advance="click" data-place="bottom"><strong>Fix them one by one.</strong> Breached, reused, and weak passwords, by name. Only a scrambled fragment of a password is ever checked, never the password. Make a new one.</li>
+    <li data-target="fixed" data-state="health fixed" data-place="left"><strong>Fixed.</strong> A strong new password, saved, and the old one kept in the item's history. Change it on the site too, and Health counts what's left.</li>
+  </ol>
+</section>
+
+<section class="tour-part" id="desktop" aria-labelledby="desktop-title" data-label="Desktop app">
+  <div class="tour-head">
+    <h2 id="desktop-title">The desktop app</h2>
+    <p>For Windows, Mac, and Linux. On Windows, unlock it with Windows Hello, and approve new sign-ins from it.</p>
+  </div>
+  <div class="tour-frame">
+    <div class="tour-stage" role="region" aria-label="A sample PassBundle desktop app">
+      <div class="mock mock-narrow">
+        <div class="mock-titlebar"><span class="mock-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>PassBundle</span></div>
+        <div class="mock-lock" data-hide="unlocked">
+          <x-mark class="big"></x-mark>
+          <b>Your vault is locked</b>
+          <span class="mock-note">sam@example.com</span>
+          <button type="button" class="demo-btn primary" data-x="hello" data-act="hello">Unlock with Windows Hello</button>
+          <span class="mock-note">or</span>
+          <button type="button" class="ui-field" data-act="type" aria-label="Master password"><span data-hide="typed">Master password</span><span class="mock-fill" data-show="typed" hidden>••••••••••••••</span></button>
+          <button type="button" class="demo-btn" data-show="typed" data-act="unlock" hidden>Unlock</button>
+        </div>
+        <div class="mock-desk" data-show="unlocked" hidden>
+          <div class="ui-list lined desk-list">
+            <button type="button" class="ui-list-row" data-act="open" data-item="bank" data-pressed="sel-bank" data-x="item-bank"><x-tile icon="key" tone="sapphire"></x-tile><span class="ui-name"><b>Hometown Credit Union</b><small>sam.rivera</small></span></button>
+            <button type="button" class="ui-list-row" data-act="open" data-item="mail" data-pressed="sel-mail"><x-tile icon="key" tone="sapphire"></x-tile><span class="ui-name"><b>Family email</b><small>sam@example.com</small></span></button>
+            <button type="button" class="ui-list-row" data-act="open" data-item="power" data-pressed="sel-power"><x-tile icon="key" tone="sapphire"></x-tile><span class="ui-name"><b>City Power &amp; Light</b><small>sam@example.com</small></span></button>
+            <button type="button" class="ui-list-row" data-act="open" data-item="wifi" data-pressed="sel-wifi"><x-tile icon="wifi" tone="turquoise"></x-tile><span class="ui-name"><b>Home Wi-Fi</b><small>Rivera Home</small></span></button>
+          </div>
+          <div class="desk-side">
+            <div class="ui ui-approve" data-show="req" data-x="request" role="group" aria-label="Sign-in request" hidden>
+              <span class="ui-title">Approve sign-in?</span>
+              <span class="ui-phrase">alpine-river-tiger-ladder-ember</span>
+              <span class="ui-text">Web vault in Chrome on Windows, from 203.0.113.24, just now. Approve only a sign-in you started, with this phrase on its screen.</span>
+              <span class="ui-buttons" data-show="req-wait"><button type="button" data-act="deny">Deny</button><button type="button" data-act="later">Later</button><button type="button" class="go" data-x="approve" data-act="approve">Approve</button></span>
+              <span class="mock-note" data-show="req-check" hidden>Checking it's you, with Windows Hello</span>
+              <p class="demo-ok" data-show="req-approved" data-x="approved" hidden>Approved. Chrome on Windows is signed in.</p>
+              <p class="demo-ok plain" data-show="req-denied" hidden>Denied. Nothing was sent.</p>
+              <button type="button" class="demo-btn" data-show="req-approved req-denied" data-act="req-done" hidden>Done</button>
+            </div>
+            <div class="desk-detail" data-desk-detail><p class="mock-empty">Pick an item to see it.</p></div>
+          </div>
+        </div>
+        <div class="mock-foot" data-show="unlocked" hidden><span data-x="timer">Locks itself after 5 minutes</span><button type="button" class="mock-link" data-show="req-later" data-act="reopen" hidden>1 sign-in request</button><button type="button" class="demo-btn" data-act="lock">Lock now</button></div>
+      </div>
+    </div>
+  </div>
+  <ol class="tour-steps">
+    <li data-target="hello" data-advance="click" data-place="right"><strong>Unlock with Windows Hello.</strong> Your face, finger, or Windows PIN, so you don't type your master password every time. Unlock now.</li>
+    <li data-target="item-bank" data-state="unlocked" data-advance="click" data-place="right"><strong>Your vault, in a window of its own.</strong> Open an item to copy its password, or its two-step code as it changes.</li>
+    <li data-target="timer" data-state="unlocked item" data-place="top"><strong>It locks itself.</strong> After the time you choose, PassBundle locks again, and the vault stays encrypted on your computer.</li>
+    <li data-target="approve" data-anchor="request" data-state="unlocked item request" data-advance="click" data-place="left"><strong>Approve a new sign-in.</strong> Signing in on another computer? Approve it here, after checking the phrase matches the one on the other screen.</li>
+    <li data-target="approved" data-anchor="request" data-state="unlocked item approved" data-place="left"><strong>Signed in, without typing a password there.</strong> PassBundle checked it was you first. The other computer opens your vault, and your master password never left this one.</li>
+  </ol>
+</section>
+
+<section class="tour-part" id="phone" aria-labelledby="phone-title" data-label="Phone">
+  <div class="tour-head">
+    <h2 id="phone-title">The phone app</h2>
+    <p>Fills logins and passkeys in your apps and browsers on Android. The iPhone app is coming.</p>
+  </div>
+  <div class="tour-frame">
+    <div class="tour-stage" role="region" aria-label="A sample Android phone with PassBundle">
+      <div class="mock-phone">
+        <div class="phone-screen phone-vault" data-show="vault">
+          <span class="phone-appbar"><x-mark class="mini"></x-mark><b>PassBundle</b></span>
+          <div class="ui-list lined">
+            <button type="button" class="ui-list-row" data-act="item" data-item="bank"><x-tile icon="key" tone="sapphire"></x-tile><span class="ui-name"><b>Hometown Credit Union</b><small>sam.rivera</small></span></button>
+            <button type="button" class="ui-list-row" data-act="item" data-item="mail"><x-tile icon="key" tone="sapphire"></x-tile><span class="ui-name"><b>Family email</b><small>sam@example.com</small></span></button>
+            <button type="button" class="ui-list-row" data-act="item" data-item="wifi"><x-tile icon="wifi" tone="turquoise"></x-tile><span class="ui-name"><b>Home Wi-Fi</b><small>Rivera Home</small></span></button>
+          </div>
+          <div class="phone-sheet phone-setup" data-show="card">
+            <b>Turn on autofill</b>
+            <span class="mock-note">So PassBundle can fill your sign-ins in apps and browsers.</span>
+            <span class="phone-setup-row" data-x="autofill-row"><span>Use PassBundle for autofill</span><button type="button" class="demo-btn primary" data-x="turn-on" data-act="turn-on" data-hide="on">Turn on</button><span class="phone-on" data-show="on" hidden><svg class="mock-icon on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>On</span></span>
+            <span class="phone-setup-row"><span>Use PassBundle for passkeys</span><button type="button" class="demo-btn" data-act="turn-on" data-hide="on">Turn on</button><span class="phone-on" data-show="on" hidden><svg class="mock-icon on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>On</span></span>
+            <button type="button" class="demo-btn" data-act="later" data-hide="on">Later</button>
+            <button type="button" class="demo-btn primary" data-act="later" data-show="on" hidden>Done</button>
+          </div>
+        </div>
+        <div class="phone-screen" data-show="item" hidden>
+          <span class="phone-bar"><button type="button" class="phone-back" data-act="back" aria-label="Back"><svg class="mock-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6"/></svg></button><b data-phone-title>Item</b></span>
+          <div class="phone-item" data-phone-item></div>
+        </div>
+        <div class="phone-screen phone-settings" data-show="settings" hidden>
+          <span class="phone-bar"><button type="button" class="phone-back" data-act="back" aria-label="Back"><svg class="mock-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6"/></svg></button><b>Autofill service</b></span>
+          <button type="button" class="phone-option" data-act="none"><span class="phone-radio" data-show="chosen" hidden aria-hidden="true"></span><span class="phone-radio on" data-hide="chosen" aria-hidden="true"></span><span>None</span></button>
+          <button type="button" class="phone-option" data-x="pb-option" data-act="choose"><span class="phone-radio" data-hide="chosen" aria-hidden="true"></span><span class="phone-radio on" data-show="chosen" hidden aria-hidden="true"></span><x-mark class="mini"></x-mark><span>PassBundle</span></button>
+          <p class="phone-hint">The service fills passwords and passkeys in apps and browsers.</p>
+          <div class="phone-scrim" data-show="confirm" hidden>
+            <div class="phone-dialog" role="dialog" aria-label="Use PassBundle?">
+              <b>Use PassBundle?</b>
+              <p>PassBundle will look at what's on the screen to know what it can fill.</p>
+              <span class="phone-dialog-buttons"><button type="button" data-act="cancel">Cancel</button><button type="button" data-x="ok" data-act="ok">OK</button></span>
+            </div>
+          </div>
+        </div>
+        <div class="phone-screen phone-home" data-show="home" hidden>
+          <span class="phone-clock">9:41</span>
+          <div class="phone-apps">
+            <button type="button" class="phone-icon" data-act="app" data-app="bank" data-x="bank-app"><x-tile icon="bank" tone="sapphire" class="app"></x-tile><span>Hometown</span></button>
+            <button type="button" class="phone-icon" data-act="app" data-app="bakery"><x-tile icon="cake" tone="topaz" class="app"></x-tile><span>Juniper Bakery</span></button>
+            <button type="button" class="phone-icon" data-act="app" data-app="vault"><x-mark class="app"></x-mark><span>PassBundle</span></button>
+            <button type="button" class="phone-icon" data-act="app" data-app="settings"><x-tile icon="sliders" tone="onyx" class="app"></x-tile><span>Settings</span></button>
+          </div>
+        </div>
+        <div class="phone-screen phone-app" data-show="bank" hidden>
+          <span class="phone-appbar"><x-tile icon="bank" tone="sapphire" class="small"></x-tile><b>Hometown Credit Union</b></span>
+          <div class="phone-form" data-hide="bankhome">
+            <span class="ui-label">Username</span>
+            <button type="button" class="ui-field focus" data-act="field" aria-label="Username"><span class="mock-fill" data-show="filled" hidden>sam.rivera</span></button>
+            <span class="phone-suggest" data-show="suggest" hidden><button type="button" class="phone-suggest-row pb-pick" data-x="unlock" data-act="suggest"><x-mark class="mini"></x-mark><span class="ui-who"><b>Unlock PassBundle</b><span>to fill this sign-in</span></span></button></span>
+            <span class="ui-label">Password</span>
+            <button type="button" class="ui-field" data-x="pass" data-act="field" aria-label="Password"><span class="mock-fill later" data-show="filled" hidden>••••••••••••••••</span></button>
+            <span class="mock-error" data-show="err" hidden>Enter your username and password.</span>
+            <button type="button" class="mock-submit" data-x="p-signin" data-act="signin">Sign in</button>
+          </div>
+          <div class="site-home phone-page" data-show="bankhome" hidden>
+            <span class="ui-title" data-x="p-hello">Good morning, Sam</span>
+            <span class="site-card"><span class="ui-label">Everyday Checking, ending 4821</span><b class="site-big">$2,418.36</b><span class="mock-note">Available balance</span></span>
+            <button type="button" class="mock-link" data-act="bank-out">Sign out</button>
+          </div>
+          <div class="phone-sheet" data-show="bio" hidden>
+            <b>Unlock PassBundle</b>
+            <span class="mock-note">Touch the fingerprint sensor</span>
+            <button type="button" class="phone-finger" data-x="finger" data-act="finger" aria-label="Touch the fingerprint sensor"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 8.5a6.5 6.5 0 0 1 11 2.5 M5 13.5c.3-1.2.3-2.4 0-3.5 M12 9.5a3 3 0 0 1 3 3c0 2.5-.5 4.6-1.6 6.5 M9 12.5a3 3 0 0 1 .4-1.5 M9 15.5c.1-1 .1-2 0-3 M12 12.5c0 3-.6 5.6-2 8 M18 14.5c-.2 2-.8 3.8-1.6 5.5 M7.5 18c.6-.9 1-1.9 1.3-3"/></svg></button>
+            <button type="button" class="mock-link" data-act="sheet-cancel">Cancel</button>
+          </div>
+        </div>
+        <div class="phone-screen phone-app" data-show="bakery" hidden>
+          <span class="phone-appbar"><x-tile icon="cake" tone="topaz" class="small"></x-tile><b>Juniper Bakery</b></span>
+          <div class="phone-form" data-hide="cake">
+            <span class="ui-title">Sign in</span>
+            <span class="ui-text">Pick up where you left off: your order and your favorite cakes.</span>
+            <button type="button" class="mock-submit" data-act="pk">Sign in with a passkey</button>
+          </div>
+          <div class="site-home phone-page" data-show="cake" hidden>
+            <span class="ui-title">Welcome back, Sam</span>
+            <span class="site-card site-order"><span class="cake lemon" aria-hidden="true"></span><span class="ui-who"><b>Your lemon cake</b><span>Ready Saturday at 10 a.m.</span></span></span>
+            <button type="button" class="mock-link" data-act="bakery-out">Sign out</button>
+          </div>
+          <div class="phone-sheet" data-show="pk" hidden>
+            <b>Use your passkey for bakery.example?</b>
+            <span class="mock-row"><x-mark class="mini"></x-mark><span class="ui-who"><b>sam@example.com</b><span>PassBundle</span></span></span>
+            <button type="button" class="demo-btn primary pb-pick" data-act="pk-use">Continue</button>
+            <button type="button" class="mock-link" data-act="sheet-cancel">Cancel</button>
+          </div>
+        </div>
+        <button type="button" class="phone-nav" data-x="home" data-act="home" aria-label="Home"></button>
+      </div>
+    </div>
+  </div>
+  <ol class="tour-steps">
+    <li data-target="turn-on" data-state="card" data-advance="click" data-place="right"><strong>PassBundle offers to turn it on.</strong> The first time you unlock it, a card asks to fill your sign-ins in apps and browsers. Tap Turn on.</li>
+    <li data-target="pb-option" data-state="settings" data-advance="click" data-place="right"><strong>Android lists its autofill services.</strong> Tap PassBundle.</li>
+    <li data-target="ok" data-state="settings chosen confirm" data-advance="click" data-place="right"><strong>Android checks you trust it.</strong> Press OK.</li>
+    <li data-target="home" data-anchor="autofill-row" data-state="card on" data-advance="click" data-place="right"><strong>That's the whole setup.</strong> Back in PassBundle, it shows On. On Android 14 and later, the passkeys row works the same way, and on Android 15 one choice turns on both. Now try it: go home.</li>
+    <li data-target="bank-app" data-state="home on" data-advance="click" data-place="left"><strong>Open an app.</strong> Your bank's, say.</li>
+    <li data-target="unlock" data-state="bank on" data-advance="click" data-pick data-place="right"><strong>Tap a sign-in field.</strong> In any app or browser, PassBundle offers to fill it. When your vault is locked, it asks you to unlock first.</li>
+    <li data-target="finger" data-state="bank on bio" data-advance="click" data-place="right"><strong>Unlock with your fingerprint or face.</strong> Touch the sensor.</li>
+    <li data-target="p-signin" data-anchor="pass" data-state="bank on filled" data-advance="click" data-place="right"><strong>Filled.</strong> An app only gets a website's logins when the app and the site both say they belong together, so a look-alike app gets nothing. Sign in.</li>
+    <li data-target="p-hello" data-state="bank on bankhome" data-place="right"><strong>Passkeys too.</strong> On Android 14 and later, choose PassBundle when an app or a site asks for a passkey. Try it in Juniper Bakery, from the home screen.</li>
+  </ol>
+</section>
+
+<section class="tour-part" id="family" aria-labelledby="family-title" data-label="Family">
+  <div class="tour-head">
+    <h2 id="family-title">Sharing with your family</h2>
+    <p>Families gives up to {{prices.familiesPeople}} people Premium and shared folders, and everyone keeps a private vault.</p>
+  </div>
+  <div class="tour-frame">
+    <div class="tour-stage" role="region" aria-label="A sample family organization">
+      <div class="mock">
+        <div class="mock-top">
+          <x-mark class="mini"></x-mark>
+          <b>Rivera family</b>
+          <span class="chip">Families</span>
+        </div>
+        <div class="mock-grid">
+          <div class="mock-panel">
+            <div class="mock-panel-head"><b>People</b><button type="button" class="demo-btn primary" data-x="invite" data-act="invite">Invite someone</button></div>
+            <div class="ui-list lined" data-people data-limit="{{prices.familiesPeople}}">
+              <span class="ui-list-row"><span class="avatar a1" aria-hidden="true">SR</span><span class="ui-name"><b>Sam Rivera</b><small>sam@example.com</small></span><span class="badge">Owner</span></span>
+              <span class="ui-list-row"><span class="avatar a2" aria-hidden="true">AR</span><span class="ui-name"><b>Alex Rivera</b><small>alex@example.com</small></span><span class="badge">Member</span></span>
+            </div>
+          </div>
+          <div class="mock-panel" data-x="folders">
+            <div class="mock-panel-head"><b>Shared folders</b></div>
+            <div class="ui-list lined">
+              <button type="button" class="ui-list-row" data-act="folder" data-folder="bills"><x-tile icon="folder" tone="brand"></x-tile><span class="ui-name"><b>Bills</b><small data-folder-note="bills">3 items. Alex can edit.</small></span><span class="row-more">Access</span></button>
+              <button type="button" class="ui-list-row" data-act="folder" data-folder="family" data-x="folder-family"><x-tile icon="folder" tone="brand"></x-tile><span class="ui-name"><b>Family</b><small data-folder-note="family">3 items. Alex can edit.</small></span><span class="row-more">Access</span></button>
+            </div>
+          </div>
+          <div class="mock-dialog" data-show="dialog" hidden>
+            <div class="mock-dialog-card" role="dialog" aria-labelledby="family-invite-title">
+              <b class="mock-dialog-title" id="family-invite-title">Invite someone</b>
+              <label class="ui-label" for="family-invite-email">Email</label>
+              <input class="mock-input" id="family-invite-email" type="email" value="jordan@example.com" autocomplete="off" spellcheck="false" data-invite-email>
+              <span class="ui-label">Shared folders</span>
+              <label class="mock-select" data-x="perm"><span>Bills</span><select data-invite="bills"><option value="none" selected>No access</option><option value="view">Can view</option><option value="edit">Can edit</option><option value="manage">Can manage</option></select></label>
+              <label class="mock-select"><span>Family</span><select data-invite="family"><option value="none">No access</option><option value="view" selected>Can view</option><option value="edit">Can edit</option><option value="manage">Can manage</option></select></label>
+              <span class="mock-error" data-invite-error hidden></span>
+              <span class="mock-actions"><button type="button" class="demo-btn" data-act="close">Cancel</button><button type="button" class="demo-btn primary" data-x="send" data-act="send">Send invite</button></span>
+            </div>
+          </div>
+          <div class="mock-dialog" data-show="access" hidden>
+            <div class="mock-dialog-card" role="dialog" aria-labelledby="family-access-title">
+              <b class="mock-dialog-title" id="family-access-title" data-access-title>Family</b>
+              <span class="mock-note">Who reaches this folder, and what they can do there.</span>
+              <div class="access-list" data-access-list data-x="access-list"></div>
+              <span class="mock-actions"><button type="button" class="demo-btn primary" data-act="close">Done</button></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <ol class="tour-steps">
+    <li data-target="invite" data-advance="click" data-place="bottom"><strong>Add someone.</strong> Each person gets Premium and a private vault of their own. Invite one now.</li>
+    <li data-target="perm" data-state="dialog" data-place="right"><strong>Choose what they share.</strong> Pick the shared folders they get, and what they can do in each: view, edit, or manage.</li>
+    <li data-target="send" data-state="dialog" data-advance="click" data-place="right"><strong>Send the invite.</strong> They make their own account with their own master password.</li>
+    <li data-target="folders" data-state="invited" data-place="bottom"><strong>Share only what you mean to.</strong> The Wi-Fi, the bills, the streaming login go in shared folders. Everything else stays private to each person.</li>
+    <li data-target="folder-family" data-state="invited" data-advance="click" data-place="bottom"><strong>Change it any time.</strong> Open a folder to change who reaches it.</li>
+    <li data-target="access-list" data-state="invited access" data-place="right"><strong>Per person, per folder.</strong> View, edit, or manage, or no access at all. Each person's private vault stays theirs alone.</li>
+  </ol>
+</section>
+
+<section class="tour-part" id="msp" aria-labelledby="msp-title" data-label="MSP console">
+  <div class="tour-head">
+    <h2 id="msp-title">The MSP console</h2>
+    <p>Every client you look after, in one place, with one pool of seats.</p>
+  </div>
+  <div class="tour-frame">
+    <div class="tour-stage" role="region" aria-label="A sample MSP console">
+      <div class="mock">
+        <div class="mock-top">
+          <x-mark class="mini"></x-mark>
+          <b>MSP console</b>
+          <span class="chip">Harbor IT</span>
+        </div>
+        <div class="demo-msp mock-msp">
+          <div class="demo-clients">
+            <div class="demo-table">
+              <div class="demo-row head"><span>Client</span><span>Members</span><span>Expiring</span><span>Weak</span><span>Reused</span></div>
+              <span class="demo-row"><span class="demo-client-name"><span class="tile small sapphire" aria-hidden="true">A</span><span>Acme Dental</span></span><span>9</span><span>1</span><span>2</span><span>3</span></span>
+              <span class="demo-row"><span class="demo-client-name"><span class="tile small amethyst" aria-hidden="true">B</span><span>Baker &amp; Hale Law</span></span><span>6</span><span>2</span><span>0</span><span>0</span></span>
+              <span class="demo-row"><span class="demo-client-name"><span class="tile small turquoise" aria-hidden="true">C</span><span>Cedar Pediatrics</span></span><span>14</span><span>0</span><span>1</span><span>0</span></span>
+              <span class="demo-row"><span class="demo-client-name"><span class="tile small topaz" aria-hidden="true">L</span><span>Linden Realty</span></span><span>4</span><span>0</span><span>4</span><span>2</span></span>
+              <span class="demo-row"><span class="demo-client-name"><span class="tile small ruby" aria-hidden="true">M</span><span>Maple Street Bakery</span></span><span>3</span><span>1</span><span>0</span><span>0</span></span>
+            </div>
+          </div>
+          <div class="demo-client">
+            <p class="mock-empty">Pick a client to see what needs attention.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <ol class="tour-steps">
+    <li data-target="clients" data-place="top"><strong>Every client, side by side.</strong> Members, what expires soon, and weak and reused passwords, for every client you look after.</li>
+    <li data-target="linden" data-advance="click" data-place="bottom"><strong>Linden Realty needs you.</strong> Open it to see why.</li>
+    <li data-target="fix-list" data-state="client" data-place="left"><strong>Exactly what to fix.</strong> Each weak or reused password by name, and whether it's been in a data breach. Never the password itself.</li>
+    <li data-target="install" data-state="client" data-advance="click" data-place="left"><strong>Roll out from your RMM.</strong> This command runs our install script on the client's Windows computers: it turns off the browsers' own password saving, and installs the extension once it's in the Chrome and Edge stores. Copy it.</li>
+    <li data-target="add" data-state="client" data-advance="click" data-place="bottom"><strong>A new client, in one step.</strong> Add one now.</li>
+    <li data-target="create" data-state="add" data-advance="click" data-place="right"><strong>It starts with your defaults.</strong> Account recovery on, strong master passwords, and one work account per person, before anyone joins.</li>
+    <li data-target="new-client" data-state="added" data-place="top"><strong>Done.</strong> Change a default policy later, and every client that follows it changes too.</li>
+  </ol>
+</section>

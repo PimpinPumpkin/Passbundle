@@ -6,6 +6,10 @@
 /help/:article/ /help/ 302
 /help/:section/:article /help/ 302
 /help/:section/:article/ /help/ 302
+# The tour became the homepage's demo; a link to /tour/#family keeps its
+# #family through the redirect, and the homepage opens that part.
+/tour / 301
+/tour/ / 301
 /products /  302
 /products/:page / 302
 /products/:page/ / 302

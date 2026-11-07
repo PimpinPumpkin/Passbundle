@@ -18,8 +18,8 @@
     "trialDays": "30"
   },
   "links": {
-    "vault": "https://vault.passbundle.com",
-    "signup": "https://vault.passbundle.com/#/signup",
+    "vault": "",
+    "signup": "",
     "chrome": "",
     "edge": "",
     "firefox": "",

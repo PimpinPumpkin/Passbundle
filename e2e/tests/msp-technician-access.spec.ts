@@ -82,7 +82,7 @@ test("an MSP admin chooses a technician's clients, role, and install commands, a
   await expect(
     techDental.getByRole("button", { name: "Install command" }),
   ).toHaveCount(0);
-  await techDental.getByRole("link", { name: "Open" }).click();
+  await techDental.getByRole("link", { name: "Admin console" }).click();
   await expect(tech).toHaveURL(/#\/organizations\/[^/]+\/members/);
   await expect(tech.getByRole("button", { name: "Invite member" })).toBeVisible();
   await expect(tech.getByRole("link", { name: "Policies" })).toHaveCount(0);
@@ -138,7 +138,7 @@ test("an MSP admin chooses a technician's clients, role, and install commands, a
   // Admin at Acme Dental still, so its policies are theirs; not at Baker Law.
   await tech.goto("/#/vault");
   await tech.goto("/#/msp");
-  await tech.getByTestId("msp-client-Baker Law").getByRole("link", { name: "Open" }).click();
+  await tech.getByTestId("msp-client-Baker Law").getByRole("link", { name: "Admin console" }).click();
   await expect(tech.getByRole("button", { name: "Invite member" })).toBeVisible();
   await expect(tech.getByRole("link", { name: "Policies" })).toHaveCount(0);
 

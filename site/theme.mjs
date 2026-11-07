@@ -13,6 +13,8 @@
 //   <html data-mode="light|dark">   the theme showing, for the button's icon
 //   the screenshots' dark <source>, the theme-color meta tags, and the
 //   button's aria-pressed and hidden (it stays hidden without scripts).
+// Pressing the button spreads the new theme out from it (a view
+// transition; styles.css "Motion"), unless the device asks for less motion.
 export const THEME_SCRIPT = `(() => {
   const root = document.documentElement;
   const device = matchMedia("(prefers-color-scheme: dark)");
@@ -41,14 +43,23 @@ export const THEME_SCRIPT = `(() => {
   device.addEventListener("change", apply);
   document.addEventListener("DOMContentLoaded", apply);
   document.addEventListener("click", (e) => {
-    if (!e.target.closest("[data-theme-toggle]")) return;
-    pick = root.dataset.mode === "dark" ? "light" : "dark";
-    if (pick === (device.matches ? "dark" : "light")) pick = null;
-    try {
-      if (pick) localStorage.setItem("theme", pick);
-      else localStorage.removeItem("theme");
-    } catch {}
-    apply();
+    const button = e.target.closest("[data-theme-toggle]");
+    if (!button) return;
+    const change = () => {
+      pick = root.dataset.mode === "dark" ? "light" : "dark";
+      if (pick === (device.matches ? "dark" : "light")) pick = null;
+      try {
+        if (pick) localStorage.setItem("theme", pick);
+        else localStorage.removeItem("theme");
+      } catch {}
+      apply();
+    };
+    if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) return change();
+    const r = button.getBoundingClientRect();
+    root.style.setProperty("--reveal-x", r.left + r.width / 2 + "px");
+    root.style.setProperty("--reveal-y", r.top + r.height / 2 + "px");
+    root.classList.add("theming");
+    document.startViewTransition(change).finished.finally(() => root.classList.remove("theming"));
   });
 })();`;
 
@@ -99,3 +110,10 @@ function scope(rules, prefix) {
     return `${before}${ws}${scoped}${ws2}{`;
   });
 }
+
+/** The same switch in the phone menu, where the bar has no room for it. */
+export const THEME_MENU_BUTTON = `<button type="button" class="theme-row" data-theme-toggle aria-pressed="false" hidden>
+          <svg class="moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z"/></svg>
+          <svg class="sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M12 2.5v2 M12 19.5v2 M4.6 4.6l1.4 1.4 M18 18l1.4 1.4 M2.5 12h2 M19.5 12h2 M4.6 19.4 6 18 M18 6l1.4-1.4"/></svg>
+          <span>Dark mode</span>
+        </button>`;

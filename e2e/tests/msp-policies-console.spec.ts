@@ -54,7 +54,7 @@ test("an MSP admin changes a default policy and sees which clients took it, and 
   // says the MSP sets defaults, and the change makes it Baker Law's own.
   await admin
     .getByTestId("msp-client-Baker Law")
-    .getByRole("link", { name: "Open" })
+    .getByRole("link", { name: "Admin console" })
     .click();
   await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
   const lawUrl = admin.url().replace(/\/members.*$/, "");

@@ -74,8 +74,8 @@ test("someone invited gets in without anyone confirming them, unless the organiz
   const autoOrg = await createOrganization(owner, "Corner Bakery");
   const approvalOrg = await createOrganization(owner, "Harbor Clinic");
 
-  // Harbor Clinic asks for approval, on its Settings page.
-  await owner.goto(`/#/organizations/${approvalOrg}/settings/account`);
+  // Harbor Clinic asks for approval, in its settings: Joining and security.
+  await owner.goto(`/#/organizations/${approvalOrg}/settings/joining`);
   const joining = owner.getByTestId("org-joining");
   await expect(joining.getByTestId("org-joining-source")).toHaveText("The default.");
   await joining.getByRole("checkbox", { name: "Let people in when they accept an invitation" }).uncheck();
@@ -116,7 +116,7 @@ test("an MSP's joining default reaches its clients, a client can have its own, a
   await admin.getByRole("button", { name: "Add client" }).click();
   await expect(toast(admin, "Added Acme Dental")).toBeVisible();
   const client = admin.getByTestId("msp-client-Acme Dental");
-  await client.getByRole("link", { name: "Open" }).click();
+  await client.getByRole("link", { name: "Admin console" }).click();
   await admin.waitForURL(/#\/organizations\/[0-9a-f-]{36}/);
   const clientId = /organizations\/([0-9a-f-]{36})/.exec(admin.url())![1];
 
@@ -133,7 +133,7 @@ test("an MSP's joining default reaches its clients, a client can have its own, a
   // The client follows it.
   const settings = async () => {
     await admin.goto("/#/vault");
-    await admin.goto(`/#/organizations/${clientId}/settings/account`);
+    await admin.goto(`/#/organizations/${clientId}/settings/joining`);
     return admin.getByTestId("org-joining");
   };
   let card = await settings();

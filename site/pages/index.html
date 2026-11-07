@@ -1,36 +1,32 @@
 <!--
 title: PassBundle: the open-source password manager for you, your family, and your clients
-description: One password to remember. PassBundle fills in your logins, passkeys, and cards on every device, free, end-to-end encrypted, and open source, with plans for families, businesses, and MSPs.
+description: One password to remember. PassBundle fills in your logins, passkeys, and cards for you, free, end-to-end encrypted, and open source, with plans for families, businesses, and MSPs.
 layout: wide
-script: demo
+script: tour
 -->
 <section class="home-hero">
-  <h1>One password to remember. PassBundle handles the rest.</h1>
+  <h1>Bundle your passwords.</h1>
   <div class="home-hero-side">
-    <p class="lead">Free on every device. Your passwords, passkeys, and cards are encrypted on your device before they go anywhere, so only you can read them.</p>
+    <p class="lead">One click signs you in: your password, your two-step code, or your passkey. Free on every device, and encrypted on yours so only you can read it.</p>
     <div class="actions">
-      <a class="button primary" href="/download/">Get PassBundle, free</a>
-      <a class="button" href="#demo">Try the demo</a>
+      <a class="button primary" href="/download/">Download, free</a>
+      <a class="button" href="#demo" data-watch>Watch it work</a>
     </div>
+    <p class="fine">The demo below runs in your browser with made-up data. Nothing you type leaves the page.</p>
   </div>
 </section>
 
-<section class="home-demo" id="demo" aria-label="Try PassBundle">
-  <div class="demo" data-demo>
-    <x-shot name="web-vault" frame="desktop" alt="The PassBundle web vault: a family's logins, cards, and notes, with a login open beside the list" eager></x-shot>
-  </div>
-  <p class="fine">This demo runs in your browser with made-up data. Nothing you type leaves the page. Want the whole picture? <a href="/tour/">Take the tour</a>, with tips for the extension, the desktop app, families, and MSPs.</p>
-</section>
+<x-part name="tour" first-only></x-part>
 
 <section class="home-doors" aria-label="Plans">
   <div class="doors">
-    <a class="door" href="#personal">
+    <a class="door" href="/personal/">
       <span class="door-who">For you</span>
       <span class="door-price">Free</span>
       <span class="door-what">Every password on every device, for as long as you like.</span>
       <span class="more">What you get</span>
     </a>
-    <a class="door" href="/pricing/#personal">
+    <a class="door" href="/personal/#families">
       <span class="door-who">For families</span>
       <span class="door-price">{{prices.families}} a year</span>
       <span class="door-what">Shared folders and Premium for up to {{prices.familiesPeople}} people.</span>
@@ -49,101 +45,36 @@ script: demo
       <span class="more">PassBundle for MSPs</span>
     </a>
   </div>
+  <p class="plans-note">Paid plans start at launch, with our hosted service. Until then, there's nothing to buy.</p>
 </section>
 
-<section class="home-rows" id="personal">
-  <div class="row">
-    <div class="row-text">
-      <h2>Sign in without typing.</h2>
-      <p class="lead">Logins, passkeys, cards, and addresses, filled in your browser and on your Android phone, and only on the sites they belong to.</p>
-    </div>
-    <div class="stage" role="img" aria-label="A bank's sign-in page, with PassBundle offering the login saved for it under the username field">
-      <div class="ui ui-signin">
-        <span class="ui-site">bank.example</span>
-        <span class="ui-title">Sign in to online banking</span>
-        <span class="ui-label">Username</span>
-        <span class="ui-field focus">sam.rivera</span>
-        <span class="ui-menu">
-          <span class="ui-menu-item"><x-tile icon="key" tone="sapphire" class="small"></x-tile><span class="ui-who"><b>Hometown Credit Union</b><span>sam.rivera</span></span><span class="ui-key">Enter</span></span>
-        </span>
-        <span class="ui-label">Password</span>
-        <span class="ui-field"></span>
-      </div>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="row-text">
-      <h2>Share with the people you live with.</h2>
-      <p class="lead">The Wi-Fi, the streaming login, the bank everyone pays bills from. Families gives up to {{prices.familiesPeople}} people shared folders and Premium, and everyone keeps a private vault of their own.</p>
-      <p><a class="more" href="/pricing/#personal">{{prices.families}} a year for the family</a></p>
-    </div>
-    <div class="stage" role="img" aria-label="A shared folder called Bills: Sam owns it, Alex can edit it, and Jordan can only view it">
-      <div class="ui ui-list">
-        <span class="ui-list-head"><x-tile icon="folder" tone="brand"></x-tile><span class="ui-name"><b>Bills</b><small>Shared folder, 14 items</small></span></span>
-        <span class="ui-list-row"><span class="avatar a1">SR</span><span class="ui-name">Sam Rivera</span><span class="badge">Owner</span></span>
-        <span class="ui-list-row"><span class="avatar a2">AR</span><span class="ui-name">Alex Rivera</span><span class="badge">Can edit</span></span>
-        <span class="ui-list-row"><span class="avatar a3">JR</span><span class="ui-name">Jordan Rivera</span><span class="badge">Can view</span></span>
-      </div>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="row-text">
-      <h2>Knows when something is wrong.</h2>
-      <p class="lead">PassBundle finds weak, reused, and breached passwords and helps you fix them one by one. Only a scrambled fragment of a password is ever checked, never the password. It reminds you before a passport or card expires, too.</p>
-    </div>
-    <div class="stage" role="img" aria-label="Three items that need attention: a patient portal password found in a data breach, a password used twice, and a passport that expires in 12 days">
-      <div class="ui ui-list lined">
-        <span class="ui-list-row"><x-tile icon="exposed" tone="garnet"></x-tile><span class="ui-name">Dr. Okafor's patient portal</span><span class="badge bad">In a data breach</span></span>
-        <span class="ui-list-row"><x-tile icon="reused" tone="topaz"></x-tile><span class="ui-name">Water and sewer</span><span class="badge warn">Used twice</span></span>
-        <span class="ui-list-row"><x-tile icon="clock" tone="amethyst"></x-tile><span class="ui-name">Passport</span><span class="badge">Expires in 12 days</span></span>
-      </div>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="row-text">
-      <h2>New devices need your OK.</h2>
-      <p class="lead">Signing in on a new computer? Choose Log in with device, then approve it in PassBundle on your phone or another computer. Both show the same fingerprint phrase, so you know the request is yours.</p>
-    </div>
-    <div class="stage" role="img" aria-label="A sign-in request from Chrome on Windows, showing its fingerprint phrase, with Deny and Approve buttons">
-      <div class="ui ui-approve">
-        <x-tile icon="desktop" tone="onyx"></x-tile>
-        <span class="ui-title">Sign-in request</span>
-        <span class="ui-text">Chrome on Windows wants to open your vault.</span>
-        <span class="ui-label">Fingerprint phrase</span>
-        <span class="ui-phrase">alpine-river-tiger-ladder-ember</span>
-        <span class="ui-buttons"><span>Deny</span><span class="go">Approve</span></span>
-      </div>
-    </div>
-  </div>
-
+<section class="home-rows" id="unique" aria-labelledby="unique-title">
   <div class="also">
-    <h2>Also in PassBundle</h2>
+    <h2 id="unique-title">Only in PassBundle</h2>
     <ul>
-      <li><strong>Passkeys</strong><span>Save them as you create them, and sign in with them in the browser and on Android.</span></li>
-      <li><strong>Send</strong><span>Share a password or a note through an encrypted link that expires when you say.</span></li>
-      <li><strong>A template for everything</strong><span>Wi-Fi, servers, software licenses, and memberships, with the right fields ready to fill.</span></li>
-      <li><strong>Unlock with your face or finger</strong><span>Windows Hello on Windows, and your fingerprint or face on Android.</span></li>
-      <li><strong>Legacy contacts</strong><span>Name someone you trust. If they ask for your vault, you have days to say no before they get in.</span></li>
-      <li><strong>Move in, in minutes</strong><span>Bring your passwords from your browser, 1Password, LastPass, and dozens of other apps. <a href="/switch/">See how</a>.</span></li>
+      <li><strong>You decide what fills each field</strong><span>Right-click any field and pick what goes there, a custom field included. PassBundle remembers it on every device.</span></li>
+      <li><strong>One command sets up a computer</strong><span>The install command turns off the browsers' own password saving, and adds PassBundle to Chrome and Edge once it's in their stores.</span></li>
+      <li><strong>Imports that don't make a mess</strong><span>What you already have is left out, and a different password goes to a folder to check, never over yours.</span></li>
+      <li><strong>No confirm step</strong><span>People you invite are in as soon as they sign up, with a check a hacked server can't fake.</span></li>
+      <li><strong>Every edit kept</strong><span>Item history keeps the version before each change, with who saved it, and restores it in a click.</span></li>
+      <li><strong>Credentials for scripts</strong><span>Your RMM's scripts read only the logins you grant them, end-to-end encrypted, and every read is logged.</span></li>
     </ul>
+    <p><a class="more" href="/features/">Everything PassBundle does</a></p>
   </div>
 </section>
 
-<section class="band" id="msp" aria-labelledby="msp-title">
+<section class="band" id="for-msps" aria-labelledby="for-msps-title">
   <div class="band-inner">
     <div class="split-head">
       <div>
         <span class="eyebrow">For MSPs and IT providers</span>
-        <h2 id="msp-title">Every client, one console.</h2>
+        <h2 id="for-msps-title">Every client, one console.</h2>
       </div>
       <div class="split-side">
         <p class="lead">Add a client in one step, set your policies once for all of them, and see each client's people, expiring logins, and passwords to fix, side by side.</p>
         <div class="actions">
           <a class="button primary" href="/msp/">PassBundle for MSPs</a>
-          <a class="button" href="mailto:hello@passbundle.com?subject=PassBundle%20demo">Book a demo</a>
+          <a class="button" href="/contact/">Talk to us</a>
         </div>
       </div>
     </div>
@@ -166,19 +97,60 @@ script: demo
   <ul class="lines">
     <li><strong>No ads, no trackers</strong><span>And no selling data, ever.</span></li>
     <li><strong>Open source</strong><span>All of our code is public, under the GPL and AGPL, so anyone can check it.</span></li>
-    <li><strong>Our server or yours</strong><span>Use our service, or run the open-source server yourself.</span></li>
+    <li><strong>Our server or yours</strong><span>Run the open-source server yourself, or use our hosted service once it opens at launch.</span></li>
   </ul>
   <p><a class="more" href="/security/">How PassBundle keeps your vault safe</a></p>
+</section>
+
+<section class="flow" id="faq" aria-labelledby="faq-title">
+  <div class="split-head page-head">
+    <h2 id="faq-title">Questions</h2>
+  </div>
+  <div class="faq">
+    <details>
+      <summary>Is it really free?</summary>
+      <p>Yes. Every password on every device, autofill, passkeys, password health, and legacy contacts are free, with no ads and no trial that runs out. Paid plans start at launch: then Premium ({{prices.premium}} a year) adds built-in two-step codes, file attachments, and file Sends, and Families ({{prices.families}} a year) gives up to {{prices.familiesPeople}} people Premium and shared folders. See <a href="/pricing/">Pricing</a>.</p>
+    </details>
+    <details>
+      <summary>What happens if PassBundle gets hacked?</summary>
+      <p>Your vault is encrypted on your device with a key made from your master password, and our servers only ever hold the encrypted result. A stolen copy is useless without each person's master password, which we never have. See <a href="/security/">how PassBundle keeps your vault safe</a>.</p>
+    </details>
+    <details>
+      <summary>What if I forget my master password?</summary>
+      <p>We can't reset it, because we never have it. Name a legacy contact who can take over your vault if you can't get in. At work, your organization can turn on account recovery, so an admin can reset it.</p>
+    </details>
+    <details>
+      <summary>Does it work on my phone?</summary>
+      <p>On Android, yes: a test build fills passwords and passkeys in apps and browsers, and unlocks with your fingerprint or face. The iPhone app is coming; until then, the web vault works in your phone's browser. See <a href="/download/">Download</a>.</p>
+    </details>
+    <details>
+      <summary>Can I bring my passwords from my browser or another app?</summary>
+      <p>Yes. PassBundle walks you through your browser's own export and imports it, leaving out what you already have, and it imports from about 70 other apps, 1Password and LastPass among them. See <a href="/switch/">Switch to PassBundle</a>.</p>
+    </details>
+    <details>
+      <summary>Do I need a domain or any IT setup?</summary>
+      <p>No. Sign up with any email address. Businesses don't need a domain, Active Directory, or an identity provider either; the install command works on any Windows computer, joined to a domain or not.</p>
+    </details>
+    <details>
+      <summary>Can my family share passwords?</summary>
+      <p>Yes. Families is {{prices.families}} a year for up to {{prices.familiesPeople}} people: shared folders for the bills, the Wi-Fi, and the streaming logins, and a private vault for each person that nobody else can open. See <a href="/personal/#families">PassBundle for families</a>.</p>
+    </details>
+    <details>
+      <summary>Is PassBundle open source?</summary>
+      <p>Yes. All of our code is public under the GPL and AGPL, so anyone can check what it does. Run the server yourself, or use our hosted service once it opens at launch.</p>
+    </details>
+  </div>
+  <p class="faq-more"><a class="more" href="/help/">More questions and help</a></p>
 </section>
 
 <section class="home-get" aria-labelledby="get-title">
   <div class="split-head">
     <h2 id="get-title">Get PassBundle. It's free.</h2>
     <div class="split-side">
-      <p class="lead">In Chrome, Edge, and Firefox, on Windows, Mac, Linux, and Android, and in any browser on the web.</p>
+      <p class="lead">Test builds for Windows, Mac, Linux, and Android, on a server you run yourself. The extension goes into the Chrome, Edge, and Firefox stores, and our hosted service opens, at launch.</p>
       <div class="actions">
-        <a class="button primary" href="/download/">Get PassBundle</a>
-        <a class="button" href="{{links.vault}}">Open the web vault</a>
+        <a class="button primary" href="/download/">Download</a>
+        <a class="button" href="/download/#server">Run your own server</a>
       </div>
     </div>
   </div>
