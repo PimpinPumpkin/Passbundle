@@ -129,7 +129,7 @@ An MSP's feed also gets its activity log:
 | 9100, 9101, 9102 | Created the MSP; added a client; a client stopped being managed by the MSP (high) |
 | 9110 to 9116 | Staff: invited, joined, invitation cancelled, role changed (high), technician's access changed (high), removed, added |
 | 9120 to 9126 | Joining: a member confirmed in a client, joined with an install command, install command replaced, its email domains changed, joining defaults and clients' own settings |
-| 9130, 9131 | Default policies changed; a client put back on a default |
+| 9130 to 9133 | Default policies changed; a client put back on a default; a policy required for every client (high); no longer required |
 | 9140 to 9143 | Templates shared, changed, stopped; a client's templates folder |
 | 9150, 9151 | Site rules added or removed |
 | 9160, 9161, 9162 | Script access: token made (high), revoked, used from a new address |

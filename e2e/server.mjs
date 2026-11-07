@@ -122,6 +122,11 @@ const child = spawn(paths.serverBin, [], {
       ? { DATABASE_URL: process.env.KK_DATABASE_URL }
       : {}),
     ...(withGroups ? { ORG_GROUPS_ENABLED: "true" } : {}),
+    // KK_SINGLE_ORG_FOR_RECOVERY=1: account recovery needs single organization
+    // first, as Bitwarden always does (tests/api/msp-required-policies.spec.ts).
+    ...(process.env.KK_SINGLE_ORG_FOR_RECOVERY === "1"
+      ? { ENFORCE_SINGLE_ORG_WITH_RESET_PW_POLICY: "true" }
+      : {}),
     // Event streaming (tests/api/event-streaming.spec.ts): the main and
     // mail servers may send to receivers on 127.0.0.1 (and nothing else
     // private), and the main one sends Sentinel's sign-in and uploads to the
