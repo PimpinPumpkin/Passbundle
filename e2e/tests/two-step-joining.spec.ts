@@ -14,7 +14,7 @@ import {
   openPopup,
   userFor,
 } from "./support/extension";
-import { signUp, webUserFor } from "./support/web";
+import { policyEditor, signUp, switchOn, webUserFor } from "./support/web";
 
 test("someone waiting to turn on two-step login is told so, and so is the owner", async ({
   browser,
@@ -37,8 +37,8 @@ test("someone waiting to turn on two-step login is told so, and so is the owner"
 
   await owner.goto(`${org}/settings/policies`);
   await owner.getByRole("button", { name: /^Require two-step login .* Off$/ }).click();
-  const policy = owner.getByRole("dialog", { name: /Require two-step login/ });
-  await policy.getByRole("switch", { name: /Turn on/ }).check();
+  const policy = policyEditor(owner);
+  await switchOn(policy.getByRole("switch", { name: "Enable policy" }));
   await policy.getByRole("button", { name: "Save" }).click();
   await expect(owner.getByRole("button", { name: /^Require two-step login .* On$/ })).toBeVisible();
 
@@ -46,7 +46,7 @@ test("someone waiting to turn on two-step login is told so, and so is the owner"
   await owner.getByRole("button", { name: "Invite member" }).click();
   const invite = owner.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(memberUser.email);
-  await invite.getByRole("button", { name: "Save" }).click();
+  await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
 
   // The owner's Members page says who's waiting for two-step login.

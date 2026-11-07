@@ -15,7 +15,7 @@ import { port } from "../paths.mjs";
 
 import { newDomain, newIdentifier, setTxt, Tenant } from "./support/entra";
 import { answerTwoStep } from "./support/two-step";
-import { confirmWithPassword, signUp, signUpWithAuthenticator, type WebUser } from "./support/web";
+import { confirmWithPassword, policyEditor, signUp, signUpWithAuthenticator, switchOn, type WebUser } from "./support/web";
 
 const origin = `https://127.0.0.1:${port}`;
 const password = "correct horse battery staple 42";
@@ -43,7 +43,7 @@ async function invite(owner: Page, orgId: string, email: string) {
   await owner.getByRole("button", { name: "Invite member" }).click();
   const dialog = owner.getByRole("dialog", { name: /Invite member/ });
   await dialog.getByRole("textbox", { name: /Email/ }).fill(email);
-  await dialog.getByRole("button", { name: "Save" }).click();
+  await dialog.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(dialog).toBeHidden();
 }
 
@@ -257,11 +257,11 @@ test("with Require single sign-on, a member's password sends them to it, one not
   await owner.goto("/#/vault");
   await owner.goto(`/#/organizations/${orgId}/settings/policies`);
   await owner.getByRole("button", { name: /^Require single sign-on/ }).click();
-  const dialog = owner.getByRole("dialog");
+  const dialog = policyEditor(owner);
   await expect(dialog).toContainText("IT provider's staff");
   await expect(dialog.getByTestId("require-sso-unlinked")).toContainText(dee.email);
   await expect(dialog.getByTestId("require-sso-unlinked")).not.toContainText(cy.email);
-  await dialog.getByRole("switch", { name: /Turn on/ }).check();
+  await switchOn(dialog.getByRole("switch", { name: "Enable policy" }));
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(owner.getByRole("button", { name: /^Require single sign-on .* On$/ })).toBeVisible();
 

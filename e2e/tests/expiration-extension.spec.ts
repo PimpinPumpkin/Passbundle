@@ -6,7 +6,7 @@ test("the popup's item list flags an item that expires soon", async ({ context, 
   const user = userFor("expires-ext", testInfo.repeatEachIndex);
   const web = await createAccount(context, user);
   await newItem(web, "Login");
-  const dialog = web.getByRole("dialog", { name: "New Login" });
+  const dialog = web.getByRole("dialog", { name: "Add login" });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill("Example API key");
   const inTwoDays = new Date();
   inTwoDays.setUTCDate(inTwoDays.getUTCDate() + 2);
@@ -28,7 +28,7 @@ test("the extension reminds once, on the device, when an item is about to expire
   const user = userFor("expires-remind", testInfo.repeatEachIndex);
   const web = await createAccount(context, user);
   await newItem(web, "Login");
-  const dialog = web.getByRole("dialog", { name: "New Login" });
+  const dialog = web.getByRole("dialog", { name: "Add login" });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill("Example certificate");
   const inFiveDays = new Date();
   inFiveDays.setUTCDate(inFiveDays.getUTCDate() + 5);

@@ -66,7 +66,7 @@ test("the console lets nobody in on its own when the server's answers are forged
   await admin.getByRole("button", { name: "Invite member" }).click();
   const invite = admin.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(person.email);
-  await invite.getByRole("button", { name: "Save" }).click();
+  await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
 
   for (const [what, forge] of forgeries) {

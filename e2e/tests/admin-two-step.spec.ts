@@ -10,7 +10,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { totp } from "./api/support";
 import { giveAuthenticator } from "./support/two-step";
-import { confirmMember, confirmWithPassword, signUp, webUserFor, type WebUser } from "./support/web";
+import { chooseRole, confirmMember, confirmWithPassword, signUp, webUserFor, type WebUser } from "./support/web";
 
 async function enterPassword(page: Page, user: WebUser) {
   await page.goto("/#/login");
@@ -46,8 +46,8 @@ test("an admin without two-step login is taken to set it up, then signs in with 
   await owner.getByRole("button", { name: "Invite member" }).click();
   const invite = owner.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(adminUser.email);
-  await invite.getByRole("radio", { name: /^Admin/ }).check();
-  await invite.getByRole("button", { name: "Save" }).click();
+  await chooseRole(invite, "Admin");
+  await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
 
   // This test server sends no email, so the invitation joined them without

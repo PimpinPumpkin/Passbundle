@@ -14,7 +14,7 @@ function isoInDays(days: number): string {
 
 async function openNewLogin(page: Page, name: string) {
   await newItem(page, "Login");
-  const dialog = page.getByRole("dialog", { name: "New Login" });
+  const dialog = page.getByRole("dialog", { name: "Add login" });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill(name);
   return dialog;
 }
@@ -46,7 +46,7 @@ test("an expiration date shows on the item and in the list, and can be cleared",
   await page.getByText("Example API key").first().click();
   // Clearing the date in the editor removes it everywhere.
   await view.getByRole("button", { name: "Edit" }).click();
-  const edit = page.getByRole("dialog", { name: /Edit Login/ });
+  const edit = page.getByRole("dialog", { name: /Edit login/i });
   await expect(edit.getByTestId("keykeeper-expires")).toHaveValue(isoInDays(10));
   await edit.getByTestId("keykeeper-expires").fill("");
   await edit.getByRole("button", { name: "Save" }).click();
@@ -122,7 +122,7 @@ test("an expired item and a card expiring this month are flagged", async ({ page
   await expect(listBadge(page, "Old certificate")).toHaveText("Expired 5 days ago");
 
   await page.getByText("Expiring card").first().click();
-  const view = page.getByRole("dialog", { name: /View Card/ });
+  const view = page.getByRole("dialog", { name: /View card/i });
   const expected =
     daysToMonthEnd === 0 ? "Expires today" : daysToMonthEnd === 1 ? "Expires tomorrow" : `Expires in ${daysToMonthEnd} days`;
   await expect(view.getByTestId("keykeeper-expiration")).toContainText(expected);

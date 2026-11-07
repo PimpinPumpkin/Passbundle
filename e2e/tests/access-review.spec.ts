@@ -46,9 +46,9 @@ async function openFolder(page: Page, org: string, name: string) {
 
 /** Adds an item to the shared folder picked in the admin console's vault. */
 async function addItem(page: Page, kind: "Login" | "Note", name: string) {
-  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
   await page.getByRole("menuitem", { name: kind }).click();
-  const item = page.getByRole("dialog", { name: `New ${kind}` });
+  const item = page.getByRole("dialog", { name: `Add ${kind}` });
   await item.getByRole("textbox", { name: /Item name/ }).fill(name);
   if (kind === "Login") {
     await item.getByRole("textbox", { name: "Username", exact: true }).fill("frontdesk@harbor.test");
