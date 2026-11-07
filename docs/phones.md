@@ -24,7 +24,7 @@ Design, October 21, 2026. The phone apps are the desktop app's Flutter screens a
 | Master password, master key, private key, organization keys, anything decrypted | memory only, while unlocked | memory only, while unlocked |
 | Browsers the person trusted for autofill (package names and certificate hashes) | the app's no-backup files folder | (none: iOS says which website) |
 
-- **Several accounts** (DESIGN.md, "Several accounts in the apps"): each account has its own folder in the app's (`accounts/<id>`), its own refresh token, and its own biometric key: on Android a Keystore key named `passbundle-biometric-<id>` and `biometric-<id>.sealed`, on iOS the Keychain item `user-key-<id>`. The account's id is made on the phone and says nothing about the account.
+- **Several accounts** (DESIGN.md, "Several accounts in the apps"): each account has its own folder in the app's (`accounts/<id>`), its own refresh token, and its own biometric key: on Android a Keystore key named `passbundle-biometric-<id>` and `biometric-<id>.sealed`, on iOS the Keychain item `user-key-<id>`. The account's id is made on the phone and says nothing about the account. Autofill and passkeys offer every unlocked account's logins, each labeled with its account's name, and fill or sign from that account only (DESIGN.md, "All accounts").
 - **Backups:** the app's backup rules leave its files out of Android's backups (auto-backup would include them otherwise), Keystore keys never leave the phone, and the iOS Keychain items are "this device only". The kept sync is still encrypted, so a backup of it alone would open nothing anyway.
 - **"Never lock"** (keeping the user key without biometrics) isn't offered, as on the desktop.
 
