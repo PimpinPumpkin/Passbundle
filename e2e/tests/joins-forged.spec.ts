@@ -49,7 +49,7 @@ test("the console lets nobody in on its own when the server's answers are forged
     privateKeyEncoding: { type: "pkcs8", format: "der" },
   });
   const person = await api.account("Invited", undefined, publicKey.toString("base64"));
-  await admin.getByTestId("msp-client-Forged Dental").getByRole("link", { name: "Open" }).click();
+  await admin.getByTestId("msp-client-Forged Dental").getByRole("link", { name: "Admin console" }).click();
   await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
   const orgId = /#\/organizations\/([^/]+)\//.exec(admin.url())![1];
 

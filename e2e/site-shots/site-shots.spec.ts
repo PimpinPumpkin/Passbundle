@@ -362,7 +362,7 @@ test("an MSP's console with five clients, a client's passwords to fix, Entra, an
       });
       expect(joined.status, JSON.stringify(joined.body)).toBe(200);
     }
-    await row.getByRole("link", { name: "Open" }).click();
+    await row.getByRole("link", { name: "Admin console" }).click();
     await expect(web).toHaveURL(/#\/organizations\/[^/]+\/members/);
     urls.set(client.name, web.url().replace(/\/members.*$/, ""));
     log(`importing ${client.name}`);

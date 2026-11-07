@@ -45,7 +45,7 @@ test("a client's owner removes one of its MSP's technicians: the Members page of
   await expect(toast(tech, "You joined Pine IT")).toBeVisible();
 
   // The MSP adds the client's own owner, and the console confirms everyone.
-  await admin.getByTestId("msp-client-Pine Dental").getByRole("link", { name: "Open" }).click();
+  await admin.getByTestId("msp-client-Pine Dental").getByRole("link", { name: "Admin console" }).click();
   await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
   const membersUrl = admin.url();
   await admin.getByRole("button", { name: "Invite member" }).click();
