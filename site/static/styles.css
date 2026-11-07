@@ -1699,6 +1699,13 @@ main.wide .row-text h2 {
   font-weight: 600;
 }
 
+.mock-row .ui-who > *,
+.pop-item .ui-who > * {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .ui-who span,
 .ui-key {
   font-size: 13px;
@@ -2031,7 +2038,8 @@ main.wide .home-get h2 {
   color: var(--muted);
 }
 
-.demo-nav button {
+.demo-nav button,
+.demo-nav-row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2054,13 +2062,15 @@ main.wide .home-get h2 {
 }
 
 .demo-nav button[aria-pressed="true"],
+.demo-nav-row.on,
 .demo-item[aria-pressed="true"],
 .demo-row[aria-pressed="true"] {
   background: var(--brand-tint);
   color: var(--text);
 }
 
-.demo-nav button[aria-pressed="true"] {
+.demo-nav button[aria-pressed="true"],
+.demo-nav-row.on {
   font-weight: 600;
 }
 
@@ -2274,7 +2284,7 @@ main.wide .home-get h2 {
 
 .demo-row {
   display: grid;
-  grid-template-columns: minmax(0, 2.2fr) minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(0, 2.4fr) repeat(4, minmax(0, 0.8fr));
   gap: 12px;
   align-items: center;
   width: 100%;
@@ -2287,6 +2297,8 @@ main.wide .home-get h2 {
 }
 
 .demo-row.head {
+  max-width: none;
+  margin: 0;
   padding: 8px 12px;
   border-top: 0;
   font-size: 12px;
@@ -2425,12 +2437,14 @@ main.wide .home-get h2 {
     display: none;
   }
 
-  .demo-nav button {
+  .demo-nav button,
+  .demo-nav-row {
     width: auto;
     flex: none;
   }
 
-  .demo-list {
+  .demo-list,
+  .mock .demo-list {
     border-left: 0;
     border-right: 0;
     border-bottom: 1px solid var(--line);
@@ -2733,6 +2747,24 @@ main.wide > section.tour-nav-wrap {
 
 .tour-pointer.press i {
   transform: scale(0.82);
+}
+
+/* PassBundle's own clicks (a login, a code, a passkey), when the demo plays
+   itself: a ring spreads from the pointer, and the pick glows. */
+.tour-pointer::after {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: -16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid var(--brand);
+  opacity: 0;
+}
+
+.picked {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 45%, transparent);
 }
 
 /* Without scripts, a link to one of the demo's parts shows it. */
@@ -3301,7 +3333,8 @@ button.ui-menu-item {
 }
 
 .mock-submit,
-.mock button.mock-submit {
+.mock button.mock-submit,
+.mock-phone button.mock-submit {
   margin-top: 6px;
   border: 0;
   height: 42px;
@@ -3431,32 +3464,6 @@ button.ui-menu-item {
   color: var(--muted);
 }
 
-.mock-history {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: var(--inset);
-  font-size: 14px;
-  color: var(--muted);
-}
-
-.mock-health {
-  flex: 8 1 600px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 24px;
-}
-
-.mock-health .ui {
-  max-width: none;
-  box-shadow: none;
-}
-
 main.wide .mock h3 {
   font-size: 20px;
   letter-spacing: -0.02em;
@@ -3493,13 +3500,36 @@ main.wide .mock h3 {
   padding: 20px;
 }
 
-.mock-desk > .ui {
-  flex: 1 1 260px;
-  box-shadow: none;
+.desk-list {
+  flex: 1 1 240px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
 }
 
-.mock-desk > .ui-approve {
+.desk-side {
+  flex: 1.4 1 300px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.desk-side > .ui-approve {
+  max-width: none;
+  box-shadow: none;
   border: 1px solid var(--line);
+}
+
+.desk-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.desk-detail .mock-empty {
+  margin: 40px auto;
 }
 
 .ui-buttons > * {
@@ -3532,7 +3562,7 @@ main.wide .mock h3 {
 
 .mock-grid {
   position: relative;
-  min-height: 420px;
+  min-height: 480px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   align-content: start;
@@ -3626,6 +3656,575 @@ main.wide .mock h3 {
 
 span.demo-row {
   border-top: 1px solid var(--line);
+}
+
+/* ----- The demo's apps: what responds to a click ----- */
+.mock input,
+.mock select {
+  font: inherit;
+  color: var(--text);
+}
+
+/* A field the visitor clicks into: the page offers PassBundle's menu. */
+.mock button.ui-field {
+  width: 100%;
+  background: var(--field);
+  text-align: left;
+}
+
+.mock-input,
+.demo-search {
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--field-border);
+  background: var(--field);
+  font-size: 15px;
+}
+
+.demo-search {
+  flex: 1 1 200px;
+  height: 36px;
+  font-size: 14px;
+}
+
+.mock-input::placeholder,
+.demo-search::placeholder,
+.pop-search::placeholder {
+  color: var(--muted);
+}
+
+.mock-select select {
+  max-width: 60%;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--field-border);
+  background: var(--field);
+  font-size: 14px;
+}
+
+.mock-error {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--bad-text);
+}
+
+/* A text button: Sign out, Cancel, a request waiting. */
+.mock .mock-link,
+.mock-phone .mock-link {
+  align-self: flex-start;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mock .mock-link:hover,
+.mock-phone .mock-link:hover {
+  text-decoration: underline;
+}
+
+.mock-top.wrap {
+  flex-wrap: wrap;
+}
+
+.demo-status {
+  flex: 1 1 200px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.demo-empty {
+  margin: 24px 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.demo-note {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.demo-zero {
+  color: var(--muted);
+}
+
+.demo-alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.demo-alert p {
+  flex: 1 1 200px;
+}
+
+.demo-alert.bad { background: var(--bad); color: var(--bad-text); }
+.demo-alert.warn { background: var(--warn); color: var(--warn-text); }
+.demo-alert.info { background: var(--info); color: var(--info-text); }
+
+.demo-ok.plain {
+  background: var(--inset);
+}
+
+.demo-history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--inset);
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.demo-history-head,
+.demo-versions li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 10px;
+}
+
+.demo-versions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.demo-versions li {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+.demo-shared {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.demo-avatars {
+  display: inline-flex;
+}
+
+.demo-shared .avatar {
+  width: 26px;
+  height: 26px;
+  font-size: 11px;
+  border: 2px solid var(--surface);
+}
+
+.demo-shared .avatar + .avatar {
+  margin-left: -8px;
+}
+
+.demo-client-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+.demo-client-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+main.wide .demo-client h4 {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+.demo-client .mock-code {
+  margin-top: -4px;
+}
+
+.demo-issues .ui-who b {
+  font-size: 14px;
+}
+
+/* PassBundle's own picks (a login, a code, a passkey): its mark, and its
+   tint. */
+.ui-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px 6px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+.brand-tile.tiny {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  box-shadow: none;
+}
+
+.brand-tile.tiny svg {
+  width: 7px;
+  height: 9px;
+}
+
+.ui-menu-item.pb-pick {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 35%, transparent);
+}
+
+.mock button.ui-menu-item:hover,
+.mock-phone .phone-suggest-row:hover {
+  background: var(--brand-tint-strong);
+}
+
+/* The browser's tabs: the one showing joins the toolbar. */
+.mock button.mock-tab {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.mock button.mock-tab[aria-pressed="true"] {
+  background: var(--inset);
+  color: var(--text);
+}
+
+.mock button.mock-tab:hover {
+  background: var(--hover);
+}
+
+.mock button.mock-tab[aria-pressed="true"]:hover {
+  background: var(--inset);
+}
+
+.mock-favicon.bakery {
+  background: #c2621a;
+}
+
+.mock-ext:hover,
+.mock-ext[aria-pressed="true"] {
+  background: var(--brand-tint);
+}
+
+/* The sites' own pages, once signed in. */
+.site-home {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 420px;
+}
+
+.site-home .ui-title {
+  margin: 0;
+}
+
+.site-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+}
+
+.site-order {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.site-big {
+  font-size: 26px;
+  font-weight: 640;
+  letter-spacing: -0.02em;
+}
+
+.site-list,
+.cakes {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  font-size: 14px;
+}
+
+.site-list > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+}
+
+.site-list > span + span {
+  border-top: 1px solid var(--line);
+}
+
+.cakes {
+  flex-direction: row;
+  border: 0;
+  gap: 10px;
+}
+
+.cakes > span {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 8px;
+  border-radius: 12px;
+  background: var(--inset);
+}
+
+.cakes > span > span:last-child {
+  color: var(--muted);
+}
+
+.cake {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  border: 5px solid #f6efe2;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+}
+
+.cake.lemon { background: #f2cf4a; }
+.cake.carrot { background: #e0893b; }
+.cake.chocolate { background: #6e4029; }
+
+/* PassBundle's popup from the toolbar: Vault, Generator, Send, Settings. */
+.mock-popup.pop {
+  z-index: 3;
+  gap: 8px;
+}
+
+.pop-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pop-search {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1px solid var(--field-border);
+  background: var(--field);
+  font-size: 14px;
+}
+
+.pop-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.code-digits {
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+}
+
+.pop-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+}
+
+.pop-item + .pop-item {
+  border-top: 1px solid var(--line);
+}
+
+.pop-item .demo-btn {
+  height: 28px;
+}
+
+.seg {
+  display: flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 10px;
+  background: var(--sunken);
+}
+
+.mock .seg button {
+  flex: 1 1 0;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mock .seg button[aria-pressed="true"] {
+  background: var(--floating);
+  color: var(--text);
+  box-shadow: var(--shadow-resting);
+}
+
+.gen-out {
+  min-height: 2.8em;
+}
+
+.gen-len {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.gen-len span {
+  min-width: 96px;
+}
+
+.gen-len input {
+  flex: 1 1 auto;
+  min-width: 0;
+  accent-color: var(--brand);
+}
+
+.pop-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  font-size: 14px;
+  text-align: left;
+}
+
+.switch {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--field-border);
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  transition: transform 0.15s;
+}
+
+[aria-checked="true"] > .switch {
+  background: var(--brand);
+}
+
+[aria-checked="true"] > .switch::after {
+  transform: translateX(14px);
+}
+
+.mock .mock-tabs button:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.mock .mock-tabs button[aria-pressed="true"] {
+  color: var(--link);
+  background: var(--brand-tint);
+}
+
+/* The desktop app's and the phone's lists: each item opens. */
+.mock button.ui-list-row,
+.mock-phone button.ui-list-row {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.mock button.ui-list-row:hover,
+.mock-phone button.ui-list-row:hover {
+  background: var(--hover);
+}
+
+.mock button.ui-list-row[aria-pressed="true"] {
+  background: var(--brand-tint);
+}
+
+.mock .ui-buttons button {
+  background: transparent;
+}
+
+.mock .ui-buttons button:hover {
+  background: var(--hover);
+}
+
+.mock .ui-buttons button.go,
+.mock .ui-buttons button.go:hover {
+  background: var(--brand);
+}
+
+.mock-lock > .ui-field {
+  color: var(--muted);
+}
+
+/* The family's folders open who reaches them. */
+.row-more {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--link);
+}
+
+.access-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.access-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.access-row .ui-name b {
+  font-size: 15px;
+}
+
+.access-row select {
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--field-border);
+  background: var(--field);
+  font-size: 14px;
 }
 
 /* ----- A phone (the tour's Phone part) ----- */
@@ -3872,6 +4471,124 @@ span.demo-row {
   height: 16px;
   stroke: currentColor;
   stroke-width: 2.4;
+}
+
+/* Android's home bar, the home screen, and moving around the apps. */
+.mock-phone .phone-nav {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  z-index: 4;
+  width: 120px;
+  height: 22px;
+  margin-left: -60px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.mock-phone .phone-nav::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 9px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--text);
+  opacity: 0.55;
+}
+
+.mock-phone .phone-nav:hover::after {
+  opacity: 0.85;
+}
+
+.phone-sheet {
+  padding-bottom: 34px;
+}
+
+.phone-home {
+  padding: 48px 18px 24px;
+  background:
+    radial-gradient(120% 80% at 20% 0%, color-mix(in srgb, var(--brand) 22%, transparent), transparent 70%),
+    var(--sunken);
+}
+
+.phone-clock {
+  align-self: center;
+  font-size: 48px;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+}
+
+.phone-apps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px 8px;
+  margin-top: auto;
+  margin-bottom: 24px;
+}
+
+.mock-phone .phone-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  font-size: 12px;
+}
+
+.mock-phone .phone-icon:hover {
+  background: var(--hover);
+}
+
+.tile.app,
+.brand-tile.app {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+}
+
+.tile.app {
+  background: color-mix(in srgb, var(--tone) 18%, var(--surface));
+}
+
+.brand-tile.app svg {
+  width: 21px;
+  height: 26px;
+}
+
+.mock-phone .phone-back {
+  display: inline-flex;
+  margin: -8px 0 -8px -8px;
+  padding: 8px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+}
+
+.mock-phone .phone-back:hover {
+  background: var(--hover);
+}
+
+.phone-item {
+  padding: 4px 14px;
+}
+
+.phone-item .demo-field {
+  flex-wrap: wrap;
+  padding: 10px 12px;
+}
+
+.phone-page {
+  padding: 20px 16px;
+}
+
+.phone-page .ui-title {
+  font-size: 22px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -4369,6 +5086,14 @@ main.doc > .paper {
     animation: rise 0.3s ease-out;
   }
 
+  .tour-pointer.pick::after {
+    animation: pick-ring 0.6s ease-out;
+  }
+
+  .tour-stage .picked {
+    animation: picked 0.7s ease-out;
+  }
+
   /* A pick fills every field: each one lights up and types itself in,
      the username, then the password. */
   .tour-stage .mock-fill:not([hidden]) {
@@ -4385,6 +5110,23 @@ main.doc > .paper {
 
   .tour-stage .ui-field:has(> .mock-fill.later:not([hidden])) {
     animation-delay: 0.3s;
+  }
+}
+
+@keyframes pick-ring {
+  from {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+
+@keyframes picked {
+  from {
+    transform: scale(0.97);
   }
 }
 

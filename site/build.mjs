@@ -19,6 +19,9 @@
 //     means beside it. `class` sizes it (small, large).
 //   <x-art name="LockIcon"></x-art>: one of the apps' drawings from art/,
 //     inline so it takes the page's colors.
+//   <x-mark class="mini"></x-mark>: the logo's glossy tile with the lock, as
+//     the apps draw PassBundle's mark in their screens. Decorative. `class`
+//     sizes it (mini, big, app).
 //   <x-part name="tour"></x-part>: parts/tour.html, a piece of a page kept
 //     in its own file (its leading comment says how to use it). `first-only` hides
 //     every .tour-part but the first until static/tour.js runs.
@@ -123,6 +126,12 @@ function tile(tag, file) {
   return `<span class="tile ${tone}${cls ? ` ${cls}` : ""}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="${ICONS[icon]}"/></svg></span>`;
 }
 
+/** <x-mark>: PassBundle's tile, decorative. */
+function mark(tag) {
+  const { class: cls } = attrs(tag);
+  return `<span class="brand-tile${cls ? ` ${cls}` : ""}" aria-hidden="true"><svg viewBox="0 0 26 32" focusable="false"><path fill-rule="evenodd" d="${MARK}"/></svg></span>`;
+}
+
 /** <x-art>: an inline drawing, decorative. */
 function art(tag, file) {
   const { name, class: cls } = attrs(tag);
@@ -161,6 +170,7 @@ function expand(html, file) {
     .replace(/<x-shot\b([^>]*)><\/x-shot>/g, (_, t) => shot(t, file))
     .replace(/<x-art\b([^>]*)><\/x-art>/g, (_, t) => art(t, file))
     .replace(/<x-tile\b([^>]*)><\/x-tile>/g, (_, t) => tile(t, file))
+    .replace(/<x-mark\b([^>]*)><\/x-mark>/g, (_, t) => mark(t))
     .replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k) => value(k, file));
 }
 

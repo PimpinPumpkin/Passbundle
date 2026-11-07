@@ -62,4 +62,6 @@ export const ICONS = {
   at: "M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z M16 12v1.5a2.5 2.5 0 0 0 5 0V12a9 9 0 1 0-3.5 7.1",
   chat: "M4 5h16v11H9l-5 4Z M8 9.5h8 M8 12.5h5",
   import: "M14 3h5v18h-5 M3 12h11 M10 8l4 4-4 4",
+  // The demo's made-up bakery (parts/tour.html).
+  cake: "M4 20h16 M5 20v-7h14v7 M5 16c2.3 1.2 4.7-1.2 7 0s4.7 1.2 7 0 M12 13V9 M12 7c-1-.8-1-2 0-3 1 1 1 2.2 0 3Z",
 };
