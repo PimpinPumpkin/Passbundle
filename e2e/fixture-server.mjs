@@ -1,6 +1,6 @@
 // Serves the autofill corpus over real HTTPS, so the extension sees real
 // network traffic (its submit detection watches requests). Browsers in the
-// tests resolve *.example.test to this server. Any path serves the fixture
+// tests resolve *.example.test (and *.elsewhere.test, another site) to this server. Any path serves the fixture
 // file of the same name, for GET and POST: /otp-masked.html, and so on.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -25,6 +25,13 @@ const server = https.createServer({ cert: fs.readFileSync(cert), key: fs.readFil
   const name = path.basename(new URL(req.url, "https://x").pathname);
   const file = path.join(root, name === "" ? "index.html" : name);
   if (name === "alive") return res.writeHead(200).end("ok");
+  // Redirects for Open and fill (open-and-fill.spec.ts): one to this site's
+  // sign-in page, one to another site's.
+  const redirects = {
+    "to-sign-in": "/simple-login.html",
+    "to-elsewhere": "https://login.elsewhere.test/simple-login.html",
+  };
+  if (Object.hasOwn(redirects, name)) return res.writeHead(302, { location: redirects[name] }).end();
   if (!file.startsWith(root) || !fs.existsSync(file)) return res.writeHead(404).end("not found");
   req.resume();
   req.on("end", () => {
