@@ -305,7 +305,7 @@ Where the apps sign in, so nobody types a server address who doesn't have to:
   - personal, organization, and item-key items;
   - tampered and refused strings;
   - a sample sync that ties them together.
-- **Checked with upstream's crypto:** a script in the clients repo opens every vector with upstream's `PureCrypto` (derive, unwrap, decapsulate, decrypt), and tier 1 runs it, as for the other vectors.
+- **Checked with upstream's crypto:** a script in the clients repo opens every vector with upstream's `PureCrypto` (derive, unwrap, decapsulate, decrypt), and tier 1 runs it, as for the other vectors. Since web-v2026.10.1, `PureCrypto` has no call that opens the user key with the master key, so the script stretches the master key itself, as upstream does (HKDF-Expand with SHA-256 to "enc" and "mac"), and opens the user key with upstream's unwrap; it also opens it with the master password, all upstream's.
 - **The core's own tests** read the vectors and must produce or open every value.
 - **Against a real server** (`core/tests/server.rs` in `passbundle-apps`, run by its CI against the server's `keykeeper` branch), with real keys:
   - signing up as an app would;
