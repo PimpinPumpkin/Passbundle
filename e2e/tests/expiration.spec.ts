@@ -284,7 +284,7 @@ test("Remind me sets an item's reminder days, which the item shows and the edito
   await expect(dialog.getByTestId("keykeeper-remind")).toHaveCount(0);
   await dialog.getByTestId("keykeeper-expires").fill(isoInDays(20));
   await dialog.getByRole("combobox", { name: "Remind me" }).click();
-  await page.getByRole("option", { name: "7 and 1 day before" }).click();
+  await page.getByRole("option", { name: "7 and 1 day before", exact: true }).click();
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog).toBeHidden();
 
@@ -296,7 +296,7 @@ test("Remind me sets an item's reminder days, which the item shows and the edito
   const edit = page.getByRole("dialog", { name: /Edit Login/ });
   await expect(edit.getByTestId("keykeeper-remind")).toContainText("7 and 1 day before");
   await edit.getByRole("combobox", { name: "Remind me" }).click();
-  await page.getByRole("option", { name: "Don't remind me" }).click();
+  await page.getByRole("option", { name: "Don't remind me", exact: true }).click();
   await edit.getByRole("button", { name: "Save" }).click();
   await expect(edit).toBeHidden();
   await expect(view.getByTestId("keykeeper-remind-days")).toHaveText("No reminders");
@@ -304,7 +304,7 @@ test("Remind me sets an item's reminder days, which the item shows and the edito
   // Back to the default: nothing said, nothing stored.
   await view.getByRole("button", { name: "Edit" }).click();
   await edit.getByRole("combobox", { name: "Remind me" }).click();
-  await page.getByRole("option", { name: "30, 7, and 1 day before" }).click();
+  await page.getByRole("option", { name: "30, 7, and 1 day before", exact: true }).click();
   await edit.getByRole("button", { name: "Save" }).click();
   await expect(edit).toBeHidden();
   await expect(view.getByTestId("keykeeper-expiration")).toContainText("Expires in 20 days");

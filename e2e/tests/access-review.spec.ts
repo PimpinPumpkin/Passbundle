@@ -290,7 +290,7 @@ test("revoking or removing several people at once says what each can open, then 
   );
   await revoking.getByRole("button", { name: "Revoke members" }).click();
   await expect(revoking.getByText("Revoked organization access successfully")).toHaveCount(2);
-  await revoking.getByRole("button", { name: "Close" }).click();
+  await revoking.locator("footer").getByRole("button", { name: "Close" }).click();
 
   // Then one list: the logins whose passwords either could see, and who could
   // see each. Front desk PC (Everyone) was Alex's; Payroll portal (Admins)
@@ -325,7 +325,7 @@ test("revoking or removing several people at once says what each can open, then 
   );
   await removing.getByRole("button", { name: "Remove members" }).click();
   await expect(removing.getByText("Removed successfully")).toHaveCount(2);
-  await removing.getByRole("button", { name: "Close" }).click();
+  await removing.locator("footer").getByRole("button", { name: "Close" }).click();
   const seenAgain = page.getByRole("dialog", { name: "Passwords these 2 people could see" });
   await expect(seenAgain.getByTestId("seen-password")).toHaveCount(2);
   await seenAgain.getByRole("button", { name: "Done" }).click();

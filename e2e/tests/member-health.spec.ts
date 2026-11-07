@@ -99,7 +99,9 @@ test("a member's own logins reach the owner as numbers only, and the member is t
     groups: [],
   });
   expect(invited.status, JSON.stringify(invited.body)).toBe(200);
+  // The Members page is open already: reload it, so it lists Ana.
   await page.goto(`${org}/members`);
+  await page.reload();
   await confirmMember(page, anaUser.email);
 
   // Ana's web vault, unlocked again as a member, counts her own logins and
@@ -170,6 +172,7 @@ test("a member's Reports doesn't show Members' own passwords, and its address sh
   });
   expect(invited.status, JSON.stringify(invited.body)).toBe(200);
   await page.goto(`${org}/members`);
+  await page.reload();
   await confirmMember(page, memberUser.email);
   await reloadVault(member);
   await member.goto(`/#/organizations/${orgId}/reporting/reports/member-health-report`);

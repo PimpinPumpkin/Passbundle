@@ -129,16 +129,18 @@ test("the popup's Expiring soon chip lists what has expired or expires soon, and
   await expect(chips.last()).toHaveAttribute("data-category", "expiring");
 
   // The card's badge, from its expiry month, in the list.
-  const card = popup.getByRole("button", { name: /Expiring card/ });
+  // The vault's own list, under any suggestions for the page in front.
+  const list = popup.locator("#allItems");
+  const card = list.getByRole("button", { name: /Expiring card/ });
   await expect(card.getByTestId("keykeeper-expiration-badge")).toHaveText(/^Expires (today|tomorrow|in \d+ days)$/);
 
   await chips.last().click();
   await expect(chips.last()).toHaveAttribute("aria-pressed", "true");
-  await expect(popup.getByTestId("item-name")).toHaveText(["Expiring card", "Payments API"], {
+  await expect(list.getByTestId("item-name")).toHaveText(["Expiring card", "Payments API"], {
     useInnerText: true,
   });
   await chips.first().click();
-  await expect(popup.getByRole("button", { name: /Domain renewal/ })).toBeVisible();
+  await expect(list.getByRole("button", { name: /Domain renewal/ })).toBeVisible();
 });
 
 test("an item's own reminder days decide when the extension reminds, and Don't remind me never does", async ({
