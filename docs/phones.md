@@ -34,7 +34,9 @@ The core needs a few things only the OS's own APIs do on phones: the Keystore, t
 
 - `seal(bytes) -> bytes` and `open(bytes) -> bytes` with the app's Keystore key (Android; on iOS the Keychain does this);
 - `copy(text, sensitive, clear_after)`;
-- on Android, the autofill service's calls into the core (below).
+- on Android, the autofill service's calls into the core (below);
+- on Android, a security key for two-step login (`SecurityKeys.kt`): it finds a key held to the phone (NFC's reader mode) or plugged in (USB, with Android's permission for it), and passes the core's APDUs or HID reports to it; the CTAP is the core's, as on computers (DESIGN.md, "Two-step login in the apps"). It also reads a YubiKey's one-time code held to the phone;
+- Duo's way back at sign-in: on Android a screenless activity takes `passbundle://duo-callback` and brings the app back; on iOS the system's sign-in sheet (ASWebAuthenticationSession) hands the link back itself.
 
 On Android the core reaches Kotlin through JNI; on iOS Swift hands the core C function pointers at start. Dart isn't in the path, so secrets stay out of Dart as on the desktop. Kotlin's and Swift's strings can't be wiped either, so a secret is only put into one where the OS takes nothing else (the clipboard, an autofill value), and byte arrays are zeroed after use.
 
@@ -152,4 +154,4 @@ The same as on a computer (`docs/core.md`, "Approving a sign-in"; DESIGN.md, "Ap
 
 ## Not yet
 
-Passkeys on iPhone (designed above), a sign-in request's notice while PassBundle is closed (push), Wear OS and watchOS, tablets' own layout (they get the desktop layout when wide enough), and sharing from other apps into a new item.
+Passkeys on iPhone (designed above), security keys and YubiKey codes over NFC at sign-in on iPhone (they need an Apple developer account's entitlements), a sign-in request's notice while PassBundle is closed (push), Wear OS and watchOS, tablets' own layout (they get the desktop layout when wide enough), and sharing from other apps into a new item.
