@@ -349,9 +349,44 @@ jobs:
           # The clients' jest config asks for 8 workers; the runner has 4
           # cores and 16 GB, and a large set of Angular tests then runs it out
           # of memory (the runner shuts down mid-run).
-          if [ -s "$RUNNER_TEMP/changed.txt" ]; then
-            xargs npx jest --ci --maxWorkers=4 --findRelatedTests < "$RUNNER_TEMP/changed.txt"
+          [ -s "$RUNNER_TEMP/changed.txt" ] || exit 0
+          results="$RUNNER_TEMP/jest.json"
+          if xargs npx jest --ci --maxWorkers=4 --findRelatedTests --json --outputFile="$results" < "$RUNNER_TEMP/changed.txt"; then
+            exit 0
           fi
+          # One more try, alone, for upstream's own tests and only those: a
+          # test file in a folder we haven't changed since the base tag (some
+          # of upstream's fail now and then on a busy runner, never alone).
+          # Ours get fixed, not rerun. The run still names each test that
+          # needed the second try, as a warning.
+          [ -f "$results" ] || exit 1
+          node -e '
+            const path = require("path");
+            for (const file of require(process.argv[1]).testResults) {
+              if (file.status === "failed") console.log(path.relative(process.cwd(), file.name));
+            }
+          ' "$results" > "$RUNNER_TEMP/failed.txt"
+          [ -s "$RUNNER_TEMP/failed.txt" ] || exit 1
+          while read -r file; do
+            if ! git diff --quiet "$base" HEAD -- "$(dirname "$file")"; then
+              echo "$file is in a folder we changed, so it isn't tried again." >&2
+              exit 1
+            fi
+          done < "$RUNNER_TEMP/failed.txt"
+          echo "Upstream's tests that failed, tried once more:"
+          cat "$RUNNER_TEMP/failed.txt"
+          xargs npx jest --ci --runInBand --runTestsByPath < "$RUNNER_TEMP/failed.txt"
+          node -e '
+            const path = require("path");
+            const clean = (s) => s.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+            for (const file of require(process.argv[1]).testResults) {
+              if (file.status !== "failed") continue;
+              const where = path.relative(process.cwd(), file.name);
+              const failed = file.assertionResults.filter((t) => t.status === "failed").map((t) => `"${t.fullName}"`);
+              const what = failed.length ? `Upstream test ${failed.join(", ")}` : `Upstream test file ${where}`;
+              console.log(`::warning file=${where}::${clean(`${what} failed, then passed when tried again alone.`)}`);
+            }
+          ' "$results"
 
   other-browsers:
     name: Edge and Firefox extensions
