@@ -3,11 +3,13 @@
 // right people leave them, checks only that each looks like one, and hands
 // them to the apps that confirm, with each person waiting. The apps' checks
 // are unit-tested against docs/vectors/joins-v1.json, joins-v2.json, and
-// joining-v2.json. Invitation and staff seals are version 2, which end and
+// joining-v3.json. Invitation and staff seals are version 2, which end and
 // carry a nonce; the server takes only those for them, and deletes them once
-// the person they vouch for is confirmed. Joining seals are version 2, which
-// say where the setting comes from; the server takes only those, from the
-// source the change they come with makes it.
+// the person they vouch for is confirmed. Joining seals are version 3, which
+// say where the setting comes from and when it was sealed; the server takes
+// only those, from the source the change they come with makes it, and hands
+// every organization's to its owners' and admins' apps, so they remember the
+// newest.
 import { expect, test } from "@playwright/test";
 
 import { limitsServerPort } from "../../paths.mjs";
@@ -16,8 +18,14 @@ import { type Account, Api, encString, expiringSeal } from "./support";
 
 /** A version 1 seal-shaped value (client seals, proofs): the server can't tell a real one from this. */
 const seal = (n: number) => Buffer.alloc(32, n).toString("base64");
-/** A version 2 joining seal's shape, from the organization's own setting or a default it follows. */
+/**
+ * A version 3 joining seal's shape, from the organization's own setting or a
+ * default it follows, sealed `n` seconds into November 2026.
+ */
 const joiningSeal = (n: number, source: "own" | "default") =>
+  `v3.${source}.${1_793_059_200 + n}.${Buffer.alloc(16, n).toString("base64url")}.${Buffer.alloc(32, n).toString("base64url")}`;
+/** A version 2 joining seal's shape, which says nothing of when it was sealed. */
+const joiningSealV2 = (n: number, source: "own" | "default") =>
   `v2.${source}.${Buffer.alloc(32, n).toString("base64url")}`;
 const secret = encString("join-secret");
 
@@ -384,7 +392,7 @@ test.describe("on a server that sends no email", () => {
   });
 });
 
-test("joining seals are version 2, and say where the setting comes from as the change they come with makes it", async ({
+test("joining seals are version 3, and say where the setting comes from as the change they come with makes it", async ({
   request,
 }) => {
   const api = new Api(request);
@@ -395,8 +403,21 @@ test("joining seals are version 2, and say where the setting comes from as the c
     expect(result.status, JSON.stringify(body)).toBe(400);
   };
   // The organization's own setting is sealed as its own; going back to the
-  // default, or the MSP's default, as following it; version 1 never.
+  // default, or the MSP's default, as following it; versions 1 and 2 never.
   await refused("PUT", joiningUrl, { autoConfirm: true, inviteHours: 24, seal: seal(20) });
+  await refused("PUT", joiningUrl, { autoConfirm: true, inviteHours: 24, seal: joiningSealV2(20, "own") });
+  await refused("DELETE", joiningUrl, { seal: joiningSealV2(21, "default") });
+  await refused("PUT", `/api/keykeeper/msp/${mspId}/joining`, {
+    autoConfirm: true,
+    inviteHours: 24,
+    seals: { [orgId]: joiningSealV2(22, "default") },
+  });
+  // Nor one whose time isn't one.
+  await refused("PUT", joiningUrl, {
+    autoConfirm: true,
+    inviteHours: 24,
+    seal: joiningSeal(20, "own").replace(".1793059220.", ".01793059220."),
+  });
   await refused("PUT", joiningUrl, { autoConfirm: true, inviteHours: 24, seal: joiningSeal(20, "default") });
   await refused("DELETE", joiningUrl, { seal: joiningSeal(21, "own") });
   await refused("PUT", `/api/keykeeper/msp/${mspId}/joining`, {
@@ -407,7 +428,7 @@ test("joining seals are version 2, and say where the setting comes from as the c
   await refused("PUT", joiningUrl, {
     autoConfirm: true,
     inviteHours: 24,
-    seal: `v2.msp.${Buffer.alloc(32, 23).toString("base64url")}`,
+    seal: joiningSeal(23, "own").replace("v3.own.", "v3.msp."),
   });
   const own = await api.call(admin, "PUT", joiningUrl, {
     autoConfirm: false,
@@ -420,4 +441,48 @@ test("joining seals are version 2, and say where the setting comes from as the c
   const msp = `/api/keykeeper/msp/${mspId}/seals`;
   expect((await api.call(admin, "PUT", msp, { joining: [{ organizationId: orgId, seal: joiningSeal(25, "default") }] })).status).toBe(400);
   expect((await api.call(admin, "PUT", msp, { joining: [{ organizationId: orgId, seal: joiningSeal(25, "own") }] })).status).toBe(200);
+  // Nor version 2 there.
+  expect((await api.call(admin, "PUT", msp, { joining: [{ organizationId: orgId, seal: joiningSealV2(26, "own") }] })).status).toBe(400);
+});
+
+test("owners' and admins' apps get every organization's joining setting with its seal, whether or not anyone is waiting", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const { admin, mspId, orgId } = await setUp(api);
+  const sealed = joiningSeal(30, "default");
+  expect(
+    (await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/seals`, { joining: [{ organizationId: orgId, seal: sealed }] }))
+      .status,
+  ).toBe(200);
+  const listed = async (caller: Account) => {
+    const pending = await api.call(caller, "GET", "/api/keykeeper/organizations/pending");
+    expect(pending.status, JSON.stringify(pending.body)).toBe(200);
+    return pending.body.joining as { organizationId: string }[];
+  };
+  // Nobody is waiting in the client, and its setting is there all the same.
+  expect((await listed(admin)).find((o) => o.organizationId === orgId)).toEqual({
+    organizationId: orgId,
+    autoConfirm: true,
+    domains: [],
+    seal: sealed,
+  });
+  // As its own setting changes, so does the list.
+  const own = joiningSeal(31, "own");
+  const changed = await api.call(admin, "PUT", `/api/keykeeper/organizations/${orgId}/joining`, {
+    autoConfirm: false,
+    inviteHours: 24,
+    seal: own,
+  });
+  expect(changed.status, JSON.stringify(changed.body)).toBe(200);
+  expect((await listed(admin)).find((o) => o.organizationId === orgId)).toEqual({
+    organizationId: orgId,
+    autoConfirm: false,
+    domains: [],
+    seal: own,
+  });
+  // A regular member's apps confirm nobody, so they get none of it.
+  const member = await api.account("joining-list-member");
+  await api.addMember(admin, orgId, member, "user");
+  expect((await listed(member)).find((o) => o.organizationId === orgId)).toBeUndefined();
 });
