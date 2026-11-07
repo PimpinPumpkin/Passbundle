@@ -12,7 +12,7 @@ Script access lets a script fetch exactly the credential it needs, at run time, 
 
 ## What people do
 
-1. **An admin makes a token.** In the MSP console, on a client (or on an organization's Settings page, for a company's own IT): Script access, New token. They name it ("Join domain"), choose the items it may read, choose what it gets from each (username, password, one-time code, named custom fields), and set when it expires. Optionally they limit it to networks (IP ranges), such as the client's office.
+1. **An admin makes a token.** In the MSP console, on a client (or in an organization's Settings, Joining and security, for a company's own IT): Script access, New token. They name it ("Join domain"), choose the items it may read, choose what it gets from each (username, password, one-time code, named custom fields), and set when it expires. Optionally they limit it to networks (IP ranges), such as the client's office.
 2. **The console shows the token once**, as a single string, `pbs1_…`. The admin pastes it into the RMM as a masked script variable (every RMM has one).
 3. **The script asks for what it needs:**
 
