@@ -13,6 +13,8 @@
 //   <html data-mode="light|dark">   the theme showing, for the button's icon
 //   the screenshots' dark <source>, the theme-color meta tags, and the
 //   button's aria-pressed and hidden (it stays hidden without scripts).
+// Pressing the button spreads the new theme out from it (a view
+// transition; styles.css "Motion"), unless the device asks for less motion.
 export const THEME_SCRIPT = `(() => {
   const root = document.documentElement;
   const device = matchMedia("(prefers-color-scheme: dark)");
@@ -41,14 +43,23 @@ export const THEME_SCRIPT = `(() => {
   device.addEventListener("change", apply);
   document.addEventListener("DOMContentLoaded", apply);
   document.addEventListener("click", (e) => {
-    if (!e.target.closest("[data-theme-toggle]")) return;
-    pick = root.dataset.mode === "dark" ? "light" : "dark";
-    if (pick === (device.matches ? "dark" : "light")) pick = null;
-    try {
-      if (pick) localStorage.setItem("theme", pick);
-      else localStorage.removeItem("theme");
-    } catch {}
-    apply();
+    const button = e.target.closest("[data-theme-toggle]");
+    if (!button) return;
+    const change = () => {
+      pick = root.dataset.mode === "dark" ? "light" : "dark";
+      if (pick === (device.matches ? "dark" : "light")) pick = null;
+      try {
+        if (pick) localStorage.setItem("theme", pick);
+        else localStorage.removeItem("theme");
+      } catch {}
+      apply();
+    };
+    if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) return change();
+    const r = button.getBoundingClientRect();
+    root.style.setProperty("--reveal-x", r.left + r.width / 2 + "px");
+    root.style.setProperty("--reveal-y", r.top + r.height / 2 + "px");
+    root.classList.add("theming");
+    document.startViewTransition(change).finished.finally(() => root.classList.remove("theming"));
   });
 })();`;
 

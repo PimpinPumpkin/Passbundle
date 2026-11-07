@@ -1,5 +1,5 @@
-// The tour (/tour/): pieces of the apps drawn in the page, and a tip that
-// points at what to try next. Each part's steps are the <ol class="tour-steps">
+// The tour (parts/tour.html, on the homepage and /tour/): pieces of the apps
+// drawn in the page, and a tip that points at what to try next. Each part's steps are the <ol class="tour-steps">
 // under it, so without scripts the page shows the screens and the steps as a
 // list. With it, one part shows at a time, and each step says:
 //   data-target   the [data-x] it points at, ringed
@@ -24,6 +24,9 @@
   // the pulse.
   const RING = 9;
   const main = parts[0].parentElement;
+  // Only the tour's own page keeps the part in the address (#family), so
+  // links can open it; on the homepage, #msp and the like are its own.
+  const ownPage = location.pathname.startsWith("/tour");
 
   let tips = true;
   try {
@@ -219,7 +222,7 @@
     } else {
       tour.place();
     }
-    if (location.hash !== `#${id}`) history.replaceState(null, "", `#${id}`);
+    if (ownPage && location.hash !== `#${id}`) history.replaceState(null, "", `#${id}`);
     if (fromButton) document.getElementById(id)?.scrollIntoView({ block: "start" });
   }
 
@@ -238,6 +241,6 @@
   addEventListener("resize", replace);
   document.fonts?.ready.then(replace);
 
-  const first = parts.find((p) => `#${p.id}` === location.hash) || parts[0];
+  const first = (ownPage && parts.find((p) => `#${p.id}` === location.hash)) || parts[0];
   show(first.id);
 })();

@@ -15,8 +15,9 @@
    - Google Sans Flex, self-hosted (its license is in fonts/OFL.txt).
 
    Every text color passes WCAG AA on what it sits on, in both themes. No
-   inline styles (the CSP blocks them), nothing from anyone else, and one
-   script of our own: the home page's demo, static/demo.js. */
+   inline styles (the CSP blocks them), nothing from anyone else, and two
+   scripts of our own: the light/dark switch (theme.mjs) and the tour
+   (static/tour.js). */
 
 @font-face {
   font-family: "Google Sans Flex";
@@ -870,38 +871,6 @@ main.wide > section.hero {
 }
 
 /* ----- Facts: a row of plain statements under the hero. ----- */
-.facts {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  background: var(--surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-resting);
-}
-
-.facts > div {
-  padding: 24px 26px;
-  border-left: 1px solid var(--divider);
-}
-
-.facts > div:first-child {
-  border-left: 0;
-}
-
-.facts strong {
-  display: block;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  line-height: 1.25;
-}
-
-.facts span {
-  display: block;
-  margin-top: 4px;
-  font-size: 15px;
-  color: var(--muted);
-}
 
 /* ----- Cards ----- */
 .card {
@@ -1524,16 +1493,6 @@ main.wide > section.home-hero {
   font-size: 18px;
 }
 
-main.wide > section.home-demo {
-  padding-top: 0;
-  padding-bottom: 0;
-}
-
-.home-demo > .fine {
-  margin-top: 14px;
-  font-size: 14px;
-}
-
 main.wide > section.home-doors,
 main.wide > section.home-rows,
 main.wide > section.home-security {
@@ -2009,88 +1968,7 @@ main.wide .home-get h2 {
   font-weight: 640;
 }
 
-/* ----- The demo (static/demo.js; a screenshot until it starts) ----- */
-.demo {
-  border: 1px solid var(--field-border);
-  border-radius: 18px;
-  background: var(--surface);
-  box-shadow: var(--shadow-shot);
-  overflow: hidden;
-  font-size: 15px;
-  line-height: 1.4;
-}
-
-.demo [hidden] {
-  display: none;
-}
-
-.demo > .shot img {
-  border-radius: 0;
-  box-shadow: none;
-}
-
-.demo button {
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-
-.demo-top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 14px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--line);
-}
-
-.demo-seg {
-  display: inline-flex;
-  padding: 3px;
-  gap: 2px;
-  border-radius: 10px;
-  background: var(--sunken);
-}
-
-.demo-seg button {
-  height: 34px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.demo-seg button[aria-pressed="true"] {
-  background: var(--floating);
-  color: var(--text);
-  box-shadow: var(--shadow-resting);
-}
-
-.demo-search {
-  flex: 1 1 220px;
-  min-width: 0;
-  height: 38px;
-  padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid var(--field-border);
-  background: var(--field);
-  color: var(--text);
-  font: inherit;
-  font-size: 15px;
-}
-
-.demo-search::placeholder {
-  color: var(--muted);
-}
-
-.demo-status {
-  flex: 1 1 220px;
-  font-size: 14px;
-  color: var(--muted);
-}
+/* ----- Pieces of the apps that the tour draws (parts/tour.html) ----- */
 
 .demo-body {
   display: flex;
@@ -2214,12 +2092,6 @@ main.wide .home-get h2 {
   color: var(--muted);
 }
 
-.demo-empty {
-  margin: 24px 12px;
-  font-size: 14px;
-  color: var(--muted);
-}
-
 .demo-detail {
   flex: 5 1 360px;
   min-width: 0;
@@ -2248,36 +2120,10 @@ main.wide .home-get h2 {
   gap: 2px;
 }
 
-main.wide .demo h3 {
-  font-size: 22px;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  font-weight: 640;
-}
-
 .demo-where {
   font-size: 14px;
   color: var(--muted);
 }
-
-.demo-alert {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 14px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.demo-alert p {
-  flex: 1 1 220px;
-}
-
-.demo-alert.bad { background: var(--bad); color: var(--bad-text); }
-.demo-alert.warn { background: var(--warn); color: var(--warn-text); }
-.demo-alert.info { background: var(--info); color: var(--info-text); }
 
 .demo-ok {
   padding: 12px 14px;
@@ -2329,11 +2175,6 @@ main.wide .demo h3 {
   color: var(--link);
 }
 
-.demo-note {
-  font-size: 12px;
-  color: var(--muted);
-}
-
 .demo-btn {
   display: inline-flex;
   align-items: center;
@@ -2372,29 +2213,6 @@ main.wide .demo h3 {
 
 .demo-btn.primary:hover {
   background: var(--brand-strong);
-}
-
-.demo-shared {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: var(--muted);
-}
-
-.demo-shared .avatar {
-  width: 26px;
-  height: 26px;
-  font-size: 11px;
-  border: 2px solid var(--surface);
-}
-
-.demo-shared .avatar + .avatar {
-  margin-left: -8px;
-}
-
-.demo-avatars {
-  display: inline-flex;
 }
 
 .demo-msp {
@@ -2771,6 +2589,27 @@ main.wide > section.tour-nav-wrap {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* On a phone, the parts are one row that scrolls sideways, edge to edge,
+   with the Tips switch under it. */
+@media (max-width: 640px) {
+  .tour-tabs {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 0 -16px;
+    padding: 2px 16px;
+    scrollbar-width: none;
+  }
+
+  .tour-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tour-tabs a {
+    flex: none;
+  }
 }
 
 /* The Tips switch: a pill with a small on/off track. */
@@ -4163,18 +4002,6 @@ main.doc > .paper {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .facts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .facts > div:nth-child(3) {
-    border-left: 0;
-  }
-
-  .facts > div:nth-child(n + 3) {
-    border-top: 1px solid var(--divider);
-  }
-
   .footer-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -4241,19 +4068,6 @@ main.doc > .paper {
     gap: 28px;
   }
 
-  .facts {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .facts > div {
-    border-left: 0;
-    padding: 18px 20px;
-  }
-
-  .facts > div + div {
-    border-top: 1px solid var(--divider);
-  }
-
   .card,
   .plan {
     padding: 24px 20px;
@@ -4290,6 +4104,101 @@ main.doc > .paper {
   th,
   td {
     padding: 12px 14px;
+  }
+}
+
+/* ======================================================================
+   Motion. Small and quick, only transform and opacity, and none at all
+   for people who ask their device for less motion. Browsers without view
+   transitions or scroll-driven animations just skip them.
+   ====================================================================== */
+
+/* Moving between pages: the header stays put and the page cross-fades. */
+.site-header {
+  view-transition-name: site-header;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.2s;
+}
+
+/* Light or dark: the new theme spreads out from the button (theme.mjs sets
+   the point and the "theming" class while it runs). */
+:root.theming .site-header {
+  view-transition-name: none;
+}
+
+:root.theming::view-transition-old(root) {
+  animation: none;
+}
+
+:root.theming::view-transition-new(root) {
+  animation: theme-reveal 0.45s ease-in-out;
+}
+
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0 at var(--reveal-x, 100%) var(--reveal-y, 0));
+  }
+  to {
+    clip-path: circle(150vmax at var(--reveal-x, 100%) var(--reveal-y, 0));
+  }
+}
+
+.button {
+  transition: transform 0.1s ease;
+}
+
+.button:active {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  /* Rows and lists rise into place as they scroll into view. */
+  @supports (animation-timeline: view()) {
+    .row > .row-text,
+    .row > .stage,
+    .lines > li,
+    .also li,
+    .door {
+      animation: rise ease-out both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 80%;
+    }
+  }
+
+  /* The tour: the tip glides from step to step, what a step opens fades
+     in, and a new part settles in. */
+  .tour-bubble:not(.docked) {
+    transition:
+      left 0.25s ease,
+      top 0.25s ease;
+  }
+
+  .tour-stage [data-show]:not([hidden]) {
+    animation: fade-in 0.2s ease-out;
+  }
+
+  .tour-part:not([hidden]) .tour-stage {
+    animation: rise 0.3s ease-out;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
   }
 }
 

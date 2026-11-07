@@ -148,6 +148,10 @@ layout: wide
       <p>Android, yes: a test build that fills passwords in apps and browsers and unlocks with your fingerprint or face. The iPhone app is coming. Until then, people can open the web vault in their phone's browser.</p>
     </details>
     <details>
+      <summary>Do we need a domain, Active Directory, or an identity provider?</summary>
+      <p>No. People sign in with their own email address, on any domain, and a master password. You don't need a domain controller, Active Directory, Microsoft Entra ID, Google Workspace, or single sign-on, and your computers don't need to be joined to a domain: the install command works on any Windows computer you can run a PowerShell line on as an administrator, by hand or from your RMM. Limiting the install command to your email domains is optional, and so is Entra ID.</p>
+    </details>
+    <details>
       <summary>Do you support single sign-on or directory sync?</summary>
       <p>Directory sync, yes: provisioning from Microsoft Entra ID adds, updates, and removes people and groups for you. Signing in with Entra is coming soon; until then, people sign in with their own master password.</p>
     </details>

@@ -2,7 +2,7 @@
 title: PassBundle: the open-source password manager for you, your family, and your clients
 description: One password to remember. PassBundle fills in your logins, passkeys, and cards on every device, free, end-to-end encrypted, and open source, with plans for families, businesses, and MSPs.
 layout: wide
-script: demo
+script: tour
 -->
 <section class="home-hero">
   <h1>One password to remember. PassBundle handles the rest.</h1>
@@ -10,17 +10,13 @@ script: demo
     <p class="lead">Free on every device. Your passwords, passkeys, and cards are encrypted on your device before they go anywhere, so only you can read them.</p>
     <div class="actions">
       <a class="button primary" href="/download/">Get PassBundle, free</a>
-      <a class="button" href="#demo">Try the demo</a>
+      <a class="button" href="#demo">Try it below</a>
     </div>
+    <p class="fine">The demo below runs in your browser with made-up data. Nothing you type leaves the page.</p>
   </div>
 </section>
 
-<section class="home-demo" id="demo" aria-label="Try PassBundle">
-  <div class="demo" data-demo>
-    <x-shot name="web-vault" frame="desktop" alt="The PassBundle web vault: a family's logins, cards, and notes, with a login open beside the list" eager></x-shot>
-  </div>
-  <p class="fine">This demo runs in your browser with made-up data. Nothing you type leaves the page. Want the whole picture? <a href="/tour/">Take the tour</a>, with tips for the extension, the desktop app, families, and MSPs.</p>
-</section>
+<x-part name="tour" first-only></x-part>
 
 <section class="home-doors" aria-label="Plans">
   <div class="doors">
@@ -132,12 +128,12 @@ script: demo
   </div>
 </section>
 
-<section class="band" id="msp" aria-labelledby="msp-title">
+<section class="band" id="for-msps" aria-labelledby="for-msps-title">
   <div class="band-inner">
     <div class="split-head">
       <div>
         <span class="eyebrow">For MSPs and IT providers</span>
-        <h2 id="msp-title">Every client, one console.</h2>
+        <h2 id="for-msps-title">Every client, one console.</h2>
       </div>
       <div class="split-side">
         <p class="lead">Add a client in one step, set your policies once for all of them, and see each client's people, expiring logins, and passwords to fix, side by side.</p>
