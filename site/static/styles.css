@@ -561,9 +561,12 @@ mark.todo {
 .menu summary {
   list-style: none;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  height: 38px;
   font-weight: 600;
   font-size: 15px;
-  padding: 8px 14px;
+  padding: 0 14px;
   border-radius: 10px;
   background: var(--field);
   border: 1px solid var(--field-border);
@@ -572,6 +575,10 @@ mark.todo {
 }
 
 .menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.menu .menu-icon {
   display: none;
 }
 
@@ -2271,6 +2278,13 @@ main.wide .home-get h2 {
   background: var(--brand-strong);
 }
 
+/* A plain button beside a primary one is as tall as it. */
+:has(> .demo-btn.primary) > .demo-btn:not(.primary) {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
 .demo-msp {
   display: flex;
   flex-wrap: wrap;
@@ -2712,7 +2726,9 @@ main.wide > section.tour-nav-wrap {
 }
 
 .tour-play[data-state="pause"]::before {
-  clip-path: polygon(10% 0, 40% 0, 40% 100%, 10% 100%, 10% 0, 60% 0, 90% 0, 90% 100%, 60% 100%, 60% 0);
+  width: 10px;
+  clip-path: none;
+  background: linear-gradient(to right, currentColor 0 35%, transparent 35% 65%, currentColor 65%);
 }
 
 .tour-play[data-state="replay"]::before {
@@ -4919,27 +4935,38 @@ main.doc > .paper {
     margin-left: 0;
   }
 
+  /* The same height as Download beside it, with three drawn lines: the
+     word stays for screen readers. */
   .menu summary {
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
     padding: 0;
-    font-size: 0;
   }
 
-  .menu summary::after,
-  .menu[open] summary::after {
-    width: 18px;
-    height: 2px;
-    margin: 0;
-    border: 0;
-    border-radius: 1px;
-    background: currentColor;
-    box-shadow:
-      0 -6px currentColor,
-      0 6px currentColor;
-    transform: none;
+  .menu .menu-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .menu .menu-icon {
+    display: block;
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .menu summary::after {
+    content: none;
   }
 
   .brand-word {
