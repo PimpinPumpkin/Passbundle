@@ -21,6 +21,7 @@ import {
   hasElementDeep,
   hasNotificationBar,
   chooseFirstInlineMenuItem,
+  offeredPassword,
   waitForExtensionScan,
 } from "./support/autofill";
 
@@ -104,6 +105,38 @@ async function setUpSavedLogin(context: BrowserContext, extensionId: string, use
   await web.close();
   await logInPopup(await openPopup(context, extensionId), user);
 }
+
+// A site that answers a sign-in at once (fixture-server.mjs answers every
+// request at once), signed in to by a quick typist: the last character, then
+// Enter. Upstream lost the prompt when the page after the sign-in had loaded
+// before the extension started waiting for it, and offered the password
+// without the characters typed in the last tenth of a second before Enter
+// (DESIGN.md, "Missed save prompts on fast sites"). Every sign-in here must
+// prompt, with the password as typed: no tries again.
+test("offers to update a password on a site that answers at once, every time, with every character typed", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const site = "https://login.example.test";
+  await setUpSavedLogin(context, extensionId, userFor("instant-site", testInfo.repeatEachIndex), site);
+
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const page = await context.newPage();
+    await page.goto(`${site}/simple-login.html`);
+    await waitForExtensionScan(context, page, "username");
+    await page.getByLabel("Username").fill("alice-example");
+    const password = page.getByLabel("Password");
+    await password.fill(`a-changed-password-${attempt}`);
+    await password.press("X");
+    await password.press("Enter");
+    await page.waitForURL(`${site}/signed-in.html`);
+    await expect
+      .poll(() => hasNotificationBar(page), { timeout: 10_000, message: `sign-in ${attempt} has no prompt` })
+      .toBe(true);
+    expect(await offeredPassword(context, page), `sign-in ${attempt}`).toBe(`a-changed-password-${attempt}X`);
+    await page.close();
+  }
+});
 
 // Absence can only be checked over a window. The calibration shows the prompt
 // appears within about a second of a submit; give it five.
