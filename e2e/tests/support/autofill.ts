@@ -45,6 +45,22 @@ export const codeFieldId: Record<string, string> = {
 export const hasNotificationBar = (page: Page) =>
   page.frames().some((f) => f.url().includes("notification/bar.html"));
 
+/**
+ * What the save or update prompt on a page offers: the password it would save,
+ * from the extension's background (through upstream's `self.bitwardenMain`
+ * debugging handle), or null when the page has no prompt waiting.
+ */
+export async function offeredPassword(context: BrowserContext, page: Page): Promise<string | null> {
+  const worker = context.serviceWorkers()[0];
+  return worker.evaluate(async (url) => {
+    const tab = (await chrome.tabs.query({})).find((t) => t.url === url);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const queue: any[] = (self as any).bitwardenMain.notificationBackground.notificationQueue ?? [];
+    const prompt = queue.find((n) => n.tab?.id === tab?.id);
+    return prompt?.data?.newPassword ?? prompt?.password ?? null;
+  }, page.url());
+}
+
 // Finds elements anywhere in a frame, including inside closed shadow roots,
 // through the DevTools protocol. Page scripts can't do this; tests can.
 export type DeepNode = {
