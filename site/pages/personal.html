@@ -1,0 +1,174 @@
+<!--
+title: PassBundle for you and your family
+description: Every password, passkey, and card on every device, free and end-to-end encrypted. Premium adds built-in two-step codes and file attachments, and Families shares folders and Premium with the people you live with.
+layout: wide
+-->
+<section class="page-hero">
+  <span class="eyebrow">PassBundle for you and your family</span>
+  <h1>Every password you have, on every device, free.</h1>
+  <div class="home-hero-side">
+    <p class="lead">PassBundle remembers your logins, passkeys, and cards, and fills them in for you. Bring the people you live with, and share the Wi-Fi, the streaming login, and the bills.</p>
+    <div class="actions">
+      <a class="button primary" href="/download/">Get PassBundle, free</a>
+      <a class="button" href="/#family">See how families share</a>
+    </div>
+  </div>
+  <p class="fine">Free has no limit on passwords or devices. Families is {{prices.families}} a year for up to {{prices.familiesPeople}} people.</p>
+</section>
+
+<section class="page-shot" aria-label="The web vault">
+  <div class="stage wide">
+    <x-shot name="web-vault" frame="desktop" alt="The PassBundle web vault: a family's logins, cards, and notes, with a login open beside the list" eager></x-shot>
+  </div>
+</section>
+
+<section class="flow" aria-label="The basics">
+  <ul class="lines">
+    <li><strong>Free means free</strong><span>Every password, every device, autofill, passkeys, and password health. No trial, no ads, and no card.</span></li>
+    <li><strong>Only you can read it</strong><span>Your vault is encrypted on your device with a key made from your master password. We only ever hold the encrypted result.</span></li>
+    <li><strong>Wherever you sign in</strong><span>Chrome, Edge, and Firefox, the app for Windows, Mac, Linux, and Android, and the web vault in any browser.</span></li>
+  </ul>
+</section>
+
+<section class="flow" aria-label="What you get">
+  <div class="row">
+    <div class="row-text">
+      <span class="eyebrow">Autofill</span>
+      <h2>Sign in without typing.</h2>
+      <p class="lead">Click the field and pick the login. PassBundle only offers a login on the site it belongs to, so a lookalike page gets nothing.</p>
+      <ul class="checks">
+        <li>Logins, passkeys, cards, and addresses</li>
+        <li>In your browser, and in apps on Android</li>
+        <li>Saves new logins as you sign up</li>
+      </ul>
+    </div>
+    <div class="stage" role="img" aria-label="A bank's sign-in page, with PassBundle offering the login saved for it under the username field">
+      <div class="ui ui-signin">
+        <span class="ui-site">bank.example</span>
+        <span class="ui-title">Sign in to online banking</span>
+        <span class="ui-label">Username</span>
+        <span class="ui-field focus">sam.rivera</span>
+        <span class="ui-menu">
+          <span class="ui-menu-item"><x-tile icon="key" tone="sapphire" class="small"></x-tile><span class="ui-who"><b>Hometown Credit Union</b><span>sam.rivera</span></span><span class="ui-key">Enter</span></span>
+        </span>
+        <span class="ui-label">Password</span>
+        <span class="ui-field"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row flip" id="families">
+    <div class="row-text">
+      <span class="eyebrow">Families</span>
+      <h2>Share with the people you live with.</h2>
+      <p class="lead">One person sets up the family and invites everyone by email. Make a shared folder for the bills, one for the kids' school logins, as many as you like. Everyone also keeps a private vault nobody else can open.</p>
+      <ul class="checks">
+        <li>Up to {{prices.familiesPeople}} people, with Premium for all of them</li>
+        <li>Choose who can edit a folder and who can only view it</li>
+        <li>Invited people get in without anyone approving them</li>
+      </ul>
+      <p><a class="more" href="/#family">Try it in the tour</a></p>
+    </div>
+    <div class="stage" role="img" aria-label="The Rivera family: Sam organizes it, and Alex, Jordan, and Rose are members, with three shared folders">
+      <div class="ui ui-list">
+        <span class="ui-list-head"><x-tile icon="people" tone="amethyst"></x-tile><span class="ui-name"><b>The Riveras</b><small>Families, 4 of {{prices.familiesPeople}} people</small></span></span>
+        <span class="ui-list-row"><span class="avatar a1">SR</span><span class="ui-name">Sam Rivera</span><span class="badge">Organizer</span></span>
+        <span class="ui-list-row"><span class="avatar a2">AR</span><span class="ui-name">Alex Rivera</span><span class="badge">Member</span></span>
+        <span class="ui-list-row"><span class="avatar a3">JR</span><span class="ui-name">Jordan Rivera</span><span class="badge">Member</span></span>
+        <span class="ui-list-row"><span class="avatar a1">RO</span><span class="ui-name">Rose Ortiz</span><span class="badge">Member</span></span>
+        <span class="ui-list-row"><x-tile icon="folder" tone="brand" class="small"></x-tile><span class="ui-name">Bills, Streaming, School</span><span class="badge">3 shared folders</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="row-text">
+      <span class="eyebrow">Password health</span>
+      <h2>Knows when something is wrong.</h2>
+      <p class="lead">PassBundle finds weak, reused, and breached passwords and walks you through fixing them. Only a scrambled fragment of a password is ever checked, never the password. It reminds you before a passport or card expires, too.</p>
+    </div>
+    <div class="stage" role="img" aria-label="Three items that need attention: a patient portal password found in a data breach, a password used twice, and a passport that expires in 12 days">
+      <div class="ui ui-list lined">
+        <span class="ui-list-row"><x-tile icon="exposed" tone="garnet"></x-tile><span class="ui-name">Dr. Okafor's patient portal</span><span class="badge bad">In a data breach</span></span>
+        <span class="ui-list-row"><x-tile icon="reused" tone="topaz"></x-tile><span class="ui-name">Water and sewer</span><span class="badge warn">Used twice</span></span>
+        <span class="ui-list-row"><x-tile icon="clock" tone="amethyst"></x-tile><span class="ui-name">Passport</span><span class="badge">Expires in 12 days</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row flip">
+    <div class="row-text">
+      <span class="eyebrow">Legacy contacts</span>
+      <h2>Someone you trust, for the worst day.</h2>
+      <p class="lead">Name a person who can ask for your vault if something happens to you. You choose how long you have to say no, and they only get in if you don't.</p>
+      <ul class="checks">
+        <li>Let them see your vault, or take it over</li>
+        <li>From one day to ninety days to answer</li>
+        <li>Free, on every plan</li>
+      </ul>
+    </div>
+    <div class="stage" role="img" aria-label="A request from Alex Rivera to see Sam's vault, which Sam can reject; otherwise Alex gets in after 7 days">
+      <div class="ui ui-approve">
+        <x-tile icon="lifebuoy" tone="sapphire"></x-tile>
+        <span class="ui-title">Alex Rivera asked for your vault</span>
+        <span class="ui-text">If you don't reject the request, Alex can see your vault in 7 days.</span>
+        <span class="ui-buttons"><span>Reject</span><span class="go">Approve now</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="also">
+    <h2>Also in PassBundle</h2>
+    <ul>
+      <li><strong>Passkeys</strong><span>Save them as you create them, and sign in with them in the browser and on Android.</span></li>
+      <li><strong>Unlock with your face or finger</strong><span>Windows Hello on Windows, and your fingerprint or face on Android.</span></li>
+      <li><strong>A template for everything</strong><span>Wi-Fi, passports, memberships, and software licenses, with the right fields ready to fill.</span></li>
+      <li><strong>Send</strong><span>Share a password or a note through an encrypted link that expires when you say.</span></li>
+      <li><strong>Item history</strong><span>Every edit keeps the version before, so a changed password is never lost.</span></li>
+      <li><strong>Move in, in minutes</strong><span>Bring your passwords from your browser, 1Password, LastPass, and dozens of other apps. <a href="/switch/">See how</a>.</span></li>
+    </ul>
+  </div>
+</section>
+
+<section class="flow" aria-labelledby="plans-title">
+  <div class="split-head page-head">
+    <h2 id="plans-title">Three plans, one price each.</h2>
+    <div class="split-side">
+      <p class="lead">Everything that keeps you safe is in Free. Premium and Families pay for the extras.</p>
+    </div>
+  </div>
+  <ul class="lines">
+    <li><strong>Free, $0</strong><span>Every password and device, autofill, passkeys, password health, legacy contacts, and Send for text.</span></li>
+    <li><strong>Premium, {{prices.premium}} a year</strong><span>Two-step codes for your other accounts built in, 5 GB of encrypted attachments, file Sends, and email support.</span></li>
+    <li><strong>Families, {{prices.families}} a year</strong><span>Premium for up to {{prices.familiesPeople}} people, as many shared folders as you like, and a private vault for each person.</span></li>
+  </ul>
+  <p><a class="more" href="/pricing/#compare">Compare every plan</a></p>
+</section>
+
+<section class="flow last" aria-labelledby="faq-title">
+  <div class="split-head page-head">
+    <h2 id="faq-title">Questions</h2>
+  </div>
+  <div class="faq">
+    <details>
+      <summary>What if I forget my master password?</summary>
+      <p>We can't reset it, because we never have it, and that's what keeps your vault yours. Name a legacy contact who can take over your vault: if you can't get in, they ask, and when the wait you chose is up, they set a new master password and pass it to you.</p>
+    </details>
+    <details>
+      <summary>Is free really free?</summary>
+      <p>Yes, with no limit on passwords or devices, no ads, and no trial that runs out. Premium and Families pay for extras, and businesses and MSPs pay per person.</p>
+    </details>
+    <details>
+      <summary>Which devices does it work on?</summary>
+      <p>The extension works in Chrome, Edge, and Firefox on Windows, Mac, and Linux. There are test builds of the PassBundle app for Windows, Mac, Linux, and Android. The iPhone app is coming; until then, the web vault works in your phone's browser. See <a href="/download/">Download</a>.</p>
+    </details>
+    <details>
+      <summary>Can someone in my family see my own passwords?</summary>
+      <p>No. Only what you put in a shared folder is shared. Your private vault is encrypted with your own key, and nobody in the family, including the organizer, can open it.</p>
+    </details>
+    <details>
+      <summary>Can I bring my passwords from another app?</summary>
+      <p>Yes. Export them from your browser or your old password manager and import the file. See <a href="/switch/">Switch to PassBundle</a>.</p>
+    </details>
+  </div>
+</section>

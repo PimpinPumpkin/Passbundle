@@ -15,8 +15,9 @@
    - Google Sans Flex, self-hosted (its license is in fonts/OFL.txt).
 
    Every text color passes WCAG AA on what it sits on, in both themes. No
-   inline styles (the CSP blocks them), nothing from anyone else, and one
-   script of our own: the home page's demo, static/demo.js. */
+   inline styles (the CSP blocks them), nothing from anyone else, and two
+   scripts of our own: the light/dark switch (theme.mjs) and the tour
+   (static/tour.js). */
 
 @font-face {
   font-family: "Google Sans Flex";
@@ -510,12 +511,45 @@ mark.todo {
 }
 
 .theme-toggle .sun,
-:root[data-mode="dark"] .theme-toggle .moon {
+.theme-row .sun,
+:root[data-mode="dark"] .theme-toggle .moon,
+:root[data-mode="dark"] .theme-row .moon {
   display: none;
 }
 
-:root[data-mode="dark"] .theme-toggle .sun {
+:root[data-mode="dark"] .theme-toggle .sun,
+:root[data-mode="dark"] .theme-row .sun {
   display: block;
+}
+
+/* The phone menu's row for it (the bar has no room on a phone). */
+.theme-row {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+}
+
+.theme-row:hover {
+  background: var(--hover);
+}
+
+.theme-row svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .menu {
@@ -870,38 +904,6 @@ main.wide > section.hero {
 }
 
 /* ----- Facts: a row of plain statements under the hero. ----- */
-.facts {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  background: var(--surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-resting);
-}
-
-.facts > div {
-  padding: 24px 26px;
-  border-left: 1px solid var(--divider);
-}
-
-.facts > div:first-child {
-  border-left: 0;
-}
-
-.facts strong {
-  display: block;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  line-height: 1.25;
-}
-
-.facts span {
-  display: block;
-  margin-top: 4px;
-  font-size: 15px;
-  color: var(--muted);
-}
 
 /* ----- Cards ----- */
 .card {
@@ -1361,6 +1363,11 @@ th.num {
   margin: 0 auto;
 }
 
+.faq-more {
+  max-width: 860px;
+  margin: 20px auto 0;
+}
+
 .faq details {
   background: var(--surface);
   border-radius: 14px;
@@ -1522,16 +1529,6 @@ main.wide > section.home-hero {
 
 .home-hero-side .lead {
   font-size: 18px;
-}
-
-main.wide > section.home-demo {
-  padding-top: 0;
-  padding-bottom: 0;
-}
-
-.home-demo > .fine {
-  margin-top: 14px;
-  font-size: 14px;
 }
 
 main.wide > section.home-doors,
@@ -1700,6 +1697,13 @@ main.wide .row-text h2 {
 .ui-who b {
   font-size: 14px;
   font-weight: 600;
+}
+
+.mock-row .ui-who > *,
+.pop-item .ui-who > * {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ui-who span,
@@ -2009,88 +2013,7 @@ main.wide .home-get h2 {
   font-weight: 640;
 }
 
-/* ----- The demo (static/demo.js; a screenshot until it starts) ----- */
-.demo {
-  border: 1px solid var(--field-border);
-  border-radius: 18px;
-  background: var(--surface);
-  box-shadow: var(--shadow-shot);
-  overflow: hidden;
-  font-size: 15px;
-  line-height: 1.4;
-}
-
-.demo [hidden] {
-  display: none;
-}
-
-.demo > .shot img {
-  border-radius: 0;
-  box-shadow: none;
-}
-
-.demo button {
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-
-.demo-top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 14px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--line);
-}
-
-.demo-seg {
-  display: inline-flex;
-  padding: 3px;
-  gap: 2px;
-  border-radius: 10px;
-  background: var(--sunken);
-}
-
-.demo-seg button {
-  height: 34px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.demo-seg button[aria-pressed="true"] {
-  background: var(--floating);
-  color: var(--text);
-  box-shadow: var(--shadow-resting);
-}
-
-.demo-search {
-  flex: 1 1 220px;
-  min-width: 0;
-  height: 38px;
-  padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid var(--field-border);
-  background: var(--field);
-  color: var(--text);
-  font: inherit;
-  font-size: 15px;
-}
-
-.demo-search::placeholder {
-  color: var(--muted);
-}
-
-.demo-status {
-  flex: 1 1 220px;
-  font-size: 14px;
-  color: var(--muted);
-}
+/* ----- Pieces of the apps that the tour draws (parts/tour.html) ----- */
 
 .demo-body {
   display: flex;
@@ -2115,7 +2038,8 @@ main.wide .home-get h2 {
   color: var(--muted);
 }
 
-.demo-nav button {
+.demo-nav button,
+.demo-nav-row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2138,13 +2062,15 @@ main.wide .home-get h2 {
 }
 
 .demo-nav button[aria-pressed="true"],
+.demo-nav-row.on,
 .demo-item[aria-pressed="true"],
 .demo-row[aria-pressed="true"] {
   background: var(--brand-tint);
   color: var(--text);
 }
 
-.demo-nav button[aria-pressed="true"] {
+.demo-nav button[aria-pressed="true"],
+.demo-nav-row.on {
   font-weight: 600;
 }
 
@@ -2214,12 +2140,6 @@ main.wide .home-get h2 {
   color: var(--muted);
 }
 
-.demo-empty {
-  margin: 24px 12px;
-  font-size: 14px;
-  color: var(--muted);
-}
-
 .demo-detail {
   flex: 5 1 360px;
   min-width: 0;
@@ -2248,36 +2168,10 @@ main.wide .home-get h2 {
   gap: 2px;
 }
 
-main.wide .demo h3 {
-  font-size: 22px;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  font-weight: 640;
-}
-
 .demo-where {
   font-size: 14px;
   color: var(--muted);
 }
-
-.demo-alert {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 14px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.demo-alert p {
-  flex: 1 1 220px;
-}
-
-.demo-alert.bad { background: var(--bad); color: var(--bad-text); }
-.demo-alert.warn { background: var(--warn); color: var(--warn-text); }
-.demo-alert.info { background: var(--info); color: var(--info-text); }
 
 .demo-ok {
   padding: 12px 14px;
@@ -2329,11 +2223,6 @@ main.wide .demo h3 {
   color: var(--link);
 }
 
-.demo-note {
-  font-size: 12px;
-  color: var(--muted);
-}
-
 .demo-btn {
   display: inline-flex;
   align-items: center;
@@ -2374,29 +2263,6 @@ main.wide .demo h3 {
   background: var(--brand-strong);
 }
 
-.demo-shared {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: var(--muted);
-}
-
-.demo-shared .avatar {
-  width: 26px;
-  height: 26px;
-  font-size: 11px;
-  border: 2px solid var(--surface);
-}
-
-.demo-shared .avatar + .avatar {
-  margin-left: -8px;
-}
-
-.demo-avatars {
-  display: inline-flex;
-}
-
 .demo-msp {
   display: flex;
   flex-wrap: wrap;
@@ -2418,7 +2284,7 @@ main.wide .demo h3 {
 
 .demo-row {
   display: grid;
-  grid-template-columns: minmax(0, 2.2fr) minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(0, 2.4fr) repeat(4, minmax(0, 0.8fr));
   gap: 12px;
   align-items: center;
   width: 100%;
@@ -2431,6 +2297,8 @@ main.wide .demo h3 {
 }
 
 .demo-row.head {
+  max-width: none;
+  margin: 0;
   padding: 8px 12px;
   border-top: 0;
   font-size: 12px;
@@ -2569,12 +2437,14 @@ main.wide .demo h3 {
     display: none;
   }
 
-  .demo-nav button {
+  .demo-nav button,
+  .demo-nav-row {
     width: auto;
     flex: none;
   }
 
-  .demo-list {
+  .demo-list,
+  .mock .demo-list {
     border-left: 0;
     border-right: 0;
     border-bottom: 1px solid var(--line);
@@ -2759,10 +2629,198 @@ main.wide > section.tour-nav-wrap {
   padding-bottom: 0;
 }
 
+.tour-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
 .tour-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* On a phone, the parts are one row that scrolls sideways, edge to edge,
+   with the Tips switch under it. */
+@media (max-width: 640px) {
+  .tour-tabs {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 0 -16px;
+    padding: 2px 16px;
+    scrollbar-width: none;
+  }
+
+  .tour-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tour-tabs a {
+    flex: none;
+  }
+}
+
+.tour-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Pause / Play / Replay for the part that plays itself. */
+.tour-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px 7px 14px;
+  border: 1px solid var(--field-border);
+  border-radius: 999px;
+  background: none;
+  color: var(--label);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tour-play:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.tour-play[hidden] {
+  display: none;
+}
+
+.tour-play::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  clip-path: polygon(15% 0, 100% 50%, 15% 100%);
+}
+
+.tour-play[data-state="pause"]::before {
+  clip-path: polygon(10% 0, 40% 0, 40% 100%, 10% 100%, 10% 0, 60% 0, 90% 0, 90% 100%, 60% 100%, 60% 0);
+}
+
+.tour-play[data-state="replay"]::before {
+  clip-path: none;
+  background: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  width: 9px;
+  height: 9px;
+}
+
+/* The pointer that clicks through a part that plays itself. */
+.tour-pointer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 7;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    transform 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease;
+  filter: drop-shadow(0 0 1px #ffffff) drop-shadow(0 2px 3px rgb(0 0 0 / 0.35));
+}
+
+.tour-pointer.on {
+  opacity: 1;
+}
+
+.tour-pointer i {
+  display: block;
+  width: 18px;
+  height: 26px;
+  background: #111416;
+  clip-path: polygon(0 0, 0 78%, 26% 60%, 44% 100%, 60% 93%, 42% 55%, 76% 55%);
+  transform-origin: 0 0;
+  transition: transform 0.12s ease;
+}
+
+.tour-pointer.press i {
+  transform: scale(0.82);
+}
+
+/* PassBundle's own clicks (a login, a code, a passkey), when the demo plays
+   itself: a ring spreads from the pointer, and the pick glows. */
+.tour-pointer::after {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: -16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid var(--brand);
+  opacity: 0;
+}
+
+.picked {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 45%, transparent);
+}
+
+/* Without scripts, a link to one of the demo's parts shows it. */
+:root:not([data-tour]) .tour-part:target {
+  display: block !important;
+}
+
+/* The Tips switch: a pill with a small on/off track. */
+.tour-tips {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 7px 7px 16px;
+  border: 1px solid var(--field-border);
+  border-radius: 999px;
+  background: none;
+  color: var(--label);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tour-tips:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.tour-tips-switch {
+  position: relative;
+  width: 36px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--field-border);
+  transition: background-color 0.15s;
+}
+
+.tour-tips-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  transition: transform 0.15s;
+}
+
+.tour-tips[aria-pressed="true"] .tour-tips-switch {
+  background: var(--brand);
+}
+
+.tour-tips[aria-pressed="true"] .tour-tips-switch::after {
+  transform: translateX(14px);
 }
 
 .tour-tabs a {
@@ -2852,9 +2910,27 @@ main.wide .tour-head h2 {
   }
 }
 
+/* Where the screen's edge would cut the ring off, it's drawn inside. */
+.tour-focus.inset {
+  outline-offset: -3px;
+  animation-name: tour-pulse-inset;
+}
+
+@keyframes tour-pulse-inset {
+  50% {
+    outline-color: color-mix(in srgb, var(--brand) 45%, transparent);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .tour-focus {
+  .tour-focus,
+  .tour-focus.inset {
     animation: none;
+  }
+
+  .tour-tips-switch,
+  .tour-tips-switch::after {
+    transition: none;
   }
 }
 
@@ -2964,6 +3040,59 @@ main.wide .tour-head h2 {
   .tour-bubble {
     border: 1px solid rgb(255 255 255 / 0.12);
   }
+}
+
+/* Tips off, or the visitor looking around on their own (.quiet): no tip,
+   just the step and Back / Next (and Show tip) under the screen. The :root
+   keeps these ahead of the dark-mode rules above. */
+:root [data-tips="off"] .tour-bubble,
+:root .tour-frame.quiet .tour-bubble {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
+}
+
+:root [data-tips="off"] .tour-text,
+:root .tour-frame.quiet .tour-text {
+  display: none;
+}
+
+:root [data-tips="off"] .tour-count,
+:root .tour-frame.quiet .tour-count {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+:root [data-tips="off"] .tour-buttons,
+:root .tour-frame.quiet .tour-buttons {
+  margin-top: 0;
+}
+
+:root [data-tips="off"] .tour-buttons button,
+:root .tour-frame.quiet .tour-buttons button {
+  border-color: var(--field-border);
+  color: var(--text);
+}
+
+:root .tour-frame.quiet .tour-buttons .again {
+  margin-right: auto;
+  border-color: transparent;
+  color: var(--link);
+}
+
+:root [data-tips="off"] .tour-buttons .go,
+:root .tour-frame.quiet .tour-buttons .go {
+  border-color: transparent;
+  background: var(--text);
+  color: var(--ground);
 }
 
 /* ----- The screens ----- */
@@ -3203,8 +3332,11 @@ button.ui-menu-item {
   text-align: left;
 }
 
-.mock-submit {
+.mock-submit,
+.mock button.mock-submit,
+.mock-phone button.mock-submit {
   margin-top: 6px;
+  border: 0;
   height: 42px;
   display: flex;
   align-items: center;
@@ -3213,6 +3345,11 @@ button.ui-menu-item {
   background: var(--text);
   color: var(--ground);
   font-weight: 600;
+}
+
+.mock-code {
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
 }
 
 .mock-popup {
@@ -3327,32 +3464,6 @@ button.ui-menu-item {
   color: var(--muted);
 }
 
-.mock-history {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: var(--inset);
-  font-size: 14px;
-  color: var(--muted);
-}
-
-.mock-health {
-  flex: 8 1 600px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 24px;
-}
-
-.mock-health .ui {
-  max-width: none;
-  box-shadow: none;
-}
-
 main.wide .mock h3 {
   font-size: 20px;
   letter-spacing: -0.02em;
@@ -3389,13 +3500,36 @@ main.wide .mock h3 {
   padding: 20px;
 }
 
-.mock-desk > .ui {
-  flex: 1 1 260px;
-  box-shadow: none;
+.desk-list {
+  flex: 1 1 240px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
 }
 
-.mock-desk > .ui-approve {
+.desk-side {
+  flex: 1.4 1 300px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.desk-side > .ui-approve {
+  max-width: none;
+  box-shadow: none;
   border: 1px solid var(--line);
+}
+
+.desk-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.desk-detail .mock-empty {
+  margin: 40px auto;
 }
 
 .ui-buttons > * {
@@ -3428,7 +3562,7 @@ main.wide .mock h3 {
 
 .mock-grid {
   position: relative;
-  min-height: 420px;
+  min-height: 480px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   align-content: start;
@@ -3522,6 +3656,575 @@ main.wide .mock h3 {
 
 span.demo-row {
   border-top: 1px solid var(--line);
+}
+
+/* ----- The demo's apps: what responds to a click ----- */
+.mock input,
+.mock select {
+  font: inherit;
+  color: var(--text);
+}
+
+/* A field the visitor clicks into: the page offers PassBundle's menu. */
+.mock button.ui-field {
+  width: 100%;
+  background: var(--field);
+  text-align: left;
+}
+
+.mock-input,
+.demo-search {
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--field-border);
+  background: var(--field);
+  font-size: 15px;
+}
+
+.demo-search {
+  flex: 1 1 200px;
+  height: 36px;
+  font-size: 14px;
+}
+
+.mock-input::placeholder,
+.demo-search::placeholder,
+.pop-search::placeholder {
+  color: var(--muted);
+}
+
+.mock-select select {
+  max-width: 60%;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--field-border);
+  background: var(--field);
+  font-size: 14px;
+}
+
+.mock-error {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--bad-text);
+}
+
+/* A text button: Sign out, Cancel, a request waiting. */
+.mock .mock-link,
+.mock-phone .mock-link {
+  align-self: flex-start;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mock .mock-link:hover,
+.mock-phone .mock-link:hover {
+  text-decoration: underline;
+}
+
+.mock-top.wrap {
+  flex-wrap: wrap;
+}
+
+.demo-status {
+  flex: 1 1 200px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.demo-empty {
+  margin: 24px 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.demo-note {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.demo-zero {
+  color: var(--muted);
+}
+
+.demo-alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.demo-alert p {
+  flex: 1 1 200px;
+}
+
+.demo-alert.bad { background: var(--bad); color: var(--bad-text); }
+.demo-alert.warn { background: var(--warn); color: var(--warn-text); }
+.demo-alert.info { background: var(--info); color: var(--info-text); }
+
+.demo-ok.plain {
+  background: var(--inset);
+}
+
+.demo-history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--inset);
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.demo-history-head,
+.demo-versions li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 10px;
+}
+
+.demo-versions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.demo-versions li {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+.demo-shared {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.demo-avatars {
+  display: inline-flex;
+}
+
+.demo-shared .avatar {
+  width: 26px;
+  height: 26px;
+  font-size: 11px;
+  border: 2px solid var(--surface);
+}
+
+.demo-shared .avatar + .avatar {
+  margin-left: -8px;
+}
+
+.demo-client-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+.demo-client-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+main.wide .demo-client h4 {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+.demo-client .mock-code {
+  margin-top: -4px;
+}
+
+.demo-issues .ui-who b {
+  font-size: 14px;
+}
+
+/* PassBundle's own picks (a login, a code, a passkey): its mark, and its
+   tint. */
+.ui-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px 6px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+.brand-tile.tiny {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  box-shadow: none;
+}
+
+.brand-tile.tiny svg {
+  width: 7px;
+  height: 9px;
+}
+
+.ui-menu-item.pb-pick {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 35%, transparent);
+}
+
+.mock button.ui-menu-item:hover,
+.mock-phone .phone-suggest-row:hover {
+  background: var(--brand-tint-strong);
+}
+
+/* The browser's tabs: the one showing joins the toolbar. */
+.mock button.mock-tab {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.mock button.mock-tab[aria-pressed="true"] {
+  background: var(--inset);
+  color: var(--text);
+}
+
+.mock button.mock-tab:hover {
+  background: var(--hover);
+}
+
+.mock button.mock-tab[aria-pressed="true"]:hover {
+  background: var(--inset);
+}
+
+.mock-favicon.bakery {
+  background: #c2621a;
+}
+
+.mock-ext:hover,
+.mock-ext[aria-pressed="true"] {
+  background: var(--brand-tint);
+}
+
+/* The sites' own pages, once signed in. */
+.site-home {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 420px;
+}
+
+.site-home .ui-title {
+  margin: 0;
+}
+
+.site-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+}
+
+.site-order {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.site-big {
+  font-size: 26px;
+  font-weight: 640;
+  letter-spacing: -0.02em;
+}
+
+.site-list,
+.cakes {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  font-size: 14px;
+}
+
+.site-list > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+}
+
+.site-list > span + span {
+  border-top: 1px solid var(--line);
+}
+
+.cakes {
+  flex-direction: row;
+  border: 0;
+  gap: 10px;
+}
+
+.cakes > span {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 8px;
+  border-radius: 12px;
+  background: var(--inset);
+}
+
+.cakes > span > span:last-child {
+  color: var(--muted);
+}
+
+.cake {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  border: 5px solid #f6efe2;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+}
+
+.cake.lemon { background: #f2cf4a; }
+.cake.carrot { background: #e0893b; }
+.cake.chocolate { background: #6e4029; }
+
+/* PassBundle's popup from the toolbar: Vault, Generator, Send, Settings. */
+.mock-popup.pop {
+  z-index: 3;
+  gap: 8px;
+}
+
+.pop-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pop-search {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1px solid var(--field-border);
+  background: var(--field);
+  font-size: 14px;
+}
+
+.pop-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.code-digits {
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+}
+
+.pop-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+}
+
+.pop-item + .pop-item {
+  border-top: 1px solid var(--line);
+}
+
+.pop-item .demo-btn {
+  height: 28px;
+}
+
+.seg {
+  display: flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 10px;
+  background: var(--sunken);
+}
+
+.mock .seg button {
+  flex: 1 1 0;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mock .seg button[aria-pressed="true"] {
+  background: var(--floating);
+  color: var(--text);
+  box-shadow: var(--shadow-resting);
+}
+
+.gen-out {
+  min-height: 2.8em;
+}
+
+.gen-len {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.gen-len span {
+  min-width: 96px;
+}
+
+.gen-len input {
+  flex: 1 1 auto;
+  min-width: 0;
+  accent-color: var(--brand);
+}
+
+.pop-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  font-size: 14px;
+  text-align: left;
+}
+
+.switch {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--field-border);
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  transition: transform 0.15s;
+}
+
+[aria-checked="true"] > .switch {
+  background: var(--brand);
+}
+
+[aria-checked="true"] > .switch::after {
+  transform: translateX(14px);
+}
+
+.mock .mock-tabs button:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.mock .mock-tabs button[aria-pressed="true"] {
+  color: var(--link);
+  background: var(--brand-tint);
+}
+
+/* The desktop app's and the phone's lists: each item opens. */
+.mock button.ui-list-row,
+.mock-phone button.ui-list-row {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.mock button.ui-list-row:hover,
+.mock-phone button.ui-list-row:hover {
+  background: var(--hover);
+}
+
+.mock button.ui-list-row[aria-pressed="true"] {
+  background: var(--brand-tint);
+}
+
+.mock .ui-buttons button {
+  background: transparent;
+}
+
+.mock .ui-buttons button:hover {
+  background: var(--hover);
+}
+
+.mock .ui-buttons button.go,
+.mock .ui-buttons button.go:hover {
+  background: var(--brand);
+}
+
+.mock-lock > .ui-field {
+  color: var(--muted);
+}
+
+/* The family's folders open who reaches them. */
+.row-more {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--link);
+}
+
+.access-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.access-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.access-row .ui-name b {
+  font-size: 15px;
+}
+
+.access-row select {
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--field-border);
+  background: var(--field);
+  font-size: 14px;
 }
 
 /* ----- A phone (the tour's Phone part) ----- */
@@ -3768,6 +4471,124 @@ span.demo-row {
   height: 16px;
   stroke: currentColor;
   stroke-width: 2.4;
+}
+
+/* Android's home bar, the home screen, and moving around the apps. */
+.mock-phone .phone-nav {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  z-index: 4;
+  width: 120px;
+  height: 22px;
+  margin-left: -60px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.mock-phone .phone-nav::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 9px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--text);
+  opacity: 0.55;
+}
+
+.mock-phone .phone-nav:hover::after {
+  opacity: 0.85;
+}
+
+.phone-sheet {
+  padding-bottom: 34px;
+}
+
+.phone-home {
+  padding: 48px 18px 24px;
+  background:
+    radial-gradient(120% 80% at 20% 0%, color-mix(in srgb, var(--brand) 22%, transparent), transparent 70%),
+    var(--sunken);
+}
+
+.phone-clock {
+  align-self: center;
+  font-size: 48px;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+}
+
+.phone-apps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px 8px;
+  margin-top: auto;
+  margin-bottom: 24px;
+}
+
+.mock-phone .phone-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  font-size: 12px;
+}
+
+.mock-phone .phone-icon:hover {
+  background: var(--hover);
+}
+
+.tile.app,
+.brand-tile.app {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+}
+
+.tile.app {
+  background: color-mix(in srgb, var(--tone) 18%, var(--surface));
+}
+
+.brand-tile.app svg {
+  width: 21px;
+  height: 26px;
+}
+
+.mock-phone .phone-back {
+  display: inline-flex;
+  margin: -8px 0 -8px -8px;
+  padding: 8px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+}
+
+.mock-phone .phone-back:hover {
+  background: var(--hover);
+}
+
+.phone-item {
+  padding: 4px 14px;
+}
+
+.phone-item .demo-field {
+  flex-wrap: wrap;
+  padding: 10px 12px;
+}
+
+.phone-page {
+  padding: 20px 16px;
+}
+
+.phone-page .ui-title {
+  font-size: 22px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -4046,18 +4867,6 @@ main.doc > .paper {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .facts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .facts > div:nth-child(3) {
-    border-left: 0;
-  }
-
-  .facts > div:nth-child(n + 3) {
-    border-top: 1px solid var(--divider);
-  }
-
   .footer-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -4084,12 +4893,45 @@ main.doc > .paper {
     gap: 12px;
   }
 
-  .header-actions {
+  /* A phone's bar: the logo, Download, and the menu as an icon. Light
+     or dark moves into the menu. */
+  .site-header .bar > .theme-toggle {
     display: none;
   }
 
-  .menu {
+  .menu .theme-row:not([hidden]) {
+    display: flex;
+  }
+
+  .header-actions {
     margin-left: auto;
+  }
+
+  .menu {
+    margin-left: 0;
+  }
+
+  .menu summary {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .menu summary::after,
+  .menu[open] summary::after {
+    width: 18px;
+    height: 2px;
+    margin: 0;
+    border: 0;
+    border-radius: 1px;
+    background: currentColor;
+    box-shadow:
+      0 -6px currentColor,
+      0 6px currentColor;
+    transform: none;
   }
 
   .brand-word {
@@ -4122,19 +4964,6 @@ main.doc > .paper {
 
   .features {
     gap: 28px;
-  }
-
-  .facts {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .facts > div {
-    border-left: 0;
-    padding: 18px 20px;
-  }
-
-  .facts > div + div {
-    border-top: 1px solid var(--divider);
   }
 
   .card,
@@ -4173,6 +5002,160 @@ main.doc > .paper {
   th,
   td {
     padding: 12px 14px;
+  }
+}
+
+/* ======================================================================
+   Motion. Small and quick, only transform and opacity, and none at all
+   for people who ask their device for less motion. Browsers without view
+   transitions or scroll-driven animations just skip them.
+   ====================================================================== */
+
+/* Moving between pages: the header stays put and the page cross-fades. */
+.site-header {
+  view-transition-name: site-header;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.2s;
+}
+
+/* Light or dark: the new theme spreads out from the button (theme.mjs sets
+   the point and the "theming" class while it runs). */
+:root.theming .site-header {
+  view-transition-name: none;
+}
+
+:root.theming::view-transition-old(root) {
+  animation: none;
+}
+
+:root.theming::view-transition-new(root) {
+  animation: theme-reveal 0.45s ease-in-out;
+}
+
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0 at var(--reveal-x, 100%) var(--reveal-y, 0));
+  }
+  to {
+    clip-path: circle(150vmax at var(--reveal-x, 100%) var(--reveal-y, 0));
+  }
+}
+
+.button {
+  transition: transform 0.1s ease;
+}
+
+.button:active {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  /* Rows and lists rise into place as they scroll into view. */
+  @supports (animation-timeline: view()) {
+    .row > .row-text,
+    .row > .stage,
+    .lines > li,
+    .also li,
+    .door {
+      animation: rise ease-out both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 80%;
+    }
+  }
+
+  /* The tour: the tip glides from step to step, what a step opens fades
+     in, and a new part settles in. */
+  .tour-bubble:not(.docked) {
+    transition:
+      left 0.25s ease,
+      top 0.25s ease;
+  }
+
+  .tour-stage [data-show]:not([hidden]) {
+    animation: fade-in 0.2s ease-out;
+  }
+
+  .tour-part:not([hidden]) .tour-stage {
+    animation: rise 0.3s ease-out;
+  }
+
+  .tour-pointer.pick::after {
+    animation: pick-ring 0.6s ease-out;
+  }
+
+  .tour-stage .picked {
+    animation: picked 0.7s ease-out;
+  }
+
+  /* A pick fills every field: each one lights up and types itself in,
+     the username, then the password. */
+  .tour-stage .mock-fill:not([hidden]) {
+    animation: type-in 0.45s steps(12, end) both;
+  }
+
+  .tour-stage .mock-fill.later:not([hidden]) {
+    animation-delay: 0.3s;
+  }
+
+  .tour-stage .ui-field:has(> .mock-fill:not([hidden])) {
+    animation: filled-flash 1.4s ease-out;
+  }
+
+  .tour-stage .ui-field:has(> .mock-fill.later:not([hidden])) {
+    animation-delay: 0.3s;
+  }
+}
+
+@keyframes pick-ring {
+  from {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+
+@keyframes picked {
+  from {
+    transform: scale(0.97);
+  }
+}
+
+@keyframes type-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes filled-flash {
+  0%,
+  30% {
+    background: var(--brand-tint);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
   }
 }
 

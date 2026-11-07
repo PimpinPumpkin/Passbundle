@@ -1,0 +1,145 @@
+<!--
+title: Features
+description: What PassBundle does that other password managers don't: choose what fills each field, a one-line rollout that turns off the browsers' own password saving, a guided import that skips what you have, credentials for RMM scripts, and default policies across every client.
+layout: wide
+-->
+<section class="page-hero">
+  <span class="eyebrow">Features</span>
+  <h1>The parts other password managers leave to you.</h1>
+  <div class="home-hero-side">
+    <p class="lead">Everything you'd expect is here: autofill, passkeys, sharing, two-step login, and reports. These are the things we built because nobody else had, from filling the odd field on your bank's sign-in page to rolling out a whole office in one line.</p>
+    <div class="actions">
+      <a class="button primary" href="/download/">Get PassBundle, free</a>
+      <a class="button" href="/#demo">Try the demo</a>
+    </div>
+  </div>
+</section>
+
+<section class="flow" aria-label="Only in PassBundle">
+  <div class="row">
+    <div class="row-text">
+      <span class="eyebrow">Fill picker</span>
+      <h2>You decide what goes in each field.</h2>
+      <p class="lead">Right-click a field, or use the button in PassBundle's menu inside it, and choose what fills it: the username, the password, the one-time code, any custom field, or nothing at all. PassBundle remembers the choice on that item and fills it there every time, on every device.</p>
+      <ul class="checks">
+        <li>A custom field fills a field with a different name, no HTML reading</li>
+        <li>Each item lists its choices in plain words, and you can remove one</li>
+        <li>A choice only ever fills on the site it was made on</li>
+      </ul>
+    </div>
+    <div class="stage" role="img" aria-label="A bank's Customer number field with PassBundle's menu open: fill this field with the Customer ID custom field, the username, the password, or never fill it">
+      <div class="ui ui-signin">
+        <span class="ui-site">bank.example</span>
+        <span class="ui-title">Sign in to online banking</span>
+        <span class="ui-label">Customer number</span>
+        <span class="ui-field focus"></span>
+        <span class="ui-menu">
+          <span class="ui-menu-item"><x-tile icon="list" tone="sapphire" class="small"></x-tile><span class="ui-who"><b>Customer ID</b><span>Custom field</span></span><span class="ui-key">Enter</span></span>
+          <span class="ui-menu-item"><x-tile icon="key" tone="sapphire" class="small"></x-tile><span class="ui-who"><b>Username</b><span>sam.rivera</span></span></span>
+          <span class="ui-menu-item"><x-tile icon="eyeoff" tone="onyx" class="small"></x-tile><span class="ui-who"><b>Never fill this field</b><span>On bank.example</span></span></span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row flip">
+    <div class="row-text">
+      <span class="eyebrow">Rollout</span>
+      <h2>One line sets up every computer, browsers included.</h2>
+      <p class="lead">Run the install command from your RMM, Intune, or group policy. It installs the extension in Chrome and Edge with your server filled in, turns off the browsers' own password saving, and puts each person in the right organization when they sign up.</p>
+      <ul class="checks">
+        <li>Turns saving off without deleting anything, so people can import first</li>
+        <li>Card and address autofill too, if you choose</li>
+        <li>Limit who can join with it to your email domains</li>
+      </ul>
+    </div>
+    <div class="stage" role="img" aria-label="A computer after the install command: PassBundle is installed in Chrome and Edge, with the browsers' own password saving turned off">
+      <div class="ui ui-list lined">
+        <span class="ui-list-head"><x-tile icon="laptop" tone="onyx"></x-tile><span class="ui-name"><b>FRONT-DESK-02</b><small>Install command, 2 minutes ago</small></span></span>
+        <span class="ui-list-row"><x-tile icon="browser" tone="sapphire" class="small"></x-tile><span class="ui-name">Chrome: PassBundle installed</span><span class="badge">Server set</span></span>
+        <span class="ui-list-row"><x-tile icon="browser" tone="turquoise" class="small"></x-tile><span class="ui-name">Edge: PassBundle installed</span><span class="badge">Server set</span></span>
+        <span class="ui-list-row"><x-tile icon="lock" tone="brand" class="small"></x-tile><span class="ui-name">The browsers' password saving</span><span class="badge">Off</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="row-text">
+      <span class="eyebrow">Import from your browser</span>
+      <h2>Bring your browser's passwords without the mess.</h2>
+      <p class="lead">PassBundle walks you through your browser's own export, step by step for Chrome, Edge, Brave, Firefox, and Safari, then sorts it: what you already have is left out, and a login whose password differs from yours goes to a folder to check, not over the top of it.</p>
+      <ul class="checks">
+        <li>Duplicates in the file are left out too</li>
+        <li>A reminder to delete the export, with how on your computer</li>
+        <li>Then how to turn the browser's own saving off</li>
+      </ul>
+    </div>
+    <div class="stage" role="img" aria-label="An import from Chrome: 212 logins added, 18 already in the vault and left out, and 3 with a different password put in a folder to check">
+      <div class="ui ui-list lined">
+        <span class="ui-list-head"><x-tile icon="import" tone="brand"></x-tile><span class="ui-name"><b>Imported from Chrome</b><small>Your vault</small></span></span>
+        <span class="ui-list-row"><x-tile icon="key" tone="sapphire" class="small"></x-tile><span class="ui-name">Logins added</span><span class="badge">212</span></span>
+        <span class="ui-list-row"><x-tile icon="layers" tone="onyx" class="small"></x-tile><span class="ui-name">Already in your vault, left out</span><span class="badge">18</span></span>
+        <span class="ui-list-row"><x-tile icon="folder" tone="topaz" class="small"></x-tile><span class="ui-name">Check these: from Chrome</span><span class="badge warn">3</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row flip">
+    <div class="row-text">
+      <span class="eyebrow">Script access</span>
+      <h2>Credentials for your RMM scripts, without pasting them in.</h2>
+      <p class="lead">Give a script a token that reads only the items you choose, then call <code>Get-PassBundleCredential</code> from PowerShell. The script never holds more than it needs, and you see every read.</p>
+      <ul class="checks">
+        <li>Tokens expire, can be limited to your networks, and stop the moment you revoke them</li>
+        <li>End-to-end encrypted: the server can't read what a token reads</li>
+        <li>Nothing to install: Windows PowerShell 5.1 or PowerShell 7</li>
+      </ul>
+    </div>
+    <div class="stage" role="img" aria-label="A script token that reads the Domain admin login in Linden Realty, with its last read and when it expires">
+      <div class="ui ui-list lined">
+        <span class="ui-list-head"><x-tile icon="terminal" tone="onyx"></x-tile><span class="ui-name"><b>Nightly backup check</b><small>Script token, Linden Realty</small></span></span>
+        <span class="ui-list-row"><x-tile icon="key" tone="sapphire" class="small"></x-tile><span class="ui-name">Domain admin</span><span class="badge">Username, password</span></span>
+        <span class="ui-list-row"><x-tile icon="clock" tone="amethyst" class="small"></x-tile><span class="ui-name">Last read 2:00 AM, office network</span><span class="badge">Expires in 90 days</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="also">
+    <h2>Also only in PassBundle</h2>
+    <ul>
+      <li><strong>No confirm step</strong><span>People you invite, and people who join with the install command, get in without anyone clicking Confirm, with a check a hacked server can't fake.</span></li>
+      <li><strong>Default policies, and required ones</strong><span>An MSP sets policies once for every client. A client can set its own, unless you make one required for every client.</span></li>
+      <li><strong>Site fixes</strong><span>Fix a site with the fill picker and, if you like, share the fix. Once three people make the same one, it fills for everyone on the server; MSPs can apply their staff's fixes to every client.</span></li>
+      <li><strong>Folders down to the capability</strong><span>Let a team see a folder's items without their passwords, or add to a folder without changing it.</span></li>
+      <li><strong>Item history</strong><span>Every edit keeps the version before, with who saved it, and you can restore it.</span></li>
+      <li><strong>Templates and expiration dates</strong><span>Wi-Fi, servers, licenses, certificates, and your own, with reminders before something expires.</span></li>
+      <li><strong>One-time codes stay codes</strong><span>A code typed into a sign-in page is never saved as your password.</span></li>
+      <li><strong>Events to your security tools</strong><span>Microsoft Sentinel, syslog over TLS, or a signed webhook, from one client or every client at once.</span></li>
+      <li><strong>Private by default on the desktop</strong><span>The desktop app keeps itself out of screenshots and screen sharing unless you allow them.</span></li>
+    </ul>
+  </div>
+</section>
+
+<section class="flow" aria-labelledby="everything-title">
+  <div class="split-head page-head">
+    <h2 id="everything-title">And everything you'd expect.</h2>
+    <div class="split-side">
+      <p class="lead">Passkeys, autofill in the browser and on Android, the password generator, every two-step login method, weak, reused, and exposed password reports, legacy contacts, Send, unlock with Windows Hello or your fingerprint, and imports from about 70 other apps.</p>
+      <p><a class="more" href="/pricing/#compare">Every feature, plan by plan</a></p>
+    </div>
+  </div>
+</section>
+
+<section class="flow last" aria-labelledby="next-title">
+  <div class="split-head page-head">
+    <h2 id="next-title">Coming next</h2>
+    <div class="split-side">
+      <p class="lead">Built into the plan, not built yet.</p>
+    </div>
+  </div>
+  <ul class="lines">
+    <li><strong>Browser extensions report</strong><span>Every other extension installed on your computers and what it can read, with an alert when one with broad access appears.</span></li>
+    <li><strong>Import on its own</strong><span>The desktop app brings in the browsers' saved passwords after you sign in, with no export file, once it's signed for Windows and Mac.</span></li>
+    <li><strong>Sign in with Microsoft Entra ID</strong><span>Built, and being checked against real Microsoft 365 tenants.</span></li>
+  </ul>
+</section>

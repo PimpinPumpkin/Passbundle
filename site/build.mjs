@@ -2,8 +2,8 @@
 // the shared layout, and everything in site/static is copied as is. No
 // framework, nothing loaded from anyone else, which the privacy policy
 // promises, and no scripts but our own: the light or dark switch, inline in
-// every page (theme.mjs), and a page whose header has "script: demo" loads
-// /demo.js. Run: node site/build.mjs
+// every page (theme.mjs), and a page whose header has "script: tour" loads
+// /tour.js. Run: node site/build.mjs
 //
 // Pages can use:
 //   {{prices.premium}}, {{links.vault}}: values from site.json. An empty link
@@ -19,16 +19,23 @@
 //     means beside it. `class` sizes it (small, large).
 //   <x-art name="LockIcon"></x-art>: one of the apps' drawings from art/,
 //     inline so it takes the page's colors.
+//   <x-mark class="mini"></x-mark>: the logo's glossy tile with the lock, as
+//     the apps draw PassBundle's mark in their screens. Decorative. `class`
+//     sizes it (mini, big, app).
+//   <x-part name="tour"></x-part>: parts/tour.html, a piece of a page kept
+//     in its own file (its leading comment says how to use it). `first-only` hides
+//     every .tour-part but the first until static/tour.js runs.
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ICONS } from "./icons.mjs";
-import { THEME_BUTTON, THEME_SCRIPT, themeable } from "./theme.mjs";
+import { THEME_BUTTON, THEME_MENU_BUTTON, THEME_SCRIPT, themeable } from "./theme.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pagesDir = path.join(here, "pages");
+const partsDir = path.join(here, "parts");
 const staticDir = path.join(here, "static");
 const artDir = path.join(here, "art");
 const dist = path.join(here, "dist");
@@ -119,6 +126,12 @@ function tile(tag, file) {
   return `<span class="tile ${tone}${cls ? ` ${cls}` : ""}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="${ICONS[icon]}"/></svg></span>`;
 }
 
+/** <x-mark>: PassBundle's tile, decorative. */
+function mark(tag) {
+  const { class: cls } = attrs(tag);
+  return `<span class="brand-tile${cls ? ` ${cls}` : ""}" aria-hidden="true"><svg viewBox="0 0 26 32" focusable="false"><path fill-rule="evenodd" d="${MARK}"/></svg></span>`;
+}
+
 /** <x-art>: an inline drawing, decorative. */
 function art(tag, file) {
   const { name, class: cls } = attrs(tag);
@@ -137,22 +150,40 @@ function value(key, file) {
   return v;
 }
 
+/** <x-part>: a shared piece of a page, from parts/. */
+function part(tag, file) {
+  const a = attrs(tag);
+  if (!/^[a-z-]+$/.test(a.name ?? "")) throw new Error(`${file}: <x-part> needs a name like tour`);
+  const from = path.join(partsDir, `${a.name}.html`);
+  if (!fs.existsSync(from)) throw new Error(`${file}: no parts/${a.name}.html`);
+  let html = fs.readFileSync(from, "utf8").replace(/^<!--[\s\S]*?-->\s*/, "");
+  if ("first-only" in a) {
+    let seen = 0;
+    html = html.replace(/<section class="tour-part"/g, (m) => (seen++ ? `${m} hidden` : m));
+  }
+  return html;
+}
+
 function expand(html, file) {
   return html
+    .replace(/<x-part\b([^>]*)><\/x-part>/g, (_, t) => part(t, file))
     .replace(/<x-shot\b([^>]*)><\/x-shot>/g, (_, t) => shot(t, file))
     .replace(/<x-art\b([^>]*)><\/x-art>/g, (_, t) => art(t, file))
     .replace(/<x-tile\b([^>]*)><\/x-tile>/g, (_, t) => tile(t, file))
+    .replace(/<x-mark\b([^>]*)><\/x-mark>/g, (_, t) => mark(t))
     .replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k) => value(k, file));
 }
 
+// Six links: see it, what it does, who it's for, and what it costs. Demo is
+// the homepage's demo, from any page. Download is the button beside them;
+// Security, Help, and the rest are in the footer.
 const NAV = [
-  ["/msp/", "For MSPs"],
+  ["/#demo", "Demo"],
+  ["/features/", "Features"],
+  ["/personal/", "Personal"],
   ["/business/", "Business"],
-  ["/tour/", "Tour"],
+  ["/msp/", "MSPs"],
   ["/pricing/", "Pricing"],
-  ["/download/", "Download"],
-  ["/security/", "Security"],
-  ["/help/", "Help"],
 ];
 
 function layout({ meta, body, file }, route) {
@@ -161,7 +192,7 @@ function layout({ meta, body, file }, route) {
   const current = (href) => (route.startsWith(href) ? ' aria-current="page"' : "");
   const links = NAV.map(([href, label]) => `<a href="${href}"${current(href)}>${label}</a>`).join("\n        ");
   const vault = value("links.vault", file);
-  // Our own scripts only, by name, from static/: "script: demo" is /demo.js.
+  // Our own scripts only, by name, from static/: "script: tour" is /tour.js.
   if (meta.script && !/^[a-z-]+$/.test(meta.script)) throw new Error(`${file}: script must be a name like demo`);
   if (meta.script && !fs.existsSync(path.join(staticDir, `${meta.script}.js`))) throw new Error(`${file}: no static/${meta.script}.js`);
   const script = meta.script ? `\n<script src="/${meta.script}.js" defer></script>` : "";
@@ -193,14 +224,15 @@ function layout({ meta, body, file }, route) {
     ${THEME_BUTTON}
     <div class="header-actions">
       <a class="login" href="${vault}">Log in</a>
-      <a class="button primary small" href="/download/">Get PassBundle</a>
+      <a class="button primary small" href="/download/">Download</a>
     </div>
     <details class="menu">
       <summary>Menu</summary>
       <nav aria-label="Menu">
         ${links}
         <a href="${vault}">Log in</a>
-        <a class="button primary" href="/download/">Get PassBundle</a>
+        ${THEME_MENU_BUTTON}
+        <a class="button primary" href="/download/">Download</a>
       </nav>
     </details>
   </div>
@@ -218,10 +250,11 @@ ${kind === "doc" ? `<div class="paper">\n${expand(body.trim(), file)}\n</div>` :
     </div>
     <nav aria-label="Product">
       <h2>Product</h2>
-      <a href="/msp/">For MSPs</a>
+      <a href="/personal/">Personal and families</a>
       <a href="/business/">Business</a>
-      <a href="/#personal">Personal and families</a>
-      <a href="/tour/">Tour</a>
+      <a href="/msp/">For MSPs</a>
+      <a href="/#demo">Demo</a>
+      <a href="/features/">Features</a>
       <a href="/pricing/">Pricing</a>
       <a href="/download/">Download</a>
     </nav>
