@@ -56,7 +56,7 @@ test("the test kit's extension reaches the agent and the test server", async () 
     // The carousel renders its buttons before Angular wires them up, and an
     // early click is dropped. Click until the app actually navigates.
     await expect(async () => {
-      await popup.getByRole("button", { name: "Log in" }).click();
+      await popup.getByRole("button", { name: "Sign in" }).click();
       await expect(popup).toHaveURL(/#\/login/, { timeout: 1000 });
     }).toPass({ timeout: 30_000 });
     // A server from policy shows as "Accessing: self-hosted", and the popup

@@ -114,7 +114,7 @@ test("the extension signs in with a passkey the core made", async ({ context, ex
   const choosing = context.waitForEvent("page");
   await page.getByRole("button", { name: "Sign in with a passkey" }).click();
   const choose = await choosing;
-  await expect(choose.getByRole("heading", { name: "Log in with passkey?" })).toBeVisible();
+  await expect(choose.getByRole("heading", { name: "Sign in with a passkey?" })).toBeVisible();
   // The core names a new login after the site's ID.
   await answerAndClose(choose, choose.getByRole("button", { name: new RegExp(rpId.replace(/\./g, "\\.")) }));
   await expect(page.getByRole("status")).toHaveText("Signed in with a passkey, signature checked");

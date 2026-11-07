@@ -80,7 +80,7 @@ test("the install command's join asks first; Not now joins nothing, and a token 
   let prompt: Page | undefined;
   await expect.poll(() => (prompt = prompts()[0])).toBeTruthy();
   await expect(prompt!.getByTestId("keykeeper-join")).toContainText(
-    "Your IT set up this browser so you can join Prompt Dental.",
+    "Your IT admin set up this browser so you can join Prompt Dental.",
   );
   // This test server sends no email, so the client offers no account recovery.
   await expect(prompt!.getByText("Account recovery")).toHaveCount(0);

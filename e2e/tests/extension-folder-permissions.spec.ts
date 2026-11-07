@@ -428,7 +428,7 @@ test("a member who can't see passwords can't reveal or copy them in the extensio
   }
   if (!(await folders.isVisible())) {
     await password.fill(dana.password);
-    await web.getByRole("button", { name: /^(Log in|Unlock)$/ }).click();
+    await web.getByRole("button", { name: /^(Sign in|Unlock)$/ }).click();
   }
   await expect(folders).toBeVisible({ timeout: 30_000 });
   await folders.getByRole("button", { name: "Everyone", exact: true }).click();
@@ -451,7 +451,7 @@ test("a member who can't see passwords can't reveal or copy them in the extensio
   await expect(refused.or(password)).toBeVisible({ timeout: 30_000 });
   if (await password.isVisible()) {
     await password.fill(dana.password);
-    await web.getByRole("button", { name: /^(Log in|Unlock)$/ }).click();
+    await web.getByRole("button", { name: /^(Sign in|Unlock)$/ }).click();
   }
   await expect(refused).toBeVisible({ timeout: 30_000 });
   await expect(web.getByRole("dialog", { name: /^New/ })).toHaveCount(0);
