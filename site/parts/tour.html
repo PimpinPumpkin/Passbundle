@@ -44,12 +44,12 @@ part until the script runs (or the part a link names, by :target).
             <span class="ui-site">Hometown Credit Union</span>
             <span class="ui-title">Sign in to online banking</span>
             <span class="ui-label">Username</span>
-            <span class="ui-field focus" data-x="user"><span data-show="filled" hidden>sam.rivera</span></span>
+            <span class="ui-field focus" data-x="user"><span class="mock-fill" data-show="filled" hidden>sam.rivera</span></span>
             <span class="ui-menu" data-show="inline" hidden>
               <button type="button" class="ui-menu-item" data-x="inline-item"><x-tile icon="key" tone="sapphire" class="small"></x-tile><span class="ui-who"><b>Hometown Credit Union</b><span>sam.rivera</span></span><span class="ui-key">Fill</span></button>
             </span>
             <span class="ui-label">Password</span>
-            <span class="ui-field" data-x="pass"><span data-show="filled" hidden>••••••••••••••••</span></span>
+            <span class="ui-field" data-x="pass"><span class="mock-fill later" data-show="filled" hidden>••••••••••••••••</span></span>
             <button type="button" class="mock-submit" data-x="signin">Sign in</button>
           </div>
           <div class="ui ui-signin mock-signin" data-show="code" hidden>
@@ -57,7 +57,7 @@ part until the script runs (or the part a link names, by :target).
             <span class="ui-title">Enter your code</span>
             <span class="ui-text">Enter the 6-digit code from your authenticator app.</span>
             <span class="ui-label">Code</span>
-            <span class="ui-field focus" data-x="code-field"><span class="mock-code" data-show="coded" hidden>284 913</span></span>
+            <span class="ui-field focus" data-x="code-field"><span class="mock-code mock-fill" data-show="coded" hidden>284 913</span></span>
             <span class="ui-menu" data-show="codemenu" hidden>
               <button type="button" class="ui-menu-item" data-x="code-item"><x-tile icon="clock" tone="sapphire" class="small"></x-tile><span class="ui-who"><b>Two-step code</b><span>284 913</span></span><span class="ui-key">Fill</span></button>
             </span>
@@ -107,7 +107,7 @@ part until the script runs (or the part a link names, by :target).
   </div>
   <ol class="tour-steps">
     <li data-target="inline-item" data-state="inline" data-advance="click" data-place="right"><strong>Pick your login.</strong> Click into a sign-in form, and PassBundle offers the login saved for this site, right under the field.</li>
-    <li data-target="signin" data-anchor="pass" data-state="filled" data-advance="click" data-place="right"><strong>Both fields, one click.</strong> PassBundle only offers a login on the site it belongs to, so a look-alike site gets nothing. Now sign in.</li>
+    <li data-target="signin" data-anchor="pass" data-state="filled" data-advance="click" data-place="right"><strong>Every field, one click.</strong> The username and the password went in together, with no clicking into each field. And only on the site the login belongs to, so a look-alike site gets nothing. Now sign in.</li>
     <li data-target="code-item" data-state="code codemenu" data-advance="click" data-place="right"><strong>Then the two-step code.</strong> The bank asks for a code, and PassBundle has that too. Built-in codes come with Premium, Families, and Business.</li>
     <li data-target="verify" data-anchor="code-field" data-state="code coded" data-advance="click" data-place="right"><strong>No phone, no typing.</strong> The code is in. Verify, and you're signed in.</li>
     <li data-target="pk-btn" data-state="passkey" data-advance="click" data-place="right"><strong>Some sites skip the password.</strong> With a passkey, there's nothing to type at all.</li>

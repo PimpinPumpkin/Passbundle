@@ -3010,9 +3010,11 @@ main.wide .tour-head h2 {
   }
 }
 
-/* Tips off: no tip, just the step and Back / Next under the screen. The
-   :root keeps these ahead of the dark-mode rules above. */
-:root [data-tips="off"] .tour-bubble {
+/* Tips off, or the visitor looking around on their own (.quiet): no tip,
+   just the step and Back / Next (and Show tip) under the screen. The :root
+   keeps these ahead of the dark-mode rules above. */
+:root [data-tips="off"] .tour-bubble,
+:root .tour-frame.quiet .tour-bubble {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3025,26 +3027,37 @@ main.wide .tour-head h2 {
   color: var(--muted);
 }
 
-:root [data-tips="off"] .tour-text {
+:root [data-tips="off"] .tour-text,
+:root .tour-frame.quiet .tour-text {
   display: none;
 }
 
-:root [data-tips="off"] .tour-count {
+:root [data-tips="off"] .tour-count,
+:root .tour-frame.quiet .tour-count {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
 }
 
-:root [data-tips="off"] .tour-buttons {
+:root [data-tips="off"] .tour-buttons,
+:root .tour-frame.quiet .tour-buttons {
   margin-top: 0;
 }
 
-:root [data-tips="off"] .tour-buttons button {
+:root [data-tips="off"] .tour-buttons button,
+:root .tour-frame.quiet .tour-buttons button {
   border-color: var(--field-border);
   color: var(--text);
 }
 
-:root [data-tips="off"] .tour-buttons .go {
+:root .tour-frame.quiet .tour-buttons .again {
+  margin-right: auto;
+  border-color: transparent;
+  color: var(--link);
+}
+
+:root [data-tips="off"] .tour-buttons .go,
+:root .tour-frame.quiet .tour-buttons .go {
   border-color: transparent;
   background: var(--text);
   color: var(--ground);
@@ -4354,6 +4367,40 @@ main.doc > .paper {
 
   .tour-part:not([hidden]) .tour-stage {
     animation: rise 0.3s ease-out;
+  }
+
+  /* A pick fills every field: each one lights up and types itself in,
+     the username, then the password. */
+  .tour-stage .mock-fill:not([hidden]) {
+    animation: type-in 0.45s steps(12, end) both;
+  }
+
+  .tour-stage .mock-fill.later:not([hidden]) {
+    animation-delay: 0.3s;
+  }
+
+  .tour-stage .ui-field:has(> .mock-fill:not([hidden])) {
+    animation: filled-flash 1.4s ease-out;
+  }
+
+  .tour-stage .ui-field:has(> .mock-fill.later:not([hidden])) {
+    animation-delay: 0.3s;
+  }
+}
+
+@keyframes type-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes filled-flash {
+  0%,
+  30% {
+    background: var(--brand-tint);
   }
 }
 

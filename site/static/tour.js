@@ -15,7 +15,11 @@
 // pointer clicking through its steps up to the one marked
 // data-autoplay-end, unless the device asks for less motion. It stops for
 // good the moment the visitor clicks or types in it, and the Pause / Play
-// button beside the tabs controls it. Links to /#family and the like open
+// button beside the tabs controls it. Clicking something a step points at
+// goes where that click leads (Sign in signs in, from any step); clicking
+// anything else means the visitor is looking around, so the tip steps aside
+// (Back / Next and "Show tip" under the screen) until they click what it
+// pointed at, or ask for it. Links to /#family and the like open
 // that part. The Tips switch hides the tips and rings and leaves a slim
 // Back / Next bar under the screen; the browser remembers "off" on the
 // device (the privacy policy says so). Nothing is sent anywhere. No
@@ -67,6 +71,7 @@
 
     const count = h("p", { class: "tour-count" });
     const text = h("p", { class: "tour-text" });
+    const again = h("button", { type: "button", class: "again", text: "Show tip", hidden: "" });
     const back = h("button", { type: "button", text: "Back" });
     const next = h("button", { type: "button", class: "go" });
     const bubble = h(
@@ -74,13 +79,22 @@
       { class: "tour-bubble", role: "group", "aria-label": `Tip for the ${part.dataset.label}` },
       count,
       h("div", { "aria-live": "polite" }, text),
-      h("div", { class: "tour-buttons" }, back, next),
+      h("div", { class: "tour-buttons" }, again, back, next),
     );
     frame.append(bubble);
 
     let at = 0;
     let target = null;
+    // The visitor is looking around on their own: the tip steps aside.
+    let quiet = false;
     const following = parts[index + 1];
+
+    function wander(on) {
+      if (quiet === on) return;
+      quiet = on;
+      frame.classList.toggle("quiet", on);
+      place();
+    }
 
     // On a narrow screen, a target can sit partly outside a strip that
     // scrolls sideways (a sidebar, a table): scroll the strip, not the page.
@@ -141,12 +155,14 @@
     function place() {
       if (part.hidden) return;
       const step = steps[at];
+      const showing = tips && !quiet;
+      again.hidden = !(tips && quiet);
       if (target) {
         reveal(target);
-        target.classList.toggle("tour-focus", tips);
-        target.classList.toggle("inset", tips && clipped(target));
+        target.classList.toggle("tour-focus", showing);
+        target.classList.toggle("inset", showing && clipped(target));
       }
-      if (!target || !tips || frame.clientWidth < NARROW) {
+      if (!target || !showing || frame.clientWidth < NARROW) {
         bubble.classList.add("docked");
         bubble.style.left = "";
         bubble.style.top = "";
@@ -292,10 +308,32 @@
     }
 
     stage.addEventListener("click", (e) => {
-      if (steps[at].dataset.advance === "click" && target && target.contains(e.target)) go(at + 1, true);
+      if (steps[at].dataset.advance === "click" && target && target.contains(e.target)) {
+        wander(false);
+        go(at + 1, true);
+        return;
+      }
+      // Something another step points at (and clicks through): go where
+      // that click leads, as the real app would.
+      const hit = e.target.closest("[data-x]");
+      const i = hit ? steps.findIndex((s) => s.dataset.advance === "click" && s.dataset.target === hit.dataset.x) : -1;
+      if (i >= 0) {
+        wander(false);
+        go(i + 1, true);
+        return;
+      }
+      wander(true);
     });
-    back.addEventListener("click", () => go(at - 1));
+    again.addEventListener("click", () => {
+      wander(false);
+      next.focus({ preventScroll: true });
+    });
+    back.addEventListener("click", () => {
+      wander(false);
+      go(at - 1);
+    });
     next.addEventListener("click", () => {
+      wander(false);
       if (at < steps.length - 1) go(at + 1);
       else if (following) show(following.id, { scroll: true, user: true });
       else go(0);
