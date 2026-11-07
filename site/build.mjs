@@ -164,13 +164,14 @@ function expand(html, file) {
     .replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k) => value(k, file));
 }
 
-// Five links: who it's for, what it costs, and why to trust it. The tour is
-// on the homepage, "Get PassBundle" is the download, and Help, the tour, and
-// the rest are in the footer.
+// Six links: who it's for, what it does, what it costs, and why to trust it.
+// The tour is on the homepage, "Get PassBundle" is the download, and Help,
+// the tour, and the rest are in the footer.
 const NAV = [
   ["/personal/", "Personal"],
   ["/business/", "Business"],
   ["/msp/", "MSPs"],
+  ["/features/", "Features"],
   ["/pricing/", "Pricing"],
   ["/security/", "Security"],
 ];
@@ -241,6 +242,7 @@ ${kind === "doc" ? `<div class="paper">\n${expand(body.trim(), file)}\n</div>` :
       <a href="/personal/">Personal and families</a>
       <a href="/business/">Business</a>
       <a href="/msp/">For MSPs</a>
+      <a href="/features/">Features</a>
       <a href="/tour/">Tour</a>
       <a href="/pricing/">Pricing</a>
       <a href="/download/">Download</a>

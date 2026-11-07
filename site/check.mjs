@@ -25,6 +25,7 @@ const REQUIRED = [
   "/personal/",
   "/business/",
   "/msp/",
+  "/features/",
   "/pricing/",
   "/switch/",
   "/help/",
