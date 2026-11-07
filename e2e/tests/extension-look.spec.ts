@@ -21,7 +21,7 @@ async function closeView(web: Page) {
 /** Saves a new item of a kind with a name. */
 async function saveItem(web: Page, kind: string, name: string) {
   await newItem(web, kind);
-  const dialog = web.getByRole("dialog", { name: `New ${kind}` });
+  const dialog = web.getByRole("dialog", { name: `Add ${kind}` });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill(name);
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog).toBeHidden();

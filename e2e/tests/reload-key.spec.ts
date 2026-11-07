@@ -25,7 +25,7 @@ import {
 
 import { fixturePort, hostResolverRules, port, restartServerPort } from "../paths.mjs";
 
-import { confirmMember, signUp, signUpWithAuthenticator, webUserFor, type WebUser } from "./support/web";
+import { confirmMember, policyEditor, signUp, signUpWithAuthenticator, webUserFor, type WebUser } from "./support/web";
 
 const e2eDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const RECORD = /_keykeeperReloadKey_reloadKey$/;
@@ -523,7 +523,7 @@ async function businessMember(
   await owner.getByRole("button", { name: "Invite member" }).click();
   const invite = owner.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(member.email);
-  await invite.getByRole("button", { name: "Save" }).click();
+  await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
   await confirmMember(owner, member.email);
   return { owner, org, member, joining };
@@ -615,7 +615,7 @@ test("with the web vault's wait at 1 minute, moving the clock past it locks", as
   // The owner sets the web vault's wait on the policy page.
   await owner.goto(`${org}/settings/policies`);
   await owner.getByRole("button", { name: /^Vault lock .* On$/ }).click();
-  const dialog = owner.getByRole("dialog");
+  const dialog = policyEditor(owner);
   await expect(dialog.getByRole("radio", { name: /^When the computer locks/ })).toBeChecked();
   await dialog.getByRole("combobox", { name: "In the web vault, at most" }).click();
   await owner.getByRole("option", { name: "1 minute", exact: true }).click();
@@ -654,7 +654,7 @@ test("a Vault lock policy can turn staying unlocked across a reload off for its 
 
   await owner.goto(`${org}/settings/policies`);
   await owner.getByRole("button", { name: /^Vault lock .* On$/ }).click();
-  const dialog = owner.getByRole("dialog");
+  const dialog = policyEditor(owner);
   const webReload = dialog.getByRole("checkbox", { name: /^Web vaults can stay unlocked/ });
   await expect(webReload).toBeChecked();
   await webReload.uncheck();

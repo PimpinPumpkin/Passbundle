@@ -30,7 +30,7 @@ async function createOrganization(owner: Page, name: string): Promise<string> {
 async function webLogin(page: Page, at: string, item: { name: string; username: string; password: string; notes: string }) {
   await page.goto(at);
   await newItem(page, "Login");
-  const dialog = page.getByRole("dialog", { name: "New Login" });
+  const dialog = page.getByRole("dialog", { name: "Add login" });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill(item.name);
   await dialog.getByRole("textbox", { name: /Username/ }).fill(item.username);
   await dialog.getByLabel("Password", { exact: true }).fill(item.password);

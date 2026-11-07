@@ -65,11 +65,12 @@ export async function giveAuthenticator(
     data: { masterPasswordHash: hash },
   });
   expect(started.status(), await started.text()).toBe(200);
-  const key = (await started.json()).key as string;
+  const answer = await started.json();
+  const key = answer.authenticator.key as string;
   const now = Date.now();
   const on = await request.post("/api/two-factor/authenticator", {
     headers,
-    data: { key, token: totp(key, now), masterPasswordHash: hash },
+    data: { key, token: totp(key, now), userVerificationToken: answer.userVerificationToken },
   });
   expect(on.status(), await on.text()).toBe(200);
   authenticators.set(user.email.toLowerCase(), { key, lastStep: stepOf(now) });

@@ -102,7 +102,7 @@ export async function addLogin(
   },
 ) {
   await newItem(web, "Login");
-  const dialog = web.getByRole("dialog", { name: "New Login" });
+  const dialog = web.getByRole("dialog", { name: "Add login" });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill(item.name);
   await dialog.getByRole("textbox", { name: "Username", exact: true }).fill(item.username);
   await dialog.getByRole("textbox", { name: "Password", exact: true }).fill(item.password);

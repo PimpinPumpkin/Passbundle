@@ -9,7 +9,7 @@
 // with only those still opens the admin console's Vault tab.
 import { expect, test, type Page } from "@playwright/test";
 
-import { acceptRole, reloadVault, signUp, signUpWithAuthenticator, webUserFor } from "./support/web";
+import { acceptRole, chooseRole, reloadVault, roleOption, signUp, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 const toast = (page: Page, text: string | RegExp) => page.getByText(text).first();
 
@@ -54,7 +54,7 @@ test("an MSP admin gives a client's point of contact a custom role that manages 
   await admin.getByRole("button", { name: "Invite member" }).click();
   const invite = admin.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(pocUser.email);
-  await invite.getByRole("radio", { name: /^Custom/ }).check();
+  await chooseRole(invite, "Custom");
   const allCollections = invite.getByRole("checkbox", { name: "Manage all shared folders" });
   await expect(allCollections).toBeVisible();
   await invite.getByRole("checkbox", { name: "Manage users" }).check();
@@ -65,7 +65,7 @@ test("an MSP admin gives a client's point of contact a custom role that manages 
   await expect(invite.getByTestId("custom-role-no-collections")).toContainText(
     "can't also manage all shared folders",
   );
-  await invite.getByRole("button", { name: "Save" }).click();
+  await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
   await acceptRole(poc);
   await admin.goto("/#/msp");
@@ -94,7 +94,7 @@ test("an MSP admin gives a client's point of contact a custom role that manages 
   await poc.getByRole("button", { name: "Invite member" }).click();
   const pocInvite = poc.getByRole("dialog", { name: /Invite member/ });
   await pocInvite.getByRole("textbox", { name: /Email/ }).fill(newHire);
-  await pocInvite.getByRole("button", { name: "Save" }).click();
+  await pocInvite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(pocInvite).toBeHidden();
   // A row, since the first text match is the avatar's hidden title.
   const newHireRow = poc.getByRole("row").filter({ hasText: newHire });
@@ -105,18 +105,21 @@ test("an MSP admin gives a client's point of contact a custom role that manages 
   await newHireRow.getByRole("button", { name: newHire }).click();
   const edit = poc.getByRole("dialog", { name: /Edit member/ });
   await expect(edit.getByRole("tab", { name: "Groups" })).toBeVisible();
-  await edit.getByRole("button", { name: "Cancel" }).click();
+  await edit.getByRole("button", { name: "Close" }).click();
   await expect(edit).toBeHidden();
 
   // The server refuses anything beyond a regular member, whatever the dialog offers.
   await poc.getByRole("button", { name: "Invite member" }).click();
   const adminInvite = poc.getByRole("dialog", { name: /Invite member/ });
   await adminInvite.getByRole("textbox", { name: /Email/ }).fill(`would-be-admin-${testInfo.repeatEachIndex}@example.test`);
-  const adminRadio = adminInvite.getByRole("radio", { name: /^Admin/ });
-  if (await adminRadio.isEnabled()) {
-    await adminRadio.check();
-    await adminInvite.getByRole("button", { name: "Save" }).click();
+  await adminInvite.getByRole("combobox", { name: /Member role/ }).click();
+  const adminOption = roleOption(adminInvite, "Admin");
+  if ((await adminOption.getAttribute("aria-disabled")) !== "true") {
+    await adminOption.click();
+    await adminInvite.getByRole("button", { name: "Invite", exact: true }).click();
     await expect(toast(poc, /Only Owners can invite|only add regular members/)).toBeVisible();
+  } else {
+    await poc.keyboard.press("Escape");
   }
   await expect(poc.getByText(`would-be-admin-${testInfo.repeatEachIndex}@example.test`)).toHaveCount(0);
 
@@ -152,9 +155,9 @@ test("upstream's Custom role that only manages all collections still opens the a
   await admin.getByRole("button", { name: "Invite member" }).click();
   const invite = admin.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(managerUser.email);
-  await invite.getByRole("radio", { name: /^Custom/ }).check();
+  await chooseRole(invite, "Custom");
   await invite.getByRole("checkbox", { name: "Manage all shared folders" }).check();
-  await invite.getByRole("button", { name: "Save" }).click();
+  await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
   await admin.goto("/#/msp");
   await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
@@ -163,7 +166,7 @@ test("upstream's Custom role that only manages all collections still opens the a
   const refused = refusedCalls(manager);
   await manager.goto(orgUrl);
   await expect(manager).toHaveURL(/#\/organizations\/[^/]+\/vault/);
-  await expect(manager.getByRole("button", { name: "New" })).toBeVisible();
+  await expect(manager.getByRole("button", { name: "Add", exact: true })).toBeVisible();
   expect(refused).toEqual([]);
 
   await managerContext.close();
@@ -196,9 +199,9 @@ test("a client's custom role that only views event logs opens the event log and 
   await admin.getByRole("button", { name: "Invite member" }).click();
   const invite = admin.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(viewerUser.email);
-  await invite.getByRole("radio", { name: /^Custom/ }).check();
+  await chooseRole(invite, "Custom");
   await invite.getByRole("checkbox", { name: /event logs/i }).check();
-  await invite.getByRole("button", { name: "Save" }).click();
+  await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
   await admin.goto("/#/msp");
   await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
@@ -248,10 +251,10 @@ test("a custom role that manages members and views event logs opens a member's e
   await admin.getByRole("button", { name: "Invite member" }).click();
   const invite = admin.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(pocUser.email);
-  await invite.getByRole("radio", { name: /^Custom/ }).check();
+  await chooseRole(invite, "Custom");
   await invite.getByRole("checkbox", { name: "Manage users" }).check();
   await invite.getByRole("checkbox", { name: /event logs/i }).check();
-  await invite.getByRole("button", { name: "Save" }).click();
+  await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
   await acceptRole(poc);
   await admin.goto("/#/msp");

@@ -3,7 +3,7 @@
 // saved. See docs/core.md, "Locking by policy".
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { signUp, webUserFor } from "./support/web";
+import { policyEditor, signUp, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text; the
  * last, since the one before can still be showing. */
@@ -17,7 +17,7 @@ async function openVaultLock(page: Page, org: string, state: "On" | "Off") {
   await page.goto("/#/vault");
   await page.goto(`${org}/settings/policies`);
   await page.getByRole("button", { name: new RegExp(`^Vault lock .* ${state}$`) }).click();
-  const dialog = page.getByRole("dialog");
+  const dialog = policyEditor(page);
   await expect(dialog.getByRole("radio", { name: /^After a time/ })).toBeVisible();
   return dialog;
 }
