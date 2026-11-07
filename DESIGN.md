@@ -1685,6 +1685,8 @@ Determinism rules:
 - No live network in tiers 1 and 2.
 - Each test gets a fresh database.
 - Wait on state, never on sleeps.
+- No retries: a flaky test of ours gets fixed. The one exception is upstream's own unit tests (a test file in a folder we haven't changed): when one fails in tier 1, it gets one more try, alone, and the run names it in a warning. A few of them fail now and then on a busy runner and never alone (upstream's "does not trust the device while the account remains locked", twice in November).
+- A browser's first start on a fresh runner (reading it from a disk the cloud fills in as it's read) is set up before a test and has its own time limit, so the test's own limit covers only what it checks.
 
 The maintainer gets a morning summary, with screenshots and video only for failures.
 
