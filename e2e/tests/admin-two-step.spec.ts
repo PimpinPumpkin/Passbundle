@@ -85,6 +85,15 @@ test("an admin without two-step login is taken to set it up, then signs in with 
   await admin.getByTestId("two-step-setup-authenticator").click();
   const key = (await admin.getByTestId("two-step-setup-key").innerText()).trim();
   expect(key).toMatch(/^[A-Z2-7]{32}$/);
+  // A wrong code says so in plain words: never the server's time or the
+  // address upstream's server puts in its answer.
+  const wrong = String((Number(totp(key)) + 500_000) % 1_000_000).padStart(6, "0");
+  await admin.getByTestId("two-step-setup-code").fill(wrong);
+  await admin.getByRole("button", { name: "Turn on" }).click();
+  const refused = admin.getByText(/That code didn't work\. Enter the newest code/);
+  await expect(refused).toBeVisible();
+  await expect(admin.getByText(/Server time|Invalid TOTP| IP: /)).toHaveCount(0);
+  await expect(admin.getByTestId("two-step-setup-authenticator-step")).toBeVisible();
   await admin.getByTestId("two-step-setup-code").fill(totp(key));
   await admin.getByRole("button", { name: "Turn on" }).click();
   await expect(admin.getByTestId("two-step-setup-done")).toBeVisible();

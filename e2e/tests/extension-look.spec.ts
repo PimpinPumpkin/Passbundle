@@ -139,7 +139,7 @@ test("the popup's own look: where the vault is, a calm ground, category chips, a
   );
 });
 
-test("sign-in goes only to the server shown: not with a blank or refused address, and the password step names it", async ({
+test("sign-in goes only to the server shown: not with a blank, refused, or unanswered address, and the password step names it", async ({
   context,
   extensionId,
 }) => {
@@ -178,6 +178,24 @@ test("sign-in goes only to the server shown: not with a blank or refused address
     await expect(popup.getByRole("alert")).toHaveText(why);
     await expect(continueButton).toBeDisabled();
     await email.press("Enter");
+    await expect(passwordField).toBeHidden();
+  }
+
+  // An address nothing answers at, or that isn't a server, says so under the
+  // field before anything is saved, rather than after the master password.
+  for (const [typed, why] of [
+    [
+      "vualt.example.com",
+      "Couldn't reach a server at that address. Check it for typos, and that you're online.",
+    ],
+    ["shop.example.test", `There's no ${brand.name} server at that address. Check it for typos.`],
+  ]) {
+    await address.fill(typed);
+    await address.press("Tab");
+    await expect(popup.getByRole("alert")).toHaveText(why);
+    await expect(address).toHaveAttribute("aria-invalid", "true");
+    await continueButton.click();
+    await expect(popup.getByRole("alert")).toHaveText(why);
     await expect(passwordField).toBeHidden();
   }
 
