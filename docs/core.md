@@ -248,7 +248,7 @@ Design, October 21, 2026. The desktop agent already unlocks the browser extensio
 - **Turning it off, and signing out,** send `keykeeper.biometric.remove`. That ends it for the extension too (it's one enrollment), and the app says so first.
 - **Memory:** the RSA key, the session key, and the user key in messages are wiped when dropped; none of them reaches Dart.
 - **Without the agent** (not installed, or quit from its tray) the option doesn't show.
-- **Platforms:** Windows first, where the agent's Windows Hello is built. macOS when the agent's Touch ID is (it waits on code signing). Linux has none yet.
+- **Platforms:** Windows first, where the agent's Windows Hello is built. macOS when the agent's Touch ID is (it waits on code signing). Linux has none yet. Until then, on the Mac and Linux, `pb_biometric_status` says `unsupported` (unless an agent says it can, as the test builds' stand-in does), and the app doesn't offer it at all: no Unlock group in Settings, no button on the lock screen, and "Confirm before approving" says it asks for the master password there ("With Windows Hello or your master password" on Windows).
 - **Code:** the core gets the protocol's client side and the peer check. The agent moved into `passbundle-apps` on October 21, 2026, so the core and the agent can share the peer check.
 - **Tests:**
   - The core's client against the protocol's vectors (`agent/tests/vectors/native-messaging.json`, in this same repo now). It opens every message and re-encrypts each, with its IV, to the identical string, and unwraps the session key with the vectors' RSA key. Upstream's crypto already checks the same vectors.
