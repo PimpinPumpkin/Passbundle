@@ -228,7 +228,7 @@ function layout({ meta, body, file }, route) {
       <a class="button primary small" href="/download/">Download</a>
     </div>
     <details class="menu">
-      <summary>Menu</summary>
+      <summary><span class="menu-word">Menu</span><svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16 M4 12h16 M4 17h16"/></svg></summary>
       <nav aria-label="Menu">
         ${links}${vault ? `\n        <a href="${vault}">Log in</a>` : ""}
         ${THEME_MENU_BUTTON}
