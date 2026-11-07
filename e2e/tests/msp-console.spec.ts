@@ -43,14 +43,14 @@ test("an MSP admin adds a client and a technician, and the technician gets in on
   await admin.getByRole("button", { name: "Add client" }).click();
   await expect(toast(admin, "Added Acme Dental")).toBeVisible();
   const client = admin.getByTestId("msp-client-Acme Dental");
-  await expect(client.getByRole("link", { name: "Open" })).toBeVisible();
+  await expect(client.getByRole("link", { name: "Admin console" })).toBeVisible();
 
   // The default policies (the Business preset), applied without building
   // any. Account recovery is on too (the API and mail tests check it), but the
   // server only shows it when it can send email, and this test server sends
   // none.
   await expect(client.getByTestId("msp-client-policies")).toHaveText("Defaults");
-  await client.getByRole("link", { name: "Open" }).click();
+  await client.getByRole("link", { name: "Admin console" }).click();
   await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
   const clientUrl = admin.url().replace(/\/members.*$/, "");
   await admin.goto(`${clientUrl}/settings/policies`);
@@ -167,7 +167,7 @@ test("an MSP admin adds a client and a technician, and the technician gets in on
   await tech.getByRole("link", { name: "MSP console" }).click();
   await expect(tech.getByTestId("msp-name")).toContainText("Technician");
   const techClient = tech.getByTestId("msp-client-Acme Dental");
-  await techClient.getByRole("link", { name: "Open" }).click();
+  await techClient.getByRole("link", { name: "Admin console" }).click();
   await expect(tech).toHaveURL(/#\/organizations\/[^/]+\/members/);
   await expect(tech.getByText(techUser.email).first()).toBeVisible();
 
@@ -179,6 +179,93 @@ test("an MSP admin adds a client and a technician, and the technician gets in on
 
   await techContext.close();
   await adminContext.close();
+});
+
+test("a client's actions say what they do, to the mouse, the keyboard, and screen readers, each on one line", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  await signUpWithAuthenticator(page, webUserFor("msp-actions", testInfo.repeatEachIndex));
+  await page.goto("/#/msp");
+  await page.getByRole("textbox", { name: "Your MSP's name" }).fill("Contoso IT");
+  await page.getByRole("button", { name: "Create MSP" }).click();
+  for (const name of ["Acme Dental", "Baker & Hale Law"]) {
+    await page.getByRole("textbox", { name: "New client's name" }).fill(name);
+    await page.getByRole("button", { name: "Add client" }).click();
+    await expect(toast(page, `Added ${name}`)).toBeVisible();
+  }
+  const row = page.getByTestId("msp-client-Acme Dental");
+
+  // In this order, named for what they open, with the client's name for
+  // screen readers, under a column header they can hear.
+  await expect(row.getByRole("cell").last().locator("a, button")).toHaveText([
+    "Admin console",
+    "Install command",
+    "Entra ID sync",
+  ]);
+  await expect(page.getByRole("columnheader", { name: "Actions" })).toHaveCount(1);
+  const actions = [
+    {
+      action: row.getByRole("link", { name: "Admin console for Acme Dental" }),
+      says: "Opens this client's admin console, with its members, policies, and settings.",
+    },
+    {
+      action: row.getByRole("button", { name: "Install command for Acme Dental" }),
+      says: `Shows the one-line command your RMM runs on this client's computers to install ${brand.name} and join their people to this client.`,
+    },
+    {
+      action: row.getByRole("link", { name: "Entra ID sync for Acme Dental" }),
+      says: "Opens this client's page for syncing its people from Microsoft Entra ID (SCIM).",
+    },
+  ];
+
+  // Screen readers hear what each one does.
+  for (const { action, says } of actions) {
+    await expect(action).toHaveAccessibleDescription(says);
+  }
+
+  // Pointing at one shows the same as a tooltip.
+  const tooltip = page.locator(".bit-tooltip-container[data-visible='true']").getByRole("tooltip");
+  for (const { action, says } of actions) {
+    await action.hover();
+    await expect(tooltip).toHaveText(says);
+  }
+  await page.mouse.move(0, 0);
+  await expect(tooltip).toHaveCount(0);
+
+  // So does moving onto one with the keyboard.
+  await actions[0].action.focus();
+  for (const { action, says } of actions.slice(1)) {
+    await page.keyboard.press("Tab");
+    await expect(action).toBeFocused();
+    await expect(tooltip).toHaveText(says);
+  }
+
+  // Each label stays whole, one under the other, and the table fits the
+  // console without scrolling sideways.
+  const table = page.locator("bit-table").filter({ has: row });
+  const lineHeight = await actions[0].action.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
+  let above = -Infinity;
+  for (const { action } of actions) {
+    const box = (await action.boundingBox())!;
+    expect(box.height).toBeLessThan(lineHeight * 1.5);
+    expect(box.y).toBeGreaterThan(above);
+    above = box.y;
+  }
+  const fits = () => table.evaluate((el) => el.scrollWidth <= el.clientWidth);
+  expect(await fits()).toBe(true);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  expect(await fits()).toBe(true);
+
+  // On a narrow screen it scrolls sideways instead, so the actions are still
+  // there to reach.
+  await page.setViewportSize({ width: 820, height: 900 });
+  await expect.poll(fits).toBe(false);
+  expect(await table.evaluate((el) => getComputedStyle(el).overflowX)).toBe("auto");
+  await actions[2].action.scrollIntoViewIfNeeded();
+  await expect(actions[2].action).toBeInViewport();
+  await actions[2].action.click();
+  await expect(page).toHaveURL(/#\/organizations\/[^/]+\/settings\/provisioning/);
 });
 
 test("a client's own owner sees its MSP on the Members page and removes it; the MSP's staff can't", async ({
@@ -200,7 +287,7 @@ test("a client's own owner sees its MSP on the Members page and removes it; the 
   await admin.getByRole("button", { name: "Create MSP" }).click();
   await admin.getByRole("textbox", { name: "New client's name" }).fill("Fabrikam Law");
   await admin.getByRole("button", { name: "Add client" }).click();
-  await admin.getByTestId("msp-client-Fabrikam Law").getByRole("link", { name: "Open" }).click();
+  await admin.getByTestId("msp-client-Fabrikam Law").getByRole("link", { name: "Admin console" }).click();
   await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
   const membersUrl = admin.url();
 

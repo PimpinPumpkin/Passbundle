@@ -46,7 +46,7 @@ test("an MSP admin gives a client's point of contact a custom role that manages 
   await admin.getByRole("button", { name: "Create MSP" }).click();
   await admin.getByRole("textbox", { name: "New client's name" }).fill("Fabrikam Dental");
   await admin.getByRole("button", { name: "Add client" }).click();
-  await admin.getByTestId("msp-client-Fabrikam Dental").getByRole("link", { name: "Open" }).click();
+  await admin.getByTestId("msp-client-Fabrikam Dental").getByRole("link", { name: "Admin console" }).click();
   await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
   const orgUrl = admin.url().replace(/\/members.*$/, "");
 
@@ -145,7 +145,7 @@ test("upstream's Custom role that only manages all collections still opens the a
   await admin.getByRole("button", { name: "Create MSP" }).click();
   await admin.getByRole("textbox", { name: "New client's name" }).fill("Contoso Dental");
   await admin.getByRole("button", { name: "Add client" }).click();
-  await admin.getByTestId("msp-client-Contoso Dental").getByRole("link", { name: "Open" }).click();
+  await admin.getByTestId("msp-client-Contoso Dental").getByRole("link", { name: "Admin console" }).click();
   await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
   const orgUrl = admin.url().replace(/\/members.*$/, "");
 
@@ -188,7 +188,7 @@ test("a client's custom role that only views event logs opens the event log and 
   await admin.getByRole("button", { name: "Create MSP" }).click();
   await admin.getByRole("textbox", { name: "New client's name" }).fill("Northwind Dental");
   await admin.getByRole("button", { name: "Add client" }).click();
-  await admin.getByTestId("msp-client-Northwind Dental").getByRole("link", { name: "Open" }).click();
+  await admin.getByTestId("msp-client-Northwind Dental").getByRole("link", { name: "Admin console" }).click();
   await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
   const orgUrl = admin.url().replace(/\/members.*$/, "");
 
@@ -239,7 +239,7 @@ test("a custom role that manages members and views event logs opens a member's e
   await admin.getByRole("button", { name: "Create MSP" }).click();
   await admin.getByRole("textbox", { name: "New client's name" }).fill("Tailspin Dental");
   await admin.getByRole("button", { name: "Add client" }).click();
-  await admin.getByTestId("msp-client-Tailspin Dental").getByRole("link", { name: "Open" }).click();
+  await admin.getByTestId("msp-client-Tailspin Dental").getByRole("link", { name: "Admin console" }).click();
   await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
   const orgUrl = admin.url().replace(/\/members.*$/, "");
 

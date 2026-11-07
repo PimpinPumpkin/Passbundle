@@ -116,7 +116,7 @@ test("an MSP's joining default reaches its clients, a client can have its own, a
   await admin.getByRole("button", { name: "Add client" }).click();
   await expect(toast(admin, "Added Acme Dental")).toBeVisible();
   const client = admin.getByTestId("msp-client-Acme Dental");
-  await client.getByRole("link", { name: "Open" }).click();
+  await client.getByRole("link", { name: "Admin console" }).click();
   await admin.waitForURL(/#\/organizations\/[0-9a-f-]{36}/);
   const clientId = /organizations\/([0-9a-f-]{36})/.exec(admin.url())![1];
 

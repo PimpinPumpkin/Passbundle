@@ -149,7 +149,7 @@ async function addClient(page: Page, name: string): Promise<string> {
   await page.goto("/#/msp");
   await page.getByRole("textbox", { name: "New client's name" }).fill(name);
   await page.getByRole("button", { name: "Add client" }).click();
-  const open = page.getByTestId(`msp-client-${name}`).getByRole("link", { name: "Open" });
+  const open = page.getByTestId(`msp-client-${name}`).getByRole("link", { name: "Admin console" });
   await open.click();
   await expect(page).toHaveURL(/#\/organizations\/[^/]+\/members/);
   return page.url().replace(/\/members.*$/, "");

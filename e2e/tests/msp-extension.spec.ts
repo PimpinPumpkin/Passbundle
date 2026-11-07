@@ -88,7 +88,7 @@ test("with no vault tab open, an MSP admin's extension confirms someone invited 
     privateKeyEncoding: { type: "pkcs8", format: "der" },
   });
   const person = await api.account("FrontDesk", undefined, publicKey.toString("base64"));
-  await web.getByTestId("msp-client-Acme Dental").getByRole("link", { name: "Open" }).click();
+  await web.getByTestId("msp-client-Acme Dental").getByRole("link", { name: "Admin console" }).click();
   await expect(web).toHaveURL(/#\/organizations\/[^/]+\/members/);
   const orgId = /#\/organizations\/([^/]+)\//.exec(web.url())![1];
   await web.getByRole("button", { name: "Invite member" }).click();

@@ -124,7 +124,7 @@ test("an MSP admin recovers the account of someone who joined through the instal
   await admin.goto("/#/msp");
   await admin
     .getByTestId("msp-client-Recovery Dental")
-    .getByRole("link", { name: "Open" })
+    .getByRole("link", { name: "Admin console" })
     .click();
   await confirmMember(admin, person.email);
 
