@@ -24,6 +24,7 @@ Design, October 21, 2026. The phone apps are the desktop app's Flutter screens a
 | Master password, master key, private key, organization keys, anything decrypted | memory only, while unlocked | memory only, while unlocked |
 | Browsers the person trusted for autofill (package names and certificate hashes) | the app's no-backup files folder | (none: iOS says which website) |
 
+- **Several accounts** (DESIGN.md, "Several accounts in the apps"): each account has its own folder in the app's (`accounts/<id>`), its own refresh token, and its own biometric key: on Android a Keystore key named `passbundle-biometric-<id>` and `biometric-<id>.sealed`, on iOS the Keychain item `user-key-<id>`. The account's id is made on the phone and says nothing about the account.
 - **Backups:** the app's backup rules leave its files out of Android's backups (auto-backup would include them otherwise), Keystore keys never leave the phone, and the iOS Keychain items are "this device only". The kept sync is still encrypted, so a backup of it alone would open nothing anyway.
 - **"Never lock"** (keeping the user key without biometrics) isn't offered, as on the desktop.
 
@@ -47,7 +48,7 @@ The phone's own fingerprint or face unlock, standing in for the desktop agent's 
 - **Unlocking:** the lock screen offers it when it's on. Android asks for the biometric and decrypts the user key with the Keystore key; iOS reads the Keychain item, which asks for Face ID or Touch ID. The core opens the kept vault with the user key, without the KDF, as with Windows Hello.
 - **The key goes from the OS's code to the core directly:** Kotlin or Swift hands the bytes to the core's native function and zeroes them; it never passes through Dart.
 - **Someone adds a fingerprint or face:** the OS invalidates the key, the app can't decrypt, it turns biometric unlock off and asks for the master password once. The same if the account's keys change (the user key no longer opens the vault), as on the desktop.
-- **Signing out and turning it off** delete the key and the kept user key.
+- **Signing out and turning it off** delete the key and the kept user key: the account's own, with several accounts on the phone, each with its own key (DESIGN.md, "Several accounts in the apps"). The core names the account in every call, and the key a prompt opens goes back to that account's unlock only.
 - **The master password always works.**
 
 ## Copying

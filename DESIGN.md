@@ -1143,6 +1143,80 @@ PassBundle's windows stay out of screenshots, screen recordings, and screen shar
 - **What it isn't:** a guarantee. It keeps the window out of captures that go through the OS's own capture, as screenshots, recording, and screen sharing apps do; a program that reads the screen some other way, or a camera, still can.
 - **Tests:** the window tests check the window is kept out by default and taken once allowed (Windows' display affinity, the Mac window server's sharing state), and the app's tests check the switch. CI's screenshots come from builds with the core's test hooks, which allow capture with `PB_ALLOW_SCREENSHOTS=1`; a release's core can't read it, and the release jobs check the name isn't in it.
 
+## Several accounts in the apps
+
+People with a work account and a personal one want both in one app, the way 1Password shows every account together. They can't merge them: the Business preset's single-organization policy keeps a work account to one company, and account recovery lets the company's admins reset its master password, so personal passwords belong in an account of their own. The browser extension (upstream's) already switches between up to five accounts. The apps now do too.
+
+**Status (November 6, 2026):** part 1 built in passbundle-apps' `accounts` branch: several accounts signed in side by side, switching, adding, and signing out of one. Part 2, next: an "All accounts" place listing every unlocked account's items with each account's name and color, Android's autofill and passkeys offering items from every unlocked account, and new items asking which account.
+
+- **Up to five accounts** on a device, as the extension allows. The account menu, from the email at the foot of the menu on a computer (and on a phone, Settings' "Accounts" and the vault header's account button), lists them (the one shown marked, a locked one saying so), switches to another, adds one, and signs out of the one shown. A locked account's screen has "Switch account" too.
+- **Adding one** is signing in, as before: the same server choice (PassBundle's, an organization's managed server, or "Self-hosted?"), two-step login, and making an account. Signing in to an account that's here already (the same server and email) signs it in again in its own place, as "Sign in again" does. At five, adding waits for signing out of one.
+- **Each account is its own:** its vault, keys, session, settings (when to lock, confirming before approving a sign-in, the generator's), lock state and timer, biometric unlock, its organizations' policies, and sign-in requests. Switching shows another account as it is, unlocked or locked; the one shown before stays as it was. Lock locks the one shown. Signing out of one leaves the others.
+- **What's the device's:** how the app looks (website icons), whether screenshots are allowed, updates, browsers trusted for autofill, and the offers to turn on biometric unlock and autofill ("Not now" holds for every account).
+
+### Storage
+
+In the app's folder (`docs/core.md`, "What's kept where"), as before 0700 with each file 0600, written whole:
+
+| What | Where |
+|---|---|
+| The accounts, in the order they were added; the one shown last; this install's device identifier; the server and email last signed in to or out of (for the sign-in screen) | `accounts.json`. Nothing secret. |
+| Each account's server, email, KDF settings, kept sync, and choices | `accounts/<id>/` (`settings.json`, `sync.json`, `preferences.json`, `generator.json`, `generator-synced.json`, `approvals.json`), one folder each |
+| What's the device's | the app's folder itself, as before (`appearance.json`, `screenshots.json`, the updater's) |
+| Each account's refresh token | the OS's secret store, one entry per account, named by its server and email as before (Android: `tokens/<hash of both>.sealed`) |
+
+- **`<id>`** is made on the device: 32 random hex digits that say nothing about the account. The core builds a path from an id only when it's one of these, and only inside `accounts/`.
+- **One device identifier per install,** the same for every account, as upstream's apps have it. An account signed out and in again is the same device to its server (no new-device email, and a remembered two-step login stays remembered), and the server keeps devices by device and account (Vaultwarden's two-part key), so two accounts on one server don't collide. The cost: two accounts on the same server look like one device to that server's operator. Two servers each see only their own account. Decided against: an identifier per account, which would make every sign-out and sign-in a new device.
+- **Recovering from a stop part way:** at start, a folder with a kept vault that `accounts.json` doesn't list (a sign-in that finished as the app stopped) is kept; a folder without one (an account signed out of, or a sign-in given up) is deleted. `accounts.json` holds the order and the account shown; the folders are what count.
+- **Carrying over an install from before:** its one account's files in the app's folder move into an account folder of their own (`settings.json` last), and it's the account shown. One that was signed out leaves only its server and email for the sign-in screen. On a computer, biometric unlock carries over as it is: the desktop agent keeps it by the account's id on its server. On a phone, the one key kept before goes (the Keystore key and sealed file, or the Keychain item), and the app offers biometric unlock again after the next unlock with the master password. There are no users yet, so that's the simple way.
+
+### What's in memory, when
+
+- **Every account signed in** has its own `App` in the core (`core/src/accounts.rs`): its server, email, KDF settings, choices, and, from its kept sync, its organizations' policies. No key while it's locked.
+- **An unlocked account** holds its own keys (user key, private key, organization keys), its decrypted items, its session (access and refresh token), its websites' icons, an item's history, its listed sign-in requests, and its last confirmation, as one account did before. With two accounts unlocked, two sets of keys are in memory; locking one wipes its own (`zeroize`) and leaves the other's.
+- **Nothing decrypted is written,** as before.
+- **The screens** show one account at a time, and every call about an account names it (below).
+
+### Locking
+
+- **Each account locks by its own choices and its own organizations' policy:** its wait, "Lock when the computer sleeps" (or the phone locks), "Immediately", and a policy's longest wait, lock on system lock, or sign out. The app asks the core every two seconds while any account is unlocked, and the core checks each.
+- **Using the app** starts the shown account's wait again; the others keep theirs, as the extension counts activity for its active account. On a computer the OS's idle time counts as before, so working in other apps keeps every account's wait from running out.
+- **Leaving the screen, the computer sleeping, a phone's screen going off,** and on Android autofill or a passkey handing back its answer: each account locks if its own choice or policy says so.
+- **A policy's "sign out"** signs out of that account only, and takes it off the device.
+- **Switching** never unlocks anything: an account that's locked shows its lock screen.
+
+### Biometric keys, per account
+
+- **On a computer,** the desktop agent keeps each account's key by the account's id on its server, as it does for the browser extension: each account turns it on for itself (one Windows Hello or Touch ID prompt each), unlocks with its own, and signing out of one removes only its own. The extension and the app still share one enrollment for the same account.
+- **On Android,** each account has its own Keystore key (`passbundle-biometric-<id>`: AES-256-GCM, strong biometrics for every use, voided when a fingerprint or face is added, in StrongBox where there is one) and its own sealed user key (`biometric-<id>.sealed` in the app's files).
+- **On iOS,** each account has its own Keychain item (`user-key-<id>`), readable only after the current Face ID or Touch ID, this device only.
+- **The account is named in every call** between the core and Kotlin or Swift: sealing takes that account's user key, and the key a prompt opens goes back to that account's unlock (or its approval), never another's. A key that doesn't open that account's vault turns off that account's biometric unlock only.
+
+### What can never cross between accounts
+
+- **A key:** one account's keys open only its own vault. No call hands one account's key to another, and the core opens a vault only with its own account's master password or its own biometric key.
+- **An item:** lists, search, revealing, copying, editing, saving, trashing, attachments, history, passkeys, and autofill are each account's own. Every call across the bridge carries the id of the account the screens showed when it was made (`Core.account` in `app/lib/core.dart`), so a slow call, a save from an editor, or an icon's fetch lands on that account even if the screens switched meanwhile. Switching closes whatever was open over the vault, as locking does. A call naming an account that isn't here sees an app with nothing in it, which keeps nothing.
+- **A server:** each account talks only to its own server, with its own session. Websites' icons for an account's logins come from that account's server, so a personal server never learns the sites of the work account's logins.
+- **A policy:** an organization's policies (locking, the password generator, "Remove Unlock with PIN") apply to the account in it only.
+- **A sign-in request:** while a vault is shown, the app asks for every unlocked account's requests, and each is listed, confirmed (that account's biometric unlock or master password), and approved for its own account, with that account's key, wrapped to the request's public key as before. The prompt names the account it's for, and Settings' list names another account's. A listing asked for before a switch is dropped.
+- **The same account twice:** a new account the server says is one here already (the same id on its server, under another email or server) is refused, with nothing kept of it: the two would share the desktop agent's key. Sign out of the first one, then add it.
+- **An account's id, pinned:** once an account's vault is on the device, a sync that answers with another account's vault (another id) is refused, with nothing of it kept and the session dropped. A server can't turn one account here into another, so the desktop agent's key for one account can't be asked for, or replaced, through another, even by a hostile server. This holds with one account too: before, a server could have answered a session with another account's vault.
+
+### Not in this
+
+- **The browser extension filling from several accounts at once.** Upstream's design fills from the active account only; ours keeps that for now. Later.
+- **Sign-in requests for a locked account:** they show once it's unlocked, as with one account. While no vault is shown (the account shown is locked), none are asked for.
+- **Part 2** (above).
+
+### Tests
+
+- **Core unit tests** (`core/src/accounts.rs`, on two vaults with keys of their own): two accounts unlock with their own master passwords only, show only their own items, and one's user key doesn't open the other; locking one leaves the other; each keeps its own choices in its own folder and locks on its own time (one minute and fifteen, made-up readings) and by its own sleep choice; signing out of one removes its folder and leaves the other unlocked and shown; a policy's "sign out" takes only its account off; carrying over an install from before (files moved, the device's left, the same choices and device identifier, done once) and one that was signed out; a sign-in that finished as the app stopped kept, one given up deleted; switching kept across a restart; at five, a new sign-in refused while one that's here still signs in again; the same server and email, as typed, routed to the account; a new account with an id already here dropped with nothing left; giving up adding one; a dropped sign-in's refresh token forgotten at start, and only its own; the device's own choices shared; a sync for another account than the one kept refused (`core/src/app.rs`).
+- **The core against a real server** (`core/tests/server.rs`): a work and a personal account signed in side by side, each its own session and items, one install's device identifier, locking one while the other syncs, signing in to the first again keeping its place, signing out of one forgetting only its refresh token, and a restart opening the one left, locked.
+- **Through a real agent** (`core/tests/agent.rs`): each account turns on Windows Hello or Touch ID for itself, unlocks with its own, and signing out of one turns off only its own.
+- **The app** (`app/test/sign_in_requests_test.dart`): another account's sign-in request names that account, and is confirmed and answered for it. (`app/test/accounts_test.dart`): the account menu switches between two accounts, each unlocked and locked on its own and showing only its own items; the lock screen's "Switch account"; adding goes to the sign-in screen and back to the account as it was; signing out of one leaves the other; at five, adding can't be chosen; a phone's Settings and the vault header's account button; an install from before carried over. Every other app test opens its sample as an install from before, so each goes through the carry-over too.
+- **Android and iOS** (`app/integration_test/phone_test.dart`, `autofill_setup_test.dart`): biometric unlock sealed under the account's own id, removed with the account, and autofill and passkeys filling from the account they name.
+- No key derivation or encryption changed, so no new test vectors.
+
 ## Staying unlocked across a reload
 
 Upstream's web vault locks on every reload, whatever the vault timeout: it keeps the user key only in the page's memory. The owner found that wearing ("I press refresh and type my master password again"), and chose (2026-10-26) to keep a tab unlocked across a reload, within its timeout, with a key the server holds. A security review on 2026-10-27 tightened it (reopened tabs, Back, its own setting, policies, limits), and a second review tightened it again (the leaving beacon, "On browser refresh" under policies, other tabs).
