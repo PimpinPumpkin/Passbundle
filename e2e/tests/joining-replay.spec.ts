@@ -156,7 +156,7 @@ test("an older joining setting the server shows again, with its real seal, lets 
   await owner.getByRole("button", { name: "Invite member" }).click();
   const invite = owner.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(person.email);
-  await invite.getByRole("button", { name: "Save" }).click();
+  await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
 
   // The owner on another device, signed in after the change: its background
