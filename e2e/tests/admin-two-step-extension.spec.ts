@@ -34,15 +34,15 @@ test("the extension sends an owner who hasn't set up two-step login to the web v
   // Signing in as logInPopup does, up to the answer.
   const popup = await openPopup(context, extensionId);
   await expect(async () => {
-    await popup.getByRole("button", { name: "Log in" }).click();
+    await popup.getByRole("button", { name: "Sign in" }).click();
     await expect(popup).toHaveURL(/#\/login/, { timeout: 1000 });
   }).toPass();
-  await popup.getByRole("button", { name: "My own server" }).click();
+  await popup.getByRole("button", { name: "Self-hosted" }).click();
   await popup.getByRole("textbox", { name: "Server address" }).fill(serverUrl);
   await popup.getByLabel(/Email address/).fill(user.email);
   await popup.getByRole("button", { name: "Continue" }).click();
   await popup.getByRole("textbox", { name: /Master password/ }).fill(user.password);
-  await popup.getByRole("button", { name: "Log in", exact: true }).click();
+  await popup.getByRole("button", { name: "Sign in", exact: true }).click();
   const dialog = popup.getByRole("dialog", { name: /Set up two-step login/ });
   await expect(dialog).toBeVisible({ timeout: 30_000 });
   await expect(dialog).toContainText("Two-step login is required for your role by Contoso Clinic");

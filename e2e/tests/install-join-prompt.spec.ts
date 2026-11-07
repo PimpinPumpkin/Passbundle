@@ -90,7 +90,7 @@ test("the install command's join asks first; Not now joins nothing, and a token 
   expect(await notices()).toEqual([
     [
       "Sign in to vault.elsewhere.example.test to join your organization",
-      `Your IT set up this browser for vault.elsewhere.example.test, but you're signed in to ${signedInTo}. To join your organization, sign in to vault.elsewhere.example.test instead.`,
+      `Your IT admin set up this browser for vault.elsewhere.example.test, but you're signed in to ${signedInTo}. To join your organization, sign in to vault.elsewhere.example.test instead.`,
     ],
   ]);
   expect(await run(elsewhere)).toBe("other-server");
@@ -101,7 +101,7 @@ test("the install command's join asks first; Not now joins nothing, and a token 
   let prompt: Page | undefined;
   await expect.poll(() => (prompt = prompts()[0])).toBeTruthy();
   await expect(prompt!.getByTestId("keykeeper-join")).toContainText(
-    "Your IT set up this browser so you can join Prompt Dental.",
+    "Your IT admin set up this browser so you can join Prompt Dental.",
   );
   await expect(prompt!.getByTestId("keykeeper-join-later")).toHaveText(
     "Not now asks again in 7 days.",

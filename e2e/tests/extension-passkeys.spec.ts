@@ -27,7 +27,7 @@ async function signIn(context: BrowserContext, page: Page) {
   const choosing = context.waitForEvent("page");
   await page.getByRole("button", { name: "Sign in with a passkey" }).click();
   const choose = await choosing;
-  await expect(choose.getByRole("heading", { name: "Log in with passkey?" })).toBeVisible();
+  await expect(choose.getByRole("heading", { name: "Sign in with a passkey?" })).toBeVisible();
   await answerAndClose(choose, choose.getByRole("button", { name: /Passkeys Example/ }));
   await expect(page.getByRole("status")).toHaveText("Signed in with a passkey, signature checked");
 }

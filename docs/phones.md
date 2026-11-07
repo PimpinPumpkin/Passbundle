@@ -122,7 +122,7 @@ The core signs and makes passkeys (`docs/core.md`, "Passkeys"); each OS asks for
 
 ## Approving a sign-in
 
-The same as on a computer (`docs/core.md`, "Approving a sign-in"; DESIGN.md, "Approving a sign-in from another device"): someone choosing "Log in with device" on the web vault or in the browser extension approves it on the phone, after comparing the fingerprint phrase.
+The same as on a computer (`docs/core.md`, "Approving a sign-in"; DESIGN.md, "Approving a sign-in from another device"): someone choosing "Sign in with a device" on the web vault or in the browser extension approves it on the phone, after comparing the fingerprint phrase.
 
 - **When the phone shows a request:** while PassBundle is open and unlocked, it asks the server every 10 seconds, and shows each new request once. When it opens and unlocks, it asks at once, so a request made while it was closed shows then (after the offer to unlock with a fingerprint, if that comes first). Settings lists every request waiting.
 - **Not while it's closed:** a notice on a closed phone needs push notifications (APNs on iOS, FCM or UnifiedPush on Android), and those wait on PassBundle's own push service, which doesn't exist yet. Until then, someone signing in with a device opens PassBundle on the phone to see it. The server already sends upstream's notice to push when it's set up for that, so it's the delivery that's missing.

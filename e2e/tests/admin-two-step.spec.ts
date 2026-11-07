@@ -17,7 +17,7 @@ async function enterPassword(page: Page, user: WebUser) {
   await page.getByLabel(/Email address/).fill(user.email);
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("textbox", { name: /Master password/ }).fill(user.password);
-  await page.getByRole("button", { name: "Log in", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
 }
 
 test("an admin without two-step login is taken to set it up, then signs in with it", async ({
@@ -97,7 +97,7 @@ test("an admin without two-step login is taken to set it up, then signs in with 
   await expect(admin.getByLabel(/Email address/)).toHaveValue(adminUser.email);
   await admin.getByRole("button", { name: "Continue" }).click();
   await admin.getByRole("textbox", { name: /Master password/ }).fill(adminUser.password);
-  await admin.getByRole("button", { name: "Log in", exact: true }).click();
+  await admin.getByRole("button", { name: "Sign in", exact: true }).click();
   await admin.waitForURL(/#\/2fa/);
   await admin.getByRole("textbox", { name: /Verification code/ }).fill(totp(key, Date.now() + 30_000));
   await admin.getByRole("button", { name: "Continue" }).click();

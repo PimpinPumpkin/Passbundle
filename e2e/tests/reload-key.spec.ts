@@ -54,7 +54,7 @@ async function logIn(page: Page, user: WebUser) {
   await page.getByLabel(/Email address/).fill(user.email);
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("textbox", { name: /Master password/ }).fill(user.password);
-  await page.getByRole("button", { name: "Log in", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expectUnlocked(page);
 }
 
@@ -348,7 +348,7 @@ test("Back asks with the back-forward cache on, too", async ({}, testInfo) => {
   }
 });
 
-test("Log out from the account menu forgets the tab's R first", async ({ context, page }, testInfo) => {
+test("Sign out from the account menu forgets the tab's R first", async ({ context, page }, testInfo) => {
   test.setTimeout(120_000);
   const sent = watch(page);
   await signUp(page, webUserFor("reload-log-out-menu", testInfo.repeatEachIndex));
@@ -356,7 +356,7 @@ test("Log out from the account menu forgets the tab's R first", async ({ context
   const { token, tabId } = await tabSecrets(page);
 
   await page.locator('button[aria-haspopup="menu"]:has(bit-avatar)').first().click();
-  await page.getByRole("menuitem", { name: "Log out" }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
   await expect(page.getByLabel(/Email address/)).toBeVisible({ timeout: 30_000 });
   expect(sent.forgotten).toEqual([tabId]);
   await expect.poll(() => reloadCookie(context, tabId)).toBeUndefined();
@@ -456,7 +456,7 @@ test("On browser refresh keeps asking at each reload", async ({ page }, testInfo
   expect(sent.kept).toHaveLength(1);
 });
 
-test("with the Log out action, a reload signs out, as before", async ({ page }, testInfo) => {
+test("with the Sign out action, a reload signs out, as before", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const sent = watch(page);
   const user = webUserFor("reload-log-out", testInfo.repeatEachIndex);
@@ -464,7 +464,7 @@ test("with the Log out action, a reload signs out, as before", async ({ page }, 
   await expect.poll(() => sent.kept.length).toBe(1);
 
   await sessionTimeout(page);
-  await choose(page, "Timeout action", "Log out");
+  await choose(page, "Timeout action", "Sign out");
   await page.getByRole("dialog").getByRole("button", { name: "Yes" }).click();
   await expect.poll(() => sent.forgotten).toEqual([sent.kept[0].tabId]);
 
