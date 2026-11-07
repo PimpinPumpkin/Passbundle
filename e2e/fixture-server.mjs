@@ -28,13 +28,11 @@ const server = https.createServer({ cert: fs.readFileSync(cert), key: fs.readFil
   if (!file.startsWith(root) || !fs.existsSync(file)) return res.writeHead(404).end("not found");
   req.resume();
   req.on("end", () => {
-    // Real sites take a while to answer a sign-in. An instant answer races the
-    // extension's own messages and it drops the prompt (see DESIGN.md).
-    const delay = req.method === "POST" ? 300 : 0;
-    setTimeout(() => {
-      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      res.end(fs.readFileSync(file));
-    }, delay);
+    // Every answer comes at once, sign-ins too, as from a fast site. The save
+    // prompt must show up all the same (DESIGN.md, "Missed save prompts on
+    // fast sites").
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(fs.readFileSync(file));
   });
 });
 server.listen(Number(fixturePort), "127.0.0.1");
