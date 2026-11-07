@@ -99,6 +99,8 @@ export async function addLogin(
     password: string;
     uri: string;
     customFields?: Record<string, string>;
+    /** Asks for the master password before it fills or shows its secrets. */
+    reprompt?: boolean;
   },
 ) {
   await newItem(web, "Login");
@@ -114,6 +116,9 @@ export async function addLogin(
     await addField.getByRole("button", { name: "Add", exact: true }).click();
     await expect(addField).toBeHidden();
     await dialog.getByRole("textbox", { name: label, exact: true }).fill(value);
+  }
+  if (item.reprompt) {
+    await dialog.getByRole("checkbox", { name: "Master password re-prompt" }).check();
   }
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog).toBeHidden();

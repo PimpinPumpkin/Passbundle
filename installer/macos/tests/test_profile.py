@@ -140,6 +140,15 @@ for args, why in [
     (["--join-secret", TOKEN + "x"], "a join secret of the wrong shape"),
     (["--browsers", "firefox"], "a browser it doesn't manage"),
     (["--surprise"], "an option it doesn't have"),
+    # A line break or other control character. grep checks line by line, so each
+    # address, token, and secret here has a line that would pass alone.
+    (["--server-url", "https://vault.example.test\n</string><key>x</key><string>"], "a server address with a line break in it"),
+    (["--server-url", "https://x.test\r\nhttps://vault.example.test"], "a server address with a carriage return and line break in it"),
+    (["--enrollment-token", TOKEN + "\n</string><key>x</key><string>"], "an enrollment token with a line break in it"),
+    (["--join-secret", "x\n" + JOIN], "a join secret with a line break in it"),
+    (["--org-key", ORG_KEY + "\n"], "an organization key fingerprint with a line break after it"),
+    (["--browsers", "chrome\nedge"], "a browser list with a line break in it"),
+    (["--browsers", "chrome\tedge"], "a browser list with a tab in it"),
 ]:
     run = make(*args)
     check(f"refuses {why}", run.returncode != 0 and run.stdout == "")

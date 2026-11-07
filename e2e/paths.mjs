@@ -57,7 +57,9 @@ export const brand = JSON.parse(fs.readFileSync(paths.brand, "utf8"));
 // other hostname except the test server fails to resolve. No live network.
 // airfrance.com goes to the fixture server too: it's a site with published
 // password rules (site-password-rules.spec.ts), and nothing reaches the real one.
-export const hostResolverRules = `--host-resolver-rules=MAP *.example.test 127.0.0.1:${fixturePort}, MAP www.airfrance.com 127.0.0.1:${fixturePort}, MAP * ~NOTFOUND, EXCLUDE 127.0.0.1`;
+// So does *.elsewhere.test, a second site (another base domain), where a
+// redirect from an example.test page lands (open-and-fill.spec.ts).
+export const hostResolverRules = `--host-resolver-rules=MAP *.example.test 127.0.0.1:${fixturePort}, MAP *.elsewhere.test 127.0.0.1:${fixturePort}, MAP www.airfrance.com 127.0.0.1:${fixturePort}, MAP * ~NOTFOUND, EXCLUDE 127.0.0.1`;
 
 // Chromium flag for the website's screenshots (site-shots/): the hosted
 // service's name goes to the local test server, so screens and install

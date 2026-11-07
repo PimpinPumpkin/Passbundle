@@ -51,6 +51,7 @@ Checked October 23, 2026; the PassBundle column, the gaps list, and the rows bel
 | Fixes for sites that fill badly | Fill assist (extension 2026.6): curated rules, a policy to turn it on, and an org's own rules (2026.9) | Not found in public docs | **Built** | Opt-in shared site fixes, applied on a server once 3 people agree; MSPs can apply their staff's fixes to every client; "Report a problem with this site". The curated list we ship is next. | [bw-fillassist] |
 | One-time codes | Fill and auto-copy (codes need Premium or a paid org) | Fill after login and auto-copy, every plan | **Built** | Inherited in the extension (our server gives every account those features). Our apps show and copy codes; the phones don't fill them yet. | [bw-totp] [op-otp] |
 | Cards and identities | Yes, extension; Android card fill since 2025.8 | Yes, browsers; Android in Chrome and Brave | **Partly** | The extension, inherited. Our phone apps fill logins only. | [bw-fill] [bw-2605] [op-cards] [op-android] |
+| Open a login's site and fill it | Launch opens the site; filling it takes another click, or fill on page load (off by default) | Open & Fill, from the extension's list | **Built** | Open and fill: the open button on a login opens its site in a new tab and fills that tab once, only on that site, within a minute, never submitting (DESIGN.md, "Open and fill"). | [bw-fill] [op-save-fill] |
 | Fill on page load and auto-submit | Fill on page load, off by default, with a policy | "Sign in automatically after autofill", with a Business policy | **Partly** | Fill on page load is inherited in the extension; its policy isn't supported by our server. | [bw-fill] [op-policies] |
 | Website matching options | Six: base domain, host, starts with, regular expression, exact, never; policy for the default | Three: anywhere on the site, exact host, never | **Built** | Inherited, with the default match policy. Our Android app offers domain, host, and never (Android gives only the domain). | [bw-uri] [op-behavior] |
 | Passkeys in the browser | Yes | Yes | **Built** | Make and sign in, tested end to end, including from a second signed-in browser. The extension still uses upstream's AAGUID. | [bw-passkeys] [op-passkeys] |
@@ -355,6 +356,7 @@ Bitwarden:
 1Password:
 
 - `op-categories` Item categories: <https://support.1password.com/item-categories/>
+- `op-save-fill` Save and fill passwords in your browser: <https://support.1password.com/save-fill-passwords/>
 - `op-passkeys` Save and use passkeys: <https://support.1password.com/save-use-passkeys/>
 - `op-fields` Custom fields: <https://support.1password.com/custom-fields/>
 - `op-templates-forum` Custom item templates (community): <https://www.1password.community/1password-at-home-31/custom-item-templates-23902>
@@ -503,6 +505,7 @@ Bitwarden:
 [bw-pricing]: https://bitwarden.com/pricing/
 [bw-pricing-biz]: https://bitwarden.com/pricing/business/
 [op-categories]: https://support.1password.com/item-categories/
+[op-save-fill]: https://support.1password.com/save-fill-passwords/
 [op-passkeys]: https://support.1password.com/save-use-passkeys/
 [op-fields]: https://support.1password.com/custom-fields/
 [op-templates-forum]: https://www.1password.community/1password-at-home-31/custom-item-templates-23902
