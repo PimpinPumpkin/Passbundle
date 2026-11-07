@@ -77,6 +77,14 @@ webTest("the web vault walks someone through importing from their browser", asyn
   await guided.getByTestId("browser-import-file").setInputFiles(file("notes.csv", "just some notes"));
   await guided.getByRole("button", { name: "Import", exact: true }).click();
   await expect(guided.getByTestId("browser-import-error")).toContainText("doesn't look like a Google Chrome export");
+  // An export with no passwords in it says so, rather than that it isn't one.
+  await guided
+    .getByTestId("browser-import-file")
+    .setInputFiles(file("Chrome Passwords.csv", "name,url,username,password,note\n"));
+  await guided.getByRole("button", { name: "Import", exact: true }).click();
+  await expect(guided.getByTestId("browser-import-error")).toContainText(
+    "That export has no passwords in it. If Google Chrome has saved passwords, export again",
+  );
 
   await guided.getByTestId("browser-import-file").setInputFiles(file("Chrome Passwords.csv", chromeExport));
   await guided.getByRole("button", { name: "Import", exact: true }).click();

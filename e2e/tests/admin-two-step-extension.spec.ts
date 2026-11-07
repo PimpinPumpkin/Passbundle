@@ -27,7 +27,14 @@ test("the extension sends an owner who hasn't set up two-step login to the web v
   await card.getByRole("checkbox", { name: "Require two-step login for admins" }).check();
   await card.getByRole("button", { name: "Save" }).click();
   await confirmWithPassword(web, user.password);
-  await web.goto(`${org}/members`);
+  // The server's word can sign the page out before this navigation finishes,
+  // which Playwright reports as the navigation interrupted: either way, it
+  // ends at the sign-in page.
+  await web.goto(`${org}/members`).catch((e: unknown) => {
+    if (!String(e).includes("interrupted by another navigation")) {
+      throw e;
+    }
+  });
   await web.waitForURL(/#\/login/);
   await web.close();
 

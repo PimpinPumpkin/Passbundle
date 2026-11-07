@@ -114,7 +114,9 @@ test("an MSP console that can't load says why, with Try again, and never offers 
   await page.goto("/#/msp");
   const error = page.getByTestId("msp-load-error");
   await expect(error).toContainText("Couldn't open the MSP console");
-  await expect(error).toContainText("This browser couldn't reach the server.");
+  await expect(error).toContainText(
+    "Couldn't reach the server. Check your internet connection, then try again.",
+  );
   await expect(page.getByRole("button", { name: "Create MSP" })).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "Your MSP's name" })).toHaveCount(0);
 
@@ -124,7 +126,7 @@ test("an MSP console that can't load says why, with Try again, and never offers 
     route.fulfill({ status: 500, contentType: "application/json", body: "{}" }),
   );
   await error.getByRole("button", { name: "Try again" }).click();
-  await expect(error).toContainText("The server had a problem (error 500).");
+  await expect(error).toContainText("The server had a problem. Try again in a few minutes.");
   await expect(page.getByRole("button", { name: "Create MSP" })).toHaveCount(0);
 
   // Back online, Try again opens it.
