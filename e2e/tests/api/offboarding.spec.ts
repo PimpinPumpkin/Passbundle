@@ -130,7 +130,8 @@ async function membership(api: Api, owner: Account, orgId: string, who: Account)
 /** An MSP seal stand-in: 32 bytes, base64, as an admin's browser sends one. */
 const seal = () => randomBytes(32).toString("base64");
 /** A joining seal stand-in (version 2) for a client that follows its MSP's default. */
-const joiningSeal = () => `v2.default.${randomBytes(32).toString("base64url")}`;
+const joiningSeal = () =>
+  `v3.default.${Math.floor(Date.now() / 1000)}.${randomBytes(16).toString("base64url")}.${randomBytes(32).toString("base64url")}`;
 
 async function overview(api: Api, who: Account, mspId: string) {
   const seen = await api.call(who, "GET", `/api/keykeeper/msp/${mspId}`);

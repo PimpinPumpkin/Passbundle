@@ -901,7 +901,7 @@ test("on a server without email, an invitation signs nobody out: a role counts o
   // as they sign in again.
   const asked = await api.call(person, "GET", "/api/keykeeper/organizations/unaccepted");
   expect(asked.status, JSON.stringify(asked.body)).toBe(200);
-  expect(asked.body.data).toEqual([{ organizationId: orgId, name: orgName, role: "admin" }]);
+  expect(asked.body.data).toEqual([{ organizationId: orgId, name: orgName, role: "admin", revoked: false }]);
   await api.acceptRole(person, orgId);
   expect(await works(api, person.token)).toBe(false);
   expectSetup(await api.signIn(person.email, person.password), [orgName]);
@@ -911,6 +911,69 @@ test("on a server without email, an invitation signs nobody out: a role counts o
   expect((await confirm()).status).toBe(200);
   // The other one hasn't accepted, and still signs in as before.
   expectSignedIn(await api.signIn(other.email, other.password));
+});
+
+test("on a server without email, an admin confirmed before the setting was turned on is revoked until they accept the role, and accepting brings them back", async ({
+  request,
+}) => {
+  test.setTimeout(90_000);
+  const api = new Api(request);
+  const owner = await api.account("held-owner");
+  await api.giveAuthenticator(owner);
+  const orgName = `Held Co ${randomUUID().slice(0, 6)}`;
+  const orgId = await api.organization(owner, orgName);
+  // Invited as an admin while the organization doesn't require it, and
+  // confirmed: the server accepted the role for them (this server sends no
+  // email), and they never did.
+  const person = await api.account("held-admin");
+  const personId = await api.addMember(owner, orgId, person, "admin", { authenticator: false, accept: false });
+  const statusOf = async (id: string) => (await api.members(owner, orgId)).find((m) => m.id === id)!.status;
+  expect(await statusOf(personId)).toBe(2);
+  // Another admin who never accepted turns it on, and so accepts their own role.
+  const turner = await api.account("held-turner");
+  await api.giveAuthenticator(turner);
+  const turnerId = await api.addMember(owner, orgId, turner, "admin", { accept: false });
+  await requireIt(api, turner, orgId, true);
+  expect(await statusOf(turnerId)).toBe(2);
+  expect(await works(api, turner.token)).toBe(true);
+
+  // The first admin is revoked until they accept it, without being signed out.
+  expect(await statusOf(personId)).toBe(-1);
+  expect(await works(api, person.token)).toBe(true);
+  // In the event log as revoked (1511) by whoever turned it on.
+  const start = new Date(Date.now() - 3_600_000).toISOString();
+  const end = new Date(Date.now() + 60_000).toISOString();
+  const log = async () =>
+    (await api.call(owner, "GET", `/api/organizations/${orgId}/events?start=${start}&end=${end}`)).body.data as {
+      type: number;
+      organizationUserId: string;
+      actingUserId: string;
+    }[];
+  expect(
+    (await log()).filter((e) => e.organizationUserId === personId && e.type === 1511).map((e) => e.actingUserId),
+  ).toEqual([turner.userId]);
+  // An owner's restore waits for them, and says so.
+  const restore = await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${personId}/restore`);
+  expect(restore.status, JSON.stringify(restore.body)).toBe(400);
+  expect(restore.body.message).toMatch(/come back as soon as they accept it/);
+  expect(await statusOf(personId)).toBe(-1);
+  // Their vault asks them to accept, saying their access is on hold.
+  const asked = await api.call(person, "GET", "/api/keykeeper/organizations/unaccepted");
+  expect(asked.status, JSON.stringify(asked.body)).toBe(200);
+  expect(asked.body.data).toEqual([{ organizationId: orgId, name: orgName, role: "admin", revoked: true }]);
+
+  // Accepting brings them back as they were, and the rule with it: without
+  // two-step login, they're signed out, and set it up as they sign in again.
+  await api.acceptRole(person, orgId);
+  expect(await statusOf(personId)).toBe(2);
+  // Restored (1512) by themselves.
+  expect(
+    (await log()).filter((e) => e.organizationUserId === personId && e.type === 1512).map((e) => e.actingUserId),
+  ).toEqual([person.userId]);
+  expect(await works(api, person.token)).toBe(false);
+  expectSetup(await api.signIn(person.email, person.password), [orgName]);
+  const after = (await api.call(owner, "GET", orgSetting(orgId))).body.notSetUp as { email: string }[];
+  expect(after.map((p) => p.email)).toEqual([person.email]);
 });
 
 // Signing in with another device's approval (DESIGN.md, "Approving a sign-in

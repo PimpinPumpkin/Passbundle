@@ -125,6 +125,7 @@ jobs:
       - name: The server's joining seal and script grant seal test vectors are the meta repo's
         run: |
           cmp meta/docs/vectors/joining-v2.json src/db/models/vectors/joining-v2.json
+          cmp meta/docs/vectors/joining-v3.json src/db/models/vectors/joining-v3.json
           cmp meta/docs/vectors/script-grants-v3.json src/db/models/vectors/script-grants-v3.json
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       # One binary for both supported databases (SQLite and PostgreSQL); the
@@ -328,10 +329,12 @@ jobs:
         run: |
           node meta/docs/vectors/make-joins-v2.mjs | cmp - meta/docs/vectors/joins-v2.json
           node meta/docs/vectors/make-joining-v2.mjs | cmp - meta/docs/vectors/joining-v2.json
+          node meta/docs/vectors/make-joining-v3.mjs | cmp - meta/docs/vectors/joining-v3.json
           node meta/docs/vectors/make-script-grants-v2.mjs | cmp - meta/docs/vectors/script-grants-v2.json
           node meta/docs/vectors/make-script-grants-v3.mjs | cmp - meta/docs/vectors/script-grants-v3.json
           cmp meta/docs/vectors/joins-v2.json libs/admin-console/src/common/keykeeper/joins-v2.vectors.json
           cmp meta/docs/vectors/joining-v2.json libs/admin-console/src/common/keykeeper/joining-v2.vectors.json
+          cmp meta/docs/vectors/joining-v3.json libs/admin-console/src/common/keykeeper/joining-v3.vectors.json
           cmp meta/docs/vectors/script-grants-v2.json libs/admin-console/src/common/keykeeper/script-grants-v2.vectors.json
           cmp meta/docs/vectors/script-grants-v3.json libs/admin-console/src/common/keykeeper/script-grants-v3.vectors.json
           node meta/docs/vectors/check-script-grants-vectors.mjs meta/docs/vectors/script-grants-v2.json .
