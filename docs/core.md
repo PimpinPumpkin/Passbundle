@@ -325,7 +325,7 @@ The core's errors are the words the screens show (`core/src/error.rs`): plain wo
 - **Website icons** come from the person's server, as in the other apps: `GET /icons/<host>/icon.png`, with no session, at most 512 KB and 10 seconds, four at a time, only while the vault is open, and not at all when Settings turns them off. A redirect is no icon (it isn't followed), and so are the server's 19 by 19 fallback globe and an image whose header says it's larger than 256 pixels a side or isn't a PNG, GIF, JPEG, WebP, ICO, or BMP (`core/src/icons.rs`), so a small file that unpacks to a huge picture never reaches the screens. The app checks the header again and draws icons no larger than 128 pixels a side. The server sees which sites the vault has logins for, as it does for the web vault and the extension; icons are on by default, as there.
 - **Sign-in requests** (above): `GET /api/auth-requests/pending` every 10 seconds while the vault is open and the app is on screen, at most 10 seconds each; `GET` and `PUT /api/auth-requests/<id>` to answer one.
 - **Items' own calls** beyond saving: `PUT /api/ciphers/<id>/partial` (the favorite star, nothing encrypted again), `PUT /api/ciphers/<id>/collections_v2` (moving between shared folders, above), and `GET /api/keykeeper/ciphers/<id>/history` and `DELETE /api/keykeeper/ciphers/<id>/history[/<version>]` (version history, below).
-- **Which format it reads:** every call to the server says which upstream client version's vault format the core reads (`Bitwarden-Client-Version`, upstream's wire name: 2026.8.0, the web vault and extension PassBundle ships). A server holds back what an older client can't read, so a client that doesn't say gets no SSH keys. A real-server test saves an SSH key as upstream's apps do and checks it comes through the core's sync.
+- **Which format it reads:** every call to the server says which upstream client version's vault format the core reads (`Bitwarden-Client-Version`, upstream's wire name: 2026.8.0, the web vault and extension base when the core was written; they're on web-v2026.10.1 since November 2026, and 2026.8.0's format is still what the core reads). A server holds back what an older client can't read, so a client that doesn't say gets no SSH keys. A real-server test saves an SSH key as upstream's apps do and checks it comes through the core's sync.
 
 ## Tests
 
@@ -335,7 +335,7 @@ The core's errors are the words the screens show (`core/src/error.rs`): plain wo
   - personal, organization, and item-key items;
   - tampered and refused strings;
   - a sample sync that ties them together.
-- **Checked with upstream's crypto:** a script in the clients repo opens every vector with upstream's `PureCrypto` (derive, unwrap, decapsulate, decrypt), and tier 1 runs it, as for the other vectors.
+- **Checked with upstream's crypto:** a script in the clients repo opens every vector with upstream's `PureCrypto` (derive, unwrap, decapsulate, decrypt), and tier 1 runs it, as for the other vectors. Since web-v2026.10.1, `PureCrypto` has no call that opens the user key with the master key, so the script stretches the master key itself, as upstream does (HKDF-Expand with SHA-256 to "enc" and "mac"), and opens the user key with upstream's unwrap; it also opens it with the master password, all upstream's.
 - **The core's own tests** read the vectors and must produce or open every value.
 - **Against a real server** (`core/tests/server.rs` in `passbundle-apps`, run by its CI against the server's `keykeeper` branch), with real keys:
   - signing up as an app would;

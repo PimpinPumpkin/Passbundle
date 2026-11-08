@@ -18,7 +18,7 @@ Checked October 23, 2026; the PassBundle column, the gaps list, and the rows bel
 | **Missing** | Not built and not planned. |
 | **Unverified** | We couldn't confirm it from our code or docs. |
 
-**Where things run:** "the extension and web vault" are our builds of upstream's open-source clients (base `web-v2026.8.0`). "Our apps" are the Flutter app for Windows, macOS, Linux, Android, and iOS on the Rust core, plus the desktop agent. "The server" is passbundle-server (Vaultwarden 1.37.4 base).
+**Where things run:** "the extension and web vault" are our builds of upstream's open-source clients (base `web-v2026.10.1`). "Our apps" are the Flutter app for Windows, macOS, Linux, Android, and iOS on the Rust core, plus the desktop agent. "The server" is passbundle-server (Vaultwarden 1.37.5 base).
 
 ## Item types and fields
 

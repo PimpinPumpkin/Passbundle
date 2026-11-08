@@ -54,7 +54,7 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
   // A login in the organization, with a note the token isn't granted.
   await page.goto(`/#/organizations/${orgId}/vault`);
   await newItem(page, "Login");
-  const item = page.getByRole("dialog", { name: "New Login" });
+  const item = page.getByRole("dialog", { name: "Add login" });
   await item.getByRole("textbox", { name: /Item name/ }).fill("Domain admin");
   await item.getByRole("textbox", { name: /Username/ }).fill("admin@contoso.example");
   await item.getByLabel("Password", { exact: true }).fill("not-a-real-password-1");
@@ -127,7 +127,7 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
   await page.goto("/#/vault");
   await page.getByText("Domain admin").first().click();
   await view.getByRole("button", { name: "Edit" }).click();
-  const edit = page.getByRole("dialog", { name: /Edit Login/ });
+  const edit = page.getByRole("dialog", { name: /Edit login/i });
   await edit.getByLabel("Password", { exact: true }).fill("not-a-real-password-2");
   await edit.getByRole("button", { name: "Save" }).click();
   await expect(edit).toBeHidden();

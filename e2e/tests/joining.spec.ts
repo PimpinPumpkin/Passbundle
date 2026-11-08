@@ -43,7 +43,7 @@ async function invite(owner: Page, orgId: string, email: string) {
   await owner.getByRole("button", { name: "Invite member" }).click();
   const dialog = owner.getByRole("dialog", { name: /Invite member/ });
   await dialog.getByRole("textbox", { name: /Email/ }).fill(email);
-  await dialog.getByRole("button", { name: "Save" }).click();
+  await dialog.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(dialog).toBeHidden();
 }
 

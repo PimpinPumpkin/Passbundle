@@ -340,10 +340,7 @@ test("a setup session can only set up two-step login, setting it up ends the ses
   const earlier = (await api.call(owner, "POST", "/api/two-factor/get-recover", { masterPasswordHash: owner.password }))
     .body.code as string;
   expect(earlier).toMatch(/^[A-Z2-7]{32}$/);
-  const turnedOff = await api.call(owner, "PUT", "/api/two-factor/disable", {
-    masterPasswordHash: owner.password,
-    type: 0,
-  });
+  const turnedOff = await api.turnOffAuthenticator(owner, owner.password);
   expect(turnedOff.status, JSON.stringify(turnedOff.body)).toBe(200);
   const orgName = `Tailspin ${randomUUID().slice(0, 6)}`;
   const orgId = await businessOrg(api, owner, orgName);
@@ -373,8 +370,8 @@ test("a setup session can only set up two-step login, setting it up ends the ses
     ["GET", "/api/accounts/profile", undefined],
     ["GET", "/api/two-factor", undefined],
     ["POST", "/api/two-factor/get-recover", { masterPasswordHash: owner.password }],
-    ["PUT", "/api/two-factor/disable", { masterPasswordHash: owner.password, type: 0 }],
-    ["DELETE", "/api/two-factor/webauthn", { masterPasswordHash: owner.password, id: 1 }],
+    ["DELETE", "/api/two-factor/authenticator", { key: "none", userVerificationToken: "none" }],
+    ["DELETE", "/api/two-factor/webauthn", { id: 1, userVerificationToken: "none" }],
     ["POST", "/api/two-factor/get-email", { masterPasswordHash: owner.password }],
     ["POST", "/api/accounts/api-key", { masterPasswordHash: owner.password }],
     ["POST", "/api/accounts/sso/user-identifier", { masterPasswordHash: owner.password }],
@@ -404,7 +401,10 @@ test("a setup session can only set up two-step login, setting it up ends the ses
     [{ clientId: "DIXXXXXXXXXXXXXXXXXX", clientSecret: "secret", host: "api-1.duosecurity.com" }, /only with this server's own Duo account/],
     [{ clientId: "", clientSecret: "", host: "" }, /no Duo account of its own/],
   ] as const) {
-    const ownDuo = await api.call(setup, "PUT", "/api/two-factor/duo", { ...keys, masterPasswordHash: owner.password });
+    const ownDuo = await api.call(setup, "PUT", "/api/two-factor/duo", {
+      ...keys,
+      userVerificationToken: duo.body.userVerificationToken,
+    });
     expect(ownDuo.status, JSON.stringify(ownDuo.body)).toBe(400);
     expect(ownDuo.body.message).toMatch(refusal);
   }
@@ -418,14 +418,14 @@ test("a setup session can only set up two-step login, setting it up ends the ses
     masterPasswordHash: owner.password,
   });
   expect(started.status, JSON.stringify(started.body)).toBe(200);
-  const key = started.body.key as string;
+  const key = started.body.authenticator.key as string;
   const on = await api.call(setup, "POST", "/api/two-factor/authenticator", {
     key,
     token: totp(key),
-    masterPasswordHash: owner.password,
+    userVerificationToken: started.body.userVerificationToken,
   });
   expect(on.status, JSON.stringify(on.body)).toBe(200);
-  expect(on.body.enabled).toBe(true);
+  expect(on.body.authenticator.enabled).toBe(true);
   // A new recovery code comes with it, since the session ends here: the
   // earlier one stops working.
   const recoveryCode = on.body.keykeeperRecoveryCode as string;
@@ -609,10 +609,7 @@ test("a session ends at once when its person no longer meets the rule, and goes 
   });
   expect(toOwner.status, JSON.stringify(toOwner.body)).toBe(200);
   expect(await works(api, session.body.access_token)).toBe(true);
-  const off = await api.call({ token: session.body.access_token }, "PUT", "/api/two-factor/disable", {
-    masterPasswordHash: admin.password,
-    type: 0,
-  });
+  const off = await api.turnOffAuthenticator({ token: session.body.access_token }, admin.password);
   expect(off.status, JSON.stringify(off.body)).toBe(200);
   expect(await works(api, session.body.access_token)).toBe(false);
   const ended = await refresh(request, session.body.refresh_token);

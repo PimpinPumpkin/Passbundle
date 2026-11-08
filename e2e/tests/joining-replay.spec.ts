@@ -29,14 +29,23 @@ const PENDING = /\/api\/keykeeper\/(msp\/[^/]+|organizations)\/pending$/;
  * unlocked, so this reloads it.
  */
 async function nextJoining(page: Page, orgId: string): Promise<Joining> {
-  const answer = page.waitForResponse(
-    (r) => r.url().endsWith("/api/keykeeper/organizations/pending") && r.ok(),
-    { timeout: 60_000 },
-  );
+  // Read through a route, as replay() does: a response the page reloads past
+  // can't be read from the network afterwards.
+  let body: { joining?: Listed[] } | undefined;
+  const route = /\/api\/keykeeper\/organizations\/pending$/;
+  await page.route(route, async (r) => {
+    const response = await r.fetch();
+    const json = await response.json();
+    if (response.ok()) {
+      body ??= json;
+    }
+    await r.fulfill({ response, json });
+  });
   await reloadVault(page);
-  const body = await (await answer).json();
-  const listed = (body.joining as Listed[]).find((o) => o.organizationId === orgId);
-  expect(listed, JSON.stringify(body.joining)).toBeTruthy();
+  await expect.poll(() => body, { timeout: 60_000 }).toBeTruthy();
+  await page.unroute(route);
+  const listed = (body!.joining ?? []).find((o) => o.organizationId === orgId);
+  expect(listed, JSON.stringify(body!.joining)).toBeTruthy();
   const { autoConfirm, domains, seal } = listed!;
   return { autoConfirm, domains, seal };
 }
@@ -156,22 +165,27 @@ test("an older joining setting the server shows again, with its real seal, lets 
   await owner.getByRole("button", { name: "Invite member" }).click();
   const invite = owner.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(person.email);
-  await invite.getByRole("button", { name: "Save" }).click();
+  await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
 
   // The owner on another device, signed in after the change: its background
   // run sees the newer setting in the list of every organization's setting
   // (the person waiting is for approval, so nothing else checks it).
   const otherDevice = await (await browser.newContext()).newPage();
-  const seen = otherDevice.waitForResponse(
-    async (r) =>
-      r.url().endsWith("/api/keykeeper/organizations/pending") &&
-      r.ok() &&
-      ((await r.json()).joining as Listed[]).some((o) => o.organizationId === orgId && o.seal === approval.seal),
-    { timeout: 60_000 },
-  );
+  // Read through a route, as replay() does: a response the page reloads
+  // past can't be read from the network afterwards.
+  let seenNewer = false;
+  await otherDevice.route(PENDING, async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    if (((body.joining ?? []) as Listed[]).some((o) => o.organizationId === orgId && o.seal === approval.seal)) {
+      seenNewer = true;
+    }
+    await route.fulfill({ response, json: body });
+  });
   await logIn(otherDevice, ownerUser);
-  await seen;
+  await expect.poll(() => seenNewer, { timeout: 60_000 }).toBe(true);
+  await otherDevice.unroute(PENDING);
   // Give the run time to check what it got.
   await otherDevice.waitForTimeout(3_000);
 

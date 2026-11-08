@@ -72,7 +72,7 @@ test("a template added for every client applies to all of them, a new client inc
   await pick(admin, "Northwind Team");
   await pick(admin, "Default shared folder");
   await newTemplate(admin, "notes");
-  const editor = admin.getByRole("dialog", { name: /^New/ });
+  const editor = admin.getByRole("dialog", { name: /^Add/ });
   await editor.getByRole("textbox", { name: /Item name/ }).fill("Firewall");
   await editor.getByRole("button", { name: "Add field" }).click();
   const addField = admin.getByRole("dialog", { name: "Add field" });

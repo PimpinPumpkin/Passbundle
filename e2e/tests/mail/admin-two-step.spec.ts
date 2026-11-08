@@ -58,15 +58,20 @@ test("an email code doesn't count: an owner with only email codes gets a setup s
 
   // Email codes on, as upstream's two-step login settings do it.
   let before = await messageCount(owner.email);
+  const started = await api.call(owner, "POST", "/api/two-factor/get-email", {
+    masterPasswordHash: owner.password,
+  });
+  expect(started.status, JSON.stringify(started.body)).toBe(200);
+  const userVerificationToken = started.body.userVerificationToken;
   const sent = await api.call(owner, "POST", "/api/two-factor/send-email", {
     email: owner.email,
-    masterPasswordHash: owner.password,
+    userVerificationToken,
   });
   expect(sent.status, JSON.stringify(sent.body)).toBe(200);
   const on = await api.call(owner, "PUT", "/api/two-factor/email", {
     email: owner.email,
     token: await emailedCode(owner.email, before),
-    masterPasswordHash: owner.password,
+    userVerificationToken,
   });
   expect(on.status, JSON.stringify(on.body)).toBe(200);
   await requireIt(api, owner, orgId);

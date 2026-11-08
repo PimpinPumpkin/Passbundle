@@ -52,7 +52,7 @@ test("an owner gives someone a Custom grid in a shared folder, and the web vault
   await owner.getByRole("button", { name: "Invite member" }).click();
   const invite = owner.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(danaUser.email);
-  await invite.getByRole("button", { name: "Save" }).click();
+  await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
   await confirmMember(owner, danaUser.email);
 
@@ -61,9 +61,9 @@ test("an owner gives someone a Custom grid in a shared folder, and the web vault
   await owner.getByRole("button", { name: "Everyone", exact: true }).first().click();
   await expect(owner).toHaveURL(/collectionId=[0-9a-f-]{36}/);
   const everyoneId = /collectionId=([0-9a-f-]{36})/.exec(owner.url())![1];
-  await owner.getByRole("button", { name: "New", exact: true }).click();
+  await owner.getByRole("button", { name: "Add", exact: true }).click();
   await owner.getByRole("menuitem", { name: "Login" }).click();
-  const login = owner.getByRole("dialog", { name: "New Login" });
+  const login = owner.getByRole("dialog", { name: "Add login" });
   await login.getByRole("textbox", { name: /Item name/ }).fill("Clinic Wi-Fi");
   await login.getByRole("textbox", { name: "Password", exact: true }).fill("lakeside-guest-2026");
   await login.getByRole("button", { name: "Save" }).click();
@@ -129,7 +129,7 @@ test("an owner gives someone a Custom grid in a shared folder, and the web vault
 
   // A login of her own goes into Everyone, through the Folder picker.
   await newItem(dana, "Login");
-  const mine = dana.getByRole("dialog", { name: "New Login" });
+  const mine = dana.getByRole("dialog", { name: "Add login" });
   await mine.getByRole("textbox", { name: /Item name/ }).fill("Front desk printer");
   await mine.getByTestId("keykeeper-folder-picker").click();
   // Grouped by owner: Personal and its folders, then Lakeside Clinic with the

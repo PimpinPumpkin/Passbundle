@@ -1,6 +1,7 @@
 // Checks docs/vectors/core-v1.json (the core's vectors, docs/core.md) with
 // upstream's own crypto, the SDK's public PureCrypto API, from a checkout of
-// the clients repo: the master keys derive, the user key, private key,
+// the clients repo: the master keys derive, the user key (with the master key
+// stretched here, as upstream does, and with the master password), private key,
 // organization keys, and item key open, every item's strings open to what the
 // vectors say (a card's and an identity's details too), every attachment
 // opens, a passkey's values open and its key imports the way upstream's
@@ -9,7 +10,7 @@
 // checked out in meta/:
 //
 //   node meta/docs/vectors/check-core-vectors.mjs meta/docs/vectors/core-v1.json .
-import { createPublicKey, verify, webcrypto } from "node:crypto";
+import { createHmac, createPublicKey, verify, webcrypto } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -38,6 +39,12 @@ const attempt = (fn) => {
 };
 
 const { account, keys } = v;
+/** HKDF-Expand (RFC 5869) to 32 bytes, one block: HMAC(prk, info || 0x01). */
+const expand32 = (prk, info) =>
+  createHmac("sha256", prk).update(Buffer.concat([Buffer.from(info, "utf8"), Buffer.from([1])])).digest();
+/** A master key stretched to the 64-byte key that wraps the user key: "enc" then "mac". */
+const stretch = (masterKey) =>
+  new Uint8Array(Buffer.concat([expand32(masterKey, "enc"), expand32(masterKey, "mac")]));
 const utf8 = (text) => new Uint8Array(Buffer.from(text, "utf8"));
 const kdfs = {
   pbkdf2: (p) => ({ pBKDF2: { iterations: p.kdfIterations } }),
@@ -50,8 +57,12 @@ for (const [name, toKdf] of Object.entries(kdfs)) {
   const kdf = toKdf(a.prelogin);
   const masterKey = attempt(() => PureCrypto.derive_kdf_material(utf8(account.password), utf8(account.salt), kdf));
   check(masterKey != null && same(masterKey, a.masterKey), `${name}: the master key derives`);
+  // The SDK's PureCrypto dropped decrypt_user_key_with_master_key (web
+  // v2026.10.1). The master key is stretched as upstream stretches it,
+  // HKDF-Expand with SHA-256 to "enc" and "mac" halves, and upstream's own
+  // unwrap opens the user key with that.
   const fromKey = attempt(() =>
-    PureCrypto.decrypt_user_key_with_master_key(a.protectedUserKey, bytes(a.masterKey)),
+    PureCrypto.unwrap_symmetric_key(a.protectedUserKey, stretch(bytes(a.masterKey))),
   );
   check(fromKey != null && same(fromKey, keys.userKey), `${name}: the user key opens with the master key`);
   const fromPassword = attempt(() =>

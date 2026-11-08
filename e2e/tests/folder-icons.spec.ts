@@ -134,9 +134,9 @@ test("an owner gives a shared folder an icon and a color in the web vault, and t
   // A login in Banking, so the extension has something to filter.
   await web.getByRole("button", { name: "Banking", exact: true }).first().click();
   await expect(web).toHaveURL(/collectionId=[0-9a-f-]{36}/);
-  await web.getByRole("button", { name: "New", exact: true }).click();
+  await web.getByRole("button", { name: "Add", exact: true }).click();
   await web.getByRole("menuitem", { name: "Login" }).click();
-  const login = web.getByRole("dialog", { name: "New Login" });
+  const login = web.getByRole("dialog", { name: "Add login" });
   await login.getByRole("textbox", { name: /Item name/ }).fill("Credit union");
   await login.getByRole("textbox", { name: "Username", exact: true }).fill("rivera");
   await login.getByRole("button", { name: "Save" }).click();
