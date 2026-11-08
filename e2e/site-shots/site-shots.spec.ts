@@ -244,11 +244,11 @@ test("a person's vault, in the web vault and the extension, light and dark", asy
     // Signing in asks where the vault is: shown on one's own server, then
     // signed in to the hosted service's name (the test server here).
     await expect(async () => {
-      await popup.getByRole("button", { name: "Log in" }).click();
+      await popup.getByRole("button", { name: "Sign in" }).click();
       await expect(popup).toHaveURL(/#\/login/, { timeout: 1000 });
     }).toPass();
     const where = popup.getByRole("group", { name: "Where's your vault?" });
-    await where.getByRole("button", { name: "My own server" }).click();
+    await where.getByRole("button", { name: "Self-hosted" }).click();
     await popup.getByRole("textbox", { name: "Server address" }).fill("vault.harborit.example");
     await popup.getByLabel(/Email address/).fill(sam.email);
     for (const scheme of schemes) {
@@ -258,7 +258,7 @@ test("a person's vault, in the web vault and the extension, light and dark", asy
     await where.getByRole("button", { name: brand.name, exact: true }).click();
     await popup.getByRole("button", { name: "Continue" }).click();
     await popup.getByRole("textbox", { name: /Master password/ }).fill(sam.password);
-    await popup.getByRole("button", { name: "Log in", exact: true }).click();
+    await popup.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(popup.getByRole("heading", { name: /Items/ }).first()).toBeVisible({ timeout: 30_000 });
 
     // The first-run welcome card, once.
