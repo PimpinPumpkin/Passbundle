@@ -225,7 +225,7 @@ async function passwordSignIn(page: Page, user: WebUser) {
   await page.getByLabel(/Email address/).fill(user.email);
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("textbox", { name: /Master password/ }).fill(user.password);
-  await page.getByRole("button", { name: "Log in", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
 }
 
 test("with Require single sign-on, a member's password sends them to it, one not linked yet links first, and the owner still signs in with theirs", async ({
@@ -298,7 +298,7 @@ test("with Require single sign-on, a member's password sends them to it, one not
   await ownerAgain.getByLabel(/Email address/).fill(ownerUser.email);
   await ownerAgain.getByRole("button", { name: "Continue" }).click();
   await ownerAgain.getByRole("textbox", { name: /Master password/ }).fill(ownerUser.password);
-  await ownerAgain.getByRole("button", { name: "Log in", exact: true }).click();
+  await ownerAgain.getByRole("button", { name: "Sign in", exact: true }).click();
   await answerTwoStep(ownerAgain, ownerUser.email);
   await ownerAgain.waitForURL(/#\/vault/);
   await expect(ownerAgain).toHaveTitle(/^Items/);

@@ -57,7 +57,7 @@ test("the popup's own look: where the vault is, a calm ground, category chips, a
 
   const popup = await openPopup(context, extensionId);
   await expect(async () => {
-    await popup.getByRole("button", { name: "Log in", exact: true }).click();
+    await popup.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(popup).toHaveURL(/#\/login/, { timeout: 1000 });
   }).toPass();
 
@@ -65,14 +65,14 @@ test("the popup's own look: where the vault is, a calm ground, category chips, a
   // address goes right under it, without https:// if you like.
   await expect(popup.getByRole("heading", { name: "Sign in" })).toBeVisible();
   const where = popup.getByRole("group", { name: "Where's your vault?" });
-  await expect(where.getByRole("button")).toHaveText([brand.name, "My own server"]);
+  await expect(where.getByRole("button")).toHaveText([brand.name, "Self-hosted"]);
   await expect(where.getByRole("button", { name: brand.name })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
   await expect(popup.getByRole("textbox", { name: "Server address" })).toHaveCount(0);
-  await where.getByRole("button", { name: "My own server" }).click();
-  await expect(where.getByRole("button", { name: "My own server" })).toHaveAttribute(
+  await where.getByRole("button", { name: "Self-hosted" }).click();
+  await expect(where.getByRole("button", { name: "Self-hosted" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -82,7 +82,7 @@ test("the popup's own look: where the vault is, a calm ground, category chips, a
   await popup.getByLabel(/Email address/).fill(user.email);
   await popup.getByRole("button", { name: "Continue" }).click();
   await popup.getByRole("textbox", { name: /Master password/ }).fill(user.password);
-  await popup.getByRole("button", { name: "Log in", exact: true }).click();
+  await popup.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(popup.getByRole("heading", { name: /Items/ }).first()).toBeVisible({
     timeout: 30_000,
   });
@@ -139,13 +139,13 @@ test("the popup's own look: where the vault is, a calm ground, category chips, a
   );
 });
 
-test("sign-in goes only to the server shown: not with a blank or refused address, and the password step names it", async ({
+test("sign-in goes only to the server shown: not with a blank, refused, or unanswered address, and the password step names it", async ({
   context,
   extensionId,
 }) => {
   const popup = await openPopup(context, extensionId);
   await expect(async () => {
-    await popup.getByRole("button", { name: "Log in", exact: true }).click();
+    await popup.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(popup).toHaveURL(/#\/login/, { timeout: 1000 });
   }).toPass();
 
@@ -156,10 +156,10 @@ test("sign-in goes only to the server shown: not with a blank or refused address
   await email.fill("someone@example.test");
   await expect(continueButton).toBeEnabled();
 
-  // My own server, and nothing typed: nothing to sign in to yet.
+  // Self-hosted, and nothing typed: nothing to sign in to yet.
   await popup
     .getByRole("group", { name: "Where's your vault?" })
-    .getByRole("button", { name: "My own server" })
+    .getByRole("button", { name: "Self-hosted" })
     .click();
   await expect(continueButton).toBeDisabled();
   await expect(passkey).toBeDisabled();
@@ -178,6 +178,24 @@ test("sign-in goes only to the server shown: not with a blank or refused address
     await expect(popup.getByRole("alert")).toHaveText(why);
     await expect(continueButton).toBeDisabled();
     await email.press("Enter");
+    await expect(passwordField).toBeHidden();
+  }
+
+  // An address nothing answers at, or that isn't a server, says so under the
+  // field before anything is saved, rather than after the master password.
+  for (const [typed, why] of [
+    [
+      "vualt.example.com",
+      "Couldn't reach a server at that address. Check it for typos, and that you're online.",
+    ],
+    ["shop.example.test", `There's no ${brand.name} server at that address. Check it for typos.`],
+  ]) {
+    await address.fill(typed);
+    await address.press("Tab");
+    await expect(popup.getByRole("alert")).toHaveText(why);
+    await expect(address).toHaveAttribute("aria-invalid", "true");
+    await continueButton.click();
+    await expect(popup.getByRole("alert")).toHaveText(why);
     await expect(passwordField).toBeHidden();
   }
 

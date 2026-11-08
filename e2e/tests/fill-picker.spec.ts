@@ -73,7 +73,7 @@ async function openWebVault(context: BrowserContext, user: { email: string; pass
     await email.fill(user.email);
     await vault.getByRole("button", { name: "Continue" }).click();
     await vault.getByRole("textbox", { name: /Master password/ }).fill(user.password);
-    await vault.getByRole("button", { name: "Log in", exact: true }).click();
+    await vault.getByRole("button", { name: "Sign in", exact: true }).click();
   } else if (await unlock.isVisible()) {
     await vault.getByRole("textbox", { name: /Master password/ }).fill(user.password);
     await unlock.click();

@@ -119,18 +119,18 @@ export async function logInPopup(popup: Page, user: User, server = serverUrl) {
   // The carousel renders its buttons before Angular wires them up, and an early
   // click is dropped. Click until the app actually navigates.
   await expect(async () => {
-    await popup.getByRole("button", { name: "Log in" }).click();
+    await popup.getByRole("button", { name: "Sign in" }).click();
     await expect(popup).toHaveURL(/#\/login/, { timeout: 1000 });
   }).toPass();
   // "Where's your vault?" (DESIGN.md, "The look"): our own server, typed in place.
-  await popup.getByRole("button", { name: "My own server" }).click();
+  await popup.getByRole("button", { name: "Self-hosted" }).click();
   await popup.getByRole("textbox", { name: "Server address" }).fill(server);
   await popup.getByLabel(/Email address/).fill(user.email);
   await popup.getByRole("button", { name: "Continue" }).click();
   await popup
     .getByRole("textbox", { name: /Master password/ })
     .fill(user.password);
-  await popup.getByRole("button", { name: "Log in", exact: true }).click();
+  await popup.getByRole("button", { name: "Sign in", exact: true }).click();
   // Someone the tests gave an authenticator app (an MSP's staff, an owner or
   // admin of a Business organization) answers two-step login.
   if (hasAuthenticator(user.email)) {

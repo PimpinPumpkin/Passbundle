@@ -328,7 +328,7 @@ test("connector pages work under their own policy", async ({ page }) => {
 
   // Duo's answer for the web vault.
   await page.goto("/duo-redirect-connector.html?client=web&code=a-code&state=a-state");
-  await expect(page.getByText("You successfully logged in")).toBeVisible();
+  await expect(page.getByText("You successfully signed in")).toBeVisible();
 
   // The email links' redirect, into the vault.
   await page.goto("/redirect-connector.html#login");
@@ -430,7 +430,7 @@ test("the web vault signs in with a security key, in its own frame", async ({ br
   await web.getByLabel(/Email address/).fill(user.email);
   await web.getByRole("button", { name: "Continue" }).click();
   await web.getByRole("textbox", { name: /Master password/ }).fill(user.password);
-  await web.getByRole("button", { name: "Log in", exact: true }).click();
+  await web.getByRole("button", { name: "Sign in", exact: true }).click();
   // The two-step page frames the connector, which asks the key at once.
   await expect(web).toHaveTitle(/^Items/, { timeout: 30_000 });
   expect((await key.credential()).signCount).toBeGreaterThan(credential.signCount);
@@ -459,15 +459,15 @@ test("the extension signs in with a security key, in a tab of its own", async ({
 
     const popup = await openPopup(context, extensionId);
     await expect(async () => {
-      await popup.getByRole("button", { name: "Log in" }).click();
+      await popup.getByRole("button", { name: "Sign in" }).click();
       await expect(popup).toHaveURL(/#\/login/, { timeout: 1000 });
     }).toPass();
-    await popup.getByRole("button", { name: "My own server" }).click();
+    await popup.getByRole("button", { name: "Self-hosted" }).click();
     await popup.getByRole("textbox", { name: "Server address" }).fill(vault);
     await popup.getByLabel(/Email address/).fill(user.email);
     await popup.getByRole("button", { name: "Continue" }).click();
     await popup.getByRole("textbox", { name: /Master password/ }).fill(user.password);
-    await popup.getByRole("button", { name: "Log in", exact: true }).click();
+    await popup.getByRole("button", { name: "Sign in", exact: true }).click();
 
     // The extension opens the vault's security key page in a tab, never a frame.
     const opened = context.waitForEvent("page", (p) => p.url().includes("webauthn-fallback-connector.html"));
