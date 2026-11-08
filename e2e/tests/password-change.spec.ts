@@ -586,6 +586,13 @@ test("an organization's item: the change and the old password put back are in it
   await expect(card).toBeHidden();
   expect((await itemState(context, host)).password).toBe(OLD);
 
+  // The popup leaves its events for the extension's background, which sends them
+  // every minute, as upstream's do; the test doesn't wait the minute.
+  await context.serviceWorkers()[0].evaluate(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (self as any).bitwardenMain.eventUploadService.uploadEvents();
+  });
+
   // In the organization's log, by the member, beside the edits themselves.
   const now = Date.now();
   const range = `start=${new Date(now - 3_600_000).toISOString()}&end=${new Date(now + 3_600_000).toISOString()}`;
