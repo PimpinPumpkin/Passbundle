@@ -564,7 +564,9 @@ jobs:
     needs: [refs, server, clients, chrome-extension, agent-test-build, core-interop, cli]
     if: ${{ !inputs.skip-tests }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # A browser part takes 27 to 30 minutes on a busy day (November 2026),
+    # so 30 cut one off with its last test still running.
+    timeout-minutes: 45
     # Six machines share the suite, each with its own servers: the API
     # tests split across three, and the browser and email tests across three.
     strategy:
