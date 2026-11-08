@@ -29,7 +29,7 @@ async function logIn(page: Page) {
   await page.getByLabel(/Email address/).fill(user.email);
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("textbox", { name: /Master password/ }).fill(user.password);
-  await page.getByRole("button", { name: "Log in", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expectNoNags(page);
   await expect(page).toHaveTitle(/^Items/);
 }

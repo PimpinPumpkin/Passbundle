@@ -120,7 +120,7 @@ test("an MSP admin recovers the account of someone who joined through the instal
   // says to compare them, and that Not now asks again in a week.
   await expect(prompt!.getByTestId("keykeeper-join-fingerprint")).toHaveText(phrase);
   await expect(prompt!.getByTestId("keykeeper-join-compare")).toHaveText(
-    "To be sure this is really Recovery Dental, ask your IT to read you the phrase they see next to its install command. If it doesn't match, choose Not now and tell them.",
+    "To be sure this is really Recovery Dental, ask your IT admin to read you the phrase they see next to its install command. If it doesn't match, choose Not now and tell them.",
   );
   await expect(prompt!.getByTestId("keykeeper-join-later")).toHaveText("Not now asks again in 7 days.");
   // The answer closes the window.
@@ -161,7 +161,7 @@ test("an MSP admin recovers the account of someone who joined through the instal
   await later
     .getByRole("textbox", { name: /^Master password/ })
     .fill(newPassword);
-  await later.getByRole("button", { name: "Log in", exact: true }).click();
+  await later.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(later.getByText("Before recovery").first()).toBeVisible({
     timeout: 30_000,
   });

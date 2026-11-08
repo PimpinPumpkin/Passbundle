@@ -20,19 +20,19 @@ import { signUp, webUserFor, type WebUser } from "./support/web";
 test.skip(!coreTool && !process.env.CI, "KK_CORE_INTEROP isn't set; tier 1 builds the core's interop tool");
 
 /**
- * Signs out of the web vault (Log out, from the account menu behind the
+ * Signs out of the web vault (Sign out, from the account menu behind the
  * avatar), then asks to sign in with a device. This browser signed in
- * before, so the account knows it, which "Log in with device" needs. Returns
+ * before, so the account knows it, which "Sign in with a device" needs. Returns
  * the fingerprint phrase the web vault shows.
  */
 async function askToSignInWithDevice(page: Page, user: WebUser): Promise<string> {
   await page.goto("/#/vault");
   await page.locator('button[aria-haspopup="menu"]:has(bit-avatar)').first().click();
-  await page.getByRole("menuitem", { name: "Log out" }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
   await expect(page.getByLabel(/Email address/)).toBeVisible({ timeout: 30_000 });
   await page.getByLabel(/Email address/).fill(user.email);
   await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByRole("button", { name: "Log in with device" }).click();
+  await page.getByRole("button", { name: "Sign in with a device" }).click();
   await page.waitForURL(/#\/login-with-device/);
   const phrase = page.locator("code");
   await expect(phrase).toHaveText(/^[a-z]+(-[a-z]+){4}$/);

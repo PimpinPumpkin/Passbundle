@@ -431,7 +431,7 @@ test("turning the check after unlocking off in one browser turns it off in the a
   await other.getByLabel(/Email address/).fill(user.email);
   await other.getByRole("button", { name: "Continue" }).click();
   await other.getByRole("textbox", { name: /Master password/ }).fill(user.password);
-  await other.getByRole("button", { name: "Log in", exact: true }).click();
+  await other.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(menu(other)).toBeVisible({ timeout: 30_000 });
   await followsTo(other, false);
 
