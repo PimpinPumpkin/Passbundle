@@ -9,6 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { handleChangePassword } from "./change-password-site.mjs";
 import { fixturePort } from "./paths.mjs";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "tests", "fixtures", "autofill");
@@ -21,7 +22,9 @@ execFileSync("openssl", [
   "-addext", "subjectAltName=DNS:*.example.test,IP:127.0.0.1",
 ], { stdio: "ignore" });
 
-const server = https.createServer({ cert: fs.readFileSync(cert), key: fs.readFileSync(key) }, (req, res) => {
+const server = https.createServer({ cert: fs.readFileSync(cert), key: fs.readFileSync(key) }, async (req, res) => {
+  // Change-password test sites (change-password-site.mjs), by their hosts.
+  if (await handleChangePassword(req, res)) return;
   const name = path.basename(new URL(req.url, "https://x").pathname);
   const file = path.join(root, name === "" ? "index.html" : name);
   if (name === "alive") return res.writeHead(200).end("ok");
