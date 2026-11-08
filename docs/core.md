@@ -173,6 +173,7 @@ The apps make an account the way upstream's apps do, so it opens in the web vaul
 | How the app looks (website icons on or off) | the app's data folder |
 | Whether approving a sign-in asks for biometrics or the master password first | the app's data folder |
 | Sign-in requests waiting for an answer, as listed | memory only, while unlocked |
+| Which expiration reminders were already said: each item's id, date, and step, never its name (below) | the account's folder, `reminders.json`, forgotten at sign-out |
 
 - **Several accounts** (DESIGN.md, "Several accounts in the apps"): each account's own rows above (its server, email, KDF settings, kept sync, lock choices, approvals, and generator choices) are in a folder of its own, `accounts/<id>` in the app's folder, and `accounts.json` lists the accounts, the one shown, this install's device identifier, and the server and email last signed in to or out of. How the app looks and whether screenshots are allowed are the device's, in the app's folder. Each account's refresh token is its own secret store entry, named by its server and email as before.
 - **No secret store** (a Linux desktop without a keyring running): nothing is kept. The vault still unlocks from this device, and the app asks to sign in again to sync.
@@ -413,6 +414,19 @@ The server's item history (DESIGN.md, "Item history"), in the apps (`core/src/hi
 - **Restoring** is a normal edit, sent with the revision it was made from: the version's contents, and the item as it is now for the rest (folder, favorite, owner, shared folders, attachments, key). A passkey the item still has is kept as it is now, with the higher of its counters (signing in raises it, and a site refuses one that goes back); before restoring a version without a passkey the item has now, the app says that passkey goes. Refused for a version of another kind, owner, or key, which the web vault restores.
 - **Deleting a version, and clearing,** where the server allows them.
 - **Tests:** against a real server, a login edited twice, compared, restored, and cleared; on the vectors, a second passkey shows as a change, and restoring keeps the raised counter and names the passkey it would take away.
+
+## Expiration and reminders
+
+DESIGN.md, "Expiration dates", in the apps (`core/src/expiration.rs`, the same rules as the web vault's and the extension's):
+
+- **When an item expires:** its `keykeeper.expires` date, or a card at the end of its expiry month. Lists show "Expires in 12 days" or "Expired 5 days ago" for anything expired or due within 30 days; "Expiring soon" in the menu lists them, and Health counts and lists them with what's due.
+- **The editor** sets Expires and Remind me (30, 7, and 1 day before, the default and stored as no field; 90, 30, 7, and 1; 7 and 1; or Don't remind me, `none`), kept in `keykeeper.remind` beside the date. A list another app stored is read and kept; anything else counts as the default. No date clears both. Edits that don't touch them keep them, as every `keykeeper.*` field.
+- **Reminders:** after unlocking and every six hours while unlocked, the app asks the core what's due (`pb_reminders`): each of an item's steps once for a date, then once expired. The vault says how many at its top, never which ("2 items expire soon"), with Show (Expiring soon) and Dismiss. On a computer the core also tells the desktop agent two numbers per account (`keykeeper.reminders`, `soon` and `expired`); the agent adds them up, makes its own words, and shows them as its tray menu's first entry and its tooltip until the app says zero. It never takes text from the socket.
+- **Not yet:** a system notification from the agent, and reminders on phones while the app is closed.
+
+## Members' own passwords
+
+DESIGN.md, "Members' own passwords": after each sync, for a confirmed member of an organization, the core counts the Personal logins with a password (not in the trash) and how many are weak or reused among themselves, by Health's rules, and puts `{logins, weak, reused}` to `/api/keykeeper/own-health`: once per unlock and again when the numbers change. No `exposed`, since the apps don't check breaches. A server without the endpoint (404 or 405) isn't asked again that unlock, and nothing here ever fails a sync. The synced settings document's `health` part (the web vault's breach check switch) is kept as it is when the apps save.
 
 ## Speed
 
