@@ -29,14 +29,23 @@ const PENDING = /\/api\/keykeeper\/(msp\/[^/]+|organizations)\/pending$/;
  * unlocked, so this reloads it.
  */
 async function nextJoining(page: Page, orgId: string): Promise<Joining> {
-  const answer = page.waitForResponse(
-    (r) => r.url().endsWith("/api/keykeeper/organizations/pending") && r.ok(),
-    { timeout: 60_000 },
-  );
+  // Read through a route, as replay() does: a response the page reloads past
+  // can't be read from the network afterwards.
+  let body: { joining?: Listed[] } | undefined;
+  const route = /\/api\/keykeeper\/organizations\/pending$/;
+  await page.route(route, async (r) => {
+    const response = await r.fetch();
+    const json = await response.json();
+    if (response.ok()) {
+      body ??= json;
+    }
+    await r.fulfill({ response, json });
+  });
   await reloadVault(page);
-  const body = await (await answer).json();
-  const listed = (body.joining as Listed[]).find((o) => o.organizationId === orgId);
-  expect(listed, JSON.stringify(body.joining)).toBeTruthy();
+  await expect.poll(() => body, { timeout: 60_000 }).toBeTruthy();
+  await page.unroute(route);
+  const listed = (body!.joining ?? []).find((o) => o.organizationId === orgId);
+  expect(listed, JSON.stringify(body!.joining)).toBeTruthy();
   const { autoConfirm, domains, seal } = listed!;
   return { autoConfirm, domains, seal };
 }
