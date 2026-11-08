@@ -185,6 +185,9 @@ test("the vault: jewel tiles in the menu and the list, and the item open in a si
 
   // Another row shows its item in the panel instead; the whole row opens it,
   // not only its name (here, a click on its tile).
+  // (In view first: the mouse clicks where it's told, and notices above the
+  // list, such as the nudge to set up two-step login, can push it down.)
+  await row(page, "Visa ending 4242").scrollIntoViewIfNeeded();
   const tile = await row(page, "Visa ending 4242").locator("vault-keykeeper-item-tile").boundingBox();
   await page.mouse.click(tile!.x + tile!.width / 2, tile!.y + tile!.height / 2);
   const card = page.getByRole("dialog", { name: "View Card" });

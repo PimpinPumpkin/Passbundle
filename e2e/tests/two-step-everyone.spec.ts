@@ -58,8 +58,8 @@ test("Joining and security requires two-step login of everyone, and the vault nu
   const member = await memberContext.newPage();
   const memberUser = webUserFor("everyone-member", testInfo.repeatEachIndex);
   await signUp(member, memberUser);
+  // A one-line banner on the vault page.
   const nudge = member.getByTestId("two-step-nudge");
-  await expect(nudge).toContainText("Add two-step login");
   await expect(nudge).toContainText("Your password is all that protects your account.");
   await expect(nudge.getByRole("link", { name: "Set it up" })).toHaveAttribute(
     "href",
