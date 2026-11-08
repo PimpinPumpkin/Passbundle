@@ -35,7 +35,7 @@ The policy form shows the custom URL only on Bitwarden's cloud (`isCloud$`); on 
   - `pathnames`: `{ "/path": { "forms": [...] } }` for one page; `null` there turns autofill off on that page. Paths match exactly, after trailing slashes are trimmed; there are no patterns or prefixes.
 - **A form** (`FormContent`) is the idea of a form, not necessarily a `<form>` element:
   - `category`: one of `account-login`, `account-creation`, `account-recovery`, `account-update`, `signup`, `address`, `identity`, `payment-card`, `search`.
-  - `fields`: from a field key to a list of alternatives, tried in order. There are 46 keys (`AutofillTargetingRuleTypes`): `username`, `password`, `newPassword`, `oneTimeCode`, name parts, email and phone (with parts), organization, address lines and levels, birthdate parts, card fields, three consent boxes, and `searchTerm`. An alternative is a selector, or a list of selectors for one value spread over several inputs (a six-box code).
+  - `fields`: from a field key to a list of alternatives, tried in order. There are 42 keys (`AutofillTargetingRuleTypes`): `username`, `password`, `newPassword`, `oneTimeCode`, name parts, email and phone (with parts), organization, address lines and levels, birthdate parts, card fields, three consent boxes, and `searchTerm`. An alternative is a selector, or a list of selectors for one value spread over several inputs (a six-box code).
   - `container` and `actions` (`submit`, `save`, `next`, `previous`, `cancel`, `reset`): selectors too. Today only upstream's authoring tool writes them; the fill path doesn't read either.
 - **Selectors** are CSS, with `>>>` to cross a boundary CSS can't: into a shadow root (`#host >>> input`) or into a frame (`iframe#login >>> input`).
 
@@ -64,7 +64,7 @@ The policy form shows the custom URL only on Bitwarden's cloud (`isCloud$`); on 
 
 ### Off on our server
 
-- The server has never sent the flag unless its operator lists it in `EXPERIMENTAL_CLIENT_FEATURE_FLAGS`.
+- The server sends the flag only when its operator lists it in `EXPERIMENTAL_CLIENT_FEATURE_FLAGS`, and no PassBundle deployment does.
 - Since this change (passbundle-server branch `fill-rules-feed`), `FILL_ASSIST_RULES_URL` is empty by default instead of Bitwarden's address, and empty passes the config checks; a value someone sets keeps upstream's checks (https, a host, no credentials, query, fragment, or surrounding whitespace).
 - Because an empty value means Bitwarden's feed to upstream's clients (above), the server also sends the flag as off whenever the URL is empty, even if the operator listed it, and warns at start when they did. So no PassBundle install sends people to Bitwarden's feed unless its operator sets that address on purpose.
 - A client change could make an empty value mean off in the extension too. It isn't needed while the server keeps the flag off, and it would be one more change in upstream's files.
@@ -74,7 +74,7 @@ The policy form shows the custom URL only on Bitwarden's cloud (`isCloud$`); on 
 What we have (DESIGN.md, "Autofill"):
 
 - **Fill rules:** what someone picks with the fill picker, stored encrypted on the item (`keykeeper.fill`), synced. A field is known by its id, name, or label; a rule fills any of the item's values, custom fields included, or "never fill".
-- **Site fixes:** fill-picker rules people chose to share (host, field id, name, or label, and username, password, code, or never), confirmed on a server by 3 people with verified email addresses, or approved by the operator, plus MSP site rules for an MSP's clients. Downloaded whole from the person's own server on unlock and daily.
+- **Site fixes:** fill-picker rules people chose to share (host, field id, name, or label, and username, password, code, or never), confirmed on a server by 3 people with verified email addresses (and also approved by the operator where it asks for that), plus MSP site rules for an MSP's clients. Downloaded whole from the person's own server on unlock and daily.
 - **Problem reports:** host and the shape of the sign-in fields, sent by a click, kept without an account.
 - **Vendored site data:** Apple's MIT-licensed password rules (458 sites) and change-password pages (805), read on the device.
 - **Password-change recipes** (designed in meta PR #182, none shipping): per-site selectors for the change-password page, its fields, its button, and how it says it worked.
@@ -88,7 +88,7 @@ What we have (DESIGN.md, "Autofill"):
 
 ### What upstream's has that ours lacks
 
-- **Selectors,** so a field can be found by any attribute or position, inside a shadow root, or in another frame. Ours knows a field only by id, name, or label, and a label-only fix never fills without an id or name.
+- **Selectors,** so a field can be found by any attribute or position, inside a shadow root, or in another frame. Ours knows a field only by its id, its name, or its visible label, compared exactly.
 - **One value in several inputs** (a code split into six boxes).
 - **Paths** within a host, and **form kinds** (a sign-in form and a sign-up form on one page).
 - **Cards, identities, and consent boxes,** where ours covers logins.
