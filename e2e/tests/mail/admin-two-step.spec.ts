@@ -1,6 +1,8 @@
 // Two-step login for admins (DESIGN.md, "Two-step login for admins") where it
-// needs a server that sends email: email codes don't count, and account
-// recovery leaves a covered person to set it up at their next sign-in.
+// needs a server that sends email: email codes don't count, for admins or for
+// everyone where an organization requires it of everyone ("Two-step login for
+// everyone"), and account recovery leaves a covered person to set it up at
+// their next sign-in.
 import { randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
@@ -39,14 +41,47 @@ function expectSetup(result: Result) {
   expect(result.body).not.toHaveProperty("access_token");
 }
 
-async function requireIt(api: Api, owner: Account, orgId: string) {
+async function requireIt(api: Api, owner: Account, orgId: string, everyone = false) {
   const on = await api.call(
     owner,
     "PUT",
     `/api/keykeeper/organizations/${orgId}/admin-two-step`,
-    withMasterPassword(owner, { required: true }),
+    withMasterPassword(owner, { required: true, everyone }),
   );
   expect(on.status, JSON.stringify(on.body)).toBe(200);
+}
+
+/** Turns on email codes, as upstream's two-step login settings do it. */
+async function turnOnEmailCodes(api: Api, who: Account) {
+  const before = await messageCount(who.email);
+  const started = await api.call(who, "POST", "/api/two-factor/get-email", {
+    masterPasswordHash: who.password,
+  });
+  expect(started.status, JSON.stringify(started.body)).toBe(200);
+  const userVerificationToken = started.body.userVerificationToken;
+  const sent = await api.call(who, "POST", "/api/two-factor/send-email", {
+    email: who.email,
+    userVerificationToken,
+  });
+  expect(sent.status, JSON.stringify(sent.body)).toBe(200);
+  const on = await api.call(who, "PUT", "/api/two-factor/email", {
+    email: who.email,
+    token: await emailedCode(who.email, before),
+    userVerificationToken,
+  });
+  expect(on.status, JSON.stringify(on.body)).toBe(200);
+}
+
+/** A password sign-in with an emailed code. */
+async function signInWithEmailCode(api: Api, who: Account) {
+  const before = await messageCount(who.email);
+  const requested = await api.call(null, "POST", "/api/two-factor/send-email-login", {
+    email: who.email,
+    masterPasswordHash: who.password,
+  });
+  expect(requested.status, JSON.stringify(requested.body)).toBe(200);
+  const code = await emailedCode(who.email, before);
+  return api.signIn(who.email, who.password, { twoFactorProvider: "1", twoFactorToken: code });
 }
 
 test("an email code doesn't count: an owner with only email codes gets a setup session for the right one, and once they have an authenticator app, codes aren't taken", async ({
@@ -179,4 +214,42 @@ test("an MSP resets a client admin's two-step login, which signs them out at onc
   expectSetup(next);
   const key = await api.turnOnAuthenticator({ token: next.body.KeykeeperTwoStepSetup }, newHash);
   expect(key).toMatch(/^[A-Z2-7]+$/);
+});
+
+test("where an organization requires it of everyone, a member whose only second step is email codes gets a setup session for the right code, and once they have an authenticator app, codes aren't offered", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const owner = await api.account("email-all-owner");
+  await api.giveAuthenticator(owner);
+  const orgName = `Email All ${randomUUID().slice(0, 6)}`;
+  const orgId = await api.organization(owner, orgName);
+  await requireIt(api, owner, orgId, true);
+
+  // A regular member with email codes joins by email: a method, but not one
+  // that counts, so joining signs them out.
+  const member = await api.account("email-all-member");
+  await turnOnEmailCodes(api, member);
+  await joinByEmail(api, owner, orgId, orgName, member, { type: 2 });
+  expect((await api.call(member, "GET", "/api/sync")).status).not.toBe(200);
+
+  // The sign-in asks for the code first, as always, and the right one gets a
+  // setup session, not a login.
+  const asked = await api.signIn(member.email, member.password);
+  expect(asked.status).toBe(400);
+  expect(asked.body.TwoFactorProviders).toEqual(["1"]);
+  const setup = await signInWithEmailCode(api, member);
+  expectSetup(setup);
+  expect(setup.body.KeykeeperTwoStepRequiredBy).toEqual([orgName]);
+
+  // With an authenticator app as well, email codes aren't offered any more.
+  const key = await api.turnOnAuthenticator({ token: setup.body.KeykeeperTwoStepSetup }, member.password);
+  const offered = await api.signIn(member.email, member.password);
+  expect(offered.status).toBe(400);
+  expect(offered.body.TwoFactorProviders).toEqual(["0"]);
+  const signedIn = await api.signIn(member.email, member.password, {
+    twoFactorProvider: "0",
+    twoFactorToken: totp(key, Date.now() + 30_000),
+  });
+  expect(signedIn.status, JSON.stringify(signedIn.body)).toBe(200);
 });

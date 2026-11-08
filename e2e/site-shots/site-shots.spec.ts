@@ -160,7 +160,9 @@ async function webPage(browser: Browser) {
  * server emails, as a person would, so the vault doesn't ask them to: the open
  * vault is told to sync, and its banner goes away. Someone who will own a business or run an MSP
  * gets an authenticator app first, or their session ends at its next refresh
- * (DESIGN.md, "Two-step login for admins").
+ * (DESIGN.md, "Two-step login for admins"). Everyone else has said Not now to
+ * the nudge to set up two-step login ("A nudge for everyone else"), so it
+ * isn't in the pictures.
  */
 async function signUpVerified(page: Page, request: APIRequestContext, user: WebUser, admin = false) {
   let token = "";
@@ -176,6 +178,10 @@ async function signUpVerified(page: Page, request: APIRequestContext, user: WebU
   const verify = page.locator("#verify-email-banner");
   await expect(verify).toHaveCount(0, { timeout: 30_000 });
   if (admin) await giveAuthenticator(request, user);
+  const notNow = await request.post("/api/keykeeper/two-step-nudge/dismiss", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  expect(notNow.status(), await notNow.text()).toBe(200);
   await reloadVault(page);
   await expect(verify).toHaveCount(0);
 }
