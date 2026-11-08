@@ -940,6 +940,11 @@ main.wide > section.hero {
   margin-bottom: 18px;
 }
 
+/* A tile inside a card's heading sits beside the title, centered on it. */
+.card h3 .tile {
+  margin-bottom: 0;
+}
+
 a.card {
   display: flex;
   flex-direction: column;
@@ -1175,6 +1180,7 @@ a.card .more {
   margin-top: 4px;
   font-size: 15px;
   font-weight: 500;
+  line-height: 1.4;
   letter-spacing: 0;
   color: var(--muted);
 }
@@ -1881,6 +1887,10 @@ main.wide .also h2 {
   gap: 4px;
 }
 
+.also ul + p {
+  margin-top: 32px;
+}
+
 .also strong,
 .band-facts strong,
 .lines strong {
@@ -2351,6 +2361,52 @@ main.wide .home-get h2 {
   font-weight: 700;
 }
 
+/* On a phone the client table fits the screen instead of scrolling
+   sideways: Members and the letter tiles step aside (each client's panel
+   says how many people it has), and the columns sit closer. */
+@media (max-width: 640px) {
+  .demo-table {
+    min-width: 0;
+  }
+
+  .demo-row {
+    grid-template-columns: minmax(0, 1fr) 46px 32px 42px;
+    gap: 8px;
+    padding: 12px 8px;
+  }
+
+  .demo-row.head {
+    padding: 8px;
+    font-size: 11px;
+  }
+
+  .demo-row > :nth-child(2) {
+    display: none;
+  }
+
+  .demo-client-name .tile {
+    display: none;
+  }
+
+  .demo-client-name span:last-child {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 374px) {
+
+  /* An item's fields: Show and Copy go under a value that needs the
+     width, so an email address doesn't break in the middle. */
+  .demo-field {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .demo-field-text {
+    flex-basis: 100%;
+  }
+}
+
 .demo-client {
   flex: 2 1 280px;
   min-width: 0;
@@ -2434,12 +2490,6 @@ main.wide .home-get h2 {
   .doors,
   .also ul {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .home-hero-side .actions .button,
-  .home-get .actions .button,
-  .band .actions .button {
-    flex: 1 1 100%;
   }
 
   .stage {
@@ -2636,10 +2686,6 @@ main.wide .page-head h2 {
   .lines.four {
     grid-template-columns: minmax(0, 1fr);
   }
-
-  .page-hero .actions .button {
-    flex: 1 1 100%;
-  }
 }
 
 /* ======================================================================
@@ -2683,6 +2729,15 @@ main.wide > section.tour-nav-wrap {
 
   .tour-tabs a {
     flex: none;
+  }
+
+  /* Big enough to tap: the parts, Play, Tips. */
+  .tour-tabs a,
+  .tour-play,
+  .tour-tips {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
 }
 
@@ -3043,6 +3098,16 @@ main.wide .tour-head h2 {
 
 .tour-buttons button[hidden] {
   display: none;
+}
+
+/* Under the screen on a phone or tablet, Back and Next are big enough to
+   tap. */
+@media (max-width: 960px) {
+  .tour-buttons button {
+    height: 44px;
+    padding: 0 18px;
+    font-size: 15px;
+  }
 }
 
 .tour-buttons .go {
@@ -4927,7 +4992,9 @@ main.doc > .paper {
     display: flex;
   }
 
-  .header-actions {
+  /* Download and the menu sit at the right edge, the same gutter as the
+     logo's on the left. */
+  .site-header .bar .header-actions {
     margin-left: auto;
   }
 
@@ -4935,15 +5002,23 @@ main.doc > .paper {
     margin-left: 0;
   }
 
-  /* The same height as Download beside it, with three drawn lines: the
-     word stays for screen readers. */
+  /* The same height as Download beside it, big enough to tap, with three
+     drawn lines: the word stays for screen readers. */
   .menu summary {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
     padding: 0;
+  }
+
+  .header-actions .button.small {
+    min-height: 44px;
+  }
+
+  .site-header .brand {
+    min-height: 44px;
   }
 
   .menu .menu-word {
@@ -4955,8 +5030,11 @@ main.doc > .paper {
     white-space: nowrap;
   }
 
+  /* Drawn on a 20-pixel grid (build.mjs) and shown at 20 pixels, so each
+     line lands on whole pixels at every screen density. */
   .menu .menu-icon {
     display: block;
+    flex: none;
     width: 20px;
     height: 20px;
     fill: none;
@@ -4981,8 +5059,11 @@ main.doc > .paper {
     padding-top: 48px;
   }
 
-  .hero .actions .button {
-    width: 100%;
+  /* Buttons fill the width, one under the other, lined up with the words
+     above them. */
+  .actions > .button,
+  .home-hero-side > .actions {
+    flex: 1 1 100%;
   }
 
   .features,
@@ -5016,8 +5097,11 @@ main.doc > .paper {
 
   .tabs a {
     flex: 1;
-    text-align: center;
-    padding: 8px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 6px;
   }
 
   main.doc {
@@ -5034,9 +5118,88 @@ main.doc > .paper {
     gap: 32px 24px;
   }
 
+  /* Product down the left; Resources, then Company, down the right. */
+  .footer-grid > nav[aria-label="Product"] {
+    grid-row: span 2;
+  }
+
+  .site-footer nav {
+    gap: 0;
+  }
+
+  .site-footer nav a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
   th,
   td {
     padding: 12px 14px;
+  }
+
+  /* A short table (the MSP seat pool) fits the width: its headings wrap,
+     and its cells stay on one line. */
+  thead th {
+    white-space: normal;
+  }
+
+  td {
+    white-space: nowrap;
+  }
+}
+
+/* Small phones: the logo, Download, and the menu still fit on one line. */
+@media (max-width: 374px) {
+  .site-header .bar {
+    gap: 8px;
+  }
+
+  .site-header .brand {
+    gap: 8px;
+  }
+
+  .site-header .brand-word {
+    font-size: 21px;
+  }
+
+  .header-actions .button.small {
+    padding: 0 12px;
+  }
+
+  .tabs {
+    gap: 2px;
+  }
+
+  .tabs a {
+    padding: 0 4px;
+    font-size: 15px;
+  }
+}
+
+/* The smallest phones: Download is in the menu, so the bar keeps the logo
+   and the menu. */
+@media (max-width: 359px) {
+  .site-header .header-actions {
+    display: none;
+  }
+
+  .site-header .bar .menu {
+    margin-left: auto;
+  }
+}
+
+/* Tablets and other touch screens: the header's buttons are big enough to
+   tap. */
+@media (max-width: 1100px) and (pointer: coarse) {
+  .site-header .theme-toggle,
+  .menu summary {
+    min-width: 44px;
+    height: 44px;
+  }
+
+  .header-actions .button.small {
+    min-height: 44px;
   }
 }
 
