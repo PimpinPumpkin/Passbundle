@@ -27,7 +27,9 @@ test("the extension sends an owner who hasn't set up two-step login to the web v
   await card.getByRole("checkbox", { name: "Require two-step login for admins" }).check();
   await card.getByRole("button", { name: "Save" }).click();
   await confirmWithPassword(web, user.password);
-  await web.goto(`${org}/members`);
+  // The session can end before this page opens, which sends the web vault
+  // to sign in first and interrupts the navigation: either way, it signs in.
+  await web.goto(`${org}/members`).catch(() => {});
   await web.waitForURL(/#\/login/);
   await web.close();
 

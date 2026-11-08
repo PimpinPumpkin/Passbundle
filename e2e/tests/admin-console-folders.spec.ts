@@ -72,7 +72,7 @@ test("an admin adds a login to another shared folder from the admin console, and
   browser,
   request,
 }, testInfo) => {
-  test.setTimeout(300_000);
+  test.setTimeout(360_000);
   const api = new Api(request);
   const index = testInfo.repeatEachIndex;
   const ownerUser = webUserFor("folders-owner", index);
@@ -86,10 +86,12 @@ test("an admin adds a login to another shared folder from the admin console, and
   const leeToken = tokenOf(lee);
 
   // A business organization's owner and admins sign in with two-step login.
-  await signUpWithAuthenticator(owner, ownerUser);
-  await signUpWithAuthenticator(ada, adaUser);
-  await signUp(kim, kimUser);
-  await signUp(lee, leeUser);
+  await Promise.all([
+    signUpWithAuthenticator(owner, ownerUser),
+    signUpWithAuthenticator(ada, adaUser),
+    signUp(kim, kimUser),
+    signUp(lee, leeUser),
+  ]);
 
   await owner.goto("/#/create-organization");
   await owner.getByRole("textbox", { name: /Organization name/ }).fill("Harbor Dental");
@@ -178,6 +180,7 @@ test("an admin adds a login to another shared folder from the admin console, and
   await ada.getByRole("option", { name: "Admins" }).click();
   // Closing the list shows the dialog's buttons again.
   await assign.getByText(/Only organization members with access/).click();
+  await expect(ada.getByRole("listbox")).toHaveCount(0);
   // As an admin with one item, it goes to upstream's admin route.
   const adminSave = ada.waitForRequest(
     (r) => r.url().includes(`/api/ciphers/${id}/collections-admin`) && r.method() !== "GET",

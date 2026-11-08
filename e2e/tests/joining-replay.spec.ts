@@ -163,15 +163,20 @@ test("an older joining setting the server shows again, with its real seal, lets 
   // run sees the newer setting in the list of every organization's setting
   // (the person waiting is for approval, so nothing else checks it).
   const otherDevice = await (await browser.newContext()).newPage();
-  const seen = otherDevice.waitForResponse(
-    async (r) =>
-      r.url().endsWith("/api/keykeeper/organizations/pending") &&
-      r.ok() &&
-      ((await r.json()).joining as Listed[]).some((o) => o.organizationId === orgId && o.seal === approval.seal),
-    { timeout: 60_000 },
-  );
+  // Read through a route, as replay() does: a response the page reloads
+  // past can't be read from the network afterwards.
+  let seenNewer = false;
+  await otherDevice.route(PENDING, async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    if (((body.joining ?? []) as Listed[]).some((o) => o.organizationId === orgId && o.seal === approval.seal)) {
+      seenNewer = true;
+    }
+    await route.fulfill({ response, json: body });
+  });
   await logIn(otherDevice, ownerUser);
-  await seen;
+  await expect.poll(() => seenNewer, { timeout: 60_000 }).toBe(true);
+  await otherDevice.unroute(PENDING);
   // Give the run time to check what it got.
   await otherDevice.waitForTimeout(3_000);
 
