@@ -293,7 +293,7 @@ test("Remind me sets an item's reminder days, which the item shows and the edito
   await expect(view.getByText("keykeeper.remind")).toHaveCount(0);
 
   await view.getByRole("button", { name: "Edit" }).click();
-  const edit = page.getByRole("dialog", { name: /Edit Login/ });
+  const edit = page.getByRole("dialog", { name: /Edit login/i });
   await expect(edit.getByTestId("keykeeper-remind")).toContainText("7 and 1 day before");
   await edit.getByRole("combobox", { name: "Remind me" }).click();
   await page.getByRole("option", { name: "Don't remind me", exact: true }).click();
@@ -324,9 +324,9 @@ test("an organization's Reports lists its items that have expired or expire soon
   // A login in Everyone that expires in 4 days, made in the admin console.
   await page.goto(`${org}/vault`);
   await page.getByRole("button", { name: "Everyone", exact: true }).first().click();
-  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
   await page.getByRole("menuitem", { name: "Login" }).click();
-  const item = page.getByRole("dialog", { name: "New Login" });
+  const item = page.getByRole("dialog", { name: "Add login" });
   await item.getByRole("textbox", { name: /Item name/ }).fill("Front desk certificate");
   await item.getByTestId("keykeeper-expires").fill(isoInDays(4));
   await item.getByRole("button", { name: "Save" }).click();
