@@ -101,7 +101,7 @@ test("the look follows the device for System, Light and Dark hold, and the type 
 /** Saves a new item of a kind with a name; saving opens its view, which this closes. */
 async function save(page: Page, kind: string, name: string) {
   await newItem(page, kind);
-  const dialog = page.getByRole("dialog", { name: `New ${kind}` });
+  const dialog = page.getByRole("dialog", { name: `Add ${kind}` });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill(name);
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog).toBeHidden();
@@ -233,7 +233,7 @@ test("an item being edited in the panel keeps its edits beside a dialog, and ask
   // A new item in a dialog over it, at the same time: its Save saves the new
   // item, not the panel's (each form has an id of its own).
   await newItem(page, "Login");
-  const added = page.getByRole("dialog", { name: "New Login" });
+  const added = page.getByRole("dialog", { name: "Add login" });
   await added.getByRole("textbox", { name: /Item name/ }).fill("Fabrikam VPN");
   await added.getByRole("button", { name: "Save" }).click();
   const addedView = page.getByRole("dialog", { name: "View Login" });

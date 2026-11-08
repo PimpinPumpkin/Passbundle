@@ -33,7 +33,7 @@ import {
 import { brand, connectorServerPort, hostResolverRules, port } from "../paths.mjs";
 
 import { extensionIdOf, launchWithExtension, openPopup } from "./support/extension";
-import { signUp, skipImport, webUserFor, type WebUser } from "./support/web";
+import { signUp, webUserFor, type WebUser } from "./support/web";
 
 const e2eDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const vaultHost = "vault.connectors.test";
@@ -437,25 +437,25 @@ test("the web vault signs in with a security key, in its own frame", async ({ br
   await other.close();
 });
 
-test("the extension signs in with a security key, in a tab of its own", async ({}, testInfo) => {
+test("the extension signs in with a security key, in a tab of its own", async ({
+  context: webContext,
+  page: web,
+}, testInfo) => {
   test.setTimeout(180_000);
+  // The account and its security key come from the web vault in a browser
+  // of its own: what's under test is the extension's sign-in. (In a profile
+  // where the extension had only just started, reading the key sometimes
+  // never answered on a CI runner.)
+  const user = webUserFor("connector-extension", testInfo.repeatEachIndex);
+  await signUp(web, user);
+  const credential = await addSecurityKey(webContext, web, user);
+  await webContext.close();
+
   const { context, profile } = await launchWithExtension(rules);
   try {
     const extensionId = await extensionIdOf(context);
     // The manifest's key gives the extension PassBundle's own ID.
     expect(extensionId).toBe(brand.extension.chromiumId);
-
-    const user = webUserFor("connector-extension", testInfo.repeatEachIndex);
-    const web = await context.newPage();
-    await web.goto(`${vault}/#/signup`);
-    await web.getByLabel(/Email address/).fill(user.email);
-    await web.getByLabel("Name").fill(user.name);
-    await web.getByRole("button", { name: "Continue" }).click();
-    await web.getByRole("textbox", { name: /^Master password/ }).first().fill(user.password);
-    await web.getByRole("textbox", { name: /Confirm master password/ }).fill(user.password);
-    await web.getByRole("button", { name: "Create account" }).click();
-    await skipImport(web);
-    const credential = await addSecurityKey(context, web, user);
 
     const popup = await openPopup(context, extensionId);
     await expect(async () => {

@@ -106,9 +106,9 @@ async function addClientLogin(page: Page, clientUrl: string, name: string, passw
       timeout: 2_000,
     });
   }).toPass({ timeout: 30_000 });
-  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
   await page.getByRole("menuitem", { name: "Login" }).click();
-  const item = page.getByRole("dialog", { name: "New Login" });
+  const item = page.getByRole("dialog", { name: "Add login" });
   await item.getByRole("textbox", { name: /Item name/ }).fill(name);
   await item.getByRole("textbox", { name: "Username", exact: true }).fill("it@clients.test");
   await item.getByRole("textbox", { name: "Password", exact: true }).fill(password);

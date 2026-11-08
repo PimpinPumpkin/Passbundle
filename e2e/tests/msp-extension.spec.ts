@@ -55,7 +55,7 @@ test("with no vault tab open, an MSP admin's extension confirms someone invited 
   await pick(web, "Northwind Team");
   await pick(web, "Default shared folder");
   await newTemplate(web, "notes");
-  const editor = web.getByRole("dialog", { name: /^New/ });
+  const editor = web.getByRole("dialog", { name: /^Add/ });
   await editor.getByRole("textbox", { name: /Item name/ }).fill("Firewall");
   await editor.getByRole("button", { name: "Add field" }).click();
   const webAddField = web.getByRole("dialog", { name: "Add field" });
@@ -94,7 +94,7 @@ test("with no vault tab open, an MSP admin's extension confirms someone invited 
   await web.getByRole("button", { name: "Invite member" }).click();
   const invite = web.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(person.email);
-  await invite.getByRole("button", { name: "Save" }).click();
+  await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
 
   // From here on, no vault tab: only the extension.
@@ -152,7 +152,7 @@ test("with no vault tab open, an MSP admin's extension confirms someone invited 
   // Starting a new item from it in the popup shows the new field too, offered
   // once, where the template is.
   await popup.goto(vaultUrl);
-  await popup.getByRole("button", { name: /^\W*New$/ }).click();
+  await popup.getByRole("button", { name: /^\W*Add$/ }).click();
   await popup.getByRole("menuitem", { name: "From template" }).click();
   await expect(popup.getByRole("button", { name: "Firewall", exact: true })).toHaveCount(1);
   await popup

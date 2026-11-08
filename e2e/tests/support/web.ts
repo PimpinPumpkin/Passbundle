@@ -1,5 +1,5 @@
 // Helpers for tests that use the web vault directly, without the extension.
-import { type APIRequestContext, expect, type Page } from "@playwright/test";
+import { type APIRequestContext, expect, type Locator, type Page } from "@playwright/test";
 
 import { giveAuthenticator } from "./two-step";
 
@@ -142,9 +142,9 @@ export async function pick(page: Page, name: string) {
   await menu(page).getByRole("button", { name, exact: true }).click();
 }
 
-/** Opens the New item picker in the vault (DESIGN.md, "Our own screens"). */
+/** Opens the new item picker from Add in the vault (DESIGN.md, "Our own screens"). */
 export async function openNewItem(page: Page) {
-  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
   const picker = page.getByRole("dialog", { name: "What are you saving?" });
   await expect(picker).toBeVisible();
   return picker;
@@ -152,11 +152,11 @@ export async function openNewItem(page: Page) {
 
 /**
  * Starts a new item: Login, Secure note, Card, or Identity, or a kind under
- * More. In an organization's vault in the admin console, New is still
+ * More. In an organization's vault in the admin console, Add is still
  * upstream's menu.
  */
 export async function newItem(page: Page, kind: string) {
-  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
   const picker = page.getByRole("dialog", { name: "What are you saving?" });
   const menuItem = page.getByRole("menuitem", { name: kind });
   await expect(picker.or(menuItem)).toBeVisible();
@@ -184,4 +184,44 @@ export async function templatePicker(page: Page) {
 export async function newTemplate(page: Page, items: "logins" | "notes") {
   const picker = await templatePicker(page);
   await picker.getByRole("button", { name: items === "logins" ? "a template for logins" : "for notes" }).click();
+}
+
+/** The role list in upstream's Invite member dialog (a list since web-v2026.10.1). */
+export function roleOption(dialog: Locator, role: "User" | "Admin" | "Owner" | "Custom") {
+  return dialog.page().getByRole("option", { name: new RegExp(`^${role}`) });
+}
+
+/** Picks a role in upstream's Invite member dialog. */
+export async function chooseRole(dialog: Locator, role: "User" | "Admin" | "Owner" | "Custom") {
+  await dialog.getByRole("combobox", { name: /Member role/ }).click();
+  await roleOption(dialog, role).click();
+}
+
+/**
+ * A policy's editor on the admin console's Policies page: a side panel since
+ * web-v2026.10.1, not a dialog. (An MSP's default policy is still a dialog.)
+ */
+export function policyEditor(page: Page) {
+  return page.locator("app-policy-edit-drawer");
+}
+
+/**
+ * Turns on one of upstream's switches. Its knob covers the input, so a click
+ * on the input never lands: focus it and press Space, as a keyboard does.
+ */
+export async function switchOn(control: Locator) {
+  if (!(await control.isChecked())) {
+    await control.focus();
+    await control.press("Space");
+  }
+  await expect(control).toBeChecked();
+}
+
+/** Turns off one of upstream's switches, the same way. */
+export async function switchOff(control: Locator) {
+  if (await control.isChecked()) {
+    await control.focus();
+    await control.press("Space");
+  }
+  await expect(control).not.toBeChecked();
 }

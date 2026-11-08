@@ -8,7 +8,7 @@
 // client".
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUpWithAuthenticator, webUserFor } from "./support/web";
+import { signUpWithAuthenticator, switchOff, switchOn, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) =>
@@ -70,7 +70,7 @@ test("an MSP admin changes a default policy and sees which clients took it, and 
   );
   await expect(note).not.toContainText("Own settings here");
   await admin.getByRole("button", { name: /Remove Unlock with PIN/ }).click();
-  await admin.getByRole("checkbox", { name: "Turn on" }).check();
+  await switchOn(admin.getByRole("switch", { name: "Enable policy" }));
   await admin.getByRole("button", { name: "Save", exact: true }).click();
   await expect(note).toContainText(
     "Own settings here: Remove Unlock with PIN.",
@@ -101,7 +101,7 @@ test("an MSP admin changes a default policy and sees which clients took it, and 
   for (const name of ["Acme Dental", "Baker Law"]) {
     await expect(dialog.getByRole("checkbox", { name })).toBeChecked();
   }
-  await dialog.getByRole("checkbox", { name: "Turn on" }).check();
+  await switchOn(dialog.getByRole("switch", { name: "Enable policy" }));
   await dialog.getByRole("button", { name: "Save default" }).click();
   await expect(admin.getByRole("dialog")).toContainText(
     "Turn on Require two-step login in 2 clients?",
@@ -137,7 +137,7 @@ test("an MSP admin changes a default policy and sees which clients took it, and 
     .getByRole("button", { name: "Edit the default Remove Unlock with PIN" })
     .click();
   const pin = admin.getByRole("dialog");
-  await pin.getByRole("checkbox", { name: "Turn on" }).check();
+  await switchOn(pin.getByRole("switch", { name: "Enable policy" }));
   await pin.getByRole("checkbox", { name: "Baker Law" }).uncheck();
   await pin.getByRole("button", { name: "Save default" }).click();
   await expect(
@@ -187,7 +187,7 @@ test("an MSP admin requires a default for every client: it reaches a client with
   const lawPolicies = admin.url().replace(/\/members.*$/, "/settings/policies");
   await admin.goto(lawPolicies);
   await admin.getByRole("button", { name: /Single organization/ }).click();
-  await admin.getByRole("checkbox", { name: "Turn on" }).uncheck();
+  await switchOff(admin.getByRole("switch", { name: "Enable policy" }));
   await admin.getByRole("button", { name: "Save", exact: true }).click();
   const note = admin.getByTestId("client-msp-policies");
   await expect(note).toContainText("Own settings here: Single organization.");

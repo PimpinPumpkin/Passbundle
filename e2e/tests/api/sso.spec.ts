@@ -103,11 +103,11 @@ async function turnOnAuthenticator(api: Api, person: Account) {
     masterPasswordHash: person.password,
   });
   expect(started.status, JSON.stringify(started.body)).toBe(200);
-  const key = started.body.key as string;
+  const key = started.body.authenticator.key as string;
   const on = await api.call(person, "POST", "/api/two-factor/authenticator", {
     key,
     token: totp(key),
-    masterPasswordHash: person.password,
+    userVerificationToken: started.body.userVerificationToken,
   });
   expect(on.status, JSON.stringify(on.body)).toBe(200);
   return key;

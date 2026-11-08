@@ -10,7 +10,7 @@ import { newItem, reloadVault, signUp, webUserFor } from "./support/web";
 /** Changes the password in the item's view, through Edit, and back to its view. */
 async function changePassword(page: Page, view: Locator, password: string) {
   await view.getByRole("button", { name: "Edit" }).click();
-  const edit = page.getByRole("dialog", { name: /Edit Login/ });
+  const edit = page.getByRole("dialog", { name: /Edit login/i });
   await edit.getByRole("textbox", { name: "Password", exact: true }).fill(password);
   await edit.getByRole("button", { name: "Save" }).click();
   await expect(edit).toBeHidden();
@@ -33,7 +33,7 @@ test("a login's earlier passwords show in its history, and restoring one brings 
   await signUp(page, user);
 
   await newItem(page, "Login");
-  const create = page.getByRole("dialog", { name: "New Login" });
+  const create = page.getByRole("dialog", { name: "Add login" });
   await create.getByRole("textbox", { name: /Item name/ }).fill("Example mail");
   await create.getByRole("textbox", { name: "Username", exact: true }).fill("ana@example.test");
   await create.getByRole("textbox", { name: "Password", exact: true }).fill("first-password-1");

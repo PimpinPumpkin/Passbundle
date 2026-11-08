@@ -6,7 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { brand } from "../paths.mjs";
 
-import { acceptRole, reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
+import { acceptRole, chooseRole, reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) =>
@@ -106,9 +106,9 @@ test("an MSP admin adds a client and a technician, and the technician gets in on
   // client's own vault, shows up in the console.
   await admin.goto(`${clientUrl}/vault`);
   await admin.getByRole("button", { name: "Everyone", exact: true }).first().click();
-  await admin.getByRole("button", { name: "New", exact: true }).click();
+  await admin.getByRole("button", { name: "Add", exact: true }).click();
   await admin.getByRole("menuitem", { name: "Login" }).click();
-  const item = admin.getByRole("dialog", { name: "New Login" });
+  const item = admin.getByRole("dialog", { name: "Add login" });
   await item.getByRole("textbox", { name: /Item name/ }).fill("Front desk PC");
   await item.getByRole("textbox", { name: "Username", exact: true }).fill("frontdesk@acme.test");
   await item.getByRole("textbox", { name: "Password", exact: true }).fill("password1");
@@ -300,8 +300,8 @@ test("a client's own owner sees its MSP on the Members page and removes it; the 
   await admin.getByRole("button", { name: "Invite member" }).click();
   const invite = admin.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(ownerUser.email);
-  await invite.getByRole("radio", { name: /^Owner/ }).check();
-  await invite.getByRole("button", { name: "Save" }).click();
+  await chooseRole(invite, "Owner");
+  await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
   await acceptRole(owner);
   await admin.goto("/#/msp");

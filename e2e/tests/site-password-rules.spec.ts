@@ -75,7 +75,7 @@ webTest("the item editor's generator follows the item's website's password rules
 }, testInfo) => {
   await signUp(page, webUserFor("site-rules-editor", testInfo.repeatEachIndex));
   await newItem(page, "Login");
-  const item = page.getByRole("dialog", { name: "New Login" });
+  const item = page.getByRole("dialog", { name: "Add login" });
   await item.getByRole("textbox", { name: /Item name/ }).fill("Air France");
   // A website the way people type it, without https://.
   await item.getByRole("textbox", { name: "Website (URI)" }).fill("www.airfrance.com");

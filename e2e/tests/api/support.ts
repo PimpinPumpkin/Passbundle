@@ -230,14 +230,30 @@ export class Api {
       masterPasswordHash: password,
     });
     expect(started.status, JSON.stringify(started.body)).toBe(200);
-    const key = started.body.key as string;
+    const key = started.body.authenticator.key as string;
+    // The token the first answer gave, as upstream's clients send it.
     const on = await this.call(as, "POST", "/api/two-factor/authenticator", {
       key,
       token: totp(key),
-      masterPasswordHash: password,
+      userVerificationToken: started.body.userVerificationToken,
     });
     expect(on.status, JSON.stringify(on.body)).toBe(200);
     return key;
+  }
+
+  /**
+   * Turns the authenticator app off, as the web vault's Remove does: the
+   * master password once, then the token its answer gave.
+   */
+  async turnOffAuthenticator(as: { token: string }, password: string): Promise<Result> {
+    const started = await this.call(as, "POST", "/api/two-factor/get-authenticator", {
+      masterPasswordHash: password,
+    });
+    expect(started.status, JSON.stringify(started.body)).toBe(200);
+    return this.call(as, "DELETE", "/api/two-factor/authenticator", {
+      key: started.body.authenticator.key,
+      userVerificationToken: started.body.userVerificationToken,
+    });
   }
 
   /** Calls the API as someone (or no one), and returns the status and parsed body. */

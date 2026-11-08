@@ -11,6 +11,7 @@ import { brand } from "../paths.mjs";
 
 import {
   acceptRole,
+  chooseRole,
   reloadVault,
   signUpWithAuthenticator,
   webUserFor,
@@ -30,15 +31,15 @@ function refusedCalls(page: Page) {
   return refused;
 }
 
-async function invite(owner: Page, email: string, role: RegExp, permission?: string) {
+async function invite(owner: Page, email: string, role: "Admin" | "Custom", permission?: string) {
   await owner.getByRole("button", { name: "Invite member" }).click();
   const dialog = owner.getByRole("dialog", { name: /Invite member/ });
   await dialog.getByRole("textbox", { name: /Email/ }).fill(email);
-  await dialog.getByRole("radio", { name: role }).check();
+  await chooseRole(dialog, role);
   if (permission) {
     await dialog.getByRole("checkbox", { name: permission }).check();
   }
-  await dialog.getByRole("button", { name: "Save" }).click();
+  await dialog.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(dialog).toBeHidden();
 }
 
@@ -65,8 +66,8 @@ test("a company's admin, not only its owners, opens Joining and security: two-st
   await owner.getByRole("button", { name: "Create organization" }).click();
   await owner.waitForURL(/#\/organizations\/[0-9a-f-]{36}\/members/);
   const org = owner.url().replace(/\/members.*$/, "");
-  await invite(owner, adminUser.email, /^Admin/);
-  await invite(owner, policiesUser.email, /^Custom/, "Manage policies");
+  await invite(owner, adminUser.email, "Admin");
+  await invite(owner, policiesUser.email, "Custom", "Manage policies");
   await acceptRole(admin);
   await acceptRole(policies);
   // The owner's web vault lets them in on its own when it opens Members.

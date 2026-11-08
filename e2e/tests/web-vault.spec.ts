@@ -95,7 +95,7 @@ test("vault page carries our brand, including logos", async ({ page }) => {
   );
   expect(brand700.toLowerCase()).toBe(brand.color.toLowerCase());
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(brand.color.slice(i, i + 2), 16));
-  await expect(page.getByRole("button", { name: "New", exact: true })).toHaveCSS(
+  await expect(page.getByRole("button", { name: "Add", exact: true })).toHaveCSS(
     "background-color",
     `rgb(${r}, ${g}, ${b})`,
   );
@@ -136,7 +136,7 @@ test("New offers the kinds people save most first, and the rest under More", asy
 test("a saved login survives logging out and back in", async ({ page }) => {
   await logIn(page);
   await newItem(page, "Login");
-  const dialog = page.getByRole("dialog", { name: "New Login" });
+  const dialog = page.getByRole("dialog", { name: "Add login" });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill("Example Bank");
   await dialog.getByRole("textbox", { name: "Username", exact: true }).fill("alice-bank");
   await dialog.getByRole("textbox", { name: "Password", exact: true }).fill("not-a-real-password-1");

@@ -435,7 +435,7 @@ test("an MSP's console with five clients, a client's passwords to fix, Entra, an
   const firewall = await openItem(web, "Firewall");
   for (const next of ["Kp3#mW8z!Qr3Lt4v-2026", "Vt8!cN4q#Hs6Jw2e"]) {
     await firewall.getByRole("button", { name: "Edit" }).click();
-    const edit = web.getByRole("dialog", { name: /Edit Login/ });
+    const edit = web.getByRole("dialog", { name: /Edit login/i });
     await edit.getByRole("textbox", { name: "Password", exact: true }).fill(next);
     await edit.getByRole("button", { name: "Save" }).click();
     await expect(edit).toBeHidden();

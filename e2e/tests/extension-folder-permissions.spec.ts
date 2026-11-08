@@ -46,9 +46,9 @@ async function showFolder(owner: Page, org: string, name: string) {
 
 /** Starts a new item of a kind in the shared folder showing. */
 async function newOrgItem(owner: Page, kind: string) {
-  await owner.getByRole("button", { name: "New", exact: true }).click();
+  await owner.getByRole("button", { name: "Add", exact: true }).click();
   await owner.getByRole("menuitem", { name: kind }).click();
-  return owner.getByRole("dialog", { name: `New ${kind}` });
+  return owner.getByRole("dialog", { name: `Add ${kind}` });
 }
 
 /** Changes a login's password in the admin console, so it has an earlier version. */
@@ -56,7 +56,7 @@ async function changeOrgPassword(owner: Page, name: string, password: string) {
   await owner.getByRole("row").filter({ hasText: name }).getByText(name, { exact: true }).click();
   const view = owner.getByRole("dialog", { name: "View Login" });
   await view.getByRole("button", { name: "Edit" }).click();
-  const edit = owner.getByRole("dialog", { name: /Edit Login/ });
+  const edit = owner.getByRole("dialog", { name: /Edit login/i });
   await edit.getByRole("textbox", { name: "Password", exact: true }).fill(password);
   await edit.getByRole("button", { name: "Save" }).click();
   await expect(edit).toBeHidden();
@@ -118,7 +118,7 @@ async function setUpOrganization(
   await owner.getByRole("button", { name: "Invite member" }).click();
   const invite = owner.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(danaEmail);
-  await invite.getByRole("button", { name: "Save" }).click();
+  await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
   await confirmMember(owner, danaEmail);
 
@@ -454,7 +454,7 @@ test("a member who can't see passwords can't reveal or copy them in the extensio
     await web.getByRole("button", { name: /^(Sign in|Unlock)$/ }).click();
   }
   await expect(refused).toBeVisible({ timeout: 30_000 });
-  await expect(web.getByRole("dialog", { name: /^New/ })).toHaveCount(0);
+  await expect(web.getByRole("dialog", { name: /^Add/ })).toHaveCount(0);
 
   await ownerContext.close();
 });
