@@ -74,6 +74,8 @@ export type RealAccount = {
   token: string;
   userId: string;
   publicKey: Buffer;
+  /** The account's own key, for items in its Personal folders. */
+  userKey: SymmetricKey;
 };
 
 /** A new account with real keys (PBKDF2, 600,000 iterations), signed in. */
@@ -146,6 +148,7 @@ export async function realAccount(
     token,
     userId: (await profile.json()).id,
     publicKey,
+    userKey,
   };
 }
 
@@ -293,6 +296,36 @@ export async function realLogin(
     data: {
       cipher: loginBody(org, owner, values),
       collectionIds: [collectionId],
+    },
+  });
+  expect(created.status(), await created.text()).toBe(200);
+  return (await created.json()).id;
+}
+
+/** A login in the account's own Personal items, encrypted with its own key. */
+export async function realPersonalLogin(
+  request: APIRequestContext,
+  account: RealAccount,
+  values: LoginValues,
+): Promise<string> {
+  const key = account.userKey;
+  const created = await request.post("/api/ciphers", {
+    headers: auth(account),
+    data: {
+      type: 1,
+      organizationId: null,
+      encryptedFor: account.userId,
+      name: encrypt(key, values.name),
+      notes: null,
+      favorite: false,
+      reprompt: 0,
+      fields: [],
+      login: {
+        username: encrypt(key, values.username),
+        password: encrypt(key, values.password),
+        totp: null,
+        uris: [{ uri: encrypt(key, values.uri), match: null }],
+      },
     },
   });
   expect(created.status(), await created.text()).toBe(200);

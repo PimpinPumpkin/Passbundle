@@ -77,7 +77,7 @@ What we have (DESIGN.md, "Autofill"):
 - **Site fixes:** fill-picker rules people chose to share (host, field id, name, or label, and username, password, code, or never), confirmed on a server by 3 people with verified email addresses (and also approved by the operator where it asks for that), plus MSP site rules for an MSP's clients. Downloaded whole from the person's own server on unlock and daily.
 - **Problem reports:** host and the shape of the sign-in fields, sent by a click, kept without an account.
 - **Vendored site data:** Apple's MIT-licensed password rules (458 sites) and change-password pages (805), read on the device.
-- **Password-change recipes** (designed in meta PR #182, none shipping): per-site selectors for the change-password page, its fields, its button, and how it says it worked.
+- **Password-change recipes** (DESIGN.md, "Assisted password change"; none ship yet): per-site selectors for the change-password page, its fields, its button, and how it says it worked.
 - **The corpus and scoreboard** in tier 1.
 
 ### Where they overlap
