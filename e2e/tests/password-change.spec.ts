@@ -4,6 +4,9 @@
 // hands over for a CAPTCHA or a code; it stops when the page goes to another
 // site; the new password follows the site's rules; and when the site refuses
 // or it can't tell, the item asks, and one click puts the old password back.
+// For an organization's items: only where the person can edit and see their
+// passwords, until the organization turns it off, and the change and the old
+// password put back are in its event log in their own words.
 // Only local test sites (change-password-site.mjs), never a real one.
 import type { APIRequestContext, BrowserContext, Page } from "@playwright/test";
 
@@ -485,7 +488,19 @@ test('asks "Did the new password work?" when it can\'t tell, and takes the answe
   expect((await siteState(request, host)).password).toBe(after.password);
 });
 
-test("no Change password for an organization's items, whatever the person may do with them, for now", async ({
+/** The organization's owner in the web vault, in a tab of this browser (the extension stays signed in as someone else). */
+async function ownerWebVault(context: BrowserContext, owner: { email: string; password: string }) {
+  const page = await context.newPage();
+  await page.goto(`${serverUrl}/#/vault`);
+  await page.getByRole("textbox", { name: /Email address/ }).fill(owner.email);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("textbox", { name: /Master password/ }).fill(owner.password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "All items" }).first()).toBeVisible({ timeout: 30_000 });
+  return page;
+}
+
+test("Change password on an organization's items where the person can edit and see their passwords, until the organization turns it off", async ({
   context,
   extensionId,
   request,
@@ -504,44 +519,99 @@ test("no Change password for an organization's items, whatever the person may do
     { id: folders.edit, readOnly: false, hidePasswords: false, manage: false },
   ]);
   const uri = "https://cp-works.example.test/login";
-  await realLogin(request, owner, org, folders.view, {
-    name: "Read-only login",
-    username: "a",
-    password: OLD,
-    uri,
-  });
-  await realLogin(request, owner, org, folders.hidden, {
-    name: "Hidden login",
-    username: "b",
-    password: OLD,
-    uri,
-  });
-  await realLogin(request, owner, org, folders.edit, {
+  await realLogin(request, owner, org, folders.view, { name: "Read-only login", username: "a", password: OLD, uri });
+  await realLogin(request, owner, org, folders.hidden, { name: "Hidden login", username: "b", password: OLD, uri });
+  const editable = await realLogin(request, owner, org, folders.edit, {
     name: "Editable login",
     username: "c",
     password: OLD,
     uri,
   });
-  // Calibration: the member's own login has it, so its absence below means something.
-  await realPersonalLogin(request, member, {
-    name: "My own login",
-    username: "d",
-    password: OLD,
-    uri,
-  });
+  const mine = await realPersonalLogin(request, member, { name: "My own login", username: "d", password: OLD, uri });
 
   const popup = await openPopup(context, extensionId);
-  await logInPopup(popup, {
-    email: member.email,
-    password: member.password,
-    name: "cp-member",
-  });
-  await openItem(popup, "My own login");
+  await logInPopup(popup, { email: member.email, password: member.password, name: "cp-member" });
+  // Allowed by default: the login they can edit and see the password of has it.
+  await openItem(popup, "Editable login");
   await expect(popup.getByTestId("keykeeper-change-password")).toBeVisible();
-
-  for (const name of ["Read-only login", "Hidden login", "Editable login"]) {
+  for (const name of ["Read-only login", "Hidden login"]) {
     await popup.goBack();
     await openItem(popup, name);
     await expect(popup.getByTestId("keykeeper-change-password")).toHaveCount(0);
   }
+
+  // The owner turns it off on the organization's Settings page.
+  const web = await ownerWebVault(context, owner);
+  await web.goto(`${serverUrl}/#/organizations/${org.id}/settings/joining`);
+  const card = web.getByTestId("password-change-setting");
+  const box = card.getByRole("checkbox", { name: "Let people change passwords on sites with the browser extension" });
+  await expect(box).toBeChecked({ timeout: 30_000 });
+  await box.uncheck();
+  await card.getByRole("button", { name: "Save" }).click();
+  await expect(web.getByText("Assisted password change is off")).toBeVisible();
+
+  // The member's extension learns it at its next sync: the organization's login has it no more; their own still does.
+  await syncExtension(context);
+  const item = await itemPage(context, extensionId, editable, "Editable login");
+  await expect(item.getByTestId("keykeeper-change-password")).toHaveCount(0);
+  const own = await itemPage(context, extensionId, mine, "My own login");
+  await expect(own.getByTestId("keykeeper-change-password")).toBeVisible();
+});
+
+test("an organization's item: the change and the old password put back are in its event log, in their own words", async ({
+  context,
+  extensionId,
+  request,
+}) => {
+  const host = "cp-refuses.example.test";
+  await setSitePassword(request, host, OLD);
+  const owner = await realAccount(request, "cp-ev-owner");
+  const member = await realAccount(request, "cp-ev-member");
+  const org = await realOrganization(request, owner, "Harbor Dental");
+  const folder = await realCollection(request, owner, org, "Front desk");
+  await realMember(request, owner, org, member, [{ id: folder, readOnly: false, hidePasswords: false, manage: false }]);
+  const id = await realLogin(request, owner, org, folder, {
+    name: host,
+    username: "frontdesk",
+    password: OLD,
+    uri: `https://${host}/login`,
+  });
+
+  const popup = await openPopup(context, extensionId);
+  await logInPopup(popup, { email: member.email, password: member.password, name: "cp-ev-member" });
+  await startChange(context, popup, host);
+  await waitFor(context, "refused");
+  const card = (await itemPage(context, extensionId, id, host)).getByTestId("keykeeper-password-change-card");
+  await card.getByRole("button", { name: "Put the old password back" }).click();
+  await expect(card).toBeHidden();
+  expect((await itemState(context, host)).password).toBe(OLD);
+
+  // In the organization's log, by the member, beside the edits themselves.
+  const now = Date.now();
+  const range = `start=${new Date(now - 3_600_000).toISOString()}&end=${new Date(now + 3_600_000).toISOString()}`;
+  const events = async () => {
+    const answer = await request.get(`/api/organizations/${org.id}/events?${range}`, {
+      headers: { Authorization: `Bearer ${owner.token}` },
+    });
+    return ((await answer.json()).data as { type: number; actingUserId: string; cipherId: string }[]).filter(
+      (e) => e.cipherId === id,
+    );
+  };
+  await expect
+    .poll(async () => (await events()).filter((e) => e.type === 1192 || e.type === 1193).map((e) => e.type).sort())
+    .toEqual([1192, 1193]);
+  for (const e of await events()) {
+    if (e.type === 1192 || e.type === 1193) {
+      expect(e.actingUserId).toBe(member.userId);
+    }
+  }
+  expect((await events()).some((e) => e.type === 1101)).toBe(true);
+
+  // And in its words, in the web vault's event log.
+  const web = await ownerWebVault(context, owner);
+  await web.goto(`${serverUrl}/#/organizations/${org.id}/reporting/events`);
+  await expect(web.getByText(/Changed the password of item .* on its website\./).first()).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(web.getByText(/Put back the earlier password of item .* after a password change\./).first()).toBeVisible();
 });
