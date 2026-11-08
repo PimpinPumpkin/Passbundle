@@ -293,8 +293,20 @@ export class Api {
    * who may read its setting sees it (false for anyone else).
    */
   async requiresTwoStep(as: Account, orgId: string): Promise<boolean> {
+    return (await this.twoStepSetting(as, orgId)).required;
+  }
+
+  /**
+   * Whom an organization requires two-step login of, as someone who may read
+   * its setting sees it: its admins, and everyone else too (DESIGN.md,
+   * "Two-step login for everyone"). Nobody, for anyone else.
+   */
+  async twoStepSetting(as: Account, orgId: string): Promise<{ required: boolean; everyone: boolean }> {
     const setting = await this.call(as, "GET", `/api/keykeeper/organizations/${orgId}/admin-two-step`);
-    return setting.status === 200 && setting.body.required === true;
+    return {
+      required: setting.status === 200 && setting.body.required === true,
+      everyone: setting.status === 200 && setting.body.everyone === true,
+    };
   }
 
   /**
@@ -312,9 +324,10 @@ export class Api {
    * real member: invited (joined at once, since the test server sends no
    * mail), accepted by the member (acceptRole, unless `accept` is false), then
    * confirmed by the owner with the org key for them. An owner or admin of an
-   * organization that requires two-step login for admins gets an
-   * authenticator app first, as they'd set one up, unless `authenticator` is
-   * false: accepting without one signs them out.
+   * organization that requires two-step login for admins, or anyone where it
+   * requires it of everyone, gets an authenticator app first, as they'd set
+   * one up, unless `authenticator` is false: accepting without one signs them
+   * out.
    */
   async addMember(
     owner: Account,
@@ -323,12 +336,11 @@ export class Api {
     type: "admin" | "user" | "manager" | "owner",
     options: { authenticator?: boolean; accept?: boolean; confirm?: boolean } = {},
   ) {
-    if (
-      options.authenticator !== false &&
-      (type === "owner" || type === "admin") &&
-      (await this.requiresTwoStep(owner, orgId))
-    ) {
-      await this.giveAuthenticator(member);
+    if (options.authenticator !== false) {
+      const setting = await this.twoStepSetting(owner, orgId);
+      if (setting.everyone || ((type === "owner" || type === "admin") && setting.required)) {
+        await this.giveAuthenticator(member);
+      }
     }
     const types = { owner: 0, admin: 1, user: 2, manager: 3 };
     const invited = await this.call(
@@ -560,7 +572,8 @@ export class Api {
    * Adds an existing account with a custom role: upstream's Custom type (4)
    * with these permissions, accepted and confirmed like any member. One that manages
    * members, policies, or account recovery gets an authenticator app first
-   * where the organization requires two-step login for admins, as addMember.
+   * where the organization requires two-step login for admins, and anyone
+   * where it requires it of everyone, as addMember.
    */
   async addCustomMember(
     owner: Account,
@@ -569,7 +582,8 @@ export class Api {
     permissions: Record<string, boolean>,
   ) {
     const elevated = ["manageUsers", "managePolicies", "manageResetPassword"].some((p) => permissions[p]);
-    if (elevated && (await this.requiresTwoStep(owner, orgId))) {
+    const setting = await this.twoStepSetting(owner, orgId);
+    if (setting.everyone || (elevated && setting.required)) {
       await this.giveAuthenticator(member);
     }
     const invited = await this.call(
