@@ -1,7 +1,9 @@
 // Two-step login for everyone, in the web vault and the extension (DESIGN.md,
 // "Two-step login for everyone"): Joining and security requires it of every
-// member, listing who isn't set up first, and a member without it is taken to
-// set it up at their next sign-in; going back to admins asks first. Someone
+// member, asking first; a member without it accepts their place on their
+// vault page (this test server sends no email, so the invitation joined them
+// without asking) and is taken to set it up at their next sign-in; the card
+// lists them; going back to admins asks first. Someone
 // with no two-step login whom no rule covers gets a nudge on the vault page,
 // in the web vault and the extension's popup, and Not now hides it on every
 // device. The API test covers the rest.
@@ -17,7 +19,6 @@ import {
 import { giveAuthenticator } from "./support/two-step";
 import {
   chooseRole,
-  confirmMember,
   confirmWithPassword,
   reloadVault,
   signUp,
@@ -70,7 +71,7 @@ test("Joining and security requires two-step login of everyone, and the vault nu
   await expect(nudge).toHaveCount(0);
 
   // An owner with an authenticator app isn't nudged. They make a group, and
-  // let the member in.
+  // invite the member.
   const ownerContext = await browser.newContext();
   const owner = await ownerContext.newPage();
   const ownerUser = webUserFor("everyone-owner", testInfo.repeatEachIndex);
@@ -90,22 +91,18 @@ test("Joining and security requires two-step login of everyone, and the vault nu
   await chooseRole(invite, "User");
   await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
-  // This test server sends no email, so the invitation joined them at once.
-  await owner.goto("/#/vault");
-  await owner.goto(`${org}/members`);
-  await confirmMember(owner, memberUser.email);
 
   // Joining and security: everyone else needs the admins first, and the card
-  // lists who requiring it of everyone would sign out, and how upstream's
-  // policy differs.
+  // says how upstream's policy differs. The member hasn't accepted their
+  // place themselves, so the rule doesn't count them yet.
   await owner.goto(`${org}/settings/joining`);
   const card = owner.getByTestId("admin-two-step");
   const admins = card.getByRole("checkbox", { name: "Require two-step login for admins" });
   const everyone = card.getByRole("checkbox", { name: "Everyone else too" });
+  const members = card.getByTestId("admin-two-step-members-not-set-up");
   await expect(admins).not.toBeChecked();
   await expect(everyone).toBeDisabled();
-  await expect(card.getByTestId("admin-two-step-members-not-set-up")).toContainText(memberUser.email);
-  await expect(card).toContainText("Requiring it of everyone would sign out 1 member until they set it up.");
+  await expect(members).toContainText("Every other member has set it up.");
   await expect(card.getByTestId("admin-two-step-upstream")).toContainText(
     "Require two-step login is a separate policy: it counts email codes",
   );
@@ -113,29 +110,34 @@ test("Joining and security requires two-step login of everyone, and the vault nu
   await everyone.check();
   await card.getByRole("button", { name: "Save" }).click();
   const ask = owner.getByRole("dialog", { name: /Require two-step login of everyone/ });
-  await expect(ask).toContainText("1 member without one is signed out now");
+  await expect(ask).toContainText("Every member must use an authenticator app, a security key or passkey, or Duo.");
   await ask.getByRole("button", { name: "Require it" }).click();
   // Then the master password (DESIGN.md, "Confirming sensitive changes").
   await confirmWithPassword(owner, ownerUser.password);
   await expect(everyone).toBeChecked();
   await expect(admins).toBeChecked();
-  await expect(card).not.toContainText("Requiring it of everyone would sign out");
 
-  // The member is signed out, and their next sign-in sets it up first.
-  // (The server's word can sign the page out before this navigation
-  // finishes, which Playwright reports as interrupted: either way, it ends
-  // at the sign-in page.)
-  await member.goto("/#/settings/account").catch((e: unknown) => {
-    if (!String(e).includes("interrupted by another navigation")) {
-      throw e;
-    }
-  });
+  // The member's vault asks them to accept their place. Accepting takes it
+  // on, and the rule with it: without two-step login, they're signed out,
+  // and their next sign-in sets it up first.
+  await reloadVault(member);
+  const role = member.getByTestId("accept-role");
+  await expect(role).toContainText("Bright Smiles made you a member");
+  await role.getByRole("button", { name: "Accept the role" }).click();
   await member.waitForURL(/#\/login/, { timeout: 30_000 });
+  // The sign-in page, once signing out is done.
+  await expect(member.getByLabel(/Email address/)).toBeVisible({ timeout: 30_000 });
   await enterPassword(member, memberUser);
   await member.waitForURL(/#\/two-step-setup/);
   await expect(member.getByTestId("two-step-setup-why")).toContainText(
     "Two-step login is required for your role by Bright Smiles",
   );
+
+  // The owner's card lists them now. (Reloading would lock the vault: move
+  // away and back instead.)
+  await owner.goto(`${org}/members`);
+  await owner.goto(`${org}/settings/joining`);
+  await expect(members).toContainText(memberUser.email);
 
   // Back to admins only asks first.
   await everyone.uncheck();
