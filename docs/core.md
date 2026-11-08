@@ -91,11 +91,16 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 3. The response carries the access token, the refresh token, the user key, and the private key. The core opens the user key with the stretched master key; a wrong password fails here, on the device, as well as on the server.
 4. Sync, then open the vault.
 
-**A wrong email or master password** is said the same way, "That email or master password isn't right." (`Error::WrongSignIn`): the server answers an email with no account and a wrong password alike ("Username or password is incorrect"), and a user key that doesn't open with what was typed says the same. So a typo in the email isn't called a wrong master password, and nothing tells anyone which emails have accounts. Unlocking, where the email is known, says "That master password isn't right."
+**A wrong email or master password** is said the same way, "That email or master password isn't right." (`Error::WrongSignIn`): the server answers an email with no account and a wrong password alike ("Username or password is incorrect"), and a user key that doesn't open with what was typed says the same. So a typo in the email isn't called a wrong master password, and nothing tells anyone which emails have accounts. The server's made-up settings for an email with no account are always ones the apps accept, so those don't either (DESIGN.md, "Unknown emails at prelogin"). Unlocking, where the email is known, says "That master password isn't right."
 
-**Two-step login.** If the account has it on, the server answers step 2 with the methods it offers. The core does an authenticator app's code and an emailed code (it asks the server to send the email); the others come later.
-- The sign-in waits for the code holding the login hash and the stretched master key, in memory only, so the slow KDF runs once.
-- The code goes back with the same request.
+**Two-step login.** If the account has it on, the server answers step 2 with the methods it offers, and what each needs (`TwoFactorProviders2`). The core does all of them (DESIGN.md, "Two-step login in the apps"):
+- an authenticator app's code (0) and an emailed code (1, after asking the server to send it);
+- a YubiKey's one-time code (3), checked to be 44 modhex characters first;
+- a recovery code (8), which the server takes whatever it offers, and which turns two-step login off;
+- Duo (2): the server's Universal Prompt address, checked to be Duo's and to come back to this server, opens in the browser; the answer comes back as `passbundle://duo-callback?code=...&state=...` and must carry this sign-in's state; it goes as "code|state";
+- a security key (7): the core does the browser's part of WebAuthn for the server's own origin (the site ID must be the server's host or a domain above it that isn't a public suffix), asks the key through Windows's WebAuthn API, or itself in CTAP2 or U2F over USB (Linux, the Mac, Android) or NFC (Android), checks the answer, and sends it in the server's shape.
+- The sign-in waits for the second step holding the login hash and the stretched master key, in memory only, so the slow KDF runs once. Duo's address and a key's challenge are asked for again, with the same request, once one was tried or it's old.
+- The code or answer goes back with the same request.
 
 **Unlocking later** is steps 1 and 3 without the network: the KDF settings are kept with the email, and the encrypted user key is in the cached sync.
 
