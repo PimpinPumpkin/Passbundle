@@ -7,7 +7,8 @@ description: Move your passwords to PassBundle from 1Password, Bitwarden, LastPa
 
 <h2>Import into PassBundle</h2>
 <ol class="steps">
-  <li>Sign in to your web vault, at your PassBundle server's address.</li>
+  <x-if not link="vault"><li>Sign in to your web vault, at your PassBundle server's address.</li></x-if>
+  <x-if link="vault"><li>Sign in to the <a href="{{links.vault}}">web vault</a>. If you run your own server, it's at your server's address.</li></x-if>
   <li>Open <strong>Import and export</strong>, then <strong>Import</strong>.</li>
   <li>Choose the app you're coming from under <strong>File format</strong>, choose the export file, and select <strong>Import</strong>.</li>
   <li>Delete the export file. It has your passwords in plain text.</li>
