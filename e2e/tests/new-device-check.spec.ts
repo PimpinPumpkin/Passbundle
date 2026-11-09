@@ -129,8 +129,10 @@ test("a new browser waits for its number, and the web vault signed in elsewhere 
     "href",
     "https://db-ip.com",
   );
-  // The number isn't anywhere on the approving side.
-  expect(await dialog.innerText()).not.toContain(number);
+  // The number isn't shown on the approving side. (Its two digits may well
+  // turn up inside the address or the time, so look for it on its own.)
+  await expect(dialog.getByText(number, { exact: true })).toHaveCount(0);
+  await expect(dialog.getByTestId("keykeeper-new-device-approval-number")).toHaveValue("");
   // Approve alone, without the number, approves nothing.
   await dialog.getByTestId("keykeeper-new-device-approval-approve").click();
   await expect(dialog).toContainText("Type the two-digit number shown on the new device.");
