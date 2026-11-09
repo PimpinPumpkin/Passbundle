@@ -13,6 +13,11 @@
 //     empty.
 //   <x-if link="vault">...</x-if>: what's inside, only once that link is
 //     filled in. <x-if not link="vault">...</x-if>: only until then.
+//     <x-if link="vault" until="signup">...</x-if>: only once the first is
+//     filled in and until the second is. That's the hosted vault open for
+//     signing in before new accounts are, which is where pages say that new
+//     accounts aren't open yet; <x-if link="signup"> is where they send
+//     people to sign up. One can't go inside another.
 //   <x-shot name="msp-console" alt="..." frame="desktop"></x-shot>: a
 //     screenshot from static/shots, with its dark version in dark mode. Add
 //     `eager` for one that's on screen when the page opens, and `class` to
@@ -157,11 +162,26 @@ function value(keys, file) {
   return "/download/";
 }
 
-/** <x-if link="vault">: its contents once that link is filled in; with `not`, until then. */
+// Sign-up is on the hosted vault, so its link means nothing without the
+// vault's, and the pages count on that: <x-if link="signup"> stands for both.
+if (site.links.signup !== "" && site.links.vault === "") {
+  throw new Error("site.json: links.signup is filled in and links.vault isn't. Fill in links.vault too, or empty links.signup.");
+}
+
+/**
+ * <x-if link="vault">: its contents once that link is filled in; with `not`,
+ * until then; with until="signup", once it's filled in and until that one is.
+ */
 function when(tag, inner, file) {
   const a = attrs(tag);
-  if (typeof site.links[a.link] !== "string") throw new Error(`${file}: <x-if> needs a link from site.json, like link="vault"`);
-  return (site.links[a.link] !== "") === !("not" in a) ? inner : "";
+  const filled = (key) => {
+    if (typeof site.links[key] !== "string") throw new Error(`${file}: <x-if> needs a link from site.json, like link="vault"`);
+    return site.links[key] !== "";
+  };
+  if ("not" in a && "until" in a) throw new Error(`${file}: <x-if> takes not or until, not both`);
+  if (inner.includes("<x-if")) throw new Error(`${file}: an <x-if> can't go inside another`);
+  if ("until" in a) return filled(a.link) && !filled(a.until) ? inner : "";
+  return filled(a.link) === !("not" in a) ? inner : "";
 }
 
 /** <x-part>: a shared piece of a page, from parts/. */
