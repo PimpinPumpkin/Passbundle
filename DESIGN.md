@@ -1924,7 +1924,7 @@ The save is an edit of the item, and the server logs it as one: "Edited item" (1
 
 ## Fill rules for everyone
 
-**Design only, not built** (November 2026). How PassBundle builds rules for sites that fill badly, checks them before people hit a broken one, and ships them to every install. The study behind it, of upstream's Fill Assist and how it compares with our fill rules and site fixes, is `docs/fill-rules-study.md`.
+**Design only, not built** (November 2026; the owner decided its questions on November 8, 2026, all but who signs, under "Decisions"). How PassBundle builds rules for sites that fill badly, checks them before people hit a broken one, and ships them to every install. The study behind it, of upstream's Fill Assist and how it compares with our fill rules and site fixes, is `docs/fill-rules-study.md`.
 
 The owner's words: "see what sites everyone is using and then run our own test on our own server so we can bulk build formulas that go to everyone. and we can even preemptively run our formulas". The rules built in bulk, the tests on our own machines, and running them ahead of time are all here. Seeing what sites everyone uses is not: a password manager that learns its users' sites breaks the promise that a vault is its owner's alone, and the sites in a company's vaults say who it banks with, pays, and buys from. So the list of sites to work on comes from public data, and from reports people choose to send.
 
@@ -1933,13 +1933,13 @@ The owner's words: "see what sites everyone is using and then run our own test o
 
 ### Which sites
 
-1. **A public top-sites list.** Tranco states no license for its own list. It combines Cisco Umbrella ("available free of charge", no license named), Majestic (CC BY 3.0), Farsight (in the default list only, no license named), the Chrome UX Report (CC BY-SA 4.0), and Cloudflare Radar (CC BY-NC 4.0, so not for commercial use), per its home page on November 8, 2026. So the default Tranco list isn't clearly usable for a commercial product. The ways out: Majestic's Million alone (CC BY 3.0: any use, with credit); a Tranco list from chosen providers, once Tranco's maintainers confirm commercial use; or the Chrome UX Report alone (share-alike). A decision for the owner; my pick is Majestic's Million, credited on the lab's page, with a question to Tranco's maintainers. The list only chooses what the lab visits: it isn't published, and the feed names only sites we wrote rules for.
+1. **A public top-sites list.** Tranco states no license for its own list. It combines Cisco Umbrella ("available free of charge", no license named), Majestic (CC BY 3.0), Farsight (in the default list only, no license named), the Chrome UX Report (CC BY-SA 4.0), and Cloudflare Radar (CC BY-NC 4.0, so not for commercial use), per its home page on November 8, 2026. So the default Tranco list isn't clearly usable for a commercial product. The ways out: Majestic's Million alone (CC BY 3.0: any use, with credit); a Tranco list from chosen providers, once Tranco's maintainers confirm commercial use; or the Chrome UX Report alone (share-alike). **Decided (November 2026): Majestic's Million**, with credit on the lab's page as CC BY 3.0 asks. The list only chooses what the lab visits: it isn't published, and the feed names only sites we wrote rules for.
 2. **A business list we write:** the sign-in pages MSPs' clients use most (office suites, payroll, accounting, banks' business portals, the portals of RMM and PSA vendors), from public knowledge, never from anyone's vault.
 3. **Problem reports** (built, "Site fixes (opt-in)"): one click, host and field shape, no account. On the hosted service they go into the lab's queue. On a self-hosted server they stay there, on its admin page.
 4. **"This didn't fill"** (new): in the menu inside a field and next to Fill in the popup, it opens the report page with that reason chosen. Nothing goes until the person presses Send, and the report is a problem report: the same contents, limits, and storage. It's never sent on its own, and the extension never asks for one after a fill.
 5. **Shared fixes** (built): a fix three people confirmed on the hosted service is a strong lead. The lab tries to make a whole-form rule from it for everyone.
 6. **MSPs** see the fixes their staff share, and apply them to every client, as today. Nothing about an MSP's clients reaches the lab unless someone sends a report.
-7. **An aggregate signal from clients (optional; a decision for the owner, not in the first phases).** "Help choose which sites get rules", in the extension's Autofill settings:
+7. **An aggregate signal from clients: not yet (decided November 2026).** Reports and the public list come first; this is the design if they prove too thin. "Help choose which sites get rules", in the extension's Autofill settings:
    - **Opt-in:** off until the person turns it on, with exactly what goes shown next to the switch.
    - **What it sends:** at most once a week, the registrable domains (by the Public Suffix List's ICANN section, so `acme.github.io` counts as `github.io`) of sites where a fill left a sign-in field empty that week. At most 20 domains, and only domains on the public top-sites list the extension carries, so an intranet or a client's own domain can't be sent. No subdomain, path, time, field shape, or count per domain.
    - **Never tied to an account or a vault:** it goes without the account's session, through an Oblivious HTTP relay run by someone else (we see the report but not who sent it; the relay sees who but not what), to a counter that isn't the vault server. To count each person once without knowing who they are, each report spends a Privacy Pass token (RFC 9576), which the vault server hands each opted-in account once a week without being able to recognize it later (it learns only that the account opted in). On the hosted service only, at first.
@@ -1959,14 +1959,18 @@ Runs on our own infrastructure, apart from every vault server: no vault data, no
   5. Keeps a screenshot and a reduced copy of the form for the reviewer. They stay private on the lab and are deleted after 90 days. They're never committed or published (CLEAN_ROOM.md, "Test fixtures"); a new pattern becomes a corpus fixture in our own markup, as today.
 - **What it never does:**
   - It never signs in or creates an account.
-  - It never types into a form or submits one. That includes a made-up email to reach a two-step sign-in's password step (a decision for the owner).
+  - It never types a password, and never types into or submits any form but an email-first sign-in's first step (below).
   - It never solves or gets around a CAPTCHA or a bot check. A page that shows one is marked "blocked" and left alone: no stealth browser, no changing addresses, and an honest user agent.
   - It clicks only links toward the sign-in page, and never visits a page robots.txt disallows.
 - **How gently:** one page at a time per site, at least 10 seconds apart (longer if `Crawl-delay` says so), and at most 20 pages per site a day. It backs off on 429 and 503 and honors `Retry-After`. After 3 errors in a row it leaves the site alone for a week. A page at passbundle.com says what the lab does and how a site opts out, and opted-out sites are never visited.
 - **A person reviews every rule before it ships:**
   - The reviewer sees the page's screenshot with the rule's fields outlined, what the generic matching did, the rule itself, and the change from its last version. They approve, reject, or edit it.
   - An approved rule is a commit by the reviewer in a rules repo, so the history is the audit trail. Pulling a rule needs no review.
-- **Two-step sign-ins:** without typing, the lab sees only the first step. A rule for the password step comes from reports and shared fixes, and a person with a real account on the site checks it by hand, as recipes need ("Assisted password change").
+- **Email-first sign-ins (decided November 2026):** a page that asks for an email before it shows the password field. The lab may type a made-up address at a domain PassBundle owns (for example `lab-<random>@rules.passbundle.com`, never a real person's) and press the page's Next, once per site per check, to see the password step:
+  - It never types a password, a code, or anything else, and never presses anything after that one Next.
+  - It stops where the site says there's no account for that address ("no account found", "sign up instead"), or at any CAPTCHA or bot check, and records the page as far as it got. A site that shows a CAPTCHA is "blocked", as above.
+  - The address is the lab's alone: mail to it is dropped and never read, and nothing about it is kept with a site.
+  - Where it stops before a password field, a rule for the password step comes from reports and shared fixes, and a person with a real account on the site checks it by hand, as recipes need ("Assisted password change").
 
 ### Checking shipped rules ahead of time
 
@@ -1984,7 +1988,11 @@ Runs on our own infrastructure, apart from every vault server: no vault data, no
 
 - **The files,** in upstream's shape: `manifest.json` names the rules file and its SHA-256 (`maps.forms.v1`), and the rules file is a forms map. The manifest adds `passbundle: { sequence, issued, expires }`: the sequence counts up with every feed, and a feed expires 14 days after it's issued. Each form adds its rule's id and verified date.
 - **The signature:** `manifest.json.sig`, an Ed25519 signature (RFC 8032), as the desktop updates' manifest has ("Desktop updates (Windows and Linux)"): over the bytes `PassBundle site rules v1\n` followed by the manifest's exact bytes, so a signature the key made for anything else never passes for a feed's, checked strictly. The manifest names the rules file's hash, so one signature covers both.
-- **Who signs:** PassBundle, with a key only for this feed, never the desktop update key, so a leak of one doesn't give away the other. The lab never holds the key. It opens a pull request in the rules repo; when the reviewer merges it, a release job signs and publishes, with the key in a GitHub environment that needs the owner's approval. Where the key lives is a decision for the owner, with the other signing keys.
+- **Who signs (open):** PassBundle, with a key only for this feed, never the desktop update key, so a leak of one doesn't give away the other. The lab never holds a key. It opens a pull request in the rules repo; when the reviewer merges it, a release job signs and publishes. Where the keys live is still open: the owner wants a plan with backups for launch, not a key on one Mac. The proposal (Decisions, 5):
+  - **A root key, offline:** an Ed25519 key made on a computer that's never online, kept in two copies in two places (for example a hardware token in a safe, and an encrypted backup with someone the owner trusts). It signs only signing keys, never a feed.
+  - **Signing keys in a cloud key vault:** the release job signs through the vault's API, and the key can't be read out of it. The vault's access is the release job's identity alone, with the owner's approval on the environment, and every signature is in the vault's log.
+  - **The root replaces a signing key:** the extension has the root's public key built in and takes a signing key only with the root's signature over it (and its start and end dates). A lost or leaked signing key is replaced by signing a new one with the root, and the feed names it, with no new extension release. Losing one copy of the root is survivable; the second makes the next one.
+  - The same plan can hold the desktop update key and the other signing keys later, each with its own signing key under the root.
 - **How clients verify:**
   - The extension has the public keys built in: the current one and the next, for rotation.
   - It takes a feed only if the signature checks with a built-in key, the rules file's hash matches, the sequence isn't lower than the last one it took (no rollback), and the feed hasn't expired. Otherwise it keeps what it had, and drops it all when that copy expires.
@@ -1993,12 +2001,12 @@ Runs on our own infrastructure, apart from every vault server: no vault data, no
 - **How often:** clients check the manifest when they unlock and every 6 hours, and download the rules file only when its hash changed, as upstream's client does. An urgent pull reaches everyone in about 12 hours (6 for the server, 6 for the client). We re-sign the feed at least weekly.
 - **Built in too:** the extension ships the feed as it was at build time, signed the same way, so a new install has rules before its first download. That's step 4 of "How it keeps getting better" ("curated fixes, shipped as data"). A newer feed replaces it. The built-in copy comes with the extension, so its 14-day expiry doesn't apply to it, but the 90-day limit on each rule's verified date does.
 - **Self-hosted servers choose,** with `SITE_RULES_FEED`, set only in the environment like the other settings that say where things come from:
-  - `passbundle`: our feed, the default (a decision for the owner).
+  - `passbundle`: our feed, the default (decided November 2026).
   - A URL of the operator's own feed, with `SITE_RULES_FEED_KEY` (its Ed25519 public key). Rules under the operator's key aren't ours, so they get site fixes' treatment: the person's "Use fixes other people share" setting and site fixes' limits.
   - `none`: no feed.
 - **In the extension:**
   - **The order:** the item's own rules, then the MSP's site rules, then PassBundle's rules, then confirmed site fixes, then the generic matching for whatever is left.
-  - **The limits:** PassBundle's rules start with site fixes' limits: only fills the person starts, https, visible fields, a password only into a password field, and upstream's exclusions and page-load limits.
+  - **The limits:** PassBundle's rules keep site fixes' limits: only fills the person starts, never on page load (decided November 2026), https, visible fields, a password only into a password field, and upstream's exclusions and page-load limits.
   - **The setting:** "Use PassBundle's site rules" in Autofill settings, on by default.
   - **The selector hook:** the content script resolves a rule's selector with upstream's `DomQueryService.queryDeepSelector` (shadow roots included) and marks the field it already collected. That's the one change in upstream's files; everything else is in `keykeeper/`.
 - **Privacy:** everyone gets the same whole file from their own server, and which rule filled what never leaves the device.
@@ -2019,18 +2027,20 @@ Runs on our own infrastructure, apart from every vault server: no vault data, no
 3. **The lab:** the first 1,000 sites and the business list, plus problem reports and shared fixes from the hosted service; the review page; the signing job; publishing.
 4. **Checks ahead of time:** re-checks on the schedule, automatic pulls, verified dates, the clients' 90-day limit, and the lab's numbers on the scoreboard.
 5. **"This didn't fill"** in the extension.
-6. **The aggregate signal,** only if the owner wants it.
+6. **The aggregate signal:** not yet (decided November 2026), only if reports and the public list prove too thin.
 7. **Later:** cards and identities; change-password pages for recipes from the same lab (finding pages only, never submitting); MSPs' own signed feeds.
 
-### Decisions for the owner
+### Decisions
 
-1. **The top-sites list,** given the licenses above. My pick: Majestic's Million, credited, and ask Tranco's maintainers.
-2. **The aggregate signal:** build it or not, and if so, whose relay. My pick: not until reports and the public list prove too thin.
-3. **Page load:** whether PassBundle's signed rules may fill on page load, or, like site fixes, only fills the person starts. My pick: fills the person starts, at first.
-4. **The self-hosted default:** `SITE_RULES_FEED=passbundle`, or off until the operator chooses. My pick: on. It's the product's own feed, it carries nothing about anyone, and the server fetches a static file; `none` turns it off. (Bitwarden's feed is off by default because nobody running PassBundle chose it.)
-5. **Who reviews and signs,** and where the feed's signing key lives. My pick: the owner reviews at first, and the key is in a GitHub environment that needs the owner's approval.
-6. **Two-step sign-ins:** whether the lab may type a made-up email to reach a password step. My pick: no; it would send the site a sign-in attempt.
-7. **Upstream's Fill Assist:** whether to turn it on at all later. My pick: not while it's behind its flag without signatures or per-field limits. If we ever do, its policy's custom feed URL (any organization admin could repoint members' extensions) needs a decision of its own.
+The owner decided 1 to 4 and 6 on November 8, 2026. Who signs stays open with a proposal, and Fill Assist stays as it was.
+
+1. **The top-sites list (decided):** Majestic's Million, with credit on the lab's page.
+2. **The aggregate signal (decided):** not yet. Reports and the public list come first.
+3. **When shared rules fill (decided):** only on fills the person starts, never on page load.
+4. **Self-hosted servers (decided):** `SITE_RULES_FEED=passbundle` by default. It's the product's own feed, it carries nothing about anyone, and the server fetches a static file; `none` turns it off. (Bitwarden's feed is off by default because nobody running PassBundle chose it.)
+5. **Who reviews and signs (open):** the owner reviews at first. For the keys, the owner wants a plan with backups for launch, not a key on one Mac. Proposed in "Who signs" above: a root key kept offline in two copies, and signing keys in a cloud key vault that the root can replace.
+6. **Email-first sign-ins (decided):** the lab may type a made-up address at a domain PassBundle owns, once per site per check, to reach the password step. It never types a password, and it stops at "no account found" or any CAPTCHA ("Email-first sign-ins" above).
+7. **Upstream's Fill Assist (open):** whether to turn it on at all later. My pick: not while it's behind its flag without signatures or per-field limits. If we ever do, its policy's custom feed URL (any organization admin could repoint members' extensions) needs a decision of its own.
 
 ## Script access (our Secrets Manager)
 
