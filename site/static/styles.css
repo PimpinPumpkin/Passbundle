@@ -1451,27 +1451,103 @@ th.num {
   margin-top: 8px;
 }
 
-/* ----- Download cards ----- */
-.downloads {
+/* ----- Download ----- */
+
+/* A short hero, so the four kinds of download and their buttons show
+   without scrolling on a laptop's screen. */
+main.wide > section.hero.get-hero {
+  padding-top: 40px;
+  padding-bottom: 0;
+}
+
+.get-hero h1 {
+  font-size: clamp(36px, 1.4rem + 2vw, 52px);
+}
+
+.hero.get-hero .lead {
+  margin-top: 12px;
+  text-wrap: balance;
+}
+
+/* On a phone, the four kinds are a switcher over one card (below). Wider
+   screens show all four, and so does a browser without :has(). */
+.get-tabs {
+  display: none;
+}
+
+main.wide > section.get-section {
+  padding-top: 28px;
+  padding-bottom: 32px;
+}
+
+.note.get-note {
+  margin-bottom: 20px;
+  padding: 12px 18px;
+  font-size: 15px;
+}
+
+/* Browser, phone, computer, and web, side by side. Each card's heading,
+   words, and buttons with their notes are three rows of the grid (a
+   subgrid), so the buttons line up across the cards. */
+.get {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 20px;
 }
 
-.downloads .card {
-  display: flex;
-  flex-direction: column;
+.get-card {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  padding: 24px;
 }
 
-.downloads .card h3 {
+.get .get-card h2,
+main.wide .downloads .card h2 {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  font-size: 22px;
 }
 
-.downloads .card p {
-  flex: 1;
-  margin-top: 8px;
+.get-card > p {
+  margin-top: 10px;
+}
+
+.get-card .actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+/* In a narrow column a button's words wrap instead of leaving the card. */
+.get-card .button {
+  white-space: normal;
+  text-align: center;
+  padding: 10px 16px;
+}
+
+.get-do .fine {
+  margin-top: 12px;
+}
+
+/* Under them: installing the extension, opening a test build, the command
+   line, and your own server. */
+.downloads {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.downloads .card > p,
+.downloads .card > ol,
+.downloads .card > ul {
+  margin-top: 10px;
+}
+
+.downloads .card li {
+  color: var(--label);
 }
 
 .downloads .card .actions {
@@ -1479,8 +1555,30 @@ th.num {
 }
 
 .downloads .card .fine {
-  flex: 0;
-  margin-top: 12px;
+  margin-top: 14px;
+}
+
+.get-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+/* Links that lead on are big enough to tap. */
+.get-links {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 24px;
+}
+
+.get-links .more,
+.get-switch .more {
+  min-height: 44px;
+}
+
+.get-switch {
+  margin-top: 8px;
 }
 
 /* ======================================================================
@@ -4766,21 +4864,31 @@ main.doc > .paper {
   margin-top: 24px;
 }
 
-/* Numbered steps in a guide. */
-.paper ol.steps {
+/* Numbered steps in a guide (and in Download's card for installing the
+   extension). */
+.paper ol.steps,
+.card ol.steps {
   list-style: none;
   padding: 0;
   counter-reset: step;
 }
 
-.paper ol.steps li {
+.card ol.steps {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.paper ol.steps li,
+.card ol.steps li {
   counter-increment: step;
   position: relative;
   padding-left: 42px;
   min-height: 28px;
 }
 
-.paper ol.steps li::before {
+.paper ol.steps li::before,
+.card ol.steps li::before {
   content: counter(step);
   position: absolute;
   left: 0;
@@ -4797,7 +4905,8 @@ main.doc > .paper {
 }
 
 @media (prefers-color-scheme: dark) {
-  .paper ol.steps li::before {
+  .paper ol.steps li::before,
+  .card ol.steps li::before {
     color: var(--brand);
   }
 }
@@ -4926,6 +5035,21 @@ main.doc > .paper {
   .plans.four {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  /* Download's four columns on a small laptop: a little more room for
+     the buttons' words. */
+  .get {
+    gap: 16px;
+  }
+
+  .get-card {
+    padding: 20px 16px;
+  }
+
+  .get-card .button {
+    padding: 10px;
+    font-size: 15px;
+  }
 }
 
 @media (max-width: 960px) {
@@ -4947,6 +5071,7 @@ main.doc > .paper {
 
   .features,
   .grid.three,
+  .get,
   .downloads,
   .plans {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5071,6 +5196,7 @@ main.doc > .paper {
   .grid.two,
   .grid.three,
   .grid.four,
+  .get,
   .downloads,
   .plans,
   .plans.two,
@@ -5080,6 +5206,111 @@ main.doc > .paper {
 
   .features {
     gap: 28px;
+  }
+
+  /* Download on a phone: the four kinds are a switcher right under the
+     title, and the one that's picked shows its card in place, so no kind
+     is a scroll away. Phone is picked first. Radio buttons and :has(), no
+     script; the note about testing moves under the card. */
+  main.wide > section.hero.get-hero {
+    padding-top: 32px;
+  }
+
+  main.wide > section.get-section {
+    padding-top: 20px;
+  }
+
+  @supports selector(:has(*)) {
+    main.wide > section.get-section {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .get-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 4px;
+      padding: 4px;
+      margin-bottom: 12px;
+      border-radius: 16px;
+      background: var(--sunken);
+    }
+
+    .get-tabs label {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 68px;
+      padding: 8px 2px;
+      border-radius: 12px;
+      color: var(--label);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* The radio button covers its label, unseen: a tap anywhere picks it,
+       and the keyboard and screen readers still find it. */
+    .get-tabs input {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .get-tabs label:has(input:checked) {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: var(--shadow-resting), 0 0 0 1px var(--edge);
+    }
+
+    .get-tabs label:has(input:focus-visible) {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .get-section:has(.get-tabs input[value="browser"]:checked) .get-card:not(#browser),
+    .get-section:has(.get-tabs input[value="phone"]:checked) .get-card:not(#phone),
+    .get-section:has(.get-tabs input[value="computer"]:checked) .get-card:not(#computer),
+    .get-section:has(.get-tabs input[value="web"]:checked) .get-card:not(#web) {
+      display: none;
+    }
+
+    /* The switcher names the card, so the card's own heading is for
+       screen readers only here. */
+    .get .get-card h2 {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    /* One card at a time has no neighbors to line its rows up with. */
+    .get .get-card {
+      display: block;
+    }
+
+    .get .get-card > p {
+      margin-top: 0;
+    }
+
+    .note.get-note {
+      order: 1;
+      margin: 16px 0 0;
+    }
+  }
+
+  .get-links {
+    flex-direction: column;
   }
 
   .card,
