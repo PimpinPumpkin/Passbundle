@@ -427,7 +427,7 @@ PassBundle bills an MSP for one pool of seats across all its clients (the site's
 - **Console:** a Seats section for MSP admins: one line saying what counts (counted at the end of each day, UTC), one saying how prorated seats are worked out, with the month's own number of days ("a client's seat-days (its seats each day, added up) divided by the 30 days in November, so a seat added late in the month counts only for its days. Peak is the most seats on any day, for reference."), a month picker (this month and earlier months with figures), "So far, through" today in this month, a table (client, seat-days, prorated seats, peak, and today in this month only; a client that left says so), the total, and Download CSV, which saves the server's CSV.
 - **Decided (owner, November 8, 2026): prorated by the day,** as above. Proposed before it: each client's most seats on any day, added up. The other choices were the MSP's busiest single day across all clients, and the average over the days recorded. Stripe and collecting payment aren't built and are the owner's; the decision changed the report and how the site explains it, nothing else. Prices aren't decided here (`site/README.md`).
 - **Tests:** server unit tests (months of 28, 30, and 31 days and a leap February, a seat added and a seat removed mid-month, a client added mid-month, a day with no reading, this month so far with today as it is now, rounding to two decimals, a client that left keeping its readings and its name, month parsing, and the CSV's columns, quoting, and formulas); API tests (`e2e/tests/api/msp-seats.spec.ts`): who counts (the MSP's admin and a technician, a client's own member who joined the staff and counts again after leaving it, someone invited who never joined, someone accepted but not confirmed, someone revoked and then restored, and someone in two clients), the permission matrix (MSP admin 200; technician, the client's own owner, another MSP's admin, and a stranger 404; no login 401), the refused inputs, and the CSV; and, on a server of the tests' own whose seats job runs every second, the daily record, a later reading replacing the day's, a client that left its MSP and was deleted keeping its month by its name, an earlier month's seat-days and prorated seats over its own number of days (a seat added mid-month, a client added mid-month, a day with no reading), peaks, months, and CSV, and fixed months of 28, 29, 30, and 31 days (a seat added on the 20th of a 30-day month paying 11/30 of one, a seat removed mid-month, a client added mid-month), written into that server's SQLite database since its clock can't be moved. Web vault unit tests (`msp-seats.spec.ts`), and a console e2e test (`e2e/tests/msp-seats-console.spec.ts`): this month's table and totals, an earlier month from the picker, and both CSV files.
-- **Status:** built (`keykeeper_msp_seats.rs` in the server's API and models, the migration, and `msp-seats.component.ts` in the web vault), prorated by the day since November 8, 2026. Not built: billing, invoices, collecting payment, and syncing seats to a PSA.
+- **Status:** built (`keykeeper_msp_seats.rs` in the server's API and models, the migration, and `msp-seats.component.ts` in the web vault), prorated by the day since November 8, 2026. Not built: billing, invoices, collecting payment, and syncing seats to a PSA. "Plans and billing" has the design for turning a month's seats into an invoice.
 
 ### Server
 
@@ -2271,6 +2271,256 @@ MSPs run security stacks (a SIEM or an MDR service such as Huntress, Blumira, or
 - **Later:** a client certificate for syslog collectors that ask for one, webhook batches, Splunk HEC's format, choosing which events each destination gets, and reading events through an API.
 - **Clean room:** built from upstream's GPL event code and public documents (RFC 5424, RFC 5425, the CEF format, Standard Webhooks, Azure Monitor's Logs Ingestion API). Never from Bitwarden's integrations code.
 
+## Plans and billing
+
+The site sells Free, Premium, Families, Business, and an MSP's pool of seats (`site/pages/pricing.html`; the prices and what's in each plan are proposals until launch, `site/README.md`). The server enforces none of it yet: it tells every account it has Premium and every organization it has everything, and no code knows what anyone paid. This is the design for what's missing: what a plan gives, where the server enforces it, what happens when payment stops, and how the hosted service learns who has paid. It sets no price and moves nothing between plans. Where the site's proposal leaves a gap, the gap is in "Decisions" at the end, for the owner.
+
+- **Status:** designed (November 9, 2026). Nothing in this section is built. "Build order" says what can start now and what waits for the owner.
+- **One server:** this assumes the hosted service as it's deployed, one server holding people, families, businesses, and MSPs with their clients ("Known gaps"). "Architecture" still says each business gets its own instance, but the MSP console needs an MSP's clients on one server, and one server is how the hosted service is deployed. If businesses ever do get their own, a pool's plan has to be readable from each of its clients' servers, which this doesn't design.
+- **Clean room:** designed from the server's and the clients' GPL and AGPL code (which fields the clients read, and where they gate), this repository's site and documents, and Stripe's public documentation. Never from Bitwarden's billing server, which isn't in these repositories, or from anything under a `bitwarden_license/` directory.
+
+### Today
+
+- **Every account is told it has Premium.** The profile in every sync says `premium: true` and `premiumFromOrganization: false` (`src/db/models/user.rs`), and the access token's `premium` claim is always true (`src/auth.rs`). Upstream's clients hide their Premium features behind the profile's value, so today nothing is hidden.
+- **Every organization is told it has everything:** `enabled: true`, `usersGetPremium: true`, every `use...` feature the server supports, `maxStorageGb` 32,767, `seats` 20 in the profile and null on the organization itself, `productTierType: 3` (upstream's Enterprise), `planType: 6`, and `selfHost: true` (`src/db/models/organization.rs`). Every shared item says `organizationUseTotp: true` (`src/db/models/cipher.rs`). `GET /plans` and the billing warnings are stubs that keep the web vault from failing (`src/api/core/organizations.rs`).
+- **The only limits are the server's own, the same for everyone:** 1 GB of attachments for each person and each organization and 1 GB of Send files on a public server ("Defaults on a public server"), and the switches for signups, MSP signups, Sends, and emergency access. None of them looks at who is asking.
+- **Nothing knows about money.** There's no plan, trial, subscription, invoice, or payment table or route, and no payment provider's name anywhere in the server. An organization has a billing email (upstream's column) that nothing uses. What exists is the MSP's seat report ("Seats by client").
+- **So no promise on the Pricing page is kept by code,** in either direction: a Free account can attach files and send them, a family isn't limited to its six people, a Business trial has no clock, and the hosted service's 1 GB is less than Premium's 5 GB.
+
+### What a plan is
+
+- **Who has one:** a plan belongs to a person (Premium), an organization (Families or Business), or an MSP (its pool). A person with no plan is on Free. One table, `plans`, holds all three kinds, at most one row each:
+  - whose it is (`user`, `organization`, or `msp`, and the id) and which plan (`premium`, `families`, `business`, or `msp`);
+  - `free_until` and why (`trial` or `offer`): nothing has to be paid before then;
+  - its standing: `none` (never paid, or over), `until` (good through the moment in `until`), or `open` (good with no end set, which is a pool with a card on file and nothing unpaid). "No end" is its own value, not an empty date, so a row nobody ever paid for can't be read as one that never ends. With it, `renews`, so a plan someone canceled says "ends on" and not "renews on";
+  - how it's billed (`prepaid`, `by_the_day`, or `by_hand`), who last set it (`server`, `provider`, or `operator`), and, where a provider did, the provider's name and its ids for the customer and the subscription, which mean nothing outside the provider;
+  - when the provider was last asked (`checked_at`).
+- **An MSP's pool covers its clients.** There's no row per client: a client organization's plan is its MSP's, found through `msp_clients` when it's asked for. So adding a client, or a client leaving, changes what it gets at once, with nothing copied and nothing to drift. If a client had a row of its own before the MSP took it on, the row stays and is ignored while it's a client.
+- **What a person gets is worked out, never stored.** A person has Premium's features when their own plan is in effect, or they hold a seat (joined and not revoked, the rule in "Seats by client") in an organization whose plan is in effect, or they're on the staff of an MSP whose plan is in effect. One function in the server answers it from the rows, the memberships, and a time it's handed; every check and every sync calls it, and nothing keeps a copy that could go stale.
+- **In effect** means, at the time asked: before `free_until`; or in good standing; or in grace, which is up to `PLAN_GRACE_DAYS` (14, open) past `until` for a plan that was set to renew. A plan someone canceled gets no grace: it ends at `until`, as they chose. Past all three the plan has ended. A client is told one of four states: `trial`, `active`, `payment due` (in grace), or `ended`.
+- **What each plan gives** is one table in the server's code, because it's the product. Its numbers are settings whose defaults are the site's proposals:
+
+| Plan | Premium's features for | Attachments | People | Company features |
+|---|---|---|---|---|
+| Free (a person) | nobody | none | | |
+| Premium (a person) | that person | 5 GB (`PLAN_PREMIUM_STORAGE_GB`) | | |
+| Families (an organization) | every member | open | 6 (`PLAN_FAMILIES_PEOPLE`) | no |
+| Business (an organization) | every member | open | no limit | yes |
+| MSP (each client, as Business) | every member, and the MSP's staff | open | no limit | yes |
+
+- **Premium's features** are the Pricing page's: attaching files, sending files, the data breach report, and two-step codes built in. Email support is a promise people keep, not code.
+- **Company features** are everything the Pricing page's comparison starts at Business: policies, account recovery, the install command and rollout, provisioning from Entra, signing in with Entra, custom roles, groups, the event log, and events to security tools. They're one switch, not ten, because the site sells them together. A family has shared folders, an owner, and private vaults, and nothing else from an organization's admin console.
+- **Who can change a plan:** the server alone, in three ways, and no request from a signed-in person, owner, or admin ever writes to `plans`:
+  - creating an organization or an MSP writes its trial;
+  - the provider's word, which the server fetches itself ("Learning who has paid");
+  - the operator, by hand, for what no provider says: the first-MSPs offer, a customer who pays by bank transfer, a goodwill extension. It's part of the admin page, so in production it exists only while the operator has turned that page on for the task ("The admin page"), and each change is logged with the old and new values.
+- **The trial clock:**
+  - a new Business organization gets `free_until` 30 days out (`PLAN_TRIAL_DAYS`) with no card asked, as the Pricing page says;
+  - a new MSP gets the same 30 days for its whole pool (open: the site names only a Business trial);
+  - Premium and Families get none, since Free is how a person tries PassBundle. A family's organization is created first, because its keys are made on the creator's device, and has no plan until Families is paid for;
+  - a client that leaves its MSP gets 30 days from that moment to make its own arrangement;
+  - an organization found with no row once plans are enforced gets a trial from that moment, so turning enforcement on never ends anything on the spot.
+- **The first-MSPs offer** (six months free once billing starts, `site/pages/msp.html`) is the operator setting an MSP's `free_until` six months out with the reason `offer`. Days before `free_until` are never billed, for a trial or an offer, and the console's Seats report shows them like any others.
+
+### How a plan reaches the clients
+
+The clients learn a plan through the sync they already do. The server puts true values in fields the vault format already has, upstream's clients already act on those fields, and our apps read the same sync.
+
+| What | Field | Value |
+|---|---|---|
+| A person's own Premium | profile `premium` | true while their own plan is in effect |
+| Premium through an organization or an MSP | profile `premiumFromOrganization` | true while such a plan is in effect. The server works it out; upstream's clients don't derive it from `usersGetPremium`. |
+| Members get Premium | organization `usersGetPremium` | true while the organization's plan is in effect |
+| Attachments on shared items | organization `maxStorageGb` | the plan's figure in whole GB while it's in effect, 0 after. Upstream's clients read 0 as "can't add". |
+| The people limit | organization `seats` and `productTierType` | 6 and 1 (upstream's Families) for a family, where upstream's invite form already stops at the seats left. Null and 3 for Business and an MSP's clients, which have no limit. |
+| Company features | organization `usePolicies`, `useGroups`, `useEvents`, `useSso`, `useScim`, `useResetPassword`, `useCustomPermissions`, `useApi` | false for a family, so the admin console hides what a family doesn't have. As today for Business and an MSP's clients. |
+| Codes on shared items | organization `useTotp`, item `organizationUseTotp` | true on every plan ("What the server refuses" says why, under two-step codes) |
+| Shared folders | organization `maxCollections` | null: no plan limits them |
+| Suspended | organization `enabled` | always true (below) |
+| | `planType`, `selfHost` | unchanged |
+
+- **`enabled` is never the lever.** Upstream marks an unpaid organization `enabled: false`, and its clients then hide that organization's items ("Items in suspended organizations cannot be accessed"). That's the opposite of what the site promises, so a plan never sets it.
+- **One field of our own:** `keykeeperPlan`, on the profile and on each organization in it, beside the fields we already add there (`keykeeperPasswordChange`, `keykeeperBrowserAutofill`). It carries the plan's name, its state, `freeUntil`, `until`, `renews`, the storage and people the plan gives, whether an MSP covers it and which, whether the person asking may manage it, and whether this server enforces plans at all. Clients that don't know it ignore it. Our banners and the Plan page read it. Nothing is enforced from it.
+- **The access token's `premium` claim stays as it is,** always true. Nothing in the server, in upstream's clients, or in our apps reads it, and leaving it alone keeps this work out of the sign-in code.
+- **When a plan changes,** the server sends the people it affects the sync notice clients already act on (upstream's "sync your vault"), so a payment shows within seconds on a device that's open. A device that misses it learns at its next sync.
+- **Upstream's billing pages go.** The web vault still shows upstream's Subscription page to a person and Billing to an organization's owners, and both call a billing API this server never had. They come out of the navigation and the routes, and a Plan page of ours takes their place: the plan, its state and dates in words, what it gives, and one button, which opens the provider's page to pay, to add a card, or to manage. `GET /plans` and the billing-warning stubs stay for the upstream code that still asks.
+- **Who sees the button:** a person for their own Premium; an organization's owners for its plan; an MSP's admins for the pool. A client's owners see "Covered by" and the MSP's name, and no button. Anyone else who asks the server for a payment page gets 404, never 403, which would sign the web vault out.
+- **API:** `GET /api/keykeeper/plan` answers what the sync carries, freshly worked out. `POST /api/keykeeper/plan/pay` (whose, and which plan) and `POST /api/keykeeper/plan/manage` (whose) answer a URL on the provider's site, and exist only when a provider is set. `POST /api/keykeeper/plan/look` asks the server to check with the provider now, at most once a minute for each plan.
+
+### What the server refuses
+
+Every limit is enforced where the request arrives. Clients hide or turn off what a plan doesn't give, so people rarely meet a refusal, but a client that doesn't (an old one, somebody's script) gets the same answer. A refusal is the server's ordinary 400 with one sentence. The web vault and the extension show that sentence as their error notice, and our apps show it too (`core/src/server.rs` reads `message`), so the sentence is the copy, written once, in the server.
+
+| What's asked | Where the server refuses | What the person reads |
+|---|---|---|
+| Attaching a file to their own item, on Free | the upload routes' size check (`attachment_size_limit`, `src/api/core/ciphers.rs`), which takes its limit from the plan of whoever owns the item in place of one figure for everybody | "Attaching files is part of Premium." |
+| Attaching past the plan's storage | the same check | "Your 5 GB for attachments is full. Delete some to make room." |
+| Attaching to a shared item | the same check, by the organization's plan | the same, naming the organization |
+| Sending a file, on Free | creating a file Send (`post_send_file_v2` and the older route, `src/api/core/sends.rs`) | "Sending files is part of Premium. Sending text is free." |
+| The data breach report, on Free | the lookup (`GET /hibp/breach`, `src/api/core/mod.rs`) | "The data breach report is part of Premium." |
+| A seventh person in a family | every way someone joins or comes back: invite, reinvite, accept, confirm, restore, their bulk forms, and the admin page's invite | "A Families plan covers 6 people, and this one has 6. Remove someone first." |
+| A company feature in a family | the routes for policies, groups, the event log and event destinations, single sign-on, provisioning, account recovery, custom roles, the install command, and joining an MSP | "That's part of the Business plan." |
+| Adding to an organization whose plan has ended | "What happens when payment stops" | "This organization's plan has ended, so nothing new can be added. Everything in it can still be opened, changed, exported, and deleted." |
+
+- **Downloading and deleting never look at a plan.** A file attached while Premium was in effect downloads on Free for as long as it's kept. Storage that's over the limit, after a lapse or a lowered limit, refuses new uploads and nothing else.
+- **File Sends that already exist** when Premium ends keep working until they expire or are deleted.
+- **The server's own limits still apply.** Whoever runs a server can cap storage for everyone (`USER_ATTACHMENT_LIMIT`, `ORG_ATTACHMENT_LIMIT`, `USER_SEND_LIMIT`), and a plan never gives more than a cap the operator set. The 1 GB the hosted defaults give everyone today gives way to the plan's storage once plans are enforced; a file Send's allowance stays the server's.
+- **The family limit is counted, not trusted (open).** It counts everyone invited or joined who isn't revoked, inside the transaction that adds or restores someone, so six invitations can't become seven members. The ways in that a family doesn't have (the install command, an MSP's invitations, SCIM and Entra) are refused as company features, which covers them.
+- **The data breach report is only a link today.** Until the hosted service has a paid Have I Been Pwned key (`docs/prelaunch.md`), the report sends people to that site's own free page, which a plan can't gate and shouldn't pretend to. The check above matters once the key exists.
+- **Two-step codes are the one paid feature the server can't enforce.** The key that makes a code is inside the encrypted item. The server can't see whether an item has one, can't stop a device from doing the arithmetic, and can't refuse to store it without reading the item, which it never will. So this gate lives in the clients, and the design says so. Proposed (open): the clients gate adding a key to an item, and never gate showing the code for a key that's already there. A code that stops showing locks a person out of some other service at the moment they need it, which is what the next part forbids, and an import keeps its keys either way. Upstream's clients do the opposite (without Premium they hide the code: the extension's autofill, the copy action, the item view), so those gates change in the web vault and the extension, and our apps, which show codes to everyone today, gain the gate on adding one.
+- **What Free is promised must not sit behind `premium`.** Upstream's clients put more behind that value than the Pricing page does, and each of these stops being true the day a Free account is told `premium: false`:
+  - legacy contacts (upstream's emergency access, which "Legacy contacts" says we include in every plan): the web vault's page goes read-only without Premium. That gate comes out. The server has none.
+  - the weak, reused, and exposed password reports: upstream marks them Premium and leaves the data breach report free, and the Pricing page has it the other way round. The web vault's report list and the extension's Health pages swap.
+  - removing an attachment: the web vault and the extension open the attachments window only with Premium (or, for a shared item, an organization with storage). It has to open for any item that has files, with adding turned off, so a file can still be removed.
+  - YubiKey one-time passwords and a person's own Duo as two-step methods, and Archive: Premium in upstream's clients, and the Pricing page doesn't mention them (open). The server checks no plan for any of them.
+
+### What happens when payment stops
+
+Nobody is ever locked out of what they've stored. When a trial or a plan ends, adding stops. Reading, changing, exporting, and leaving never do.
+
+- **Always works, on every plan and in every state:** signing in and two-step login; sync; reading, autofill, and copying; codes for keys already saved; editing and deleting items; exporting a vault and an organization's; downloading and removing attachments; leaving an organization; removing and revoking members (offboarding is a safety action and never waits for a payment); deleting the organization; deleting the account; and paying.
+- **When Premium ends,** the account is on Free. Every item, every saved code key, and every attachment stays. What stops: new attachments, new file Sends, and the data breach report.
+- **When an organization's plan ends** (Families, Business, or the pool that covered it), it keeps everything and can't add to it. Refused, with the sentence above: new people by any route (invitations, accepting, confirming, restoring, the install command, an MSP's invitations, provisioning, which still removes people who've left), new shared items and items moved or imported into it, new shared folders and groups, new attachments on shared items, and new event destinations. Everything else goes on: members open and fill shared logins, edit them (a password changed on a site, or rotated after someone left, can still be saved), and the organization's settings and policies stay in force. Its members' Premium features, where they came from this organization, stop as they would for a person. Nothing is deleted for not paying, ever.
+- **For an MSP,** that's every client its pool covers, each of which keeps working as above. The MSP's console and its staff's access to clients keep working, since removing a technician or handing a client back are things an MSP in trouble most needs to do.
+- **A trial ends by the clock, with no grace after it** (open). The 30 days are the grace. Owners get an email 7 days and 1 day before, saying the date, what stops, and that nothing is deleted; the clients show the same in a banner to owners from 7 days out.
+- **A failed payment gets grace:** 14 days (open) in which nothing changes except a banner and emails to whoever pays (at the failure, 3 days before the end, and at the end). The provider retries the card during it.
+- **Coming back** is paying or adding a card. The plan is in effect again as soon as the server has looked, with nothing to restore, because nothing was taken away.
+- **Deleting an account or an organization that's paying** tells the provider to cancel first, so nobody is charged for something that's gone.
+
+### Learning who has paid
+
+- **The server never takes a payment.** People pay on the provider's own pages. The server never sees a card number, a security code, or a bank account, and stores no part of one. The provider's page shows the card's last four digits and expiry to the person; the server doesn't keep them (the privacy page's draft says we do, which is in "Decisions").
+- **What the server keeps about money:** the `plans` row, the provider's ids, each month's invoice figures that it worked out itself, and a billing email.
+- **One boundary, any provider.** Everything that's specific to a provider sits behind five calls, and the rest of the server knows only their answers:
+  1. a page to pay, or to put a card on file, for this plan and whose it is;
+  2. a page to manage it: the card, past invoices, canceling;
+  3. invoice this customer for these lines, once, for this month;
+  4. is this webhook really the provider's, and which customer is it about;
+  5. what is this customer's standing now: which plan, good through when, renewing or not.
+- **A webhook only says "look again".** The server never writes a plan from what a webhook's body says. It checks the signature, notes which customer it's about, answers 200, and then asks the provider (the fifth call) and writes that answer. So an event that arrives twice, late, out of order, or replayed by someone who captured it can only cause one more look at the truth, and a forged one doesn't get that far.
+- **Checking a webhook,** in this order, before anything is parsed:
+  - the route (`POST /api/keykeeper/billing/events/<provider>`) exists only when that provider is set, and is 404 otherwise;
+  - the body is read raw, at most 1 MB, and kept byte for byte, since the signature is over the bytes;
+  - the signature is checked with each signing secret in use (two while one is being replaced), compared in constant time;
+  - a timestamp more than five minutes from the server's clock is refused;
+  - the event's id goes into `billing_events` (unique, kept 35 days, longer than a provider resends). One that's already there is answered 200 and dropped;
+  - an event for the other mode (a test event on the live server, or the reverse) is dropped;
+  - a refusal is a 400 that doesn't say why, logged without the body.
+- **Looking again on a schedule** covers a webhook that never came. Once a day the server asks the provider about every plan a provider set. It also looks when a plan's `until` passes, when someone comes back from the provider's page (so the plan shows before the webhook lands), and when someone who manages a plan opens the Plan page.
+- **A plan never ends on a guess.** A trial ends by the server's own clock. A paid plan ends only when the provider has just been asked and says so. If the provider can't be reached, the last answer stands, the look is tried again, and the operator is told after a day of failures. A provider's outage, or ours, costs nobody their plan.
+- **Two ways to bill, because the site sells two kinds of thing:**
+  - **Prepaid,** for Premium and Families: a year at a time. The provider renews it, retries a failed card, sends receipts, and lets the person cancel at the end of what they've paid for. The server reads the result.
+  - **By the day, after the month,** for an MSP's pool, and proposed for Business (open). The server already reads seats each day and works out a month's prorated seats ("Seats by client"). On the 1st, for the month just ended, it works out the amount with that same code and rounding, so the invoice and the console's report can't disagree, and asks the provider to invoice it to the card on file. Putting a card on file charges nothing.
+- **A pool's invoice** has one line: the month, the seat-days, the days in the month, the prorated seats (two decimals, as the report rounds), and the price a seat. The amount is the prorated seats times the price, to the cent, rounded half up. Each client's share is the console's report for the same month, which is what an MSP bills its own clients from. Days before `free_until` aren't billed: a month that's partly free bills only its other days' seat-days, still divided by all of the month's days.
+- **One invoice for each plan and month, ever.** `plan_invoices` has one row for each (unique on whose plan and the month), written before the provider is asked and completed with the provider's invoice id after. A crash or a retry finds the row and looks the invoice up; it never makes a second.
+- **A business with no MSP,** if it's billed this way, needs its own readings: the daily job that reads each MSP's clients also reads each such organization (`org_seats`: the organization, the day, the seats, by the same rule for what a seat is). On any day an organization's seats are its MSP's or its own, never both, so a business an MSP takes on mid-month pays for its days before and the MSP for the days after.
+- **Where prices live:** Premium's and Families' are price records at the provider, named in the hosted server's environment. A seat's prices and the pool sizes where they change are hosted-server settings too, since the server works out that line. None is in the code, and the site's numbers stay the site's (`site/site.json`).
+- **Which price a month gets** is the owner's ("Seats by client"). The design keeps it to one function, from a month's prorated total to a price a seat, so the rule has one place to live. The Business price from 250 people is the same function with other numbers.
+
+### Stripe, the first provider
+
+Designed from Stripe's public documentation alone (docs.stripe.com, read November 9, 2026). Nobody signed up for anything. Stripe's API changes by version, so whoever builds this rereads the pages for each call first.
+
+- **Paying for Premium or Families:** a Checkout Session in `subscription` mode with the plan's Price, Stripe's hosted page taking the card. Whose plan it is travels in `client_reference_id` and in the subscription's metadata, and comes back when the server fetches the subscription.
+- **Managing:** a customer portal session, for the card, past invoices, and canceling at the period's end. What the portal offers is set in Stripe's dashboard, by the owner.
+- **A card on file for a pool:** a Checkout Session in `setup` mode. The adapter then makes that card the customer's default for invoices.
+- **The month's invoice:** an invoice item with the amount, the description, and the month as its period, then an invoice that collects from the card on file by itself. Both are sent with an idempotency key made from whose plan and the month. Stripe keeps such keys only about a day, which is why the row in `plan_invoices` is the real guard.
+- **What the adapter reads as standing.** For a subscription: `active` or `trialing` is good through the current period's end; `past_due` was good through the end of the last period that was paid, so grace runs from there while Stripe retries; `canceled`, `unpaid`, `incomplete_expired`, and `paused` are over; `incomplete` (a first payment that never finished) is nothing yet. For a pool: a default card and no unpaid invoice is good with no end; an unpaid invoice makes it good through that invoice's first failed attempt. Stripe's retry schedule is set, in its dashboard, to end when our grace does.
+- **Why not Stripe's seat quantities or its meters for the pool.** A subscription with a seat quantity prorates on Stripe's clock, to the second, inside Stripe's own billing period. Our basis is one reading a day at 23:55 UTC in UTC calendar months ("Seats by client"), so the two would differ a little every month, and an MSP's invoice wouldn't match the report it bills its own clients from. Stripe's usage meters add events up over a period, or take the last one, and price the result a unit; "seat-days divided by this month's days" isn't something they say. Stripe's own documentation now keeps meters for those already using them and sends new work to a separate product. One line worked out here, once a month, needs neither.
+- **Webhooks:** the `Stripe-Signature` header carries a timestamp (`t`) and one or more `v1` signatures. The signed text is the timestamp, a period, and the raw body, and the check is HMAC-SHA256 with the endpoint's signing secret. Any other scheme in the header is ignored. Stripe sends an event at least once, in no promised order, and retries for up to three days; "look again" makes all three harmless. The events asked for are the ones that can change standing: a Checkout Session completing, a subscription created, changed, or deleted, an invoice paid or failing, and a refund or a dispute (which only tell the operator). From an event the adapter takes its id, its mode, and the customer, and nothing else.
+- **The API version is pinned** in the adapter (the `Stripe-Version` header), so a change to the account's default changes nothing the server reads.
+- **Tax** (open): Stripe Tax is a flag on Checkout Sessions and invoices, plus a billing address collected on Stripe's page. The site says prices are before sales tax. Nothing else in the design depends on the choice.
+- **Refunds and disputes** are the owner's, in Stripe's dashboard. The server has no refund code: a subscription that's refunded and canceled there ends through the same look as any other.
+- **Secrets:** two, `STRIPE_API_KEY` and `STRIPE_WEBHOOK_SECRET`.
+  - The API key is a restricted key that can do only what the adapter calls: create Checkout Sessions, portal sessions, customers, invoice items, and invoices, and read subscriptions, invoices, and customers. Never the account's full secret key.
+  - Both come from the environment only, on the hosted server only. The admin page can't show or save them, they aren't written to the database or the config file, and they never reach a log, an error message, or a diagnostics page. They aren't in the image, a repository, or CI.
+  - The address the adapter calls can be changed only for tests (`BILLING_API_BASE`, for the stand-in), and the server won't start with that set beside a live key, so a live key is only ever sent to Stripe.
+- **Tests never talk to Stripe.** CI has no Stripe account and no key. Tier 1 runs the server against a stand-in in `e2e/` (as Entra has, `entra-standin.mjs`) that answers the few endpoints the adapter calls and sends webhooks signed with a secret made up for the run. The signature check has a unit test against a vector made from Stripe's published scheme with Node's crypto alone. Stripe's own test mode, on the owner's account, is a walk-through by hand before launch and never part of a build.
+
+### Self-hosted servers
+
+The server is AGPL, and anyone can run it for themselves or for others. So a plan can't be a lock in the code, and isn't.
+
+- **Everything on, and no billing.** Plans are enforced only where `PLANS_ENFORCED` is set, in the environment, off by default. With it off, every account and organization gets exactly what it gets today: no plan is looked up, no trial clock runs, `keykeeperPlan` says this server doesn't enforce plans, and the clients show no Plan page. There's no license key, no call home, and nothing to unlock.
+- **A provider is a second switch** (`BILLING_PROVIDER`, empty by default), and it does nothing without the first. Without it no webhook route exists and no billing job runs. So enforcement can be built, tested, and run on the hosted service with plans set by hand before any Stripe account exists.
+- **Someone running their own server may turn both on,** with their own Stripe account or with plans they set by hand, to charge their own customers. That's their right under the license, and nothing is held back to stop it.
+- **What follows for the hosted service:** it's the same image with the switches on. What people pay for is the service: the hosting, the backups, the updates, the answers, and for an MSP the console run for them, as the Pricing page's questions already say. So the site never says a feature exists only for those who pay us, only that our plans include it.
+
+### What this doesn't touch
+
+- **No encryption, key, KDF, or sign-in code changes.** Nothing here adds, wraps, moves, or reads a key. The server still never holds a key that can decrypt a vault, and a plan is never a reason to read an item.
+- **Sign-in and two-step login don't look at a plan,** in any state, so a lapse can't keep anyone out. The access token is left as it is.
+- **The sync format doesn't change:** existing fields get true values, and one field of our own is added, which clients that don't know it ignore.
+- **Where the design could have crossed the line, it doesn't:** enforcing two-step codes on the server would have meant reading inside an item, so that gate stays in the clients; making two-step methods paid would have meant plan checks in the two-step code, so the proposal is that they're free.
+
+### Tests
+
+None exist yet. These are what the build has to arrive with.
+
+- **Unit tests for the one function,** given a time: no row; a trial the second before and the second after it ends; good standing; grace's first and last moments; a canceled plan getting no grace; a client covered by its MSP, and the moment it leaves; an MSP's staff; someone in two organizations, one ended and one not; an offer's free months.
+- **API tests** (tier 1, the real server, `e2e/tests/api/plans.spec.ts`), moving a plan's dates through the operator's route, never the clock:
+  - with enforcement off, the plan fields of a sync are exactly what they are today;
+  - with it on, a Free account's fields, a Premium account's, and each organization shape's;
+  - each refusal in the table, with its sentence, and beside each that downloading, deleting, and exporting still work;
+  - a family's seventh person at every way in, and two people accepting at once for the last place;
+  - an ended organization: every add refused, and reading, editing, exporting, removing someone, and deleting it all working, with `enabled` still true;
+  - a plan changing sends the sync notice;
+  - nobody but the operator can write a plan, and people who can't manage one get 404.
+- **Webhook tests:** a good signature; a wrong secret; a body changed by one byte; a timestamp six minutes old; the same event twice; two secrets during a replacement; the other mode; a body over the limit; an event about nobody we know; and no route at all when no provider is set.
+- **Looking again:** a webhook that never came is made up by the daily look; events out of order leave the right plan; the stand-in refusing every call leaves the plan as it was.
+- **Invoices:** a month's amount equals the console's report for the same readings (months of 28, 30, and 31 days); free days aren't billed; the job run twice makes one invoice; a crash between the row and the provider's answer makes one invoice.
+- **The site and the server agree:** a test compares the site's trial length and family size (`site/site.json`) with the server's defaults.
+- **Web vault and extension (tier 1, Playwright):** the Plan page in each state; a Free account opens legacy contacts and the password reports; upstream's billing pages can't be reached; the banners.
+
+### Not yet
+
+- **Buying inside the phone apps.** The apps show a plan and its state and never sell one. Apple and Google have rules about what an app may link to; they're checked before the apps are listed.
+- **A second provider, other currencies, coupons, and paying by invoice** beyond a plan the operator sets by hand.
+- **One-year commitments.** The site shows a lower price a seat for them; what a commitment holds an MSP to is undecided, so the first build bills monthly prices only.
+- **A line for each client on an MSP's invoice,** and syncing seats or invoices to a PSA.
+- **Stopping repeat trials.** Starting a new organization to get another trial means inviting everyone again and moving every shared item, which is its own deterrent. Watch for it before building against it.
+- **Clearing out families that were created and never paid for.** They hold nothing and cost nothing.
+- **Our own receipts and payment emails,** beyond the reminders above. The provider sends receipts.
+- **MSP signup on the hosted service** (creating an MSP is a server setting, `MSP_SIGNUPS_ALLOWED`, off by default), and the Family preset ("Onboarding"; not built), which Families needs first. Both are in "Build order".
+
+### Build order
+
+Each is one pull request (with its twin under the same branch name where two repositories change), and this section's Status and `docs/` change with it. "Nothing" means agents can start now.
+
+| | Piece | Repositories | Needs from the owner |
+|---|---|---|---|
+| 1 | The `plans` table, the one function, `PLANS_ENFORCED`, true values in the sync fields and `keykeeperPlan`, the operator's route | server | Nothing |
+| 2 | Premium's limits: attachments by plan, file Sends, the breach lookup | server | Nothing. The numbers are settings. |
+| 3 | Free's promises in the clients: legacy contacts and the password reports free, the breach report Premium, the attachments window opening to remove, upstream's billing pages out | clients | Nothing |
+| 4 | Trials and endings: the trial clock, the four states, what an ended organization refuses, the reminder emails | server | Nothing to start. Decisions 3 and 4 change two settings. |
+| 5 | The Plan page and banners; the apps show a plan's state | clients, apps | Nothing |
+| 6 | Two-step codes: the gate moves to adding a key | clients, apps | Decision 2 |
+| 7 | Families: the Family preset, the people limit at every way in, company features off | server, clients | Decision 6 |
+| 8 | The provider boundary: the five calls, the webhook route and its checks, `billing_events`, looking again, the stand-in | server, this repository (`e2e/`) | Nothing |
+| 9 | Stripe for Premium and Families, against the stand-in | server, clients | Nothing to build. To go live: a Stripe account, its prices, and decisions 11 and 12. |
+| 10 | Invoices by the day: `plan_invoices`, `org_seats`, the month's job, a card on file from the console | server, clients | Decisions 8 to 10 |
+| 11 | Going live: the secrets in the hosted server's environment, the walk-through in Stripe's test mode, MSP signup, the site's and legal pages' wording | this repository | Everything in `docs/prelaunch.md` under billing |
+
+Pieces 2, 4, 5, and 8 follow 1 and don't depend on each other. Piece 3 waits for nothing, so 1 and 3 can start on the same day.
+
+### Decisions
+
+All open, and the owner's. Each has a pick, and the design is written to the pick so that building can start; none of them is costly to change before launch. Prices aren't here: they stay as the site has them.
+
+1. **What Free includes, and what Premium adds (open).** The Pricing page's proposal: Free has unlimited passwords, devices, and sync, autofill, the generator, passkeys, two-step login, the weak, reused, and exposed password reports, templates and reminders, legacy contacts, text Sends, and import. Premium adds "Two-step login codes for your other accounts, built in", "Encrypted file attachments, 5 GB", "Send files as well as text", the data breach report, and email support. My pick: keep it as it is. Upstream's clients also keep YubiKey one-time passwords, a person's own Duo, and Archive for Premium, which the page doesn't mention: make the two-step methods free (how someone signs in shouldn't be the paid part), and either list Archive under Premium or make it free.
+2. **Two-step codes when someone isn't on a paid plan (open).** The server can't enforce this one. The choices: gate adding a key and always show codes for keys already saved; hide codes without Premium, as upstream does; or make codes free. My pick: the first, so a lapse never locks anyone out of another service.
+3. **What an organization can do once its trial or plan has ended (open).** The choices: keep everything and add nothing, with edits to what's there still saved; read-only; or suspended, as upstream does. My pick: the first. Read-only stops a team saving a password it just rotated, and suspended breaks "Your vault stays yours".
+4. **Grace after a failed payment (open):** 7, 14, or 30 days. My pick: 14, and none after a trial, whose 30 days are the grace.
+5. **Self-hosted servers get everything (open).** The choices: everything on with no billing unless the operator sets it up, or some features kept for the hosted service. My pick: everything on. It's what the license means and what the Pricing page already says.
+6. **Families: counted or trusted (open).** The server can refuse a seventh person, or show six and trust it. My pick: counted, six with the owner, and invitations count.
+7. **Storage for an organization (open).** The Pricing page says attachments are included for Families, Business, and MSPs and gives no size. The choices: 5 GB for an organization; or 1 GB a person, pooled. My pick: 1 GB a person pooled across the organization and never less than 5 GB, with each member's own vault getting Premium's 5 GB.
+8. **How Business is billed (open).** The choices: by the day after each month, as the pool is; or seats bought ahead, with a limit to run into. My pick: by the day. It's one way of billing to build and explain, and a seat limit would stop the install command and Entra from adding people on their own, which is the product's point.
+9. **Which price a pool's month gets (open; "Seats by client").** The choices: the month's prorated total picks one price for every seat; each band of seats at its own price; or the busiest day picks. My pick: the prorated total, one price for every seat, which is one multiplication an MSP can check. It has a step at each size (499 seats cost more than 500), which the other way avoids at the cost of a harder invoice.
+10. **Trials for MSPs, and what a one-year commitment holds (open).** The site names only a Business trial, and shows commitment prices without saying what's committed. My pick: MSPs get the same 30 days; commitments wait until after launch, and the first build bills monthly prices.
+11. **Refunds (open; the terms' draft says "to decide").** The choices: none; 30 days on yearly plans; or the unused part back at any time. My pick: 30 days on Premium and Families, done by hand in Stripe. Pools are billed after the month, so there's nothing paid ahead to refund.
+12. **Tax (open).** The choices: Stripe Tax, which works it out and collects it for an extra fee; or no tax collected until an accountant says where it's owed. My pick: Stripe Tax from the start, since the site already says prices are before sales tax.
+13. **The card's last four digits (open).** The privacy page's draft says we keep them and the expiry. My pick: don't. Stripe's page shows them, and the server then holds nothing about a card at all; the sentence on the privacy page changes to say so.
+
 ## Running the server safely
 
 A security pass over the server before launch (October 2026) found these, and these are the rules now. The deploy guide (`deploy/README.md`) says the same for whoever runs a server.
@@ -2381,6 +2631,7 @@ The maintainer gets a morning summary, with screenshots and video only for failu
 ## Known gaps
 
 - The launch site (`site/`) goes to a preview address until launch; passbundle.com still shows the earlier "in development" page. `site/README.md` lists what has to be true before it goes live.
+- Plans aren't enforced and nothing is billed: every account is told it has Premium and every organization everything, on the hosted service as on any server. "Plans and billing" is the design; none of it is built.
 - The apps' default server is `vault.passbundle.com` (one host, the way our server is deployed), which serves nothing until the hosted service exists. Self-hosted servers are unaffected.
 - The installer's extension IDs are placeholders until the store listings exist. Chrome and Edge builds loaded unpacked have PassBundle's own ID already ("Connector pages").
 - passbundle.com still points at Namecheap, and the site is on a temporary Cloudflare account (https://passbundle.pages.dev). Next: move it to PassBundle's own Cloudflare account, point passbundle.com, .io, and .app at it, and set up hello@, privacy@, and security@ (steps in `site/README.md`).
