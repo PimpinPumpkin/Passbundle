@@ -9,7 +9,7 @@ Light or dark like the visitor's device: a near-white neutral ground (`#FAFAF8`)
 - `<x-shot name="msp-console" alt="..." frame="desktop">`: a screenshot from `static/shots`, with its dark version in dark mode. Until `e2e/site-shots/` has made it, it's a placeholder the size of its `frame` (`desktop`, `popup`, or `panel`), and `check.mjs --launch` refuses it.
 - `<x-tile icon="console" tone="sapphire">`: a tile tinted with its tone and its glyph in that tone, as the apps show each kind of item, with a glyph from `icons.mjs` (the apps' own glyphs, and some drawn for the site). Tones: brand, sapphire, topaz, amethyst, turquoise, onyx, aquamarine, garnet, emerald, ruby, gold.
 - `<x-art name="LockIcon">`: one of the apps' drawings from `art/`, inline so it takes the page's colors.
-- `static/`: copied as is: the stylesheet, fonts (with their license), screenshots, favicon, `security.txt`, and Cloudflare Pages' `_headers` (security headers) and `_redirects` (the apps' old help-article and product links).
+- `static/`: copied as is: the stylesheet, fonts (with their license), screenshots, the browsers' logos (`browsers/`, see below), favicon, `security.txt`, and Cloudflare Pages' `_headers` (security headers) and `_redirects` (the apps' old help-article and product links).
 - `art/`: drawings copied from passbundle-clients `brand/artwork/` (made by `draw.mjs` there). Copy again when they change.
 - `build.mjs` wraps each page in the shared header and footer into `dist/`, and lists the screenshots still to make. `check.mjs` fails on a broken link or image, a missing page, a script that isn't one of our own files (inline, or from anyone else), an inline style or event handler (the CSP blocks them), an em dash, or a placeholder the build didn't fill in.
 
@@ -21,6 +21,19 @@ site/deploy.sh                                 # build, check, and deploy the pr
 CI runs the build and check on every change to `site/`.
 
 Download shows its four kinds (browser, phone, computer, web) side by side, two by two below 960 pixels. On a phone they're a switcher under the title instead, Phone picked first, and only the picked kind's card shows, so none is a scroll away. The switcher is radio buttons and `:has()` in `styles.css`, no script; a browser without `:has()` shows the four cards one under another.
+
+## Browser logos
+
+Download's Browser card shows the logo and name of each browser the extension works in: Chrome, Edge, and Brave, and Firefox marked as coming until its build is signed. Safari isn't shown, because there is no Safari build. The logos are the SVG files from the `@browser-logos` packages on npm (source: https://github.com/alrra/browser-logos), copied to `static/browsers/` on November 9, 2026:
+
+| File | Package | Version |
+| --- | --- | --- |
+| `chrome.svg` | `@browser-logos/chrome` | 2.0.0 |
+| `edge.svg` | `@browser-logos/edge` | 2.0.7 |
+| `brave.svg` | `@browser-logos/brave` | 3.0.13 |
+| `firefox.svg` | `@browser-logos/firefox` | 3.0.10 |
+
+They're used as they come, in an `<img>` with its width and height: not recolored, cropped, or edited. The logos are their owners' trademarks, and the fine print at the foot of Download says whose each one is, so a logo added to another page needs that line there too. To update one, get the exact version with `npm pack --ignore-scripts @browser-logos/chrome@2.0.0` in an empty folder outside the repository, unpack it without running anything from it, read the SVG to confirm it has no `<script>`, no event handlers, and no references to other files or addresses, copy it over, and change the version and date here.
 
 ## Screenshots
 
