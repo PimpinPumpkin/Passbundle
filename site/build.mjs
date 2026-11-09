@@ -8,6 +8,8 @@
 // Pages can use:
 //   {{prices.premium}}, {{links.vault}}: values from site.json. An empty link
 //     isn't live yet and becomes /download/ (check.mjs --launch refuses it).
+//     {{links.extensionZip|links.extension}} is the first of them that isn't
+//     empty.
 //   <x-shot name="msp-console" alt="..." frame="desktop"></x-shot>: a
 //     screenshot from static/shots, with its dark version in dark mode. Add
 //     `eager` for one that's on screen when the page opens, and `class` to
@@ -143,11 +145,13 @@ function art(tag, file) {
     .replace(/^<svg /, `<svg class="art${cls ? ` ${cls}` : ""}" aria-hidden="true" focusable="false" `);
 }
 
-function value(key, file) {
-  const v = key.split(".").reduce((o, k) => (o == null ? undefined : o[k]), site);
-  if (v === undefined) throw new Error(`${file}: no {{${key}}} in site.json`);
-  if (key.startsWith("links.") && v === "") return "/download/";
-  return v;
+function value(keys, file) {
+  for (const key of keys.split("|")) {
+    const v = key.split(".").reduce((o, k) => (o == null ? undefined : o[k]), site);
+    if (v === undefined) throw new Error(`${file}: no {{${key}}} in site.json`);
+    if (!key.startsWith("links.") || v !== "") return v;
+  }
+  return "/download/";
 }
 
 /** <x-part>: a shared piece of a page, from parts/. */
@@ -171,7 +175,7 @@ function expand(html, file) {
     .replace(/<x-art\b([^>]*)><\/x-art>/g, (_, t) => art(t, file))
     .replace(/<x-tile\b([^>]*)><\/x-tile>/g, (_, t) => tile(t, file))
     .replace(/<x-mark\b([^>]*)><\/x-mark>/g, (_, t) => mark(t))
-    .replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k) => value(k, file));
+    .replace(/\{\{\s*([\w.|]+)\s*\}\}/g, (_, k) => value(k, file));
 }
 
 // Six links: see it, what it does, who it's for, and what it costs. Demo is

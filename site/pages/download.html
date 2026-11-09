@@ -1,115 +1,110 @@
 <!--
 title: Get PassBundle
-description: Test builds of the PassBundle apps for Windows, Mac, Linux, and Android, the browser extension and command-line tool, and the open-source server to run them with until our hosted service opens.
+description: The PassBundle browser extension for Chrome and Edge, test builds of the apps for Android, Windows, Mac, and Linux, the web vault, the command-line tool, and the open-source server to run them with until our hosted service opens.
 layout: wide
 -->
-<section class="hero solo">
+<section class="hero solo get-hero">
   <h1>Get PassBundle</h1>
-  <p class="lead">
-    The app for your computer and phone, the browser extension, and the web vault. Your vault
-    syncs between all of them.
-  </p>
-  <div class="note plans-note">
-    <p><strong>PassBundle is in testing.</strong> The apps are test builds, the extension isn't in the browsers' stores yet, and our hosted service, vault.passbundle.com, opens at launch. Until then, PassBundle signs in to a server you run yourself: see <a href="#server">Run your own server</a>.</p>
+  <p class="lead">For your browser, phone, computer, and the web. Your vault syncs between them.</p>
+  <nav class="get-jump" aria-label="Downloads on this page">
+    <a href="#browser"><x-tile icon="browser" tone="sapphire" class="small"></x-tile>Browser</a>
+    <a href="#phone"><x-tile icon="phone" tone="emerald" class="small"></x-tile>Phone</a>
+    <a href="#computer"><x-tile icon="laptop" tone="onyx" class="small"></x-tile>Computer</a>
+    <a href="#web"><x-tile icon="globe" tone="brand" class="small"></x-tile>Web</a>
+  </nav>
+</section>
+
+<section class="get-section">
+  <div class="note get-note">
+    <p><strong>PassBundle is in testing.</strong> These are test builds. Until our hosted service opens at launch, they sign in to <a href="#server">a server you run yourself</a>.</p>
+  </div>
+  <div class="get">
+    <div class="card get-card" id="browser">
+      <h2><x-tile icon="browser" tone="sapphire"></x-tile>Browser</h2>
+      <p>Fills passwords, cards, and addresses in Chrome, Edge, and other Chromium browsers.</p>
+      <div class="get-do">
+        <div class="actions"><a class="button primary" href="{{links.extensionZip|links.extension}}">Download the extension</a></div>
+        <p class="fine">A zip you <a href="#extension">install by hand</a> until it's in the stores.</p>
+        <p class="fine"><strong>Firefox:</strong> coming. Firefox only installs extensions Mozilla has signed, and ours isn't signed yet.</p>
+      </div>
+    </div>
+    <div class="card get-card" id="phone">
+      <h2><x-tile icon="phone" tone="emerald"></x-tile>Phone</h2>
+      <p>Fills passwords in apps and browsers, and unlocks with your fingerprint or face.</p>
+      <div class="get-do">
+        <div class="actions"><a class="button primary" href="{{links.apps}}">Download for Android</a></div>
+        <p class="fine">Choose the newest release for Android, then the arm64 APK. Passkeys need Android 14 or later.</p>
+        <p class="fine"><strong>iPhone:</strong> not available yet. Until it is, the web vault works in Safari.</p>
+      </div>
+    </div>
+    <div class="card get-card" id="computer">
+      <h2><x-tile icon="laptop" tone="onyx"></x-tile>Computer</h2>
+      <p>The PassBundle app for Windows, Mac, and Linux. It keeps itself up to date.</p>
+      <div class="get-do">
+        <div class="actions">
+          <a class="button primary" href="{{links.apps}}">Download for Windows</a>
+          <a class="button primary" href="{{links.apps}}">Download for Mac</a>
+          <a class="button primary" href="{{links.apps}}">Download for Linux</a>
+        </div>
+        <p class="fine">Choose the newest release for your system: 64-bit Windows 10 or 11, macOS 14 or later, or Linux on x64 or ARM.</p>
+      </div>
+    </div>
+    <div class="card get-card" id="web">
+      <h2><x-tile icon="globe" tone="brand"></x-tile>Web</h2>
+      <p>The web vault: your whole vault in any browser, with nothing to install.</p>
+      <div class="get-do">
+        <div class="actions"><a class="button" href="#server">Run your own server</a></div>
+        <p class="fine">Every PassBundle server has one, at the server's own address. Ours, vault.passbundle.com, opens at launch.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="tight">
+  <div class="downloads">
+    <div class="card" id="extension">
+      <h2><x-tile icon="download" tone="sapphire"></x-tile>Install the extension by hand</h2>
+      <p>In Chrome, Edge, and other Chromium browsers:</p>
+      <ol class="steps">
+        <li>Download the zip and unzip it. Keep the folder: your browser loads PassBundle from it.</li>
+        <li>Open the extensions page: <code>chrome://extensions</code> in Chrome, or <code>edge://extensions</code> in Edge.</li>
+        <li>Turn on Developer mode.</li>
+        <li>Choose Load unpacked, and pick the unzipped folder.</li>
+        <li>Pin PassBundle to the toolbar from the extensions menu, and sign in.</li>
+      </ol>
+      <p class="fine">It doesn't update itself. For a new version, put the new zip's files in the same folder, and choose Reload on PassBundle in the extensions page. Each release lists the zip's SHA-256.</p>
+    </div>
+    <div class="card" id="test-builds">
+      <h2><x-tile icon="shield" tone="onyx"></x-tile>Opening a test build</h2>
+      <p>The apps are signed with PassBundle's own test keys, not yet by Apple or Microsoft, so the first time you open one, your device asks you to allow it:</p>
+      <ul class="get-list">
+        <li><strong>Windows:</strong> choose More info, then Run anyway.</li>
+        <li><strong>Mac:</strong> choose Open Anyway in System Settings, Privacy &amp; Security.</li>
+        <li><strong>Android:</strong> let your browser install apps when it asks.</li>
+      </ul>
+      <p class="fine">Windows Hello unlock is in the Windows app, not yet tried on a real Windows Hello device. Touch ID unlock waits until the Mac app is signed by Apple. Each release lists its files' SHA-256.</p>
+    </div>
+    <div class="card" id="cli">
+      <h2><x-tile icon="code" tone="onyx"></x-tile>Command line</h2>
+      <p>The <code>passbundle</code> command, for IT scripts on Mac, Linux, and Windows: sign in with an API key, read the passwords your folders let you see, and make items from templates.</p>
+      <div class="actions"><a class="button" href="{{links.cliGuide}}">How to build and use it</a></div>
+      <p class="fine">No release yet. Until the first one, build it from its source code, as the guide shows.</p>
+    </div>
+    <div class="card" id="server">
+      <h2><x-tile icon="server" tone="garnet"></x-tile>Run your own server</h2>
+      <p>PassBundle is open source. Run the server on your own hardware and point the apps at it: the sign-in screen asks where your vault is. It's in testing too: build the server and its web vault from the source code, as one container image (<a href="https://github.com/PimpinPumpkin/Passbundle/tree/main/deploy">how</a>).</p>
+      <p class="get-links"><a class="more" href="https://github.com/PimpinPumpkin/passbundle-server">PassBundle server</a> <a class="more" href="https://github.com/PimpinPumpkin/passbundle-clients">PassBundle web vault and extension</a> <a class="more" href="https://github.com/PimpinPumpkin/passbundle-apps">PassBundle apps</a></p>
+    </div>
   </div>
 </section>
 
 <section class="tight">
   <div class="head">
-    <h2>In your browser</h2>
-    <p class="lead">Fills your passwords, cards, and addresses as you go, and saves new logins.</p>
-  </div>
-  <div class="downloads">
-    <div class="card">
-      <h3><x-tile icon="browser" tone="sapphire"></x-tile>Chrome</h3>
-      <p>Also for Brave, Vivaldi, and other browsers that install from the Chrome Web Store.</p>
-      <p class="fine">Not in the Chrome Web Store yet.</p>
-    </div>
-    <div class="card">
-      <h3><x-tile icon="browser" tone="aquamarine"></x-tile>Edge</h3>
-      <p>From Microsoft Edge Add-ons.</p>
-      <p class="fine">Not in Edge Add-ons yet.</p>
-    </div>
-    <div class="card">
-      <h3><x-tile icon="browser" tone="topaz"></x-tile>Firefox</h3>
-      <p>From Firefox Add-ons.</p>
-      <p class="fine">Not in Firefox Add-ons yet.</p>
-    </div>
-  </div>
-  <div class="note plans-note">
-    <p><strong>The extension isn't in the stores yet.</strong> Until it is, use the PassBundle app on your computer, or build the extension from <a href="https://github.com/PimpinPumpkin/passbundle-clients">its source code</a> and load it in Chrome or Edge as an unpacked extension.</p>
-  </div>
-</section>
-
-<section id="apps" class="tight">
-  <div class="head">
-    <h2>On your computer and phone</h2>
+    <h2>Then bring your passwords</h2>
     <p class="lead">
-      PassBundle's own apps. Their test builds are on GitHub,
-      and they keep themselves up to date from there.
+      Export them from your browser or your old password manager, and import the file into
+      PassBundle. It takes a few minutes.
     </p>
-  </div>
-  <div class="downloads">
-    <div class="card">
-      <h3><x-tile icon="desktop" tone="onyx"></x-tile>Windows</h3>
-      <p>For 64-bit Windows 10 and 11. A zip: move the PassBundle folder into your programs, and open it. Windows Hello unlock is in it, not yet tried on a real Windows Hello device.</p>
-      <div class="actions"><a class="button primary" href="{{links.apps}}">Download for Windows</a></div>
-      <p class="fine">Choose the newest release "for Windows".</p>
-    </div>
-    <div class="card">
-      <h3><x-tile icon="laptop" tone="onyx"></x-tile>Mac</h3>
-      <p>For Macs with Apple silicon and with Intel, on macOS 14 or later. Touch ID unlock waits until the app is signed by Apple.</p>
-      <div class="actions"><a class="button primary" href="{{links.apps}}">Download for Mac</a></div>
-      <p class="fine">Choose the newest release "for Mac".</p>
-    </div>
-    <div class="card">
-      <h3><x-tile icon="terminal" tone="onyx"></x-tile>Linux</h3>
-      <p>For 64-bit Intel and AMD, and for ARM, as a tar.gz.</p>
-      <div class="actions"><a class="button primary" href="{{links.apps}}">Download for Linux</a></div>
-      <p class="fine">Choose the newest release "for Linux".</p>
-    </div>
-    <div class="card">
-      <h3><x-tile icon="phone" tone="emerald"></x-tile>Android</h3>
-      <p>Fills your passwords in apps and browsers, saves new ones, and unlocks with your fingerprint or face. Passkeys on Android 14 and later.</p>
-      <div class="actions"><a class="button primary" href="{{links.apps}}">Download for Android</a></div>
-      <p class="fine">Choose the newest release "for Android", then the arm64 APK for a phone.</p>
-    </div>
-    <div class="card">
-      <h3><x-tile icon="phone" tone="sapphire"></x-tile>iPhone</h3>
-      <p>Coming next, with AutoFill. Until then, open your server's web vault in Safari.</p>
-    </div>
-    <div class="card">
-      <h3><x-tile icon="code" tone="onyx"></x-tile>Command line</h3>
-      <p>The <code>passbundle</code> command, for IT scripts on Mac, Linux, and Windows: sign in with an API key, read the passwords your folders let you see, and make items from templates.</p>
-      <div class="actions"><a class="button" href="{{links.cliGuide}}">How to build and use it</a></div>
-      <p class="fine">No release yet. Until the first one, build it from its source code, as the guide shows.</p>
-    </div>
-    <div class="card">
-      <h3><x-tile icon="globe" tone="brand"></x-tile>Web vault</h3>
-      <p>Your whole vault in any browser, on any computer, with nothing to install. Every PassBundle server has it, at the server's own address.</p>
-      <p class="fine">Ours, vault.passbundle.com, opens at launch.</p>
-    </div>
-  </div>
-  <div class="note plans-note">
-    <p><strong>These are test builds.</strong> They're signed with PassBundle's own test keys, not yet by Apple or Microsoft, so the first time you open one, your computer asks you to allow it: on Windows, choose More info, then Run anyway; on a Mac, choose Open Anyway in System Settings, Privacy &amp; Security; on Android, let your browser install apps when it asks. Each release lists its files' SHA-256.</p>
-  </div>
-</section>
-
-<section id="server">
-  <div class="split even">
-    <div>
-      <h2>Then bring your passwords</h2>
-      <p class="lead">
-        Export them from your browser or your old password manager, and import the file into
-        PassBundle. It takes a few minutes.
-      </p>
-      <p><a class="more" href="/switch/">Step-by-step guides for 1Password, LastPass, and every browser</a></p>
-    </div>
-    <div class="card">
-      <x-tile icon="server" tone="garnet"></x-tile>
-      <h3>Run your own server</h3>
-      <p>PassBundle is open source. Run the server on your own hardware and point the apps at it: the sign-in screen asks where your vault is. It's in testing too: build the server and its web vault from the source code, as one container image (<a href="https://github.com/PimpinPumpkin/Passbundle/tree/main/deploy">how</a>).</p>
-      <p class="actions"><a class="more" href="https://github.com/PimpinPumpkin/passbundle-server">PassBundle server</a> <a class="more" href="https://github.com/PimpinPumpkin/passbundle-clients">PassBundle web vault and extension</a> <a class="more" href="https://github.com/PimpinPumpkin/passbundle-apps">PassBundle apps</a></p>
-    </div>
+    <p class="get-switch"><a class="more" href="/switch/">Step-by-step guides for 1Password, LastPass, and every browser</a></p>
   </div>
 </section>
