@@ -1,6 +1,7 @@
 // Seats in the MSP console (DESIGN.md, "Seats by client"): an MSP admin sees
-// each client's seats this month, what counts, the totals, an earlier month
-// from the month picker, and downloads either month as CSV.
+// each client's seat-days, prorated seats, and peak this month, what counts
+// and how a month is billed, the totals, an earlier month from the month
+// picker, and downloads either month as CSV.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -41,6 +42,27 @@ const monthName = (month: string) =>
     year: "numeric",
     timeZone: "UTC",
   });
+
+/** The days in a month (`YYYY-MM`): 28 to 31. */
+function daysIn(month: string): number {
+  const [year, number] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, number, 0)).getUTCDate();
+}
+
+/** Seat-days over the days, to two decimals rounded half up, as the server and the console show them. */
+function prorated(seatDays: number, days: number): string {
+  const h = Math.floor((200 * seatDays + days) / (2 * days));
+  return `${Math.floor(h / 100)}.${String(h % 100).padStart(2, "0")}`;
+}
+
+/** What the console says about how a month is billed. */
+function howBilled(month: string): string {
+  const name = new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "long", timeZone: "UTC" });
+  return (
+    `Prorated seats are a client's seat-days (its seats each day, added up) divided by the ${daysIn(month)} days in ${name}, ` +
+    "so a seat added late in the month counts only for its days. Peak is the most seats on any day, for reference."
+  );
+}
 
 /**
  * Writes a reading into the test server's SQLite database as if the server
@@ -113,33 +135,42 @@ test("an MSP admin sees each client's seats by month and downloads them as CSV",
   const seats = page.getByTestId("msp-seats");
   await expect(seats.getByRole("heading", { name: "Seats" })).toBeVisible();
   await expect(seats.getByTestId("msp-seats-what-counts")).toHaveText(
-    "A seat is each person in a client who has joined, counted once a day. People who've been invited but haven't joined don't count, and neither do your staff.",
+    "A seat is each person in a client who has joined, counted at the end of each day (UTC). People who've been invited but haven't joined don't count, and neither do your staff.",
   );
   const month = seats.getByRole("combobox", { name: "Month" });
   const now = monthFromNow(0);
+  const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
+  await expect(seats.getByTestId("msp-seats-how-billed")).toHaveText(howBilled(now));
+  await expect(seats.getByTestId("msp-seats-through")).toHaveText(`So far, through ${today}.`);
   await expect(month).toHaveValue(now);
   await expect(month.getByRole("option")).toHaveText([`${monthName(now)} (this month)`, monthName(last)]);
 
   const row = (name: string) => seats.getByTestId(`msp-seats-${name}`);
   const cells = (name: string) => [
-    row(name).getByTestId("msp-seats-most"),
-    row(name).getByTestId("msp-seats-average"),
+    row(name).getByTestId("msp-seats-seat-days"),
+    row(name).getByTestId("msp-seats-prorated"),
+    row(name).getByTestId("msp-seats-peak"),
     row(name).getByTestId("msp-seats-today"),
   ];
+  /** Seat-days, prorated seats, peak, and today's when there's a Today column. */
   const expectRow = async (name: string, values: string[]) => {
-    const [most, average, today] = cells(name);
-    await expect(most).toHaveText(values[0]);
-    await expect(average).toHaveText(values[1]);
-    if (values.length > 2) {
-      await expect(today).toHaveText(values[2]);
+    const [seatDays, proratedSeats, peak, today] = cells(name);
+    await expect(seatDays).toHaveText(values[0]);
+    await expect(proratedSeats).toHaveText(values[1]);
+    await expect(peak).toHaveText(values[2]);
+    if (values.length > 3) {
+      await expect(today).toHaveText(values[3]);
     } else {
       await expect(today).toHaveCount(0);
     }
   };
-  await expect(seats.getByRole("columnheader")).toHaveText(["Client", "Most on any day", "Average", "Today"]);
-  await expectRow("Acme Dental", ["2", "2.0", "2"]);
-  await expectRow("Baker Law", ["1", "1.0", "1"]);
-  await expectRow("total", ["3", "3.0", "3"]);
+  // This month so far: the clients were added today, and the month's
+  // seat-days are divided by all of its days.
+  const days = daysIn(now);
+  await expect(seats.getByRole("columnheader")).toHaveText(["Client", "Seat-days", "Prorated seats", "Peak", "Today"]);
+  await expectRow("Acme Dental", ["2", prorated(2, days), "2", "2"]);
+  await expectRow("Baker Law", ["1", prorated(1, days), "1", "1"]);
+  await expectRow("total", ["3", prorated(3, days), "3", "3"]);
 
   const download = async (file: string) => {
     const [saved] = await Promise.all([
@@ -149,23 +180,29 @@ test("an MSP admin sees each client's seats by month and downloads them as CSV",
     expect(saved.suggestedFilename()).toBe(file);
     return fs.readFileSync(await saved.path(), "utf8");
   };
+  const header = "\uFEFFMonth,Through,Client,Seat-days,Days in month,Prorated seats,Peak,Today\r\n";
+  const through = new Date().toISOString().slice(0, 10);
   expect(await download(`seats-${now}.csv`)).toBe(
-    "\uFEFFMonth,Client,Most on any day,Average,Today\r\n" +
-      `${now},Acme Dental,2,2.0,2\r\n` +
-      `${now},Baker Law,1,1.0,1\r\n` +
-      `${now},Total,3,3.0,3\r\n`,
+    header +
+      `${now},${through},Acme Dental,2,${days},${prorated(2, days)},2,2\r\n` +
+      `${now},${through},Baker Law,1,${days},${prorated(1, days)},1,1\r\n` +
+      `${now},${through},Total,3,${days},${prorated(3, days)},3,3\r\n`,
   );
 
-  // Last month: no Today column, Acme Dental's most on any day, and its
-  // average over the two days recorded.
+  // Last month: no Today column or "So far", and Acme Dental's two days
+  // recorded, 4 and 2, over all of the month's days, with 4 its peak.
   await month.selectOption(last);
-  await expect(seats.getByRole("columnheader")).toHaveText(["Client", "Most on any day", "Average"]);
-  await expectRow("Acme Dental", ["4", "3.0"]);
+  const lastDays = daysIn(last);
+  await expect(seats.getByTestId("msp-seats-how-billed")).toHaveText(howBilled(last));
+  await expect(seats.getByTestId("msp-seats-through")).toHaveCount(0);
+  await expect(seats.getByRole("columnheader")).toHaveText(["Client", "Seat-days", "Prorated seats", "Peak"]);
+  await expectRow("Acme Dental", ["6", prorated(6, lastDays), "4"]);
   await expect(row("Baker Law")).toHaveCount(0);
-  await expectRow("total", ["4", "3.0"]);
+  await expectRow("total", ["6", prorated(6, lastDays), "4"]);
+  const lastThrough = `${last}-${lastDays}`;
   expect(await download(`seats-${last}.csv`)).toBe(
-    "\uFEFFMonth,Client,Most on any day,Average,Today\r\n" +
-      `${last},Acme Dental,4,3.0,\r\n` +
-      `${last},Total,4,3.0,\r\n`,
+    header +
+      `${last},${lastThrough},Acme Dental,6,${lastDays},${prorated(6, lastDays)},4,\r\n` +
+      `${last},${lastThrough},Total,6,${lastDays},${prorated(6, lastDays)},4,\r\n`,
   );
 });
