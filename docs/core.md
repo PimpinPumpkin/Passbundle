@@ -448,10 +448,22 @@ DESIGN.md, "Expiration dates", in the apps (`core/src/expiration.rs`, the same r
 
 DESIGN.md, "Members' own passwords": after each sync, for a confirmed member of an organization, the core asks the server which organizations see the numbers (`GET /api/keykeeper/own-health/seen-by`: those the person joined that have "Members' own passwords" on) and sends nothing while none does. Otherwise it counts the Personal logins with a password (not in the trash) and how many are weak or reused among themselves, by Health's rules, and puts `{logins, weak, reused}` to `/api/keykeeper/own-health`: once per unlock and again when the numbers change, or again at the next sync when the server answers that it didn't keep them (`"kept": false`, an organization turned it off in between). No `exposed`, since the apps don't check breaches. A server without the endpoints (404 or 405) isn't asked again that unlock, and nothing here ever fails a sync. The synced settings document's `health` part (the web vault's breach check switch) is kept as it is when the apps save.
 
+## Importing from browsers
+
+DESIGN.md, "Automatic import" (the rules, each browser's files, the decisions, and the tests). On computers only; the core links passbundle-apps' `browsers` crate there (`core/src/browser_import.rs`).
+
+- **Finding** (`App::browser_profiles`, `pb_browser_profiles`): every browser profile in the person's own folders, with who each is signed in as, chosen by DESIGN.md's "Which browser profiles" for this account's email and its organizations' `keykeeperEmailDomains` (from the kept sync, `organizations` and `organizationsNew`). Reads no passwords. Unlocked only.
+- **Offered once** (`pb_browser_import_offer`): once per account on this device (`browser-import.json` in the account's folder, `{"offered": true}`), after unlocking, and only when there's a profile to import from.
+- **Importing** (`App::import_from_browsers`, `pb_browser_import`): takes the ids of the profiles the person chose just now and the Firefox Primary Passwords they typed, by id; finds the profiles again and reads only those. Each profile comes back read (how many), asking for its Primary Password (or saying a wrong one), going to the guided import (with why, in words), or gone. Nothing is read while locked, without a session, or when an organization keeps items out of Personal.
+- **Into the vault:** sorted against the vault as the guided import sorts (DESIGN.md, "Into the vault"); each new login a draft like any new item, encrypted with `Vault::encrypt_item` (the user key, no item key), its "Check these" folder's name with the user key, made first with `POST /api/folders` if the vault doesn't have one by that name; then `POST /api/ciphers/import`, at most 250 to a request, then a sync. A request refused partway keeps the ones before it.
+- **Turning saving off** (`App::turn_off_browser_saving`, `pb_browser_turn_off`): the chosen profiles only, found again by id, with the browser closed.
+- **Memory:** logins read are zeroizing until they're encrypted, and dropped after; a Primary Password passes through Dart once, like the master password, and is wiped at the bridge and in the core after the read. Neither is written anywhere.
+- **Tests with test hooks** (`pb_test_browsers`, `pb_test_browsers_read`): the app's tests point the core at made-up browsers in a throwaway folder and see which profiles were read. A build with test hooks looks at no other browsers; the core's own tests never look at any.
+
 ## Speed
 
 The KDF is most of unlocking. On ARM (Apple silicon, phones) the core uses the chip's SHA-256 instructions, so PBKDF2 at 600,000 iterations takes about 46 ms on an M1 Pro instead of 288. x86 uses its own SHA extensions.
 
 ## Not yet
 
-Sends, organization admin, the MSP console (the web vault keeps it), importing, and passkeys on computers (the browser extension has them there). Each gets designed when it's next.
+Sends, organization admin, the MSP console (the web vault keeps it), importing files (the web vault and the extension import them; the apps import from a computer's browsers, above), and passkeys on computers (the browser extension has them there). Each gets designed when it's next.

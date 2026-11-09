@@ -228,3 +228,46 @@ test("whoever sent an invitation hears the person joined, worded for whether an 
   const accepted = await waitForMessage(owner.email, /^Invitation to Approve Co accepted$/);
   expect(accepted.text).toContain(`${later.email} has accepted your invitation to join Approve Co.`);
 });
+
+test("an organization's email domains reach its members' apps with each sync, and no one else's", async ({
+  request,
+}) => {
+  // The desktop app takes a browser profile signed in at one of them for a
+  // work profile when it offers to import passwords (DESIGN.md, "Which
+  // browser profiles").
+  const api = new Api(request);
+  const { admin, mspId, orgId, token } = await setUp(api, "Sync Domains Co");
+  // Confirmed members have them in `organizations`; anyone who joined, in
+  // `organizationsNew` too, before the org key reaches them.
+  const domainsOf = async (account: Account, org: string) => {
+    const sync = await api.call(account, "GET", "/api/sync?excludeDomains=true");
+    expect(sync.status, JSON.stringify(sync.body)).toBe(200);
+    const { organizations, organizationsNew } = sync.body.profile;
+    return [...organizations, ...organizationsNew].find((o: { id: string }) => o.id === org)?.keykeeperEmailDomains;
+  };
+  expect(await domainsOf(admin, orgId)).toEqual([]);
+
+  const set = await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/clients/${orgId}/enrollment/domains`, {
+    domains: ["@Sync.example.test", "branch.sync.example.test"],
+  });
+  expect(set.status, JSON.stringify(set.body)).toBe(200);
+  expect(await domainsOf(admin, orgId)).toEqual(["sync.example.test", "branch.sync.example.test"]);
+
+  // A member who joined with the command gets them too.
+  const member = await api.account("member", `member-${Date.now()}@sync.example.test`);
+  await verifyEmail(api, member);
+  expect((await join(api, member, token)).status).toBe(200);
+  expect(await domainsOf(member, orgId)).toEqual(["sync.example.test", "branch.sync.example.test"]);
+
+  // Another organization's people never see them; their own has none.
+  const other = await setUp(api, "Other Sync Co");
+  expect(await domainsOf(other.admin, orgId)).toBeUndefined();
+  expect(await domainsOf(other.admin, other.orgId)).toEqual([]);
+
+  // Cleared, they're gone from the next sync.
+  const cleared = await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/clients/${orgId}/enrollment/domains`, {
+    domains: [],
+  });
+  expect(cleared.status).toBe(200);
+  expect(await domainsOf(member, orgId)).toEqual([]);
+});
