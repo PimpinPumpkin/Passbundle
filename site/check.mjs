@@ -19,6 +19,7 @@ import { THEME_SCRIPT } from "./theme.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.join(here, "dist");
 const launch = process.argv.includes("--launch");
+const ORIGIN = "https://passbundle.com";
 
 // The apps' links to the website (brand.json's "website" plus upstream's
 // paths, rewritten by the clients' brand/apply.mjs), the security.txt path,
@@ -95,6 +96,42 @@ if (!fs.readFileSync(path.join(dist, "_headers"), "utf8").includes(`script-src '
 }
 
 const site = JSON.parse(fs.readFileSync(path.join(here, "site.json"), "utf8"));
+
+// Search engines: "indexed" in site.json decides, and what the build wrote
+// for them has to agree with it. Not indexed is an X-Robots-Tag: noindex
+// header on every path, a robots.txt that turns every crawler away, and no
+// sitemap. Indexed is neither of the first two, and a sitemap.xml of every
+// page but the 404, which robots.txt points at.
+const noindex = /^\/\*\n(?:[ \t]+.*\n)*?[ \t]+X-Robots-Tag: noindex$/m.test(fs.readFileSync(path.join(dist, "_headers"), "utf8"));
+const robots = fs.existsSync(path.join(dist, "robots.txt")) ? fs.readFileSync(path.join(dist, "robots.txt"), "utf8") : "";
+const shut = /^Disallow: \/$/m.test(robots);
+const sitemapFile = path.join(dist, "sitemap.xml");
+const sitemap = fs.existsSync(sitemapFile) ? fs.readFileSync(sitemapFile, "utf8") : null;
+let search;
+if (site.indexed === false) {
+  if (!noindex) problems.push("_headers: the site isn't indexed, and the block for every path has no X-Robots-Tag: noindex");
+  if (!shut) problems.push("robots.txt: the site isn't indexed, and this doesn't disallow everything");
+  if (sitemap != null) problems.push("sitemap.xml: the site isn't indexed, so there shouldn't be one");
+  search = `search engines: told not to index the site (site.json, "indexed": false)`;
+} else if (site.indexed === true) {
+  if (noindex) problems.push("_headers: the site is indexed, and this has X-Robots-Tag: noindex");
+  if (shut || !/^Allow: \/$/m.test(robots)) problems.push("robots.txt: the site is indexed, and this doesn't allow everything");
+  if (!robots.includes(`Sitemap: ${ORIGIN}/sitemap.xml`)) problems.push("robots.txt: doesn't point at the sitemap");
+  const listed = [...(sitemap ?? "").matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+  const built = htmlFiles(dist)
+    .map((file) => path.relative(dist, file).split(path.sep).join("/"))
+    .filter((rel) => rel !== "404.html")
+    .map((rel) => `${ORIGIN}/${rel.replace(/index\.html$/, "")}`);
+  if (sitemap == null) problems.push("sitemap.xml: the site is indexed, and there isn't one");
+  else {
+    for (const url of built) if (!listed.includes(url)) problems.push(`sitemap.xml: doesn't list ${url}`);
+    for (const url of listed) if (!built.includes(url)) problems.push(`sitemap.xml: lists ${url}, which isn't a page`);
+  }
+  search = `search engines: may index the site, and robots.txt points them at sitemap.xml, ${listed.length} pages (site.json, "indexed": true)`;
+} else {
+  problems.push('site.json: "indexed" has to be true or false');
+}
+
 // Links passbundle.com can go live without, because the pages read true
 // while they're empty: with links.vault filled in and links.signup empty,
 // they say new accounts aren't open yet and how to ask for one, and the store
@@ -121,6 +158,7 @@ if (problems.length > 0) {
   process.exit(1);
 }
 console.log(`site ok: ${REQUIRED.length} required paths, ${links} internal links`);
+console.log(search);
 if (blocking.length > 0) {
   console.log(`blocks going live on passbundle.com (${blocking.length}):\n  ${blocking.join("\n  ")}`);
 }

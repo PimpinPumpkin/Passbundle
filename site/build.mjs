@@ -50,6 +50,8 @@ const staticDir = path.join(here, "static");
 const artDir = path.join(here, "art");
 const dist = path.join(here, "dist");
 const site = JSON.parse(fs.readFileSync(path.join(here, "site.json"), "utf8"));
+// Where the site lives: each page's canonical address, and the sitemap's.
+const ORIGIN = "https://passbundle.com";
 
 const MARK =
   "M4.5 13V8.5a8.5 8.5 0 0 1 17 0V13h-4V8.5a4.5 4.5 0 0 0-9 0V13ZM4.5 13h17a4.5 4.5 0 0 1 4.5 4.5V18H0v-.5A4.5 4.5 0 0 1 4.5 13ZM0 20h26v5H0ZM0 27h26v.5a4.5 4.5 0 0 1-4.5 4.5h-17A4.5 4.5 0 0 1 0 27.5Z";
@@ -247,7 +249,7 @@ function layout({ meta, body, file }, route) {
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="/fonts/google-sans-flex-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/styles.css">
-<link rel="canonical" href="https://passbundle.com${route}">${script}
+<link rel="canonical" href="${ORIGIN}${route}">${script}
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -347,9 +349,21 @@ const cssFile = path.join(dist, "styles.css");
 fs.writeFileSync(cssFile, themeable(fs.readFileSync(cssFile, "utf8")));
 const themeHash = crypto.createHash("sha256").update(THEME_SCRIPT).digest("base64");
 const headersFile = path.join(dist, "_headers");
-const headers = fs.readFileSync(headersFile, "utf8");
+let headers = fs.readFileSync(headersFile, "utf8");
 if (headers.split("script-src 'self';").length !== 2) throw new Error("_headers: expected one script-src 'self'; in the CSP");
-fs.writeFileSync(headersFile, headers.replace("script-src 'self';", `script-src 'self' 'sha256-${themeHash}';`));
+headers = headers.replace("script-src 'self';", `script-src 'self' 'sha256-${themeHash}';`);
+// Search engines follow "indexed" in site.json. While it's false, every path
+// is served with X-Robots-Tag: noindex. The rest is below, with the pages.
+if (typeof site.indexed !== "boolean") throw new Error('site.json: "indexed" has to be true or false');
+if (!site.indexed) {
+  if (headers.split("\n/*\n").length !== 2) throw new Error("_headers: expected one /* block, for every path");
+  headers = headers.replace("\n/*\n", "\n/*\n  X-Robots-Tag: noindex\n");
+}
+fs.writeFileSync(headersFile, headers);
+for (const made of ["robots.txt", "sitemap.xml"]) {
+  if (fs.existsSync(path.join(dist, made))) throw new Error(`static/${made}: the build writes this file, from "indexed" in site.json`);
+}
+const routes = [];
 let pages = 0;
 for (const rel of fs.readdirSync(pagesDir).filter((f) => f.endsWith(".html"))) {
   const route = routeOf(rel);
@@ -357,7 +371,21 @@ for (const rel of fs.readdirSync(pagesDir).filter((f) => f.endsWith(".html"))) {
   const out = route == null ? path.join(dist, "404.html") : path.join(dist, route, "index.html");
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, html);
+  if (route != null) routes.push(route);
   pages++;
+}
+// robots.txt turns every crawler away while the site isn't indexed. Once it
+// is, robots.txt lets them in and points at sitemap.xml, which lists every
+// page but the 404.
+if (site.indexed) {
+  const urls = routes.sort().map((route) => `  <url><loc>${ORIGIN}${route}</loc></url>`);
+  fs.writeFileSync(
+    path.join(dist, "sitemap.xml"),
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`,
+  );
+  fs.writeFileSync(path.join(dist, "robots.txt"), `User-agent: *\nAllow: /\n\nSitemap: ${ORIGIN}/sitemap.xml\n`);
+} else {
+  fs.writeFileSync(path.join(dist, "robots.txt"), "User-agent: *\nDisallow: /\n");
 }
 console.log(`built ${pages} pages into ${path.relative(process.cwd(), dist) || dist}`);
 if (placeholders.length > 0) {
