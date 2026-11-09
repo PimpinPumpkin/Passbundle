@@ -209,7 +209,17 @@ test("the extension waits as a new device, then approves another one itself", as
     await popup.getByRole("button", { name: "Continue" }).click();
     await popup.getByRole("textbox", { name: /Master password/ }).fill(ana.password);
     await popup.getByRole("button", { name: "Sign in", exact: true }).click();
-    const number = await heldNumber(popup);
+    const first = await heldNumber(popup);
+
+    // The popup closes when the person turns away to approve it. Opened
+    // again, it continues the same check, with the same number: it keeps the
+    // check's token, without which signing in again would start a new one.
+    await popup.close();
+    const reopened = await openPopup(context, extensionId);
+    await expect(reopened).toHaveURL(/#\/device-verification/, { timeout: 15_000 });
+    const number = await heldNumber(reopened);
+    expect(number).toBe(first);
+    const popupAgain = reopened;
 
     // The web vault approves the extension; its requests come from this
     // computer, so where it is is unknown.
@@ -218,14 +228,14 @@ test("the extension waits as a new device, then approves another one itself", as
     await expect(dialog.getByTestId("keykeeper-new-device-approval-device")).toHaveText(/^\s*Extension in /);
     await expect(dialog.getByTestId("keykeeper-new-device-approval-where")).toContainText("Unknown location");
     await answer(laptop.page, number);
-    await expect(popup.getByRole("heading", { name: /Items/ }).first()).toBeVisible({ timeout: 30_000 });
+    await expect(popupAgain.getByRole("heading", { name: /Items/ }).first()).toBeVisible({ timeout: 30_000 });
 
     // Now the extension, open and unlocked, approves a new browser.
     const cafe = await browserAt(browser, BERLIN);
     await startSignIn(cafe.page, ana);
     const cafeNumber = await heldNumber(cafe.page);
     // The web vault would prompt too; this one is the extension's to answer.
-    await answer(popup, cafeNumber);
+    await answer(popupAgain, cafeNumber);
     await cafe.page.waitForURL(/#\/vault/, { timeout: 30_000 });
     await cafe.context.close();
   } finally {
