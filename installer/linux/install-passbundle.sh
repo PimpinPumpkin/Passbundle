@@ -7,7 +7,9 @@
 # menu, replacing an older one. For each browser (Chrome and Edge) it:
 #   - force-installs the PassBundle extension (IDs are fixed in this script, never passed in),
 #   - turns off the browser's own password saving and filling,
-#   - optionally turns off card and address autofill,
+#   - optionally turns off card and address autofill, in Firefox too (it reads
+#     the same two policies, from /etc/firefox/policies/policies.json, a file
+#     only ours or absent is written; the rest of Firefox isn't managed yet),
 #   - optionally gives the extension its server address and the client's
 #     enrollment token, join secret, and organization key fingerprint, so
 #     people join the client after they sign in (the extension asks first,
@@ -35,6 +37,9 @@ POLICY_FILE="passbundle.json"
 APP_POLICY="/etc/passbundle/policy.json"
 CHROME_POLICIES="/etc/opt/chrome/policies/managed"
 EDGE_POLICIES="/etc/opt/edge/policies/managed"
+# Firefox reads one policies file, so ours is written only where there's none
+# or it's ours, and another vendor's is left alone.
+FIREFOX_POLICY="/etc/firefox/policies/policies.json"
 # The only extensions this can ever force-install, the same as
 # Install-PassBundle.ps1's. Placeholders until the store listings exist.
 CHROME_EXTENSION="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -227,6 +232,39 @@ policy() { # extension update-url
   printf '\n}\n'
 }
 
+# Firefox's policies file as this script writes it for the options given:
+# card and address autofill only. Prints nothing without either option.
+firefox_policy() { # card address
+  [ -n "$1$2" ] || return 0
+  printf '{\n  "policies": {'
+  sep=""
+  if [ -n "$1" ]; then
+    printf '\n    "AutofillCreditCardEnabled": false'
+    sep=","
+  fi
+  [ -z "$2" ] || printf '%s\n    "AutofillAddressEnabled": false' "$sep"
+  printf '\n  }\n}\n'
+}
+
+# True when Firefox's policies file is one this script wrote, for any options.
+firefox_policy_is_ours() {
+  [ -f "$FIREFOX_POLICY" ] || return 1
+  for pair in "yes:" ":yes" "yes:yes"; do
+    if firefox_policy "${pair%%:*}" "${pair#*:}" | cmp -s - "$FIREFOX_POLICY"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Takes Firefox's policies file away if it's ours.
+remove_firefox_policy() {
+  firefox_policy_is_ours || return 0
+  rm -f "$FIREFOX_POLICY"
+  rmdir "$(dirname "$FIREFOX_POLICY")" 2> /dev/null || true
+  CHANGED=yes
+}
+
 # A list policy set in two files is the browser's pick of one, so say so.
 warn_about_others() {
   for other in "$1"/*.json; do
@@ -256,6 +294,15 @@ install_policies() {
         ;;
     esac
   done
+  # Firefox: card and address autofill only, as the options say.
+  if [ -z "$card$address" ]; then
+    remove_firefox_policy
+  elif [ -f "$FIREFOX_POLICY" ] && ! firefox_policy_is_ours; then
+    echo "Warning: $FIREFOX_POLICY is another vendor's, so it's left alone. Set AutofillCreditCardEnabled and AutofillAddressEnabled to false in it to turn them off in Firefox." >&2
+  else
+    firefox_policy "$card" "$address" > "$written"
+    put_file "$FIREFOX_POLICY" < "$written"
+  fi
   # The app signs in to the organization's server without asking.
   if [ -n "$server_url" ]; then
     one_line ServerUrl "$server_url"
@@ -269,6 +316,7 @@ if [ -n "$remove" ]; then
   pkill -x passbundle 2> /dev/null || true
   rm -rf "$APP" "/opt/.passbundle.installing"
   rm -f "$DESKTOP_ENTRY" "$ICON" "$CHROME_POLICIES/$POLICY_FILE" "$EDGE_POLICIES/$POLICY_FILE" "$APP_POLICY"
+  remove_firefox_policy
   rmdir "$(dirname "$APP_POLICY")" 2> /dev/null || true
   refresh_menus
   echo "Removed PassBundle and its browser policies."

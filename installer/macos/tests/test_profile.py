@@ -92,6 +92,7 @@ for browser in ("com.google.Chrome", "com.microsoft.Edge"):
     )
 check("card autofill untouched", "AutofillCreditCardEnabled" not in items["com.google.Chrome"])
 check("address autofill untouched", "AutofillAddressEnabled" not in items["com.google.Chrome"])
+check("Firefox untouched without the card and address options", "org.mozilla.firefox" not in items)
 check("the same options make the same profile", make().stdout == text)
 
 # Everything the MSP console's install command gives.
@@ -113,6 +114,19 @@ edge_ext = items.get(f"com.microsoft.Edge.extensions.{EDGE}", {})
 check("a full profile is a valid system profile", is_valid_profile(p))
 check("Chrome card autofill off", items["com.google.Chrome"]["AutofillCreditCardEnabled"] is False)
 check("Edge address autofill off", items["com.microsoft.Edge"]["AutofillAddressEnabled"] is False)
+firefox = items.get("org.mozilla.firefox", {})
+check("Firefox reads enterprise policies", firefox.get("EnterprisePoliciesEnabled") is True)
+check("Firefox card autofill off", firefox.get("AutofillCreditCardEnabled") is False)
+check("Firefox address autofill off", firefox.get("AutofillAddressEnabled") is False)
+check(
+    "Firefox gets nothing else",
+    set(firefox) - {"PayloadType", "PayloadIdentifier", "PayloadUUID", "PayloadVersion", "PayloadDisplayName"}
+    == {"EnterprisePoliciesEnabled", "AutofillCreditCardEnabled", "AutofillAddressEnabled"},
+)
+_, card_only = profile("--disable-card-autofill")
+firefox = payloads(card_only).get("org.mozilla.firefox", {})
+check("card only: Firefox card autofill off", firefox.get("AutofillCreditCardEnabled") is False)
+check("card only: Firefox address autofill untouched", "AutofillAddressEnabled" not in firefox)
 check(
     "Chrome extension gets the server address, without a trailing slash",
     chrome_ext.get("environment") == {"base": "https://vault.example.test"},

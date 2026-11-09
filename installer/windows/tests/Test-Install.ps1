@@ -6,6 +6,8 @@ $ErrorActionPreference = "Stop"
 $script = Join-Path $PSScriptRoot "..\Install-PassBundle.ps1"
 $chromeRoot = "HKLM:\SOFTWARE\Policies\Google\Chrome"
 $edgeRoot = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
+$firefoxRoot = "HKLM:\SOFTWARE\Policies\Mozilla\Firefox"
+$ownPolicies = "HKLM:\SOFTWARE\PassBundle\BrowserPolicies"
 $failures = 0
 
 function Check([string] $Name, [scriptblock] $Condition) {
@@ -47,6 +49,28 @@ Check "Chrome takes native-messaging hosts from the machine only" { (Dword $chro
 Check "Edge takes native-messaging hosts from the machine only" { (Dword $edgeRoot "NativeMessagingUserLevelHosts") -eq 0 }
 Check "Chrome card autofill off" { (Dword $chromeRoot "AutofillCreditCardEnabled") -eq 0 }
 Check "Address autofill untouched" { $null -eq (Dword $chromeRoot "AutofillAddressEnabled") }
+Check "Firefox card autofill off" { (Dword $firefoxRoot "AutofillCreditCardEnabled") -eq 0 }
+Check "Firefox address autofill untouched" { $null -eq (Dword $firefoxRoot "AutofillAddressEnabled") }
+Check "It records the card policies it set" { (Dword $ownPolicies "Firefox.AutofillCreditCardEnabled") -eq 1 }
+
+# The organization's setting goes back to leave as is, so the install command
+# loses its options: a run without them takes back only the card and address
+# policies it set itself. Another vendor's Edge address policy stays.
+New-ItemProperty -Path $edgeRoot -Name "AutofillAddressEnabled" -Value 0 -PropertyType DWord -Force | Out-Null
+& $script -DisableCardAutofill -DisableAddressAutofill -ServerUrl "$serverUrl/" -EnrollmentToken $token | Out-Null
+Check "Both off in Firefox with both options" {
+  (Dword $firefoxRoot "AutofillCreditCardEnabled") -eq 0 -and (Dword $firefoxRoot "AutofillAddressEnabled") -eq 0
+}
+Check "Another vendor's policy isn't recorded as ours" { $null -eq (Dword $ownPolicies "Edge.AutofillAddressEnabled") }
+& $script -ServerUrl "$serverUrl/" -EnrollmentToken $token | Out-Null
+Check "Without the options, Chrome's card policy is taken back" { $null -eq (Dword $chromeRoot "AutofillCreditCardEnabled") }
+Check "Without the options, Chrome's address policy is taken back" { $null -eq (Dword $chromeRoot "AutofillAddressEnabled") }
+Check "Without the options, Firefox's are taken back" {
+  $null -eq (Dword $firefoxRoot "AutofillCreditCardEnabled") -and $null -eq (Dword $firefoxRoot "AutofillAddressEnabled")
+}
+Check "Another vendor's Edge address policy stays" { (Dword $edgeRoot "AutofillAddressEnabled") -eq 0 }
+Remove-ItemProperty -Path $edgeRoot -Name "AutofillAddressEnabled"
+& $script -DisableCardAutofill -ServerUrl "$serverUrl/" -EnrollmentToken $token -JoinSecret $joinSecret -OrgKey $orgKey | Out-Null
 
 # The extension's own settings: server address and enrollment token.
 function Managed([string] $Root, [string] $Id, [string] $Sub, [string] $Name) {
@@ -200,6 +224,8 @@ if ($env:KK_SKIP_REMOVE -ne "1") {
   Check "Remove restores the password manager setting" { $null -eq (Dword $chromeRoot "PasswordManagerEnabled") }
   Check "Remove restores user-level native-messaging hosts" { $null -eq (Dword $edgeRoot "NativeMessagingUserLevelHosts") }
   Check "Remove drops the extension's settings" { -not (Test-Path "$chromeRoot\3rdparty\extensions\aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") }
+  Check "Remove drops Firefox's card policy" { $null -eq (Dword $firefoxRoot "AutofillCreditCardEnabled") }
+  Check "Remove forgets which policies it set" { -not (Test-Path $ownPolicies) }
   if ($haveAgent) {
     Check "Remove uninstalls the agent" { -not (Test-Path $installDir) }
     Check "Remove unregisters the host" { -not ($hostKeys | Where-Object { Test-Path $_ }) }
