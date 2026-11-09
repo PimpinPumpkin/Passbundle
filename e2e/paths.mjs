@@ -32,6 +32,10 @@ export const restartServerPort = process.env.KK_RESTART_SERVER_PORT ?? "8100";
 // A server whose seats job runs every second, which the seats tests start
 // themselves (tests/api/msp-seats.spec.ts).
 export const seatsServerPort = process.env.KK_SEATS_SERVER_PORT ?? "8105";
+// A server with the new-device check on, email, and a tiny location database,
+// which the new-device check's tests start themselves (tests/api/
+// new-device-check.spec.ts and the others named for it).
+export const newDeviceServerPort = process.env.KK_NEW_DEVICE_SERVER_PORT ?? "8106";
 // A stand-in for Microsoft Entra ID's sign-in (entra-standin.mjs), which
 // every test server uses for single sign-on, and its DNS server (UDP) for
 // domain checks.

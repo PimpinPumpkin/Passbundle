@@ -15,11 +15,17 @@ import { dnsPort, entraPort, paths, port, siemPort, smtpPort } from "./paths.mjs
 const withMail = process.env.KK_MAIL === "1";
 const withLimits = process.env.KK_LIMITS === "1";
 const withGroups = process.env.KK_GROUPS === "1";
+// KK_NEW_DEVICE=1 turns the new-device check on (DESIGN.md, "New-device
+// check"), with a tiny location database of made-up places
+// (fixtures/location/make.mjs), for the tests of the check, which start such a
+// server themselves. Every other server turns the check off: their tests sign
+// in from fresh browsers and API calls, each a new device.
+const withNewDevice = process.env.KK_NEW_DEVICE === "1";
 // KK_DATA_DIR keeps the data in that folder, and keeps it when the server
 // stops, so a test can start the same server again (reload-key.spec.ts: the
 // server forgets reload keys when it restarts). Such a server is a side one.
 const keptData = process.env.KK_DATA_DIR;
-const side = withMail || withLimits || withGroups || !!keptData;
+const side = withMail || withLimits || withGroups || withNewDevice || !!keptData;
 
 for (const [name, p] of Object.entries({
   server: paths.serverBin,
@@ -41,6 +47,13 @@ const data = keptData
 // serverDatabase).
 const dataNote = path.join(os.tmpdir(), `keykeeper-e2e-data-${port}`);
 fs.writeFileSync(dataNote, data);
+
+// The made-up places, for the server with the new-device check on.
+const locationDatabase = path.join(data, "ip-location.mmdb");
+if (withNewDevice) {
+  const { build } = await import("./fixtures/location/make.mjs");
+  fs.writeFileSync(locationDatabase, build());
+}
 
 // Release builds of the clients refuse plain HTTP, so serve HTTPS with a
 // throwaway certificate. Browsers in the tests are told to accept it.
@@ -154,6 +167,8 @@ const child = spawn(paths.serverBin, [], {
           SMTP_TIMEOUT: "5",
         }
       : {}),
+    NEW_DEVICE_CHECK: withNewDevice ? "true" : "false",
+    ...(withNewDevice ? { IP_LOCATION_DATABASE: locationDatabase } : {}),
     WEB_VAULT_FOLDER: paths.webVault,
     WEB_VAULT_ENABLED: "true",
     ROCKET_ADDRESS: "127.0.0.1",
@@ -211,7 +226,9 @@ const child = spawn(paths.serverBin, [], {
       ? {
           LOG_FILE: process.env.KK_SERVER_LOG.replace(
             /(\.log)?$/,
-            withMail
+            withNewDevice
+              ? "-new-device$1"
+              : withMail
               ? "-mail$1"
               : withLimits
                 ? "-limits$1"
