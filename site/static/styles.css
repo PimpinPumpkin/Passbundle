@@ -1469,8 +1469,9 @@ main.wide > section.hero.get-hero {
   text-wrap: balance;
 }
 
-/* On a phone, the four kinds as a grid that jumps to each (below). */
-.get-jump {
+/* On a phone, the four kinds are a switcher over one card (below). Wider
+   screens show all four, and so does a browser without :has(). */
+.get-tabs {
   display: none;
 }
 
@@ -5207,36 +5208,105 @@ main.doc > .paper {
     gap: 28px;
   }
 
-  /* Download opens with the four kinds, two by two, each a 52-pixel row
-     that jumps to its card. */
+  /* Download on a phone: the four kinds are a switcher right under the
+     title, and the one that's picked shows its card in place, so no kind
+     is a scroll away. Phone is picked first. Radio buttons and :has(), no
+     script; the note about testing moves under the card. */
   main.wide > section.hero.get-hero {
     padding-top: 32px;
   }
 
-  .get-jump {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 24px;
-    text-align: left;
-  }
-
-  .get-jump a {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 52px;
-    padding: 8px 12px;
-    border-radius: 12px;
-    background: var(--surface);
-    box-shadow: var(--shadow-resting);
-    color: var(--text);
-    font-weight: 600;
-    text-decoration: none;
-  }
-
   main.wide > section.get-section {
-    padding-top: 24px;
+    padding-top: 20px;
+  }
+
+  @supports selector(:has(*)) {
+    main.wide > section.get-section {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .get-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 4px;
+      padding: 4px;
+      margin-bottom: 12px;
+      border-radius: 16px;
+      background: var(--sunken);
+    }
+
+    .get-tabs label {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 68px;
+      padding: 8px 2px;
+      border-radius: 12px;
+      color: var(--label);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* The radio button covers its label, unseen: a tap anywhere picks it,
+       and the keyboard and screen readers still find it. */
+    .get-tabs input {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .get-tabs label:has(input:checked) {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: var(--shadow-resting), 0 0 0 1px var(--edge);
+    }
+
+    .get-tabs label:has(input:focus-visible) {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .get-section:has(.get-tabs input[value="browser"]:checked) .get-card:not(#browser),
+    .get-section:has(.get-tabs input[value="phone"]:checked) .get-card:not(#phone),
+    .get-section:has(.get-tabs input[value="computer"]:checked) .get-card:not(#computer),
+    .get-section:has(.get-tabs input[value="web"]:checked) .get-card:not(#web) {
+      display: none;
+    }
+
+    /* The switcher names the card, so the card's own heading is for
+       screen readers only here. */
+    .get .get-card h2 {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    /* One card at a time has no neighbors to line its rows up with. */
+    .get .get-card {
+      display: block;
+    }
+
+    .get .get-card > p {
+      margin-top: 0;
+    }
+
+    .note.get-note {
+      order: 1;
+      margin: 16px 0 0;
+    }
   }
 
   .get-links {

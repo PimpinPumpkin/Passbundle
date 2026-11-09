@@ -20,6 +20,8 @@ site/deploy.sh                                 # build, check, and deploy the pr
 
 CI runs the build and check on every change to `site/`.
 
+Download shows its four kinds (browser, phone, computer, web) side by side, two by two below 960 pixels. On a phone they're a switcher under the title instead, Phone picked first, and only the picked kind's card shows, so none is a scroll away. The switcher is radio buttons and `:has()` in `styles.css`, no script; a browser without `:has()` shows the four cards one under another.
+
 ## Screenshots
 
 Every screenshot is made from the real apps by `e2e/site-shots/`, with made-up people and data (`e2e/site-shots/data.ts`), on a local test server that sends email to the test mail catcher (as the hosted service does, so account recovery shows) and answers as vault.passbundle.com, so no local address shows on screen. The list, and the page each one is on, is at the top of `site-shots.spec.ts`: a person's vault in the web vault and the extension, signing in to one's own server, an MSP with five clients (the console, a client's passwords to fix, default policies, an install command, Entra provisioning, and an item's history), and a company with its own IT (members, policies, install command, and a shared folder's permissions).

@@ -6,15 +6,15 @@ layout: wide
 <section class="hero solo get-hero">
   <h1>Get PassBundle</h1>
   <p class="lead">For your browser, phone, computer, and the web. Your vault syncs between them.</p>
-  <nav class="get-jump" aria-label="Downloads on this page">
-    <a href="#browser"><x-tile icon="browser" tone="sapphire" class="small"></x-tile>Browser</a>
-    <a href="#phone"><x-tile icon="phone" tone="emerald" class="small"></x-tile>Phone</a>
-    <a href="#computer"><x-tile icon="laptop" tone="onyx" class="small"></x-tile>Computer</a>
-    <a href="#web"><x-tile icon="globe" tone="brand" class="small"></x-tile>Web</a>
-  </nav>
 </section>
 
 <section class="get-section">
+  <div class="get-tabs" role="radiogroup" aria-label="Downloads for">
+    <label><input type="radio" name="get" value="browser"><x-tile icon="browser" tone="sapphire" class="small"></x-tile>Browser</label>
+    <label><input type="radio" name="get" value="phone" checked><x-tile icon="phone" tone="emerald" class="small"></x-tile>Phone</label>
+    <label><input type="radio" name="get" value="computer"><x-tile icon="laptop" tone="onyx" class="small"></x-tile>Computer</label>
+    <label><input type="radio" name="get" value="web"><x-tile icon="globe" tone="brand" class="small"></x-tile>Web</label>
+  </div>
   <div class="note get-note">
     <p><strong>PassBundle is in testing.</strong> These are test builds. Until our hosted service opens at launch, they sign in to <a href="#server">a server you run yourself</a>.</p>
   </div>
