@@ -143,7 +143,7 @@ layout: wide
       <li><strong>Sign in with Entra <span class="chip soon">Not yet checked</span></strong><span>Each client's people sign in with their own Microsoft 365 account, set up per client. Built, and waiting on a check with a real Microsoft 365 tenant.</span></li>
       <li><strong>Bring clients over</strong><span>Import a client's shared passwords from about 70 password managers. Passportal and IT Glue have no importer yet, but a CSV with a name, website, username, and password per line imports.</span></li>
       <li><strong>Expiring credentials</strong><span>Certificates, domains, and API keys carry their expiration date, and the console counts what's expiring in each client.</span></li>
-      <li><strong>Self-hosting</strong><span>Run the open-source server yourself, with SQLite or PostgreSQL, in one container, or use our hosted service once it opens at launch.</span></li>
+      <li><strong>Self-hosting</strong><span>Run the open-source server yourself, with SQLite or PostgreSQL, in one container, or use our hosted service<x-if not link="vault"> once it opens at launch</x-if>.</span></li>
     </ul>
   </div>
 </section>

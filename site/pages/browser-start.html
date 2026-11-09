@@ -1,4 +1,5 @@
 <!--
+index: no
 title: Welcome to PassBundle
 description: You've installed the PassBundle browser extension. These are the next steps.
 -->
@@ -7,7 +8,7 @@ description: You've installed the PassBundle browser extension. These are the ne
 <p class="lead">Three steps finish setting up the extension.</p>
 <ol>
   <li><strong>Pin it.</strong> Open your browser's extensions menu and pin PassBundle to the toolbar.</li>
-  <li><strong>Sign in or create an account.</strong> Select the PassBundle icon. If your organization set up PassBundle for you, the server is already filled in.</li>
+  <li><strong>Sign in or create an account.</strong> Select the PassBundle icon. If your organization set up PassBundle for you, the server is already filled in.<x-if link="vault" until="signup"> New accounts on our hosted service aren't open yet. To ask for one, see <a href="/contact/">Contact</a>.</x-if></li>
   <li><strong>Bring your passwords.</strong> Import them from your browser or another password manager, or let PassBundle save them as you sign in to sites.</li>
 </ol>
 <p>For anything else, see <a href="/help/">Help</a>.</p>

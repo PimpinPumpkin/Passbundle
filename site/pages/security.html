@@ -24,13 +24,13 @@ description: How PassBundle protects your vault: end-to-end encryption, a server
   <li><strong>Built on established projects.</strong> The web vault, the browser extension, and the server are built on two widely used open-source projects, credited at the foot of every page. We follow their security fixes every week and ship them quickly.</li>
   <li><strong>Our own apps, on one core.</strong> The desktop and phone apps are ours. One Rust library does the encryption, the vault format, and sync for all of them, so a fix reaches all of them at once. On phones, the key for fingerprint or face unlock stays in the phone's own secure hardware.</li>
   <li><strong>Encryption changes are slow on purpose.</strong> Any change to encryption, keys, or sign-in needs a written design and test vectors before it's merged.</li>
-  <li><strong>Automated tests.</strong> Every change runs through more than a hundred automated tests, including the server's API and real browsers with the real extension, on Windows, Mac, and Linux.</li>
+  <li><strong>Automated tests.</strong> Every change to the server, the web vault, or the browser extension runs through more than 400 end-to-end tests, against the real server's API and in a real browser with the real extension. The desktop and phone apps have their own tests, which run on Windows, Mac, and Linux on every change.</li>
   <li><strong>An independent audit</strong> of PassBundle's own changes is one we mean to have, and we'll publish its report here. None has been done or scheduled yet.</li>
 </ul>
 
 <h2>Protecting your account</h2>
 <ul>
-  <li><strong>Two-step login</strong> with an authenticator app, a security key such as a YubiKey, or email codes, in every plan, in the web vault, the browser extension, and PassBundle's own apps (the iPhone app doesn't take security keys yet).</li>
+  <li><strong>Two-step login</strong> with an authenticator app, a security key such as a YubiKey, or email codes, in every plan, in the web vault, the browser extension, and the PassBundle apps for Windows, Mac, Linux, and Android.</li>
   <li><strong>Password guessing is stopped per account.</strong> After 10 wrong tries, an account allows one attempt a minute, no matter where the guesses come from.</li>
   <li><strong>New devices are announced.</strong> When your account signs in on a new device, you get an email with when and from where.</li>
 </ul>

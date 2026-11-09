@@ -1,6 +1,6 @@
 <!--
 title: Features
-description: What PassBundle does that other password managers don't: choose what fills each field, a one-line rollout that turns off the browsers' own password saving, a guided import that skips what you have, credentials for RMM scripts, and default policies across every client.
+description: What PassBundle does that other password managers don't: choose what fills each field, a one-line rollout that turns off the browsers' own password saving, a browser import that skips what you have, credentials for RMM scripts, and default policies across every client.
 layout: wide
 -->
 <section class="page-hero">
@@ -67,11 +67,11 @@ layout: wide
     <div class="row-text">
       <span class="eyebrow">Import from your browser</span>
       <h2>A browser import that skips what you already have</h2>
-      <p class="lead">PassBundle walks you through your browser's own export, step by step for Chrome, Edge, Brave, Firefox, and Safari, then sorts it. What you already have is left out, and a login whose password differs from yours goes to a folder to check instead of replacing yours.</p>
+      <p class="lead">The desktop app brings in the passwords saved in the browsers on your computer, with no export file. It lists every browser profile and reads nothing until you choose Import. What you already have is left out, and a login whose password differs from yours goes to a folder to check instead of replacing yours.</p>
       <ul class="checks">
-        <li>Duplicates in the file are left out too</li>
-        <li>A reminder to delete the export, with how on your computer</li>
-        <li>Then how to turn the browser's own saving off</li>
+        <li>Chrome, Edge, Brave, Vivaldi, Opera, Chromium, and Firefox, on Windows, Mac, and Linux</li>
+        <li>Chrome on Windows often keeps its passwords so that only Chrome can read them. PassBundle doesn't get around that. It walks you through Chrome's own export instead, as it does for Safari, and reminds you to delete the export file</li>
+        <li>Afterward, it turns off the browser's own password saving in the profiles it read, and what they saved stays</li>
       </ul>
     </div>
     <div class="stage" role="img" aria-label="An import from Chrome: 212 logins added, 18 already in the vault and left out, and 3 with a different password put in a folder to check">
@@ -139,7 +139,6 @@ layout: wide
   </div>
   <ul class="lines">
     <li><strong>Browser extensions report</strong><span>Every other extension installed on your computers and what it can read, with an alert when one with broad access appears.</span></li>
-    <li><strong>Import without an export file</strong><span>The desktop app brings in the browsers' saved passwords after you sign in, with no export file, once it's signed for Windows and Mac.</span></li>
     <li><strong>Sign in with Microsoft Entra ID</strong><span>Built, and not yet checked with a real Microsoft 365 tenant.</span></li>
   </ul>
 </section>
