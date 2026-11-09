@@ -446,7 +446,7 @@ DESIGN.md, "Expiration dates", in the apps (`core/src/expiration.rs`, the same r
 
 ## Members' own passwords
 
-DESIGN.md, "Members' own passwords": after each sync, for a confirmed member of an organization, the core counts the Personal logins with a password (not in the trash) and how many are weak or reused among themselves, by Health's rules, and puts `{logins, weak, reused}` to `/api/keykeeper/own-health`: once per unlock and again when the numbers change. No `exposed`, since the apps don't check breaches. A server without the endpoint (404 or 405) isn't asked again that unlock, and nothing here ever fails a sync. The synced settings document's `health` part (the web vault's breach check switch) is kept as it is when the apps save.
+DESIGN.md, "Members' own passwords": after each sync, for a confirmed member of an organization, the core asks the server which organizations see the numbers (`GET /api/keykeeper/own-health/seen-by`: those the person joined that have "Members' own passwords" on) and sends nothing while none does. Otherwise it counts the Personal logins with a password (not in the trash) and how many are weak or reused among themselves, by Health's rules, and puts `{logins, weak, reused}` to `/api/keykeeper/own-health`: once per unlock and again when the numbers change, or again at the next sync when the server answers that it didn't keep them (`"kept": false`, an organization turned it off in between). No `exposed`, since the apps don't check breaches. A server without the endpoints (404 or 405) isn't asked again that unlock, and nothing here ever fails a sync. The synced settings document's `health` part (the web vault's breach check switch) is kept as it is when the apps save.
 
 ## Speed
 

@@ -1,8 +1,10 @@
 // Members' own passwords (DESIGN.md, "Members' own passwords"): a member's
 // web vault counts the logins in their Personal items after unlocking and
 // sends only the numbers; the organization's owner sees them in its Reports,
-// never which items. The breach check is a stand-in here (the test browser
-// reaches no outside host), so exposed is counted too.
+// never which items, while the organization has the setting on (a business
+// does). The member's Health page names who sees them. The breach check is a
+// stand-in here (the test browser reaches no outside host), so exposed is
+// counted too.
 import { createHash } from "node:crypto";
 
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
@@ -109,7 +111,7 @@ test("a member's own logins reach the owner as numbers only, and the member is t
   await reloadVault(ana);
   await ana.goto("/#/reports");
   await expect(ana.getByTestId("keykeeper-own-health-seen-by")).toHaveText(
-    "Owners and admins of the organizations you're a member of see how many of your own passwords are weak, reused, or exposed. Never which ones.",
+    "Admins at Harbor Dental see how many of your own passwords are weak, reused, or exposed. Never which ones.",
   );
 
   // The owner's Reports: the numbers per member, and no item.
@@ -181,6 +183,91 @@ test("a member's Reports doesn't show Members' own passwords, and its address sh
   await member.goto("/#/vault");
   await expect(member.getByRole("textbox", { name: /^Master password/ })).toHaveCount(0);
   await expect(member).toHaveURL(/#\/vault/);
+
+  await memberContext.close();
+  await ownerContext.close();
+});
+
+test("an owner turns Members' own passwords off on Joining and security: the report says so, and the member is no longer told", async ({
+  browser,
+  request,
+}, testInfo) => {
+  test.setTimeout(240_000);
+  const ownerContext = await browser.newContext();
+  const page = await ownerContext.newPage();
+  const auth = tokenOf(page);
+  await signUpWithAuthenticator(page, webUserFor("member-health-owner-3", testInfo.repeatEachIndex));
+  await page.goto("/#/create-organization");
+  await page.getByRole("textbox", { name: /Organization name/ }).fill("Coho Winery");
+  await page.getByRole("radio", { name: /A business/ }).check();
+  await page.getByRole("button", { name: "Create organization" }).click();
+  await page.waitForURL(/#\/organizations\/[0-9a-f-]{36}\/members/);
+  const org = page.url().replace(/\/members.*$/, "");
+  const orgId = /organizations\/([0-9a-f-]{36})/.exec(org)![1];
+
+  const memberContext = await browser.newContext();
+  const member = await memberContext.newPage();
+  const memberUser = webUserFor("member-health-member-3", testInfo.repeatEachIndex);
+  await signUp(member, memberUser);
+  const invited = await new Api(request).call(auth(), "POST", `/api/organizations/${orgId}/users/invite`, {
+    emails: [memberUser.email],
+    type: 2,
+    accessSecretsManager: false,
+    permissions: {},
+    collections: [],
+    groups: [],
+  });
+  expect(invited.status, JSON.stringify(invited.body)).toBe(200);
+  await page.goto(`${org}/members`);
+  await page.reload();
+  await confirmMember(page, memberUser.email);
+  await reloadVault(member);
+  const line = member.getByTestId("keykeeper-own-health-seen-by");
+  /** Opens the member's Health page again, once the server has said who sees the numbers. */
+  const openHealth = async () => {
+    const answered = member.waitForResponse((r) => r.url().includes("/api/keykeeper/own-health/seen-by"));
+    await member.goto("/#/vault");
+    await member.goto("/#/reports");
+    expect((await answered).status()).toBe(200);
+  };
+  await openHealth();
+  await expect(line).toHaveText(
+    "Admins at Coho Winery see how many of your own passwords are weak, reused, or exposed. Never which ones.",
+  );
+
+  // On for a business; turning it off asks first.
+  await page.goto(`${org}/settings/joining`);
+  const card = page.getByTestId("member-health-setting");
+  const box = card.getByRole("checkbox", {
+    name: "See how many of members' own passwords are weak, reused, or exposed",
+  });
+  await expect(box).toBeChecked();
+  await box.uncheck();
+  await card.getByRole("button", { name: "Save" }).click();
+  await page
+    .getByRole("dialog", { name: /Turn off Members' own passwords/ })
+    .getByRole("button", { name: "Turn it off" })
+    .click();
+  await expect(page.getByText("Members' own passwords is off", { exact: true })).toBeVisible();
+  await expect(box).not.toBeChecked();
+
+  // The report says it's off, lists nobody, and links to where it's turned on.
+  await page.goto(`${org}/reporting/reports/member-health-report`);
+  await expect(page.getByTestId("member-health-off")).toContainText("Members' own passwords is off");
+  await expect(page.getByTestId("member-health-row")).toHaveCount(0);
+  await page.getByTestId("member-health-off").getByRole("link").click();
+  await expect(page).toHaveURL(/\/settings\/joining$/);
+
+  // The member's Health page no longer says anyone sees the numbers.
+  await openHealth();
+  await expect(line).toHaveCount(0);
+
+  // On again: the line is back.
+  await card.getByRole("checkbox").check();
+  await card.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Members' own passwords is on", { exact: true })).toBeVisible();
+  await openHealth();
+  await expect(line).toContainText("Admins at Coho Winery");
 
   await memberContext.close();
   await ownerContext.close();
