@@ -24,6 +24,8 @@
     "edge": "",
     "firefox": "",
     "apps": "https://github.com/PimpinPumpkin/passbundle-apps/releases",
+    "extension": "https://github.com/PimpinPumpkin/Passbundle/releases?q=extension-v&expanded=true",
+    "extensionZip": "",
     "cli": "https://github.com/PimpinPumpkin/Passbundle/releases?q=cli-v&expanded=true",
     "cliGuide": "https://github.com/PimpinPumpkin/Passbundle/blob/main/docs/cli.md"
   }
