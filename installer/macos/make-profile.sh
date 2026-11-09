@@ -4,7 +4,8 @@
 # It sets what Install-PassBundle.ps1 sets on Windows. For Chrome and Edge, it:
 #   - force-installs the PassBundle extension (IDs are fixed here, never passed in),
 #   - turns off the browser's own password saving and filling,
-#   - optionally turns off card and address autofill,
+#   - optionally turns off card and address autofill, in Firefox too (it
+#     reads the same two policies; the rest of Firefox isn't managed yet),
 #   - optionally gives the extension its server address and the client's
 #     enrollment token, join secret, and organization key fingerprint, so
 #     people join the client after they sign in (the extension asks first,
@@ -34,6 +35,7 @@ EDGE_UUID="FE508B21-38FB-452C-955B-5438E249A6EE"
 CHROME_SETTINGS_UUID="283E62E3-1035-4C9A-9A6A-17C26AE62BBA"
 EDGE_SETTINGS_UUID="FC9C684E-85E4-429D-97A3-E8235C4EA8F0"
 AGENT_UUID="BD47697A-955E-4F2F-944A-697C68BC198E"
+FIREFOX_UUID="474AE330-7ED7-4B3B-B65D-3420FE6D4DFB"
 
 fail() {
   echo "$1" >&2
@@ -215,6 +217,15 @@ for b in $browsers; do
       ;;
   esac
 done
+# Firefox takes the card and address autofill policies under the same names,
+# from its own preference domain once enterprise policies are on there.
+if [ -n "$card$address" ]; then
+  payload_start org.mozilla.firefox firefox "$FIREFOX_UUID" "Firefox"
+  printf '\t\t\t<key>EnterprisePoliciesEnabled</key>\n\t\t\t<true/>\n'
+  [ -z "$card" ] || off AutofillCreditCardEnabled
+  [ -z "$address" ] || off AutofillAddressEnabled
+  payload_end
+fi
 if [ -n "$server_url" ]; then
   payload_start com.passbundle.agent agent "$AGENT_UUID" "PassBundle desktop agent"
   text ServerUrl "$server_url"
