@@ -7,7 +7,9 @@
 # menu, replacing an older one. For each browser (Chrome and Edge) it:
 #   - force-installs the PassBundle extension (IDs are fixed in this script, never passed in),
 #   - turns off the browser's own password saving and filling,
-#   - optionally turns off card and address autofill,
+#   - optionally turns off card and address autofill, in Firefox too (it reads
+#     the same two policies, from /etc/firefox/policies/policies.json, a file
+#     only ours or absent is written; the rest of Firefox isn't managed yet),
 #   - optionally gives the extension its server address and the client's
 #     enrollment token, join secret, and organization key fingerprint, so
 #     people join the client after they sign in (the extension asks first,
@@ -35,6 +37,9 @@ POLICY_FILE="passbundle.json"
 APP_POLICY="/etc/passbundle/policy.json"
 CHROME_POLICIES="/etc/opt/chrome/policies/managed"
 EDGE_POLICIES="/etc/opt/edge/policies/managed"
+# Firefox reads one policies file, so ours is written only where there's none
+# or it's ours, and another vendor's is left alone.
+FIREFOX_POLICY="/etc/firefox/policies/policies.json"
 # The only extensions this can ever force-install, the same as
 # Install-PassBundle.ps1's. Placeholders until the store listings exist.
 CHROME_EXTENSION="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -57,15 +62,29 @@ join_secret=""
 org_key=""
 remove=""
 
+# True when $1 has no newline, carriage return, or other control character.
+plain() {
+  case "$1" in
+    *[[:cntrl:]]*) return 1 ;;
+  esac
+}
+
+# True when all of $2 matches the extended regex $1. grep matches line by
+# line, so without plain a value with a newline would pass if one line did.
+matches() {
+  plain "$2" && printf '%s' "$2" | grep -Eq "$1"
+}
+
 # A token, join secret, or key fingerprint: 32 bytes in unpadded base64url.
 check_secret() {
-  printf '%s' "$2" | grep -Eq '^[A-Za-z0-9_-]{43}$' || fail "$1 should be 43 letters, digits, - or _ (from the MSP console)."
+  matches '^[A-Za-z0-9_-]{43}$' "$2" || fail "$1 should be 43 letters, digits, - or _ (from the MSP console)."
 }
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --browsers)
       [ $# -ge 2 ] || fail "--browsers needs chrome, edge, or chrome,edge."
+      plain "$2" || fail "--browsers takes chrome, edge, or chrome,edge."
       browsers=$(printf '%s' "$2" | tr ',' ' ')
       for b in $browsers; do
         case "$b" in
@@ -81,7 +100,7 @@ while [ $# -gt 0 ]; do
     --server-url)
       [ $# -ge 2 ] || fail "--server-url needs the server's address."
       # HTTPS only, and nothing that could break out of the policy's JSON.
-      printf '%s' "$2" | grep -Eq '^https://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~/-]*)?$' ||
+      matches '^https://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~/-]*)?$' "$2" ||
         fail "--server-url must be an https:// address, such as https://vault.example.com"
       server_url=$(printf '%s' "$2" | sed 's:/*$::')
       shift
@@ -174,12 +193,19 @@ EOF
   refresh_menus
 }
 
+# The options' values are checked again where they go into a policy file: one
+# line each, with no control characters.
+one_line() { # name value
+  plain "$1$2" || fail "$1 has to be on one line, with no control characters."
+}
+
 # What the browser hands our extension (chrome.storage.managed).
 extension_settings() {
   [ -n "$server_url$token$join_secret$org_key" ] || return 0
   printf ',\n  "3rdparty": {\n    "extensions": {\n      "%s": {' "$1"
   sep=""
   if [ -n "$server_url" ]; then
+    one_line base "$server_url"
     printf '\n        "environment": { "base": "%s" }' "$server_url"
     sep=","
   fi
@@ -187,6 +213,7 @@ extension_settings() {
     name=${pair%%=*}
     value=${pair#*=}
     [ -n "$value" ] || continue
+    one_line "$name" "$value"
     printf '%s\n        "%s": "%s"' "$sep" "$name" "$value"
     sep=","
   done
@@ -195,11 +222,47 @@ extension_settings() {
 
 policy() { # extension update-url
   printf '{\n  "ExtensionInstallForcelist": ["%s;%s"]' "$1" "$2"
+  # Native-messaging hosts from the machine only, not one a program running
+  # as the person put in their own profile (enrollment hands it the user key).
+  printf ',\n  "NativeMessagingUserLevelHosts": false'
   [ -n "$keep_password_manager" ] || printf ',\n  "PasswordManagerEnabled": false'
   [ -z "$card" ] || printf ',\n  "AutofillCreditCardEnabled": false'
   [ -z "$address" ] || printf ',\n  "AutofillAddressEnabled": false'
   extension_settings "$1"
   printf '\n}\n'
+}
+
+# Firefox's policies file as this script writes it for the options given:
+# card and address autofill only. Prints nothing without either option.
+firefox_policy() { # card address
+  [ -n "$1$2" ] || return 0
+  printf '{\n  "policies": {'
+  sep=""
+  if [ -n "$1" ]; then
+    printf '\n    "AutofillCreditCardEnabled": false'
+    sep=","
+  fi
+  [ -z "$2" ] || printf '%s\n    "AutofillAddressEnabled": false' "$sep"
+  printf '\n  }\n}\n'
+}
+
+# True when Firefox's policies file is one this script wrote, for any options.
+firefox_policy_is_ours() {
+  [ -f "$FIREFOX_POLICY" ] || return 1
+  for pair in "yes:" ":yes" "yes:yes"; do
+    if firefox_policy "${pair%%:*}" "${pair#*:}" | cmp -s - "$FIREFOX_POLICY"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Takes Firefox's policies file away if it's ours.
+remove_firefox_policy() {
+  firefox_policy_is_ours || return 0
+  rm -f "$FIREFOX_POLICY"
+  rmdir "$(dirname "$FIREFOX_POLICY")" 2> /dev/null || true
+  CHANGED=yes
 }
 
 # A list policy set in two files is the browser's pick of one, so say so.
@@ -231,8 +294,18 @@ install_policies() {
         ;;
     esac
   done
+  # Firefox: card and address autofill only, as the options say.
+  if [ -z "$card$address" ]; then
+    remove_firefox_policy
+  elif [ -f "$FIREFOX_POLICY" ] && ! firefox_policy_is_ours; then
+    echo "Warning: $FIREFOX_POLICY is another vendor's, so it's left alone. Set AutofillCreditCardEnabled and AutofillAddressEnabled to false in it to turn them off in Firefox." >&2
+  else
+    firefox_policy "$card" "$address" > "$written"
+    put_file "$FIREFOX_POLICY" < "$written"
+  fi
   # The app signs in to the organization's server without asking.
   if [ -n "$server_url" ]; then
+    one_line ServerUrl "$server_url"
     printf '{\n  "ServerUrl": "%s"\n}\n' "$server_url" > "$written"
     put_file "$APP_POLICY" < "$written"
   fi
@@ -243,6 +316,7 @@ if [ -n "$remove" ]; then
   pkill -x passbundle 2> /dev/null || true
   rm -rf "$APP" "/opt/.passbundle.installing"
   rm -f "$DESKTOP_ENTRY" "$ICON" "$CHROME_POLICIES/$POLICY_FILE" "$EDGE_POLICIES/$POLICY_FILE" "$APP_POLICY"
+  remove_firefox_policy
   rmdir "$(dirname "$APP_POLICY")" 2> /dev/null || true
   refresh_menus
   echo "Removed PassBundle and its browser policies."

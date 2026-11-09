@@ -84,8 +84,15 @@ check(
 )
 check("Chrome password manager off", items["com.google.Chrome"]["PasswordManagerEnabled"] is False)
 check("Edge password manager off", items["com.microsoft.Edge"]["PasswordManagerEnabled"] is False)
+# A program running as the person could put its own com.passbundle.agent in ~/Library.
+for browser in ("com.google.Chrome", "com.microsoft.Edge"):
+    check(
+        f"{browser} takes native-messaging hosts from /Library only",
+        items[browser]["NativeMessagingUserLevelHosts"] is False,
+    )
 check("card autofill untouched", "AutofillCreditCardEnabled" not in items["com.google.Chrome"])
 check("address autofill untouched", "AutofillAddressEnabled" not in items["com.google.Chrome"])
+check("Firefox untouched without the card and address options", "org.mozilla.firefox" not in items)
 check("the same options make the same profile", make().stdout == text)
 
 # Everything the MSP console's install command gives.
@@ -107,6 +114,19 @@ edge_ext = items.get(f"com.microsoft.Edge.extensions.{EDGE}", {})
 check("a full profile is a valid system profile", is_valid_profile(p))
 check("Chrome card autofill off", items["com.google.Chrome"]["AutofillCreditCardEnabled"] is False)
 check("Edge address autofill off", items["com.microsoft.Edge"]["AutofillAddressEnabled"] is False)
+firefox = items.get("org.mozilla.firefox", {})
+check("Firefox reads enterprise policies", firefox.get("EnterprisePoliciesEnabled") is True)
+check("Firefox card autofill off", firefox.get("AutofillCreditCardEnabled") is False)
+check("Firefox address autofill off", firefox.get("AutofillAddressEnabled") is False)
+check(
+    "Firefox gets nothing else",
+    set(firefox) - {"PayloadType", "PayloadIdentifier", "PayloadUUID", "PayloadVersion", "PayloadDisplayName"}
+    == {"EnterprisePoliciesEnabled", "AutofillCreditCardEnabled", "AutofillAddressEnabled"},
+)
+_, card_only = profile("--disable-card-autofill")
+firefox = payloads(card_only).get("org.mozilla.firefox", {})
+check("card only: Firefox card autofill off", firefox.get("AutofillCreditCardEnabled") is False)
+check("card only: Firefox address autofill untouched", "AutofillAddressEnabled" not in firefox)
 check(
     "Chrome extension gets the server address, without a trailing slash",
     chrome_ext.get("environment") == {"base": "https://vault.example.test"},
@@ -124,6 +144,7 @@ _, p = profile("--keep-browser-password-manager", "--browsers", "edge")
 items = payloads(p)
 check("one browser only", set(items) == {"com.microsoft.Edge"})
 check("its password manager kept", "PasswordManagerEnabled" not in items["com.microsoft.Edge"])
+check("its native-messaging hosts still from /Library only", items["com.microsoft.Edge"]["NativeMessagingUserLevelHosts"] is False)
 
 # Refused, before anything is written.
 for args, why in [
@@ -133,6 +154,15 @@ for args, why in [
     (["--join-secret", TOKEN + "x"], "a join secret of the wrong shape"),
     (["--browsers", "firefox"], "a browser it doesn't manage"),
     (["--surprise"], "an option it doesn't have"),
+    # A line break or other control character. grep checks line by line, so each
+    # address, token, and secret here has a line that would pass alone.
+    (["--server-url", "https://vault.example.test\n</string><key>x</key><string>"], "a server address with a line break in it"),
+    (["--server-url", "https://x.test\r\nhttps://vault.example.test"], "a server address with a carriage return and line break in it"),
+    (["--enrollment-token", TOKEN + "\n</string><key>x</key><string>"], "an enrollment token with a line break in it"),
+    (["--join-secret", "x\n" + JOIN], "a join secret with a line break in it"),
+    (["--org-key", ORG_KEY + "\n"], "an organization key fingerprint with a line break after it"),
+    (["--browsers", "chrome\nedge"], "a browser list with a line break in it"),
+    (["--browsers", "chrome\tedge"], "a browser list with a tab in it"),
 ]:
     run = make(*args)
     check(f"refuses {why}", run.returncode != 0 and run.stdout == "")

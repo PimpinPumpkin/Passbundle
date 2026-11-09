@@ -1,0 +1,279 @@
+url,username,password,totp,extra,name,grouping,fav
+https://mail.example.com/login,test.person@example.com,Fake-Mail-Pass-01,JBSWY3DPEHPK3PXP,Recovery codes are in the fake safe.,Example Mail,Personal,1
+https://mail.example.com/login,test.person@example.com,Fake-Mail-Pass-01,JBSWY3DPEHPK3PXP,Recovery codes are in the fake safe.,Example Mail,Personal,1
+https://account.example.com/signin,test.person,One-Login-Three-Sites-22,,,Example Account (three sites),Work,0
+,admin,printer-admin-0000,,No website: it's on the office network.,Office printer admin,Work,0
+http://192.168.1.1:8080/,admin,"router,admin,2026",,,Home router,Personal,0
+https://10.0.0.5:5001/,nasadmin,"quote""inside'and'apostrophes""",,,Test NAS,Work\Servers,0
+https://203.0.113.10:8443/login,deploy,Build-Server-Pass-77,GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ,,Build server,Work\Servers,0
+https://db.staging.example.com:5432/,dbuser,  spaced out password  ,,The password starts and ends with two spaces.,Staging database,Work\Servers,0
+androidapp://com.example.notes,test.person,App-Only-Pass-31,,,Example Notes app,,0
+https://unicode.example.com/,tëst.pérson,pässwörd-日本語-🔑-Ωμέγα,,"Ünïcode notes: 你好, привет, مرحبا, 🎉",Café Ünïcode 日本語 🔑,Personal,0
+https://notes.example.org/,test.person,Long-Notes-Pass-15,,"This is a long note, the kind people paste whole emails into.
+
+Line 01: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 02: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 03: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 04: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 05: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 06: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 07: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 08: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 09: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 10: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 11: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 12: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 13: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 14: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 15: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 16: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 17: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 18: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 19: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 20: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 21: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 22: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 23: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 24: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 25: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 26: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 27: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 28: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 29: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 30: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 31: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 32: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 33: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 34: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 35: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 36: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 37: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 38: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 39: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 40: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+
+The end.",Long notes login,,0
+https://multiline.example.net/,test.person,"line one
+line two",,,Two-line password,,0
+https://csv.example.com/,test.person,"a,b""c""""d,",,,Commas and quotes,,0
+https://markup.example.com/,test.person,<b>&amp;</b>\n %s {0} $1,,,Markup-looking password,Shopping,0
+https://nopass.example.com/,test.person,,,,No password yet,,0
+,just-a-username,,,,Username only,,0
+https://forum.example.com/,test.person,Forum-First-Account-1,,,Example Forum,,0
+https://forum.example.com/,test.person.alt,Forum-Second-Account-2,,,Example Forum (second account),,0
+https://intranet.example.com/,tperson,Intranet-Basic-Auth-9,,,Intranet (browser sign-in box),Work,0
+https://www.mixedcase.example.com/Account/Login?next=%2Fhome&x=1,test.person,Mixed-Case-Url-44,,,Mixed-case address,,0
+http://shop.example.com/account,test.person,No-Scheme-Url-12,,,Address with no https,Shopping,0
+https://bank.example.com/,test.person,Bank-Current-Pass-03,,,Example Bank,Finance,1
+https://cu.example.com/,tperson,Credit-Union-Pass-88,,Branch: Example Street.,Example Credit Union,Finance,1
+https://shop.example.net/,test.person+shopping@example.com,Shop-Plus-Address-5,,,Example Shop,Shopping,0
+https://legacy.example.org/,DOMAIN\tperson,back\slash\\double-😀,,,Backslashes and emoji,,0
+http://sn,,,,"Network: Fake-Home-5G
+Password: not-a-real-wifi-pass",Home Wi-Fi,Personal,0
+http://sn,,,,"License key: FAKE-1234-ABCD-5678
+Seats: 3",Software license (fake),Work,0
+http://sn,,,,"fake-1000-code
+fake-1037-code
+fake-1074-code
+fake-1111-code
+fake-1148-code
+fake-1185-code
+fake-1222-code
+fake-1259-code
+fake-1296-code
+fake-1333-code",Recovery codes (fake),,1
+http://sn,,,,Grüße aus Köln. Ça va? 東京. 🚀,Notizen 🗒️ Ünïcode,,0
+http://sn,,,,"This is a long note, the kind people paste whole emails into.
+
+Line 01: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 02: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 03: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 04: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 05: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 06: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 07: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 08: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 09: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 10: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 11: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 12: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 13: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 14: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 15: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 16: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 17: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 18: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 19: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 20: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 21: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 22: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 23: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 24: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 25: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 26: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 27: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 28: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 29: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 30: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 31: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 32: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 33: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 34: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 35: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 36: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 37: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 38: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 39: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+Line 40: the fake account's terms, ""quoted"", with commas, semicolons; and a tab	here. Nothing here is real.
+
+The end.",Long note,,0
+http://sn,,,,Gym locker.,Locker combination,Personal,0
+http://sn,,,,"NoteType:Credit Card
+Language:en-US
+Name on Card:Test Person
+Type:Visa
+Number:4111111111111111
+Security Code:123
+Start Date:,
+Expiration Date:December,2030
+Notes:Not a real card.",Test Visa,Finance,1
+http://sn,,,,"NoteType:Credit Card
+Language:en-US
+Name on Card:Test Person
+Type:Mastercard
+Number:5555555555554444
+Security Code:321
+Start Date:,
+Expiration Date:January,2029
+Notes:",Test Mastercard,Finance,0
+http://sn,,,,"NoteType:Credit Card
+Language:en-US
+Name on Card:Test Person
+Type:Amex
+Number:378282246310005
+Security Code:1234
+Start Date:,
+Expiration Date:July,2031
+Notes:",Test Amex,,0
+http://sn,,,,"NoteType:Credit Card
+Language:en-US
+Name on Card:Tëst Pérsön
+Type:Discover
+Number:6011111111111117
+Security Code:456
+Start Date:,
+Expiration Date:March,2028
+Notes:",Test Discover,,0
+http://sn,,,,"NoteType:Address
+Language:en-US
+Title:Mx
+First Name:Test
+Middle Name:Q
+Last Name:Person
+Username:tperson
+Gender:
+Birthday:
+Company:
+Address 1:1 Example Street
+Address 2:
+Address 3:
+City / Town:Exampleville
+County:
+State:CA
+Zip / Postal Code:90000
+Country:US
+Timezone:
+Email Address:test.person@example.com
+Phone:+1 555 0100
+Evening Phone:
+Mobile Phone:
+Fax:
+Notes:",Test Person,Personal,0
+http://sn,,,,"NoteType:Address
+Language:en-US
+Title:
+First Name:Test
+Middle Name:
+Last Name:Person
+Username:
+Gender:
+Birthday:
+Company:Example Corp
+Address 1:
+Address 2:
+Address 3:
+City / Town:
+County:
+State:
+Zip / Postal Code:
+Country:
+Timezone:
+Email Address:t.person@corp.example.com
+Phone:+1 555 0199
+Evening Phone:
+Mobile Phone:
+Fax:
+Notes:",Test Person (work),Work,0
+http://sn,,,,"NoteType:Address
+Language:en-US
+Title:
+First Name:Zoë
+Middle Name:
+Last Name:Ångström-Ñúñez
+Username:
+Gender:
+Birthday:
+Company:
+Address 1:
+Address 2:
+Address 3:
+City / Town:Malmö
+County:
+State:
+Zip / Postal Code:
+Country:SE
+Timezone:
+Email Address:zoe@unicode.example.com
+Phone:
+Evening Phone:
+Mobile Phone:
+Fax:
+Notes:",Zoë Ångström-Ñúñez,,0
+https://app.granitefitness.example.org/login,test_person,iBr4AA4HRCrhUer-87,,,Granite Fitness,Work,0
+https://www.cobaltforum.example.org/,test.person@example.com,sS%zo&ABRaMW4gh=T=2F%mh,,,Cobalt Forum,,0
+https://app.granitebooks.example.net/account/sign-in,test_person,T-^Fgj6HxM$2Q9a6#enm,,,Granite Books,,0
+https://app.lanternstudio.example.net/login,test.person@example.com,7GQ^&v%NXtjw_rAq6?,,,Lantern Studio,Work,0
+https://app.lanternfitness.test/login,test.person@example.com,ZWB-BfAW4YpjN2,,Signed up for Lantern Fitness in a test.,Lantern Fitness,,0
+https://www.granitecloud.example.net/users/sign_in,test.person,UJjS5&h8AgZ7hXd#bWF,,,Granite Cloud,Work,0
+https://indigocloud.example.org/users/sign_in,test.person@example.com,H53iA65CicbaCSt-2cJ=h,,,Indigo Cloud,,0
+https://app.indigoradio.test/login,test.person@example.com,8hVux$EmbNMuU#D6ts,,,Indigo Radio,Shopping,0
+https://fernlibrary.example.com/login,test.person@example.com,rAY9P_EYWwM%us#X,,,Fern Library,Finance,0
+https://app.junipertravel.example.net/account/sign-in,test_person,t^LTk8L*y9K=Hn@aV83C5,,,Juniper Travel,Shopping,0
+https://copperradio.example.com/account/sign-in,tperson,hUDSiS!vXhdRyP5v^5HU3,,Signed up for Copper Radio in a test.,Copper Radio,,0
+https://app.indigobooks.example.org/users/sign_in,test_person,J2g%*SDtsc&X9jJprF,,Signed up for Indigo Books in a test.,Indigo Books,Personal,0
+https://www.fernbooks.example.org/users/sign_in,tperson,Cb%J?mmUrGQt3e,,,Fern Books,Shopping,0
+https://app.graniteforum.example.org/login,test.person@example.com,dFe?yo5i&A*GJev67o,,,Granite Forum,,0
+https://indigotravel.example.org/login,tperson,k8KU#z@5XCe-7!y,,,Indigo Travel,Shopping,0
+https://www.ferngarden.example.org/users/sign_in,tperson,YGKCq6mM+T&+DQ?HkS%B=,,Signed up for Fern Garden in a test.,Fern Garden,Finance,0
+https://app.juniperradio.test/users/sign_in,test.person,@%Bf#%%rrunmz739FF=$8JQE,,,Juniper Radio,,0
+https://cobaltlibrary.example.org/,test.person@example.com,SMzWVj*hm4n*+KGdz=uE9,,,Cobalt Library,,0
+https://app.indigogarden.example/users/sign_in,TestPerson42,!rtgN$7C5k$2tt,,Signed up for Indigo Garden in a test.,Indigo Garden,Shopping,0
+https://app.juniperbooks.example.org/users/sign_in,TestPerson42,sX=uwRF?M39%Vz!jgh!58c,,,Juniper Books,Personal,0
+https://app.meadowtravel.test/users/sign_in,test.person,Nz+_4#E^79AXys_M,,,Meadow Travel,,0
+https://app.lanternmarket.example.net/account/sign-in,test_person,vsFYxGF2Wp3%q=*KYw2t,,Signed up for Lantern Market in a test.,Lantern Market,Work,0
+https://app.indigostudio.example.net/account/sign-in,TestPerson42,G24ZCWhzFSM5DC_CBC6UMn,,,Indigo Studio,Personal,0
+https://ferntravel.example/,test.person@example.com,%YYiYaxCWw95hycySo,,,Fern Travel,Finance,0
+https://www.birchstudio.example.net/login,tperson,L&mfG^+i#Z#T*G,,Signed up for Birch Studio in a test.,Birch Studio,Personal,0
+https://www.coppertravel.example.org/users/sign_in,test.person,FzhG9E*Qjx+de+T7,,,Copper Travel,,0
+https://cobaltfitness.example.net/,test.person@example.com,uZAefb6KWdDhNpA,,,Cobalt Fitness,Personal,0
+https://dunegarden.example.com/users/sign_in,test_person,$o#-zDvN3?+@@T,,,Dune Garden,Personal,0
+https://birchradio.example.com/users/sign_in,test_person,VmpZJ$CGdcc?MT@=z,,Signed up for Birch Radio in a test.,Birch Radio,Finance,0
+https://www.meadowforum.example.org/login,TestPerson42,LpzQsp^JJX2MiSw,,,Meadow Forum,,0
+https://app.cobaltstudio.example.com/,tperson,J&mwxU9kuLGa8bzsMCx!,,Signed up for Cobalt Studio in a test.,Cobalt Studio,Shopping,0
+https://www.meadowcloud.example.org/,test_person,Qs9gLBEJ$Z5#QgmPcmY-d,,Signed up for Meadow Cloud in a test.,Meadow Cloud,,0
+https://app.junipermarket.example.org/users/sign_in,test.person,4%Zqz+?yc?CfX2=UsRJ#,,,Juniper Market,Personal,0
+https://www.indigoforum.example.net/login,test.person,g!S4-xZxG-Z-*$ULk,,Signed up for Indigo Forum in a test.,Indigo Forum,Shopping,0
+https://www.lanternradio.example.org/login,test.person,cLFc&s_NwCZHXa9YSyjsV,,,Lantern Radio,Personal,0
+https://harborlibrary.test/,test_person,fyYWNery3_c_7gyhVkXFQ&,,,Harbor Library,,0
+https://granitemarket.example/account/sign-in,test.person,m6NGcsFw@?D3jeo3vGckS,,,Granite Market,Work,0
+https://juniperstudio.example.com/,test.person@example.com,Hffwa$kX_vg&k5T4e,,,Juniper Studio,,0

@@ -2,7 +2,8 @@
 // and the memberships waiting for the org key; another MSP's staff, the
 // client's own people, and strangers get nothing, except that a client's own
 // owners can see their MSP and remove it. The limited technician has a custom
-// role in the client and no install commands.
+// role in the client and no install commands. The client's point of contact
+// has a custom role that manages its policies.
 import { randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
@@ -16,6 +17,7 @@ const ACTORS = [
   "limitedTech",
   "otherMspAdmin",
   "clientOwner",
+  "clientContact",
   "clientUser",
   "stranger",
   "anonymous",
@@ -40,6 +42,21 @@ async function overview(ctx: Context) {
   ).body;
 }
 
+/** Makes one of the MSP's defaults (on) required for every client, or not, as its admin. */
+async function setRequired(ctx: Context, type: number, required: boolean) {
+  const saved = await ctx.api.call(ctx.admin, "PUT", `/api/keykeeper/msp/${ctx.mspId}/policies/${type}`, {
+    enabled: true,
+    data: null,
+    required,
+  });
+  expect(saved.status, JSON.stringify(saved.body)).toBe(200);
+}
+
+async function isRequired(ctx: Context, type: number): Promise<boolean> {
+  const seen = await ctx.api.call(ctx.admin, "GET", `/api/keykeeper/msp/${ctx.mspId}/policies`);
+  return seen.body.defaults.find((p: { type: number }) => p.type === type)?.required === true;
+}
+
 /** A technician added just for one call. */
 async function freshTechnician(ctx: Context) {
   const tech = await ctx.api.account("extra-tech");
@@ -56,6 +73,21 @@ async function templateIds(ctx: Context): Promise<string[]> {
       `/api/keykeeper/msp/${ctx.mspId}/templates`,
     )
   ).body.templates.map((t: { templateId: string }) => t.templateId);
+}
+
+/** What the MSP's admin sees of its templates. */
+async function templatesState(ctx: Context) {
+  return (
+    await ctx.api.call(ctx.admin, "GET", `/api/keykeeper/msp/${ctx.mspId}/templates`)
+  ).body as { collections: Record<string, string | null> };
+}
+
+/** The client's Templates collection, made by the server the first time. */
+async function templatesCollection(ctx: Context): Promise<string> {
+  return (
+    (await templatesState(ctx)).collections[ctx.orgId] ??
+    (await ctx.api.templatesCollection(ctx.admin, ctx.mspId, ctx.orgId))
+  );
 }
 
 /** A template for every client, added by the MSP's admin. */
@@ -286,6 +318,38 @@ const rows: Row[] = [
     },
   },
   {
+    // Remove Unlock with PIN, which no other row uses (DESIGN.md, "Required
+    // for every client").
+    name: "require a default policy for every client",
+    allowed: ["mspAdmin"],
+    request: async (ctx) => {
+      await setRequired(ctx, 14, false);
+      return {
+        method: "PUT",
+        path: `/api/keykeeper/msp/${ctx.mspId}/policies/14`,
+        data: { enabled: true, data: null, required: true },
+        check: async (allowed) => {
+          expect(await isRequired(ctx, 14)).toBe(allowed);
+        },
+      };
+    },
+  },
+  {
+    name: "stop requiring a default policy for every client",
+    allowed: ["mspAdmin"],
+    request: async (ctx) => {
+      await setRequired(ctx, 14, true);
+      return {
+        method: "PUT",
+        path: `/api/keykeeper/msp/${ctx.mspId}/policies/14`,
+        data: { enabled: true, data: null, required: false },
+        check: async (allowed) => {
+          expect(await isRequired(ctx, 14)).toBe(!allowed);
+        },
+      };
+    },
+  },
+  {
     name: "see the templates sent to clients",
     allowed: ["mspAdmin", "technician", "limitedTech"],
     request: async ({ mspId }) => ({
@@ -326,7 +390,7 @@ const rows: Row[] = [
     allowed: ["mspAdmin"],
     request: async (ctx) => {
       const id = await newTemplate(ctx);
-      const collection = await ctx.api.collection(ctx.admin, ctx.orgId);
+      const collection = await templatesCollection(ctx);
       const copy = await ctx.api.orgItem(ctx.admin, ctx.orgId, collection);
       return {
         method: "POST",
@@ -352,23 +416,26 @@ const rows: Row[] = [
     },
   },
   {
-    name: "record a client's Templates collection",
+    name: "make a client's Templates collection",
     allowed: ["mspAdmin"],
     request: async (ctx) => {
-      const collection = await ctx.api.collection(ctx.admin, ctx.orgId);
+      // The client deleted the last one (if it's still there), so the
+      // console asks for a new one.
+      const before = (await templatesState(ctx)).collections[ctx.orgId];
+      if (before != null) {
+        await ctx.api.call(
+          ctx.admin,
+          "DELETE",
+          `/api/organizations/${ctx.orgId}/collections/${before}`,
+        );
+      }
       return {
         method: "PUT",
         path: `/api/keykeeper/msp/${ctx.mspId}/clients/${ctx.orgId}/templates-collection`,
-        data: { collectionId: collection },
+        data: { name: "2.aXY=|Y3Q=|bWFj" },
         check: async (allowed) => {
-          const recorded = (
-            await ctx.api.call(
-              ctx.admin,
-              "GET",
-              `/api/keykeeper/msp/${ctx.mspId}/templates`,
-            )
-          ).body.collections[ctx.orgId];
-          expect(recorded === collection).toBe(allowed);
+          const recorded = (await templatesState(ctx)).collections[ctx.orgId];
+          expect(recorded != null && recorded !== before).toBe(allowed);
         },
       };
     },
@@ -450,12 +517,15 @@ test.describe("MSP permissions", () => {
       await api.confirmPending(admin, mspId);
       await api.addMember(admin, orgId, owner, "owner");
       await api.addMember(admin, orgId, user, "user");
+      const contact = await api.account("client-contact");
+      await api.addCustomMember(owner, orgId, contact, { managePolicies: true });
       const callers: Record<Actor, Account | null> = {
         mspAdmin: admin,
         technician: tech,
         limitedTech: limited,
         otherMspAdmin: other,
         clientOwner: owner,
+        clientContact: contact,
         clientUser: user,
         stranger: await api.account("stranger"),
         anonymous: null,

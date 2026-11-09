@@ -2,13 +2,31 @@
 // keeps the seals, proofs, and encrypted join secrets apps make, lets only the
 // right people leave them, checks only that each looks like one, and hands
 // them to the apps that confirm, with each person waiting. The apps' checks
-// are unit-tested against docs/vectors/joins-v1.json.
+// are unit-tested against docs/vectors/joins-v1.json, joins-v2.json, and
+// joining-v3.json. Invitation and staff seals are version 2, which end and
+// carry a nonce; the server takes only those for them, and deletes them once
+// the person they vouch for is confirmed. Joining seals are version 3, which
+// say where the setting comes from and when it was sealed; the server takes
+// only those, from the source the change they come with makes it, and hands
+// every organization's to its owners' and admins' apps, so they remember the
+// newest.
 import { expect, test } from "@playwright/test";
 
-import { type Account, Api, encString } from "./support";
+import { limitsServerPort } from "../../paths.mjs";
 
-/** A seal-shaped value: the server can't tell a real one from this. */
+import { type Account, Api, encString, expiringSeal } from "./support";
+
+/** A version 1 seal-shaped value (client seals, proofs): the server can't tell a real one from this. */
 const seal = (n: number) => Buffer.alloc(32, n).toString("base64");
+/**
+ * A version 3 joining seal's shape, from the organization's own setting or a
+ * default it follows, sealed `n` seconds into November 2026.
+ */
+const joiningSeal = (n: number, source: "own" | "default") =>
+  `v3.${source}.${1_793_059_200 + n}.${Buffer.alloc(16, n).toString("base64url")}.${Buffer.alloc(32, n).toString("base64url")}`;
+/** A version 2 joining seal's shape, which says nothing of when it was sealed. */
+const joiningSealV2 = (n: number, source: "own" | "default") =>
+  `v2.${source}.${Buffer.alloc(32, n).toString("base64url")}`;
 const secret = encString("join-secret");
 
 async function setUp(api: Api) {
@@ -32,7 +50,7 @@ test("only an MSP's admins leave seals for its clients, and only for its staff",
   const tech = await api.account("seal-tech");
   await api.addStaff(admin, mspId, tech, "technician");
   const url = `/api/keykeeper/msp/${mspId}/seals`;
-  const staff = { staff: [{ organizationId: orgId, email: tech.email, seal: seal(1) }] };
+  const staff = { staff: [{ organizationId: orgId, email: tech.email, seal: expiringSeal(1) }] };
 
   expect((await api.call(admin, "PUT", url, staff)).status).toBe(200);
   // Staff who aren't admins, people outside the MSP, and no one at all can't.
@@ -45,15 +63,45 @@ test("only an MSP's admins leave seals for its clients, and only for its staff",
   const otherMsp = await api.msp(other, "Other IT");
   const otherClient = await api.client(other, otherMsp, "Other Dental");
   for (const body of [
-    { staff: [{ organizationId: otherClient, email: tech.email, seal: seal(1) }] },
-    { staff: [{ organizationId: orgId, email: stranger.email, seal: seal(1) }] },
+    { staff: [{ organizationId: otherClient, email: tech.email, seal: expiringSeal(1) }] },
+    { staff: [{ organizationId: orgId, email: stranger.email, seal: expiringSeal(1) }] },
     { staff: [{ organizationId: orgId, email: tech.email, seal: "not a seal" }] },
+    // A version 1 staff seal never ends; one that has ended is no use.
+    { staff: [{ organizationId: orgId, email: tech.email, seal: seal(1) }] },
+    { staff: [{ organizationId: orgId, email: tech.email, seal: expiringSeal(1, -60) }] },
     { joining: [{ organizationId: orgId, seal: seal(2).slice(0, 43) }] },
+    // A version 1 joining seal says nothing of where the setting comes from,
+    // and a new client follows the MSP's default.
+    { joining: [{ organizationId: orgId, seal: seal(2) }] },
+    { joining: [{ organizationId: orgId, seal: joiningSeal(2, "own") }] },
     { secrets: [{ organizationId: orgId, secret: "plaintext" }] },
+    { clients: [{ organizationId: otherClient, seal: seal(3) }] },
+    { clients: [{ organizationId: orgId, seal: expiringSeal(3) }] },
   ]) {
     const refused = await api.call(admin, "PUT", url, body);
     expect(refused.status, JSON.stringify(body)).not.toBe(200);
   }
+});
+
+test("an MSP admin's browser leaves a client seal for its own clients, and every staff member's apps get it", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const { admin, mspId, orgId } = await setUp(api);
+  const tech = await api.account("client-seal-tech");
+  await api.addStaff(admin, mspId, tech, "technician");
+  const clientSeal = (caller: Account) =>
+    api
+      .call(caller, "GET", `/api/keykeeper/msp/${mspId}`)
+      .then((r) => r.body.clients.find((c: { id: string }) => c.id === orgId).seal);
+  expect(await clientSeal(admin)).toBeNull();
+
+  const url = `/api/keykeeper/msp/${mspId}/seals`;
+  const body = { clients: [{ organizationId: orgId, seal: seal(15) }] };
+  expect((await api.call(tech, "PUT", url, body)).status).not.toBe(200);
+  expect((await api.call(admin, "PUT", url, body)).status).toBe(200);
+  expect(await clientSeal(admin)).toBe(seal(15));
+  expect(await clientSeal(tech)).toBe(seal(15));
 });
 
 test("each person waiting comes with what vouches for them, for the apps to check", async ({
@@ -64,7 +112,7 @@ test("each person waiting comes with what vouches for them, for the apps to chec
 
   // A sealed joining setting and an install command with a join secret.
   const sealed = await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/seals`, {
-    joining: [{ organizationId: orgId, seal: seal(3) }],
+    joining: [{ organizationId: orgId, seal: joiningSeal(3, "default") }],
     secrets: [{ organizationId: orgId, secret }],
   });
   expect(sealed.status, JSON.stringify(sealed.body)).toBe(200);
@@ -78,20 +126,33 @@ test("each person waiting comes with what vouches for them, for the apps to chec
   // A technician with a staff seal.
   const tech = await api.account("vouch-tech");
   await api.addStaff(admin, mspId, tech, "technician");
+  const staffSeal = expiringSeal(4);
   await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/seals`, {
-    staff: [{ organizationId: orgId, email: tech.email, seal: seal(4) }],
+    staff: [{ organizationId: orgId, email: tech.email, seal: staffSeal }],
   });
   // Someone invited with a seal (this server sends no email, so they're in at once).
   const invited = await api.account("vouch-invited");
+  const inviteSeal = expiringSeal(5);
   const invite = await api.call(admin, "POST", `/api/organizations/${orgId}/users/invite`, {
     emails: [invited.email],
     type: 2,
     collections: [],
     groups: [],
     permissions: {},
-    keykeeperSeals: { [invited.email.toUpperCase()]: seal(5) },
+    keykeeperSeals: { [invited.email.toUpperCase()]: inviteSeal },
   });
   expect(invite.status, JSON.stringify(invite.body)).toBe(200);
+  // A version 1 invitation seal, which never ends, isn't taken.
+  const v1 = await api.account("vouch-v1");
+  const refusedV1 = await api.call(admin, "POST", `/api/organizations/${orgId}/users/invite`, {
+    emails: [v1.email],
+    type: 2,
+    collections: [],
+    groups: [],
+    permissions: {},
+    keykeeperSeals: { [v1.email]: seal(5) },
+  });
+  expect(refusedV1.status).toBe(400);
   // Someone who joins with the install command, with a proof.
   const joiner = await api.account("vouch-joiner");
   const joined = await api.call(joiner, "POST", "/api/keykeeper/enrollment/join", {
@@ -110,12 +171,12 @@ test("each person waiting comes with what vouches for them, for the apps to chec
     ).status,
   ).toBe(400);
 
-  const joining = { autoConfirm: true, domains: [], seal: seal(3) };
+  const joining = { autoConfirm: true, domains: [], seal: joiningSeal(3, "default") };
   expect(await pendingFor(api, admin, mspId, tech.email)).toMatchObject({
     userId: tech.userId,
     fromMsp: true,
     joining,
-    staffSeal: seal(4),
+    staffSeal,
     inviteSeal: null,
     joinProof: null,
     enrollmentSecret: null,
@@ -123,7 +184,7 @@ test("each person waiting comes with what vouches for them, for the apps to chec
   expect(await pendingFor(api, admin, mspId, invited.email)).toMatchObject({
     fromMsp: false,
     joining,
-    inviteSeal: seal(5),
+    inviteSeal,
     staffSeal: null,
   });
   expect(await pendingFor(api, admin, mspId, joiner.email)).toMatchObject({
@@ -146,23 +207,27 @@ test("a change made without a seal never keeps an old one's word", async ({ requ
   const current = async () => (await api.call(admin, "GET", joiningUrl)).body;
 
   // The client's own setting, sealed, then changed without a seal.
-  await api.call(admin, "PUT", joiningUrl, { autoConfirm: true, inviteHours: 24, seal: seal(7) });
-  expect((await current()).seal).toBe(seal(7));
+  await api.call(admin, "PUT", joiningUrl, {
+    autoConfirm: true,
+    inviteHours: 24,
+    seal: joiningSeal(7, "own"),
+  });
+  expect((await current()).seal).toBe(joiningSeal(7, "own"));
   await api.call(admin, "PUT", joiningUrl, { autoConfirm: true, inviteHours: 24 });
   expect((await current()).seal).toBeNull();
 
   // Back on the MSP's default, sealed; then the default changes with a seal for it.
-  await api.call(admin, "DELETE", joiningUrl, { seal: seal(8) });
-  expect((await current()).seal).toBe(seal(8));
+  await api.call(admin, "DELETE", joiningUrl, { seal: joiningSeal(8, "default") });
+  expect((await current()).seal).toBe(joiningSeal(8, "default"));
   const following = (await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}/joining`)).body
     .following;
-  expect(following).toEqual([{ organizationId: orgId, domains: [], seal: seal(8) }]);
+  expect(following).toEqual([{ organizationId: orgId, domains: [], seal: joiningSeal(8, "default") }]);
   await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/joining`, {
     autoConfirm: false,
     inviteHours: 24,
-    seals: { [orgId]: seal(9) },
+    seals: { [orgId]: joiningSeal(9, "default") },
   });
-  expect((await current()).seal).toBe(seal(9));
+  expect((await current()).seal).toBe(joiningSeal(9, "default"));
   // Changed again without one: the client has none.
   await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/joining`, {
     autoConfirm: true,
@@ -181,8 +246,9 @@ test("a change made without a seal never keeps an old one's word", async ({ requ
       permissions: {},
       keykeeperSeals: seals,
     });
-  expect((await invite({ [person.email]: seal(10) })).status).toBe(200);
-  expect((await pendingFor(api, admin, mspId, person.email)).inviteSeal).toBe(seal(10));
+  const personSeal = expiringSeal(10);
+  expect((await invite({ [person.email]: personSeal })).status).toBe(200);
+  expect((await pendingFor(api, admin, mspId, person.email)).inviteSeal).toBe(personSeal);
   const member = (await api.members(admin, orgId)).find((m) => m.email === person.email)!;
   expect(
     (await api.call(admin, "DELETE", `/api/organizations/${orgId}/users/${member.id}`)).status,
@@ -193,10 +259,11 @@ test("a change made without a seal never keeps an old one's word", async ({ requ
   // A staff member who leaves takes their seals with them.
   const tech = await api.account("leaving-tech");
   await api.addStaff(admin, mspId, tech, "technician");
+  const techSeal = expiringSeal(11);
   await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/seals`, {
-    staff: [{ organizationId: orgId, email: tech.email, seal: seal(11) }],
+    staff: [{ organizationId: orgId, email: tech.email, seal: techSeal }],
   });
-  expect((await pendingFor(api, admin, mspId, tech.email)).staffSeal).toBe(seal(11));
+  expect((await pendingFor(api, admin, mspId, tech.email)).staffSeal).toBe(techSeal);
   expect(
     (await api.call(admin, "DELETE", `/api/keykeeper/msp/${mspId}/staff/${tech.userId}`)).status,
   ).toBe(200);
@@ -204,11 +271,56 @@ test("a change made without a seal never keeps an old one's word", async ({ requ
   expect((await pendingFor(api, admin, mspId, tech.email)).staffSeal).toBeNull();
 });
 
+test("the seals that vouched for someone are used up once they're confirmed", async ({ request }) => {
+  const api = new Api(request);
+  const { admin, mspId, orgId } = await setUp(api);
+  const person = await api.account("used-up");
+  const personSeal = expiringSeal(20);
+  const invited = await api.call(admin, "POST", `/api/organizations/${orgId}/users/invite`, {
+    emails: [person.email],
+    type: 2,
+    collections: [],
+    groups: [],
+    permissions: {},
+    keykeeperSeals: { [person.email]: personSeal },
+  });
+  expect(invited.status, JSON.stringify(invited.body)).toBe(200);
+  expect((await pendingFor(api, admin, mspId, person.email)).inviteSeal).toBe(personSeal);
+
+  // Confirmed, then removed.
+  const member = (await api.members(admin, orgId)).find((m) => m.email === person.email)!;
+  const confirmed = await api.call(
+    admin,
+    "POST",
+    `/api/organizations/${orgId}/users/${member.id}/confirm`,
+    { key: encString("org-key-for-used-up") },
+  );
+  expect(confirmed.status, JSON.stringify(confirmed.body)).toBe(200);
+  expect(
+    (await api.call(admin, "DELETE", `/api/organizations/${orgId}/users/${member.id}`)).status,
+  ).toBe(200);
+
+  // Back through the install command, which leaves seals as they are: the
+  // invitation's seal was used, so nothing vouches for them now.
+  const enrollment = await api.call(
+    admin,
+    "GET",
+    `/api/keykeeper/msp/${mspId}/clients/${orgId}/enrollment`,
+  );
+  const joined = await api.call(person, "POST", "/api/keykeeper/enrollment/join", {
+    token: enrollment.body.token,
+  });
+  expect(joined.status, JSON.stringify(joined.body)).toBe(200);
+  expect(await pendingFor(api, admin, mspId, person.email)).toMatchObject({ inviteSeal: null });
+});
+
 test("a company's own owners and admins seal their organization; an MSP's client is its MSP's to seal", async ({
   request,
 }) => {
   const api = new Api(request);
   const owner = await api.account("own-sealer");
+  // The Business preset requires two-step login of its owners.
+  await api.giveAuthenticator(owner);
   const created = await api.call(owner, "POST", "/api/keykeeper/organizations", {
     name: "Sealed Co",
     preset: "business",
@@ -221,12 +333,12 @@ test("a company's own owners and admins seal their organization; an MSP's client
   expect(created.status, JSON.stringify(created.body)).toBe(200);
   const orgId = created.body.id;
   const url = `/api/keykeeper/organizations/${orgId}/seals`;
-  expect((await api.call(owner, "PUT", url, { joining: seal(12), secret })).status).toBe(200);
+  expect((await api.call(owner, "PUT", url, { joining: joiningSeal(12, "default"), secret })).status).toBe(200);
   expect(
     (await api.call(owner, "GET", `/api/keykeeper/organizations/${orgId}/enrollment`)).body.secret,
   ).toBe(secret);
   expect((await api.call(owner, "GET", `/api/keykeeper/organizations/${orgId}/joining`)).body.seal).toBe(
-    seal(12),
+    joiningSeal(12, "default"),
   );
 
   // The browser derives the fingerprint from the organization's private key,
@@ -248,4 +360,129 @@ test("a company's own owners and admins seal their organization; an MSP's client
     joining: seal(14),
   });
   expect(refused.status).toBe(403);
+});
+
+// The limits server sends no email and keeps the default for it
+// (INVITE_JOINS_WITHOUT_EMAIL off, e2e/server.mjs): nothing proves who owns
+// an invited address there, since upstream lets an invited address sign up
+// without a link, so whoever signs up with it first would be vouched for.
+test.describe("on a server that sends no email", () => {
+  test.use({ baseURL: `https://127.0.0.1:${limitsServerPort}` });
+
+  test("an invitation's seal doesn't vouch for anyone: an owner or admin approves the join", async ({ request }) => {
+    const api = new Api(request);
+    const owner = await api.account("no-mail-owner");
+    const orgId = await api.organization(owner, "No Mail Co");
+    const invited = await api.account("no-mail-invited");
+    const invite = await api.call(owner, "POST", `/api/organizations/${orgId}/users/invite`, {
+      emails: [invited.email],
+      type: 2,
+      collections: [],
+      groups: [],
+      permissions: {},
+      keykeeperSeals: { [invited.email]: expiringSeal(20) },
+    });
+    expect(invite.status, JSON.stringify(invite.body)).toBe(200);
+    const pending = await api.call(owner, "GET", "/api/keykeeper/organizations/pending");
+    expect(pending.status, JSON.stringify(pending.body)).toBe(200);
+    expect(pending.body.data.find((p: { email: string }) => p.email === invited.email)).toMatchObject({
+      organizationId: orgId,
+      inviteSeal: null,
+    });
+  });
+});
+
+test("joining seals are version 3, and say where the setting comes from as the change they come with makes it", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const { admin, mspId, orgId } = await setUp(api);
+  const joiningUrl = `/api/keykeeper/organizations/${orgId}/joining`;
+  const refused = async (method: "PUT" | "DELETE", url: string, body: unknown) => {
+    const result = await api.call(admin, method, url, body);
+    expect(result.status, JSON.stringify(body)).toBe(400);
+  };
+  // The organization's own setting is sealed as its own; going back to the
+  // default, or the MSP's default, as following it; versions 1 and 2 never.
+  await refused("PUT", joiningUrl, { autoConfirm: true, inviteHours: 24, seal: seal(20) });
+  await refused("PUT", joiningUrl, { autoConfirm: true, inviteHours: 24, seal: joiningSealV2(20, "own") });
+  await refused("DELETE", joiningUrl, { seal: joiningSealV2(21, "default") });
+  await refused("PUT", `/api/keykeeper/msp/${mspId}/joining`, {
+    autoConfirm: true,
+    inviteHours: 24,
+    seals: { [orgId]: joiningSealV2(22, "default") },
+  });
+  // Nor one whose time isn't one.
+  await refused("PUT", joiningUrl, {
+    autoConfirm: true,
+    inviteHours: 24,
+    seal: joiningSeal(20, "own").replace(".1793059220.", ".01793059220."),
+  });
+  await refused("PUT", joiningUrl, { autoConfirm: true, inviteHours: 24, seal: joiningSeal(20, "default") });
+  await refused("DELETE", joiningUrl, { seal: joiningSeal(21, "own") });
+  await refused("PUT", `/api/keykeeper/msp/${mspId}/joining`, {
+    autoConfirm: true,
+    inviteHours: 24,
+    seals: { [orgId]: joiningSeal(22, "own") },
+  });
+  await refused("PUT", joiningUrl, {
+    autoConfirm: true,
+    inviteHours: 24,
+    seal: joiningSeal(23, "own").replace("v3.own.", "v3.msp."),
+  });
+  const own = await api.call(admin, "PUT", joiningUrl, {
+    autoConfirm: false,
+    inviteHours: 24,
+    seal: joiningSeal(24, "own"),
+  });
+  expect(own.status, JSON.stringify(own.body)).toBe(200);
+  expect(own.body).toMatchObject({ source: "own", seal: joiningSeal(24, "own") });
+  // A client with its own setting takes an MSP seal only as its own.
+  const msp = `/api/keykeeper/msp/${mspId}/seals`;
+  expect((await api.call(admin, "PUT", msp, { joining: [{ organizationId: orgId, seal: joiningSeal(25, "default") }] })).status).toBe(400);
+  expect((await api.call(admin, "PUT", msp, { joining: [{ organizationId: orgId, seal: joiningSeal(25, "own") }] })).status).toBe(200);
+  // Nor version 2 there.
+  expect((await api.call(admin, "PUT", msp, { joining: [{ organizationId: orgId, seal: joiningSealV2(26, "own") }] })).status).toBe(400);
+});
+
+test("owners' and admins' apps get every organization's joining setting with its seal, whether or not anyone is waiting", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const { admin, mspId, orgId } = await setUp(api);
+  const sealed = joiningSeal(30, "default");
+  expect(
+    (await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/seals`, { joining: [{ organizationId: orgId, seal: sealed }] }))
+      .status,
+  ).toBe(200);
+  const listed = async (caller: Account) => {
+    const pending = await api.call(caller, "GET", "/api/keykeeper/organizations/pending");
+    expect(pending.status, JSON.stringify(pending.body)).toBe(200);
+    return pending.body.joining as { organizationId: string }[];
+  };
+  // Nobody is waiting in the client, and its setting is there all the same.
+  expect((await listed(admin)).find((o) => o.organizationId === orgId)).toEqual({
+    organizationId: orgId,
+    autoConfirm: true,
+    domains: [],
+    seal: sealed,
+  });
+  // As its own setting changes, so does the list.
+  const own = joiningSeal(31, "own");
+  const changed = await api.call(admin, "PUT", `/api/keykeeper/organizations/${orgId}/joining`, {
+    autoConfirm: false,
+    inviteHours: 24,
+    seal: own,
+  });
+  expect(changed.status, JSON.stringify(changed.body)).toBe(200);
+  expect((await listed(admin)).find((o) => o.organizationId === orgId)).toEqual({
+    organizationId: orgId,
+    autoConfirm: false,
+    domains: [],
+    seal: own,
+  });
+  // A regular member's apps confirm nobody, so they get none of it.
+  const member = await api.account("joining-list-member");
+  await api.addMember(admin, orgId, member, "user");
+  expect((await listed(member)).find((o) => o.organizationId === orgId)).toBeUndefined();
 });

@@ -31,6 +31,19 @@ export type CoreRead = {
   }[];
   saved?: boolean;
   passkey?: Record<string, string>;
+  /** Sign-in requests (docs/core.md, "Approving a sign-in"), and one answered or refused. */
+  signIn?: {
+    requests: {
+      id: string;
+      device: string;
+      ip: string;
+      fingerprint: string;
+      ageSeconds: number;
+      secondsLeft: number;
+    }[];
+    answered?: string;
+    refused?: string;
+  };
 };
 
 /** The test server's certificate, for the core to trust (its usual trust is the OS's). */

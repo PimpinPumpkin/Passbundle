@@ -1,13 +1,13 @@
 // Generated passwords follow the site's own published password rules
 // (DESIGN.md, "Health (better than Watchtower)"). airfrance.com takes 8 to 12
 // characters, with a lowercase and an uppercase letter and a digit, and only
-// -!#$&+/?@_ besides; the generator's usual 14 characters are too long there.
+// -!#$&+/?@_ besides; the generator's usual 20 characters are too long there.
 // The page is the local fixture, under that name (see paths.mjs).
 import { test as webTest, type BrowserContext, type Page } from "@playwright/test";
 
 import { extensionFrame, hasElementDeep, waitForExtensionScan } from "./support/autofill";
 import { createAccount, expect, logInPopup, openPopup, test, userFor } from "./support/extension";
-import { signUp, webUserFor } from "./support/web";
+import { newItem, signUp, webUserFor } from "./support/web";
 
 /** airfrance.com's published rules, as a pattern, plus one of each required kind. */
 function expectAirFranceRules(password: string) {
@@ -61,7 +61,7 @@ test("a suggested password follows the site's own password rules, and is the usu
   // A site without published rules gets the generator's usual password.
   const elsewhere = await context.newPage();
   await elsewhere.goto("https://signup.example.test/signup.html");
-  expect(await fillSuggestedPassword(context, elsewhere)).toHaveLength(14);
+  expect(await fillSuggestedPassword(context, elsewhere)).toHaveLength(20);
 
   const site = await context.newPage();
   await site.goto("https://www.airfrance.com/signup.html");
@@ -74,9 +74,8 @@ webTest("the item editor's generator follows the item's website's password rules
   page,
 }, testInfo) => {
   await signUp(page, webUserFor("site-rules-editor", testInfo.repeatEachIndex));
-  await page.getByRole("button", { name: "New", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Login" }).click();
-  const item = page.getByRole("dialog", { name: "New Login" });
+  await newItem(page, "Login");
+  const item = page.getByRole("dialog", { name: "Add login" });
   await item.getByRole("textbox", { name: /Item name/ }).fill("Air France");
   // A website the way people type it, without https://.
   await item.getByRole("textbox", { name: "Website (URI)" }).fill("www.airfrance.com");

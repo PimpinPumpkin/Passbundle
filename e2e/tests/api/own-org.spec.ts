@@ -28,6 +28,11 @@ async function create(api: Api, owner: Account, name: string, preset?: "business
 }
 
 async function makeOrg(api: Api, owner: Account, name: string, preset?: "business" | "none") {
+  // The Business preset requires two-step login of its owners, and making it
+  // signs out an owner without it.
+  if (preset === "business") {
+    await api.giveAuthenticator(owner);
+  }
   const created = await create(api, owner, name, preset);
   expect(created.status, JSON.stringify(created.body)).toBe(200);
   return created.body.id as string;
@@ -183,7 +188,9 @@ test("an MSP's client's install command stays in the MSP's console, out of reach
   for (const caller of [mspAdmin, tech]) {
     const read = await install(api, caller, orgId);
     expect(read.status, caller.email).toBe(200);
-    expect(read.body).toEqual({ provider: "Harbor IT" });
+    // With how many people it removed since the token was made, so its
+    // Members page can say when to ask the provider for a new one.
+    expect(read.body).toEqual({ provider: "Harbor IT", removedSinceToken: 0 });
     const refused = await install(api, caller, orgId, "POST");
     expect(refused.status, caller.email).toBe(403);
     expect(refused.body.message).toContain("MSP console");

@@ -2,8 +2,11 @@
 # production (the optimized server, for SQLite and PostgreSQL, and the branded
 # web vault), then started and checked like a fresh install by
 # deploy/smoke.sh. Runs for every push to main, for pull requests that change
-# the image, and by hand. The image is kept as a build artifact; pushing it to
-# a registry comes with the hosted service. See deploy/README.md.
+# the image, and by hand. A pull request whose branch name also exists in the
+# server or clients repo is built with that branch there, as Tier 1 does, so a
+# change to the image and the server it needs pass together. The image is kept
+# as a build artifact; pushing it to a registry comes with the hosted service.
+# See deploy/README.md.
 name: Release
 
 on:
@@ -31,8 +34,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  refs:
+    name: Linked branches
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      server: ${{ steps.pick.outputs.server }}
+      clients: ${{ steps.pick.outputs.clients }}
+    steps:
+      - name: Pick each repo's branch
+        id: pick
+        env:
+          BRANCH: ${{ github.head_ref }}
+          SERVER_IN: ${{ inputs.server-ref }}
+          CLIENTS_IN: ${{ inputs.clients-ref }}
+        run: |
+          # What was asked for by hand; else the pull request's branch name,
+          # where that repo has such a branch; else its keykeeper branch.
+          linked() {
+            if [ -n "$BRANCH" ] &&
+              git ls-remote --exit-code --heads "https://github.com/PimpinPumpkin/$1.git" "refs/heads/$BRANCH" > /dev/null; then
+              echo "$BRANCH"
+            else
+              echo keykeeper
+            fi
+          }
+          server=${SERVER_IN:-$(linked passbundle-server)}
+          clients=${CLIENTS_IN:-$(linked passbundle-clients)}
+          {
+            echo "server=$server"
+            echo "clients=$clients"
+          } >> "$GITHUB_OUTPUT"
+          echo "Server: $server. Clients: $clients."
+
   server:
     name: Optimized server
+    needs: refs
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     outputs:
@@ -41,7 +78,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: PimpinPumpkin/passbundle-server
-          ref: ${{ inputs.server-ref || 'keykeeper' }}
+          ref: ${{ needs.refs.outputs.server }}
           persist-credentials: false
       - id: commit
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -63,6 +100,7 @@ jobs:
 
   web:
     name: Branded web vault
+    needs: refs
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     outputs:
@@ -71,7 +109,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: PimpinPumpkin/passbundle-clients
-          ref: ${{ inputs.clients-ref || 'keykeeper' }}
+          ref: ${{ needs.refs.outputs.clients }}
           persist-credentials: false
       - id: commit
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -124,7 +162,7 @@ jobs:
             --label "com.passbundle.clients-commit=${CLIENTS}" \
             deploy/context
           docker image inspect passbundle:release --format 'Image size: {{.Size}} bytes'
-      - name: Smoke test, on SQLite and PostgreSQL
+      - name: Smoke test, on SQLite and PostgreSQL, and the client's address behind a tunnel
         run: deploy/smoke.sh passbundle:release
       - name: Save the image
         run: docker save passbundle:release | gzip > passbundle-image.tar.gz

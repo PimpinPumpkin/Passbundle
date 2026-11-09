@@ -105,15 +105,16 @@ const test = base.extend<{ home: string; agent: Agent; context: BrowserContext; 
 
 /**
  * Locks from the account switcher, where "Lock now" lives. Upstream then
- * reloads the whole extension to clear memory, unless a desktop app's
- * fingerprint was validated, and an extension loaded from the command line,
- * as in these tests, doesn't come back from that reload. So the test marks
- * the fingerprint validated first: the reload isn't what's under test.
+ * reloads the whole extension to clear memory, and an extension loaded from
+ * the command line, as in these tests, doesn't come back from that reload.
+ * Upstream's way around it, a validated desktop fingerprint, is gone since
+ * web-v2026.10.1, so the test turns that reload off in the background first:
+ * the reload isn't what's under test.
  */
 async function lockNow(context: BrowserContext, popup: Page, extensionId: string) {
-  await context.serviceWorkers()[0].evaluate(async () => {
+  await context.serviceWorkers()[0].evaluate(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (self as any).bitwardenMain.biometricStateService.setFingerprintValidated(true);
+    (self as any).bitwardenMain.processReloadService.reloadProcess = async () => {};
   });
   await popup.goto(`chrome-extension://${extensionId}/popup/index.html#/account-switcher`);
   await popup.getByRole("button", { name: "Lock now" }).click();
@@ -132,7 +133,7 @@ async function openLockedPopup(context: BrowserContext, extensionId: string): Pr
     await expect(
       popup
         .getByRole("heading", { name: "Your vault is locked" })
-        .or(popup.getByRole("heading", { name: /Vault/ }).first()),
+        .or(popup.getByRole("heading", { name: /Items/ }).first()),
     ).toBeVisible({ timeout: 5_000 });
   }).toPass({ timeout: 45_000, intervals: [1_000] });
   return popup!;
@@ -193,7 +194,7 @@ test("biometric unlock through the desktop agent: on with a prompt, unlock with 
   await lockNow(context, popup, extensionId);
   agent.answer("yes");
   const unlocked = await unlockWithBiometrics(context, extensionId, agent.prompts);
-  await expect(unlocked.getByRole("heading", { name: /Vault/ }).first()).toBeVisible({ timeout: 30_000 });
+  await expect(unlocked.getByRole("heading", { name: /Items/ }).first()).toBeVisible({ timeout: 30_000 });
   expect(agent.prompts()).toHaveLength(2);
   expect(agent.prompts()[1]).toBe(`Unlock ${brand.name} in your browser`);
 
@@ -203,7 +204,7 @@ test("biometric unlock through the desktop agent: on with a prompt, unlock with 
   const stillLocked = await unlockWithBiometrics(context, extensionId, agent.prompts);
   expect(agent.prompts()).toHaveLength(3);
   await expect(stillLocked.getByRole("heading", { name: "Your vault is locked" })).toBeVisible();
-  await expect(stillLocked.getByRole("heading", { name: /^Vault/ })).toHaveCount(0);
+  await expect(stillLocked.getByRole("heading", { name: /^Items/ })).toHaveCount(0);
 });
 
 test("turning biometric unlock on stays off when the prompt is canceled", async ({

@@ -1,0 +1,25 @@
+<!doctype html>
+<!-- Another site's sign-in page that frames the vault's security key
+     connector, as a real-time phishing page would (connector-origins.spec.ts):
+     it lets the frame use security keys and keeps every message it receives.
+     The connector's address, with the challenge the page relayed from the
+     vault and this page as its parent, comes after the #. -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Sign in</title>
+  </head>
+  <body>
+    <script>
+      window.received = [];
+      addEventListener("message", (event) => {
+        received.push({ origin: event.origin, data: String(event.data).slice(0, 100) });
+      });
+      const frame = document.createElement("iframe");
+      frame.id = "key";
+      frame.allow = "publickey-credentials-get *";
+      frame.src = decodeURIComponent(location.hash.slice(1));
+      document.body.append(frame);
+    </script>
+  </body>
+</html>

@@ -20,13 +20,21 @@ on:
       server-ref:
         type: string
         default: keykeeper
+      # The website's screenshots (site-shots.yml) need the builds, not the
+      # end-to-end runs, so they skip those.
+      skip-tests:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
   group: tier1-${{ github.repository }}-${{ github.ref }}
-  cancel-in-progress: true
+  # A newer push to a PR replaces its running build. On main, a running build
+  # finishes (the test server and the Mac's extension deploy from main's
+  # newest green build) and only the newest waiting one runs after it.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   refs:
@@ -99,6 +107,26 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential libssl-dev pkg-config libpq-dev
       - name: Install the pinned Rust toolchain
         run: rustup toolchain install
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/Passbundle
+          ref: ${{ needs.refs.outputs.meta }}
+          path: meta
+          sparse-checkout: docs/vectors
+          persist-credentials: false
+      # The unit tests check event streaming's secrets against the server's
+      # copy of these vectors; this keeps that copy the meta repo's.
+      - name: The server's event streaming test vectors are the meta repo's
+        run: cmp meta/docs/vectors/event-streaming-secrets-v1.json src/keykeeper_streaming/vectors/event-streaming-secrets-v1.json
+      - name: The server's single sign-on client secret test vectors are the meta repo's
+        run: cmp meta/docs/vectors/sso-client-secret-v1.json src/api/core/keykeeper_sso/vectors/sso-client-secret-v1.json
+      - name: The server's site fix and install token key test vectors are the meta repo's
+        run: cmp meta/docs/vectors/server-derived-keys-v1.json src/db/models/vectors/server-derived-keys-v1.json
+      - name: The server's joining seal and script grant seal test vectors are the meta repo's
+        run: |
+          cmp meta/docs/vectors/joining-v2.json src/db/models/vectors/joining-v2.json
+          cmp meta/docs/vectors/joining-v3.json src/db/models/vectors/joining-v3.json
+          cmp meta/docs/vectors/script-grants-v3.json src/db/models/vectors/script-grants-v3.json
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       # One binary for both supported databases (SQLite and PostgreSQL); the
       # database URL picks which one at startup.
@@ -116,8 +144,14 @@ jobs:
           path: target/debug/vaultwarden
           retention-days: 3
 
+  # The web vault and the Chrome extension build on runners of their own.
+  # Side by side on one runner they needed up to 19 GB, past its 16 GB of
+  # memory and 3 GB of swap, and the runner often shut down mid-build. Alone,
+  # the web vault peaks around 12 GB with nothing in swap, and it finishes
+  # sooner than the pair did together. Capping the Node heap doesn't help:
+  # most of the memory is outside it.
   clients:
-    name: Branded web vault and extension
+    name: Branded web vault
     needs: refs
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -135,30 +169,95 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Apply branding
         run: node brand/apply.mjs
-      - name: Build the web vault and Chrome extension
-        # At the same time; each mostly uses one core.
-        run: |
-          (cd apps/web && npm run build:oss:selfhost:prod) > "$RUNNER_TEMP/web.log" 2>&1 &
-          web=$!
-          (cd apps/browser && npm run build:prod:chrome) > "$RUNNER_TEMP/chrome.log" 2>&1 &
-          chrome=$!
-          status=0
-          wait "$web" || { echo "::error::The web vault build failed"; status=1; }
-          wait "$chrome" || { echo "::error::The Chrome extension build failed"; status=1; }
-          echo "::group::Web vault build" && cat "$RUNNER_TEMP/web.log" && echo "::endgroup::"
-          echo "::group::Chrome extension build" && cat "$RUNNER_TEMP/chrome.log" && echo "::endgroup::"
-          exit "$status"
-      - name: Collect builds
+      - name: Build the web vault
+        working-directory: apps/web
+        run: npm run build:oss:selfhost:prod
+      - name: Collect the build
         run: |
           mkdir -p out
           cp -r apps/web/build out/web-vault
-          cp -r apps/browser/build out/extension-chrome
           cp brand/brand.json out/brand.json
           find out -name '*.map' -delete
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: clients
           path: out
+          retention-days: 3
+
+  chrome-extension:
+    name: Branded Chrome extension
+    needs: refs
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-clients
+          ref: ${{ needs.refs.outputs.clients }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Apply branding
+        run: node brand/apply.mjs
+      - name: Build the Chrome extension
+        working-directory: apps/browser
+        run: npm run build:prod:chrome
+      - name: Collect the build
+        run: |
+          mkdir -p out
+          cp -r apps/browser/build out/extension-chrome
+          find out -name '*.map' -delete
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: chrome-extension
+          path: out
+          retention-days: 3
+
+  # The command-line tool, branded and packed as one program the way the
+  # release packs it (tools/cli/pack.sh, docs/cli.md), for the end-to-end
+  # tests in tests/cli.
+  cli:
+    name: Command-line tool
+    needs: refs
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-clients
+          ref: ${{ needs.refs.outputs.clients }}
+          path: clients
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/Passbundle
+          ref: ${{ needs.refs.outputs.meta }}
+          path: meta
+          sparse-checkout: tools/cli
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # As the release builds it (cli-release.yml, BUILD_NODE_VERSION).
+          node-version: 24.21.0
+          cache: npm
+          cache-dependency-path: |
+            clients/package-lock.json
+            meta/tools/cli/package-lock.json
+      - name: Install dependencies
+        run: |
+          (cd clients && npm ci --no-audit --no-fund)
+          (cd meta/tools/cli && npm ci --no-audit --no-fund --ignore-scripts)
+      - name: Build and pack it
+        run: meta/tools/cli/pack.sh clients 0.0.0-test linux-x64 out
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cli
+          path: out/passbundle
+          if-no-files-found: error
           retention-days: 3
 
   clients-unit:
@@ -183,7 +282,9 @@ jobs:
           repository: PimpinPumpkin/passbundle-apps
           ref: ${{ needs.refs.outputs.apps }}
           path: passbundle-apps
-          sparse-checkout: agent/tests/vectors
+          sparse-checkout: |
+            agent/tests/vectors
+            core/src/words
           persist-credentials: false
       - name: The agent's native-messaging test vectors, checked with upstream's own crypto
         run: node passbundle-apps/agent/tests/vectors/check-upstream.mjs passbundle-apps/agent/tests/vectors/native-messaging.json .
@@ -198,6 +299,46 @@ jobs:
           persist-credentials: false
       - name: The core's test vectors, checked with upstream's own crypto
         run: node meta/docs/vectors/check-core-vectors.mjs meta/docs/vectors/core-v1.json .
+      - name: The desktop updater's test vectors, as their generator makes them
+        run: node meta/docs/vectors/make-desktop-update-v1.mjs | cmp - meta/docs/vectors/desktop-update-v1.json
+      # Approving a sign-in from another device: the vectors as their
+      # generator makes them (with the apps' copy of EFF's word list), checked
+      # with upstream's own crypto; the clients' unit test (run below) checks
+      # their copy's fingerprint phrases with upstream's own code.
+      - name: The sign-in approval test vectors, as their generator makes them and as upstream's crypto opens them
+        run: |
+          node meta/docs/vectors/make-device-approval-v1.mjs passbundle-apps/core/src/words/eff-large.txt | cmp - meta/docs/vectors/device-approval-v1.json
+          node meta/docs/vectors/check-device-approval-vectors.mjs meta/docs/vectors/device-approval-v1.json .
+          cmp meta/docs/vectors/device-approval-v1.json libs/auth/src/common/services/auth-request/keykeeper-device-approval.vectors.json
+      - name: The web vault's reload key test vectors, checked with upstream's own crypto
+        run: node meta/docs/vectors/check-reload-key-vectors.mjs meta/docs/vectors/reload-key-v1.json .
+      - name: The reload key test vectors, as their generator makes them, and the web vault's copy
+        run: |
+          node meta/docs/vectors/make-reload-key-v1.mjs | cmp - meta/docs/vectors/reload-key-v1.json
+          cmp meta/docs/vectors/reload-key-v1.json apps/web/src/app/keykeeper/reload-key/reload-key-v1.json
+      - name: Single sign-on's client secret test vectors, as their generator makes them
+        run: node meta/docs/vectors/make-sso-client-secret-v1.mjs | cmp - meta/docs/vectors/sso-client-secret-v1.json
+      - name: Site fix and install token key test vectors, as their generator makes them
+        run: node meta/docs/vectors/make-server-derived-keys-v1.mjs | cmp - meta/docs/vectors/server-derived-keys-v1.json
+      # Seals a hacked server can't steer (DESIGN.md, "Joins a hacked server
+      # can't forge", and docs/script-access.md, "Version 3 seals"): the
+      # vectors as their generators make them, the clients' copies, and the
+      # script grant seals as upstream's own crypto opens them. The apps
+      # refuse version 2 script grant seals now, and check that against them.
+      - name: The join, joining, and script grant seal test vectors, as their generators make them, the clients' copies, and as upstream's crypto opens them
+        run: |
+          node meta/docs/vectors/make-joins-v2.mjs | cmp - meta/docs/vectors/joins-v2.json
+          node meta/docs/vectors/make-joining-v2.mjs | cmp - meta/docs/vectors/joining-v2.json
+          node meta/docs/vectors/make-joining-v3.mjs | cmp - meta/docs/vectors/joining-v3.json
+          node meta/docs/vectors/make-script-grants-v2.mjs | cmp - meta/docs/vectors/script-grants-v2.json
+          node meta/docs/vectors/make-script-grants-v3.mjs | cmp - meta/docs/vectors/script-grants-v3.json
+          cmp meta/docs/vectors/joins-v2.json libs/admin-console/src/common/keykeeper/joins-v2.vectors.json
+          cmp meta/docs/vectors/joining-v2.json libs/admin-console/src/common/keykeeper/joining-v2.vectors.json
+          cmp meta/docs/vectors/joining-v3.json libs/admin-console/src/common/keykeeper/joining-v3.vectors.json
+          cmp meta/docs/vectors/script-grants-v2.json libs/admin-console/src/common/keykeeper/script-grants-v2.vectors.json
+          cmp meta/docs/vectors/script-grants-v3.json libs/admin-console/src/common/keykeeper/script-grants-v3.vectors.json
+          node meta/docs/vectors/check-script-grants-vectors.mjs meta/docs/vectors/script-grants-v2.json .
+          node meta/docs/vectors/check-script-grants-v3-vectors.mjs meta/docs/vectors/script-grants-v3.json .
       - name: Upstream unit tests for every file we changed
         run: |
           base=$(cat .keykeeper-base)
@@ -208,9 +349,47 @@ jobs:
             sed 's/\.html$/.ts/' | sort -u |
             while read -r file; do if [ -f "$file" ]; then echo "$file"; fi; done > "$RUNNER_TEMP/changed.txt"
           cat "$RUNNER_TEMP/changed.txt"
-          if [ -s "$RUNNER_TEMP/changed.txt" ]; then
-            xargs npx jest --ci --findRelatedTests < "$RUNNER_TEMP/changed.txt"
+          # The clients' jest config asks for 8 workers; the runner has 4
+          # cores and 16 GB, and a large set of Angular tests then runs it out
+          # of memory (the runner shuts down mid-run).
+          [ -s "$RUNNER_TEMP/changed.txt" ] || exit 0
+          results="$RUNNER_TEMP/jest.json"
+          if xargs npx jest --ci --maxWorkers=4 --findRelatedTests --json --outputFile="$results" < "$RUNNER_TEMP/changed.txt"; then
+            exit 0
           fi
+          # One more try, alone, for upstream's own tests and only those: a
+          # test file in a folder we haven't changed since the base tag (some
+          # of upstream's fail now and then on a busy runner, never alone).
+          # Ours get fixed, not rerun. The run still names each test that
+          # needed the second try, as a warning.
+          [ -f "$results" ] || exit 1
+          node -e '
+            const path = require("path");
+            for (const file of require(process.argv[1]).testResults) {
+              if (file.status === "failed") console.log(path.relative(process.cwd(), file.name));
+            }
+          ' "$results" > "$RUNNER_TEMP/failed.txt"
+          [ -s "$RUNNER_TEMP/failed.txt" ] || exit 1
+          while read -r file; do
+            if ! git diff --quiet "$base" HEAD -- "$(dirname "$file")"; then
+              echo "$file is in a folder we changed, so it isn't tried again." >&2
+              exit 1
+            fi
+          done < "$RUNNER_TEMP/failed.txt"
+          echo "Upstream's tests that failed, tried once more:"
+          cat "$RUNNER_TEMP/failed.txt"
+          xargs npx jest --ci --runInBand --runTestsByPath < "$RUNNER_TEMP/failed.txt"
+          node -e '
+            const path = require("path");
+            const clean = (s) => s.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+            for (const file of require(process.argv[1]).testResults) {
+              if (file.status !== "failed") continue;
+              const where = path.relative(process.cwd(), file.name);
+              const failed = file.assertionResults.filter((t) => t.status === "failed").map((t) => `"${t.fullName}"`);
+              const what = failed.length ? `Upstream test ${failed.join(", ")}` : `Upstream test file ${where}`;
+              console.log(`::warning file=${where}::${clean(`${what} failed, then passed when tried again alone.`)}`);
+            }
+          ' "$results"
 
   other-browsers:
     name: Edge and Firefox extensions
@@ -382,25 +561,31 @@ jobs:
 
   e2e:
     name: End-to-end (${{ matrix.part }})
-    needs: [refs, server, clients, agent-test-build, core-interop]
+    needs: [refs, server, clients, chrome-extension, agent-test-build, core-interop, cli]
+    if: ${{ !inputs.skip-tests }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Five machines share the suite, each with its own servers: the API
-    # tests split across two, and the browser and email tests across three.
+    # Seven machines share the suite, each with its own servers: the API
+    # tests split across three, and the browser and email tests across four
+    # (with three, one took close to the 30 minutes by November 2026).
     strategy:
       fail-fast: false
       matrix:
         include:
-          - part: API 1 of 2
-            args: --project=api --shard=1/2
-          - part: API 2 of 2
-            args: --project=api --shard=2/2
-          - part: browser 1 of 3
-            args: --project=chromium --project=mail --shard=1/3
-          - part: browser 2 of 3
-            args: --project=chromium --project=mail --shard=2/3
-          - part: browser 3 of 3
-            args: --project=chromium --project=mail --shard=3/3
+          - part: API 1 of 3
+            args: --project=api --project=cli --shard=1/3
+          - part: API 2 of 3
+            args: --project=api --project=cli --shard=2/3
+          - part: API 3 of 3
+            args: --project=api --project=cli --shard=3/3
+          - part: browser 1 of 4
+            args: --project=chromium --project=mail --shard=1/4
+          - part: browser 2 of 4
+            args: --project=chromium --project=mail --shard=2/4
+          - part: browser 3 of 4
+            args: --project=chromium --project=mail --shard=3/4
+          - part: browser 4 of 4
+            args: --project=chromium --project=mail --shard=4/4
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -417,12 +602,20 @@ jobs:
           path: build/clients
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
+          name: chrome-extension
+          path: build/clients
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
           name: agent-test
           path: build/agent
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: core-interop
           path: build/core
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: cli
+          path: build/cli
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
@@ -440,8 +633,9 @@ jobs:
           KK_BRAND: ${{ github.workspace }}/build/clients/brand.json
           KK_AGENT: ${{ github.workspace }}/build/agent
           KK_CORE_INTEROP: ${{ github.workspace }}/build/core/interop
+          KK_CLI: ${{ github.workspace }}/build/cli/passbundle
           KK_SERVER_LOG: ${{ github.workspace }}/e2e/server-log/server.log
-        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" "$KK_AGENT"/* "$KK_CORE_INTEROP" && npx playwright test ${{ matrix.args }}
+        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" "$KK_AGENT"/* "$KK_CORE_INTEROP" "$KK_CLI" && npx playwright test ${{ matrix.args }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
@@ -453,14 +647,17 @@ jobs:
           retention-days: 14
 
   api-postgres:
-    name: API tests on PostgreSQL (${{ matrix.shard }}/2)
+    name: API tests on PostgreSQL (${{ matrix.shard }}/3)
     needs: [refs, server, clients]
+    if: ${{ !inputs.skip-tests }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The second shard took 16 to 20 minutes once single sign-on's and
+    # signing in with a device's tests joined it, and a slow runner ran out.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     services:
       postgres:
         image: postgres:16
@@ -505,7 +702,7 @@ jobs:
           KK_BRAND: ${{ github.workspace }}/build/clients/brand.json
           KK_DATABASE_URL: postgresql://keykeeper:keykeeper@localhost:5432/keykeeper
           KK_SERVER_LOG: ${{ github.workspace }}/e2e/server-log/server.log
-        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" && npx playwright test --project=api --shard=${{ matrix.shard }}/2
+        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" && npx playwright test --project=api --shard=${{ matrix.shard }}/3
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:

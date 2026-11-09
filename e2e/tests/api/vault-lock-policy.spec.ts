@@ -45,6 +45,8 @@ test("an organization sets the vault lock policy, and each sync sends it", async
     { type: "custom", minutes: 15, action: "lock" },
     { type: "immediately", minutes: null, action: "logOut" },
     { type: "onSystemLock", minutes: null, action: null },
+    // The web vault's wait under "when the computer locks".
+    { type: "onSystemLock", minutes: null, webMinutes: 30, action: "lock" },
     { minutes: 240 },
   ]) {
     const set = await setVaultLock(api, owner, orgId, true, data);
@@ -65,6 +67,28 @@ test("an organization sets the vault lock policy, and each sync sends it", async
   expect((await vaultLock(api, owner, orgId)).enabled).toBe(false);
 });
 
+test("a changed policy changes each member's account, so their apps sync it at the next unlock", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const owner = await api.account("owner");
+  const member = await api.account("member");
+  const orgId = await makeOrg(api, owner, "Harbor Optometry");
+  await api.addMember(owner, orgId, member, "user");
+
+  const revision = async () => {
+    const got = await api.call(member, "GET", "/api/accounts/revision-date");
+    expect(got.status, JSON.stringify(got.body)).toBe(200);
+    return Number(got.body);
+  };
+  const before = await revision();
+  await new Promise((resolve) => setTimeout(resolve, 1100));
+
+  const set = await setVaultLock(api, owner, orgId, true, { type: "custom", minutes: 15, action: "lock" });
+  expect(set.status, JSON.stringify(set.body)).toBe(200);
+  expect(await revision()).toBeGreaterThan(before);
+});
+
 test("the vault lock policy refuses what a client couldn't read, and keeps what it had", async ({ request }) => {
   const api = new Api(request);
   const owner = await api.account("owner");
@@ -81,6 +105,11 @@ test("the vault lock policy refuses what a client couldn't read, and keeps what 
     { minutes: 1441 },
     { minutes: 2.5 },
     { minutes: 15, action: "delete" },
+    // The web vault's wait: 1 minute to a day, only for "when the computer locks".
+    { type: "onSystemLock", webMinutes: 0 },
+    { type: "onSystemLock", webMinutes: 1441 },
+    { type: "onSystemLock", webMinutes: "15" },
+    { type: "custom", minutes: 15, webMinutes: 5 },
   ]) {
     const refused = await setVaultLock(api, owner, orgId, true, data);
     expect(refused.status, JSON.stringify(data)).toBe(400);

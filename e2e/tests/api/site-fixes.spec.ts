@@ -1,7 +1,10 @@
 // Site fixes and problem reports (DESIGN.md, "Site fixes (opt-in)"): a fix
-// applies to everyone on the server once three different people shared it,
-// each counted once; what's stored has no account; problem reports are
-// capped per site; and an MSP's admins apply fixes to every client at once.
+// applies to everyone on the server once three different people with
+// verified email addresses shared it, each counted once (the mail tests,
+// tests/mail/site-fixes.spec.ts, where email can be verified); this server
+// sends no email, so nobody here counts. What's stored has no account;
+// problem reports are capped per site and per person; and an MSP's admins
+// apply fixes to every client at once.
 import { randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
@@ -22,26 +25,21 @@ const list = async (api: Api, who: Account) => {
   return listed.body as { fixes: { host: string }[]; rules: { host: string }[] };
 };
 
-test("a fix fills for everyone once three different people shared it, each person counted once", async ({
+test("accounts that haven't verified their email address don't count toward a fix, however many", async ({
   request,
 }) => {
+  // Making accounts is enough to be "different people" otherwise, so a few
+  // made for it could make a fix fill for everyone on the server.
   const api = new Api(request);
   const host = newHost();
   const fix = fixFor(host);
-  const [ana, ben, cy, dee] = await Promise.all(["ana", "ben", "cy", "dee"].map((n) => api.account(n)));
-
-  const share = async (who: Account) => {
+  const people = await Promise.all(["ana", "ben", "cy", "dee", "eve"].map((n) => api.account(n)));
+  for (const who of people) {
     const shared = await api.call(who, "POST", "/api/keykeeper/site-fixes", fix);
     expect(shared.status, JSON.stringify(shared.body)).toBe(200);
-    return shared.body.applies;
-  };
-  expect(await share(ana)).toBe(false);
-  // The same person again still counts once.
-  expect(await share(ana)).toBe(false);
-  expect(await share(ben)).toBe(false);
-  expect((await list(api, dee)).fixes.some((f) => f.host === host)).toBe(false);
-  expect(await share(cy)).toBe(true);
-  expect((await list(api, dee)).fixes).toContainEqual(fix);
+    expect(shared.body).toEqual({ applies: false, counted: false });
+  }
+  expect((await list(api, people[0])).fixes.some((f) => f.host === host)).toBe(false);
   // Nobody shares without signing in.
   expect((await api.call(null, "POST", "/api/keykeeper/site-fixes", fix)).status).toBe(401);
 });
@@ -71,7 +69,9 @@ test("a problem report keeps the shape of the fields and a note, at most 20 a si
   request,
 }) => {
   const api = new Api(request);
-  const ana = await api.account("ana");
+  // Each person sends at most 10 at once (the next test), so three people send them.
+  const reporters = await Promise.all(["ana", "ben", "cy"].map((n) => api.account(n)));
+  const ana = reporters[2];
   const host = newHost();
   const report = {
     host,
@@ -81,7 +81,7 @@ test("a problem report keeps the shape of the fields and a note, at most 20 a si
     note: "The PIN box gets my password",
   };
   for (let i = 0; i < 20; i++) {
-    const kept = await api.call(ana, "POST", "/api/keykeeper/site-problems", report);
+    const kept = await api.call(reporters[Math.floor(i / 10)], "POST", "/api/keykeeper/site-problems", report);
     expect(kept.status, JSON.stringify(kept.body)).toBe(200);
     expect(kept.body.kept).toBe(true);
   }
@@ -92,6 +92,25 @@ test("a problem report keeps the shape of the fields and a note, at most 20 a si
   expect((await api.call(ana, "POST", "/api/keykeeper/site-problems", many)).status).toBe(400);
   const long = { ...report, host: newHost(), note: "n".repeat(1001) };
   expect((await api.call(ana, "POST", "/api/keykeeper/site-problems", long)).status).toBe(400);
+});
+
+test("one person sends at most 10 problem reports and 30 fixes at once", async ({ request }) => {
+  // Reports and fixes are kept without the account, so this is the only
+  // limit on what one person can make the server keep.
+  const api = new Api(request);
+  const ana = await api.account("ana");
+  const report = (host: string) => ({ host, fields: [{ id: "pw", type: "password" }] });
+  for (let i = 0; i < 10; i++) {
+    expect((await api.call(ana, "POST", "/api/keykeeper/site-problems", report(newHost()))).status).toBe(200);
+  }
+  expect((await api.call(ana, "POST", "/api/keykeeper/site-problems", report(newHost()))).status).toBe(429);
+  for (let i = 0; i < 30; i++) {
+    expect((await api.call(ana, "POST", "/api/keykeeper/site-fixes", fixFor(newHost()))).status).toBe(200);
+  }
+  expect((await api.call(ana, "POST", "/api/keykeeper/site-fixes", fixFor(newHost()))).status).toBe(429);
+  // Someone else isn't held up.
+  const ben = await api.account("ben");
+  expect((await api.call(ben, "POST", "/api/keykeeper/site-problems", report(newHost()))).status).toBe(200);
 });
 
 test("an MSP's admin applies a fix its staff shared to every client at once, and only its clients get it", async ({

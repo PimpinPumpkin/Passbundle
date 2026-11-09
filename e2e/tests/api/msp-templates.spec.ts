@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
 
-import { type Account, Api } from "./support";
+import { type Account, Api, encString } from "./support";
 
 type Templates = {
   templates: {
@@ -79,15 +79,9 @@ test("an MSP admin sends a template to every client, records each client's copy 
   expect(seen.copies).toEqual([]);
   expect(seen.collections).toEqual({ [dental]: null, [law]: null });
 
-  // The console makes Acme Dental's Templates collection and a copy in it.
-  const collection = await api.collection(admin, dental);
-  const recorded = await api.call(
-    admin,
-    "PUT",
-    `/api/keykeeper/msp/${mspId}/clients/${dental}/templates-collection`,
-    { collectionId: collection },
-  );
-  expect(recorded.status, JSON.stringify(recorded.body)).toBe(200);
+  // The console has the server make Acme Dental's Templates collection, and
+  // writes a copy in it.
+  const collection = await api.templatesCollection(admin, mspId, dental);
   const copy = await api.orgItem(admin, dental, collection);
   const sent = await api.call(
     admin,
@@ -159,7 +153,7 @@ test("an MSP admin sends a template to every client, records each client's copy 
   ]);
 });
 
-test("a template's source is an item the admin can see and never a client's copy, and copies must be items in the MSP's own clients", async ({
+test("a template's source is an item the admin can see and share and never a client's copy, and copies must be items in the MSP's own clients", async ({
   request,
 }) => {
   test.setTimeout(120_000);
@@ -172,9 +166,9 @@ test("a template's source is an item the admin can see and never a client's copy
   const theirs = await api.client(other, otherMsp, "Not Yours Inc", "business");
   const source = await api.personalItem(admin);
   const strangers = await api.personalItem(other);
-  const dentalCollection = await api.collection(admin, dental);
+  const dentalCollection = await api.templatesCollection(admin, mspId, dental);
   const copyInDental = await api.orgItem(admin, dental, dentalCollection);
-  const theirCollection = await api.collection(other, theirs);
+  const theirCollection = await api.templatesCollection(other, otherMsp, theirs);
   const theirItem = await api.orgItem(other, theirs, theirCollection);
   const id = randomUUID();
 
@@ -210,6 +204,33 @@ test("a template's source is an item the admin can see and never a client's copy
     { sourceCipherId: copyInDental, allClients: true },
     400,
     /copy in one of your clients/,
+  );
+  // An item the admin can see but not share, which a template would copy
+  // into other organizations: someone else's organization gives them Can
+  // view on its folder (DESIGN.md, "Folders and permissions").
+  const partner = await api.organization(other, "Partner Org");
+  const partnerFolder = await api.collection(other, partner);
+  const viewOnly = await api.orgItem(other, partner, partnerFolder);
+  const adminThere = await api.addMember(other, partner, admin, "user");
+  const granted = await api.call(
+    other,
+    "PUT",
+    `/api/organizations/${partner}/collections/${partnerFolder}`,
+    {
+      name: encString("Partner folder"),
+      users: [
+        { id: adminThere, readOnly: true, hidePasswords: false, manage: false },
+      ],
+      groups: [],
+    },
+  );
+  expect(granted.status, JSON.stringify(granted.body)).toBe(200);
+  await refused(
+    "PUT",
+    `${templatePath}/${id}`,
+    { sourceCipherId: viewOnly, allClients: true },
+    400,
+    /permission to share/,
   );
   await refused(
     "PUT",
@@ -272,14 +293,14 @@ test("a template's source is an item the admin can see and never a client's copy
   await refused(
     "PUT",
     `/api/keykeeper/msp/${mspId}/clients/${dental}/templates-collection`,
-    { collectionId: theirCollection },
+    { name: encString("Templates again") },
     400,
-    /Collection not found/,
+    /already has its Templates collection/,
   );
   await refused(
     "PUT",
     `/api/keykeeper/msp/${mspId}/clients/${theirs}/templates-collection`,
-    { collectionId: theirCollection },
+    { name: encString("Templates") },
     400,
     /Client not found/,
   );
@@ -287,7 +308,77 @@ test("a template's source is an item the admin can see and never a client's copy
   // Nothing was recorded.
   const seen = await templates(api, admin, mspId);
   expect(seen.copies).toEqual([]);
-  expect(seen.collections[dental]).toBeNull();
+  expect(seen.collections[dental]).toBe(dentalCollection);
+});
+
+test("copies are recorded only by an admin who can share the template's source now", async ({
+  request,
+}) => {
+  test.setTimeout(120_000);
+  const api = new Api(request);
+  const admin = await api.account("msp-admin");
+  const mspId = await api.msp(admin, "Northwind IT");
+  const dental = await api.client(admin, mspId, "Acme Dental", "business");
+  const dentalCollection = await api.templatesCollection(admin, mspId, dental);
+  const copyInDental = await api.orgItem(admin, dental, dentalCollection);
+  // The source is in another organization's folder, where the admin can edit
+  // (and so share) to begin with.
+  const partnerOwner = await api.account("partner-owner");
+  const partner = await api.organization(partnerOwner, "Partner Org");
+  const partnerFolder = await api.collection(partnerOwner, partner);
+  const source = await api.orgItem(partnerOwner, partner, partnerFolder);
+  const adminThere = await api.addMember(partnerOwner, partner, admin, "user");
+  const grant = (readOnly: boolean) =>
+    api.call(
+      partnerOwner,
+      "PUT",
+      `/api/organizations/${partner}/collections/${partnerFolder}`,
+      {
+        name: encString("Partner folder"),
+        users: [
+          { id: adminThere, readOnly, hidePasswords: false, manage: false },
+        ],
+        groups: [],
+      },
+    );
+  expect((await grant(false)).status).toBe(200);
+  const id = randomUUID();
+  expect(
+    (
+      await setTemplate(api, admin, mspId, id, {
+        sourceCipherId: source,
+        allClients: true,
+      })
+    ).status,
+  ).toBe(200);
+  const record = (who: Account, sourceRevision: string) =>
+    api.call(who, "POST", `/api/keykeeper/msp/${mspId}/templates/${id}/copies`, {
+      copies: [{ organizationId: dental, cipherId: copyInDental, sourceRevision }],
+    });
+  const recorded = async () =>
+    (await templates(api, admin, mspId)).copies.map((c) => c.sourceRevision);
+
+  expect((await record(admin, "r1")).status).toBe(200);
+  expect(await recorded()).toEqual(["r1"]);
+
+  // Another MSP admin, who can't see the source, can't record its copies.
+  const second = await api.account("second-admin");
+  await api.addStaff(admin, mspId, second, "admin");
+  const unseen = await record(second, "r2");
+  expect(unseen.status, JSON.stringify(unseen.body)).toBe(400);
+  expect(unseen.body.message).toMatch(/permission to share/);
+
+  // Nor can the admin who chose it, once the partner takes share away.
+  expect((await grant(true)).status).toBe(200);
+  const narrowed = await record(admin, "r2");
+  expect(narrowed.status, JSON.stringify(narrowed.body)).toBe(400);
+  expect(narrowed.body.message).toMatch(/permission to share/);
+  expect(await recorded()).toEqual(["r1"]);
+
+  // Given share back, they can again.
+  expect((await grant(false)).status).toBe(200);
+  expect((await record(admin, "r3")).status).toBe(200);
+  expect(await recorded()).toEqual(["r3"]);
 });
 
 test("a technician limited to chosen clients sees only the templates and copies in their clients, and can't send templates", async ({
@@ -317,7 +408,7 @@ test("a technician limited to chosen clients sees only the templates and copies 
     expect((await setTemplate(api, admin, mspId, id, data)).status).toBe(200);
   }
   for (const org of [dental, law]) {
-    const collection = await api.collection(admin, org);
+    const collection = await api.templatesCollection(admin, mspId, org);
     const copy = await api.orgItem(admin, org, collection);
     const sent = await api.call(
       admin,

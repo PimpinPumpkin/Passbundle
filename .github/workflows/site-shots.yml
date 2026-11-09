@@ -1,0 +1,154 @@
+# Retakes the website's screenshots (site/static/shots) from the real apps:
+# Tier 1 builds the server and the clients from their keykeeper branches
+# (without running its tests), e2e/site-shots takes the screenshots, and when
+# they changed, the last job pushes them to the branch site-shots-update and
+# leaves a link to open the pull request in the run's summary. Someone opens
+# that pull request by hand: the repository doesn't let workflows open pull
+# requests, and it shouldn't.
+#
+# It runs when started from the Actions tab and on the first of each month,
+# never on a pull request, so only main's own code runs here. Only the last
+# job can write to the repository, and it runs no code from the repository:
+# it copies in files named like screenshots and pushes them.
+name: Site screenshots
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 1 * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-shots
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    uses: ./.github/workflows/tier1.yml
+    with:
+      skip-tests: true
+
+  shots:
+    name: Take the screenshots
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: server
+          path: build/server
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: clients
+          path: build/clients
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: chrome-extension
+          path: build/clients
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: agent-test
+          path: build/agent
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: core-interop
+          path: build/core
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: cli
+          path: build/cli
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Install test dependencies
+        working-directory: e2e
+        run: sudo apt-get install -y --no-install-recommends libpq5 && npm ci --no-audit --no-fund && npx playwright install --with-deps chromium
+      # Under the job's limit, so a hang fails this step and the report below
+      # still uploads.
+      - name: Take the screenshots
+        timeout-minutes: 45
+        working-directory: e2e
+        env:
+          KK_SERVER_BIN: ${{ github.workspace }}/build/server/vaultwarden
+          KK_WEB_VAULT: ${{ github.workspace }}/build/clients/web-vault
+          KK_EXTENSION: ${{ github.workspace }}/build/clients/extension-chrome
+          KK_BRAND: ${{ github.workspace }}/build/clients/brand.json
+          KK_AGENT: ${{ github.workspace }}/build/agent
+          KK_CORE_INTEROP: ${{ github.workspace }}/build/core/interop
+          KK_CLI: ${{ github.workspace }}/build/cli/passbundle
+          KK_SERVER_LOG: ${{ github.workspace }}/e2e/server-log/server.log
+        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" "$KK_AGENT"/* "$KK_CORE_INTEROP" "$KK_CLI" && npx playwright test -c playwright.site.config.ts --trace=retain-on-failure
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site-shots
+          path: site/static/shots/*.webp
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: site-shots-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            e2e/server-log
+          retention-days: 14
+
+  branch:
+    name: Push the new screenshots
+    needs: shots
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site-shots
+          path: ${{ runner.temp }}/shots
+      - name: Copy in the screenshots, and nothing else
+        env:
+          SHOTS: ${{ runner.temp }}/shots
+        run: |
+          set -euo pipefail
+          count=0
+          for f in "$SHOTS"/* "$SHOTS"/.[!.]*; do
+            [ -e "$f" ] || continue
+            name=$(basename "$f")
+            if ! [[ "$name" =~ ^[a-z0-9-]+\.webp$ ]] || [ -L "$f" ] || [ ! -f "$f" ]; then
+              echo "Not a screenshot: $name" >&2
+              exit 1
+            fi
+            cp "$f" "site/static/shots/$name"
+            count=$((count + 1))
+          done
+          [ "$count" -gt 0 ] || { echo "No screenshots came back." >&2; exit 1; }
+          echo "Copied $count screenshots."
+      - name: Push them to site-shots-update if they changed
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain -- site/static/shots)" ]; then
+            echo "The screenshots haven't changed." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c site-shots-update
+          git add site/static/shots
+          git commit -q -m "The website's screenshots, retaken from the apps as they look now"
+          git push --force origin site-shots-update
+          {
+            echo "New screenshots are on the branch site-shots-update."
+            echo
+            echo "[Open the pull request](https://github.com/${GITHUB_REPOSITORY}/compare/main...site-shots-update?expand=1), then deploy the site with site/deploy.sh once it's merged."
+          } >> "$GITHUB_STEP_SUMMARY"

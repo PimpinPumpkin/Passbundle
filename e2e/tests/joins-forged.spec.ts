@@ -9,7 +9,7 @@ import { generateKeyPairSync } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 
 import { Api } from "./api/support";
-import { signUp, webUserFor } from "./support/web";
+import { signUpWithAuthenticator, webUserFor } from "./support/web";
 
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
 
@@ -30,7 +30,8 @@ test("the console lets nobody in on its own when the server's answers are forged
 }, testInfo) => {
   test.setTimeout(180_000);
   const admin = await (await browser.newContext()).newPage();
-  await signUp(admin, webUserFor("forged-admin", testInfo.repeatEachIndex));
+  // An MSP's staff sign in with two-step login (DESIGN.md, "Two-step login for admins").
+  await signUpWithAuthenticator(admin, webUserFor("forged-admin", testInfo.repeatEachIndex));
   await admin.goto("/#/msp");
   await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Forged IT");
   await admin.getByRole("button", { name: "Create MSP" }).click();
@@ -48,7 +49,7 @@ test("the console lets nobody in on its own when the server's answers are forged
     privateKeyEncoding: { type: "pkcs8", format: "der" },
   });
   const person = await api.account("Invited", undefined, publicKey.toString("base64"));
-  await admin.getByTestId("msp-client-Forged Dental").getByRole("link", { name: "Open" }).click();
+  await admin.getByTestId("msp-client-Forged Dental").getByRole("link", { name: "Admin console" }).click();
   await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
   const orgId = /#\/organizations\/([^/]+)\//.exec(admin.url())![1];
 
@@ -65,7 +66,7 @@ test("the console lets nobody in on its own when the server's answers are forged
   await admin.getByRole("button", { name: "Invite member" }).click();
   const invite = admin.getByRole("dialog", { name: /Invite member/ });
   await invite.getByRole("textbox", { name: /Email/ }).fill(person.email);
-  await invite.getByRole("button", { name: "Save" }).click();
+  await invite.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(invite).toBeHidden();
 
   for (const [what, forge] of forgeries) {

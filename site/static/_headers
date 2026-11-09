@@ -1,7 +1,9 @@
 # Cloudflare Pages: security headers for every page. The site loads nothing
-# from anywhere else and runs no scripts.
+# from anywhere else, and the only scripts are its own files (tour.js) and
+# the light/dark script, inline and allowed by its hash, which build.mjs adds
+# to the copy in dist. No other inline scripts, styles, or event handlers.
 /*
-  Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   Referrer-Policy: no-referrer
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY

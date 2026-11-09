@@ -6,7 +6,8 @@
   Run once with admin rights, typically from an RMM. For each targeted browser it:
     - force-installs the PassBundle extension (IDs are fixed in this script, never passed in),
     - turns off the browser's own password saving and filling,
-    - optionally turns off card and address autofill,
+    - optionally turns off card and address autofill (in Firefox too, which
+      reads the same two policies; the rest of Firefox isn't managed yet),
     - optionally gives the extension its server address and the client's
       enrollment token, join secret, and organization key fingerprint, so
       people join the client after they sign in (the extension asks first,
@@ -69,6 +70,12 @@ $PolicyRoots = @{
   Chrome = "HKLM:\SOFTWARE\Policies\Google\Chrome"
   Edge   = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
 }
+# Firefox takes the card and address autofill policies under the same names.
+$FirefoxRoot = "HKLM:\SOFTWARE\Policies\Mozilla\Firefox"
+# The card and address policies this script set itself, so a run without
+# their options takes back only those, never another vendor's. Each value is
+# named "<browser>.<policy>". See DESIGN.md, "Addresses and cards".
+$OwnPolicies = "HKLM:\SOFTWARE\PassBundle\BrowserPolicies"
 
 # The desktop agent. See DESIGN.md, "Desktop agent" and "Biometric unlock".
 $AgentSource = Join-Path $PSScriptRoot "agent"
@@ -93,6 +100,38 @@ $AppShortcut = Join-Path $env:ProgramData "Microsoft\Windows\Start Menu\Programs
 function Set-Dword([string] $Path, [string] $Name, [int] $Value) {
   if (-not (Test-Path $Path)) { New-Item -Path $Path -Force | Out-Null }
   New-ItemProperty -Path $Path -Name $Name -Value $Value -PropertyType DWord -Force | Out-Null
+}
+
+# Turns a card or address autofill policy off and records that this script
+# did, unless it was off already by someone else's choice, which stays theirs.
+function Set-OwnAutofillPolicy([string] $Browser, [string] $Root, [string] $Name) {
+  $record = "$Browser.$Name"
+  $ours = (Test-Path $OwnPolicies) -and ((Get-Item $OwnPolicies).GetValueNames() -contains $record)
+  if (-not $ours -and (Test-Path $Root) -and ((Get-Item $Root).GetValue($Name)) -eq 0) { return }
+  Set-Dword $Root $Name 0
+  Set-Dword $OwnPolicies $record 1
+}
+
+# Takes back a card or address autofill policy this script set, if it's still
+# as the script left it, and forgets it. Anyone else's stays.
+function Remove-OwnAutofillPolicy([string] $Browser, [string] $Root, [string] $Name) {
+  $record = "$Browser.$Name"
+  if (-not ((Test-Path $OwnPolicies) -and ((Get-Item $OwnPolicies).GetValueNames() -contains $record))) { return }
+  if ((Test-Path $Root) -and ((Get-Item $Root).GetValue($Name)) -eq 0) {
+    Remove-ItemProperty -Path $Root -Name $Name
+  }
+  Remove-ItemProperty -Path $OwnPolicies -Name $record
+}
+
+# Card and address autofill, as the options say: off, or taken back where this
+# script turned them off before.
+function Set-AutofillPolicies([string] $Browser, [string] $Root) {
+  foreach ($policy in @(
+      @{ Name = "AutofillCreditCardEnabled"; Off = [bool] $DisableCardAutofill },
+      @{ Name = "AutofillAddressEnabled"; Off = [bool] $DisableAddressAutofill })) {
+    if ($policy.Off) { Set-OwnAutofillPolicy $Browser $Root $policy.Name }
+    else { Remove-OwnAutofillPolicy $Browser $Root $policy.Name }
+  }
 }
 
 function Get-ForcelistEntries([string] $Path) {
@@ -270,7 +309,7 @@ foreach ($browser in $Browsers) {
   if ($Remove) {
     Remove-ForcedExtension $browser
     Remove-ManagedSettings $browser
-    foreach ($name in "PasswordManagerEnabled", "AutofillCreditCardEnabled", "AutofillAddressEnabled") {
+    foreach ($name in "PasswordManagerEnabled", "AutofillCreditCardEnabled", "AutofillAddressEnabled", "NativeMessagingUserLevelHosts") {
       if ((Test-Path $root) -and ((Get-Item $root).GetValueNames() -contains $name)) {
         Remove-ItemProperty -Path $root -Name $name
       }
@@ -281,8 +320,28 @@ foreach ($browser in $Browsers) {
 
   Add-ForcedExtension $browser
   Set-ManagedSettings $browser
+  # Native-messaging hosts from the machine only: Chrome and Edge look in
+  # HKCU before HKLM, so a program running as the person could otherwise
+  # register its own com.passbundle.agent, which enrollment hands the user key.
+  Set-Dword $root "NativeMessagingUserLevelHosts" 0
   if (-not $KeepBrowserPasswordManager) { Set-Dword $root "PasswordManagerEnabled" 0 }
-  if ($DisableCardAutofill) { Set-Dword $root "AutofillCreditCardEnabled" 0 }
-  if ($DisableAddressAutofill) { Set-Dword $root "AutofillAddressEnabled" 0 }
+  Set-AutofillPolicies $browser $root
   Write-Output "Applied PassBundle policies for $browser"
+}
+
+# Firefox: only card and address autofill, as the options say.
+if ($Remove) {
+  foreach ($name in "AutofillCreditCardEnabled", "AutofillAddressEnabled") {
+    Remove-OwnAutofillPolicy "Firefox" $FirefoxRoot $name
+  }
+  if (Test-Path $OwnPolicies) { Remove-Item -Path $OwnPolicies -Recurse -Force }
+  $ownRoot = Split-Path $OwnPolicies -Parent
+  if ((Test-Path $ownRoot) -and -not (Get-ChildItem $ownRoot) -and -not (Get-Item $ownRoot).GetValueNames()) {
+    Remove-Item -Path $ownRoot -Force
+  }
+} else {
+  Set-AutofillPolicies "Firefox" $FirefoxRoot
+  if ($DisableCardAutofill -or $DisableAddressAutofill) {
+    Write-Output "Applied PassBundle's card and address autofill policies for Firefox"
+  }
 }

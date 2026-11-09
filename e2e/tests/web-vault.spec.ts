@@ -2,6 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { brand } from "../paths.mjs";
 
+import { newItem, openNewItem } from "./support/web";
+
 // One account for the whole file. Tests run in order and build on each other,
 // against a server that starts empty for every run.
 const user = {
@@ -17,7 +19,7 @@ test.describe.configure({ mode: "serial" });
 async function expectNoNags(page: Page) {
   await page.waitForURL(/#\/(vault|setup-extension)/);
   expect(page.url()).not.toContain("setup-extension");
-  await expect(page).toHaveTitle(/Vaults/);
+  await expect(page).toHaveTitle(/^Items/);
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
@@ -27,9 +29,9 @@ async function logIn(page: Page) {
   await page.getByLabel(/Email address/).fill(user.email);
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("textbox", { name: /Master password/ }).fill(user.password);
-  await page.getByRole("button", { name: "Log in", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expectNoNags(page);
-  await expect(page).toHaveTitle(/Vaults/);
+  await expect(page).toHaveTitle(/^Items/);
 }
 
 test("server identifies as PassBundle, links its source, and suppresses nags", async ({ request }) => {
@@ -67,8 +69,20 @@ test("create an account", async ({ page }) => {
   await page.getByRole("textbox", { name: /^Master password/, exact: false }).first().fill(user.password);
   await page.getByRole("textbox", { name: /Confirm master password/ }).fill(user.password);
   await page.getByRole("button", { name: "Create account" }).click();
+  // First, an offer to bring passwords over, from where they are now.
+  await page.waitForURL(/#\/setup-import/);
+  await expect(page.getByRole("heading", { name: "Bring your passwords over" })).toBeVisible();
+  for (const source of ["Your browser", "Apple Passwords", "1Password", "Bitwarden", "LastPass", "Something else"]) {
+    await expect(page.getByRole("button", { name: new RegExp(`^${source}`) })).toBeVisible();
+  }
+  await page.getByRole("button", { name: "Skip for now" }).click();
   await expectNoNags(page);
-  await expect(page).toHaveTitle(/Vaults/);
+  await expect(page).toHaveTitle(/^Items/);
+  // Skipped means skipped: the vault doesn't send it back.
+  await page.goto("/#/sends");
+  await page.goto("/#/vault");
+  await expect(page).toHaveURL(/#\/vault/);
+  await expect(page).toHaveTitle(/^Items/);
 });
 
 test("vault page carries our brand, including logos", async ({ page }) => {
@@ -81,7 +95,7 @@ test("vault page carries our brand, including logos", async ({ page }) => {
   );
   expect(brand700.toLowerCase()).toBe(brand.color.toLowerCase());
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(brand.color.slice(i, i + 2), 16));
-  await expect(page.getByRole("button", { name: "New", exact: true })).toHaveCSS(
+  await expect(page.getByRole("button", { name: "Add", exact: true })).toHaveCSS(
     "background-color",
     `rgb(${r}, ${g}, ${b})`,
   );
@@ -100,11 +114,29 @@ test("vault page carries our brand, including logos", async ({ page }) => {
   expect(leftovers).toEqual([]);
 });
 
+test("New offers the kinds people save most first, and the rest under More", async ({ page }) => {
+  await logIn(page);
+  const picker = await openNewItem(page);
+  const main = picker.getByTestId("new-item-main").getByRole("button");
+  await expect(main).toHaveCount(4);
+  for (const [i, kind] of ["Login", "Secure note", "Card", "Identity"].entries()) {
+    await expect(main.nth(i)).toContainText(kind);
+  }
+  await expect(picker.getByRole("button", { name: "API key", exact: true })).toHaveCount(0);
+  await picker.getByRole("button", { name: "More categories" }).click();
+  for (const name of ["SSH key", "API key", "Server", "Wi-Fi network"]) {
+    await expect(picker.getByRole("button", { name, exact: true })).toBeVisible();
+  }
+  await picker.getByRole("searchbox", { name: "Find a category" }).fill("wi-fi");
+  await expect(picker.getByRole("button", { name: "Server", exact: true })).toHaveCount(0);
+  await picker.getByRole("button", { name: /Folder$/ }).click();
+  await expect(page.getByRole("dialog", { name: /New folder|Add folder/ })).toBeVisible();
+});
+
 test("a saved login survives logging out and back in", async ({ page }) => {
   await logIn(page);
-  await page.getByRole("button", { name: "New", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Login" }).click();
-  const dialog = page.getByRole("dialog", { name: "New Login" });
+  await newItem(page, "Login");
+  const dialog = page.getByRole("dialog", { name: "Add login" });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill("Example Bank");
   await dialog.getByRole("textbox", { name: "Username", exact: true }).fill("alice-bank");
   await dialog.getByRole("textbox", { name: "Password", exact: true }).fill("not-a-real-password-1");

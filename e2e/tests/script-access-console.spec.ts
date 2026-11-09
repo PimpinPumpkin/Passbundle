@@ -3,12 +3,13 @@
 // login. The token string shows once, with how to use it; a script with it
 // reads a copy of just those fields, encrypted with a key the server never
 // had; an edit to the login reaches the script; the owner sees the reads, and
-// revokes the token. Real keys throughout.
+// revokes the token. Making it asks for the owner's master password first.
+// Real keys throughout.
 import { createDecipheriv, createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUp, webUserFor } from "./support/web";
+import { confirmWithPassword, newItem, signUp, webUserFor } from "./support/web";
 
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
 
@@ -46,14 +47,14 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
   request,
 }, testInfo) => {
   test.setTimeout(180_000);
-  await signUp(page, webUserFor("script-owner", testInfo.repeatEachIndex));
+  const owner = webUserFor("script-owner", testInfo.repeatEachIndex);
+  await signUp(page, owner);
   const orgId = await createOrganization(page, "Contoso");
 
   // A login in the organization, with a note the token isn't granted.
   await page.goto(`/#/organizations/${orgId}/vault`);
-  await page.getByRole("button", { name: "New", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Login" }).click();
-  const item = page.getByRole("dialog", { name: "New Login" });
+  await newItem(page, "Login");
+  const item = page.getByRole("dialog", { name: "Add login" });
   await item.getByRole("textbox", { name: /Item name/ }).fill("Domain admin");
   await item.getByRole("textbox", { name: /Username/ }).fill("admin@contoso.example");
   await item.getByLabel("Password", { exact: true }).fill("not-a-real-password-1");
@@ -65,7 +66,7 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
   await view.getByRole("button", { name: "Close" }).first().click();
   await expect(view).toBeHidden();
 
-  await page.goto(`/#/organizations/${orgId}/settings/account`);
+  await page.goto(`/#/organizations/${orgId}/settings/joining`);
   const section = page.getByTestId("script-access");
   await expect(section.getByText("No tokens yet.")).toBeVisible();
   await section.getByRole("button", { name: "New token" }).click();
@@ -78,14 +79,17 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
   await expect(fields.getByRole("checkbox", { name: "Password" })).toBeChecked();
   await dialog.getByRole("button", { name: "Make token" }).click();
   await expect(dialog).toBeHidden();
+  await confirmWithPassword(page, owner.password);
 
   // Shown once, with how to use it.
   const made = section.getByTestId("script-token-made");
   const tokenString = (await made.getByTestId("script-token-string").textContent())!.trim();
   expect(tokenString).toMatch(/^pbs1_[0-9a-f]{32}_[A-Za-z0-9_-]{43}$/);
+  // The item by its id, single-quoted, and its name only in a comment: an
+  // item's name never becomes code in an RMM script.
   const usage = made.getByTestId("script-token-usage");
-  await expect(usage).toContainText(`/api/keykeeper/script/PassBundle.psm1" -OutFile PassBundle.psm1`);
-  await expect(usage).toContainText(`Get-PassBundleCredential -Item "Domain admin"`);
+  await expect(usage).toContainText(`/api/keykeeper/script/PassBundle.psm1' -OutFile PassBundle.psm1`);
+  await expect(usage).toContainText(/Get-PassBundleCredential -Item '[0-9a-f-]{36}'\s+# Domain admin/);
   await expect(made.getByTestId("script-token-signing")).toContainText("-ExecutionPolicy Bypass");
 
   // A script with the token reads just the granted fields.
@@ -95,6 +99,7 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
   });
   expect(items.status()).toBe(200);
   const [entry] = (await items.json()).data;
+  await expect(usage).toContainText(`-Item '${entry.itemId}'`);
   const copy = script.open(entry.copy);
   expect(copy).toMatchObject({
     v: 1,
@@ -113,7 +118,7 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
   await expect(section.getByTestId("script-token-made")).toHaveCount(0);
   // Away and back (a reload would lock the vault).
   await page.goto("/#/vault");
-  await page.goto(`/#/organizations/${orgId}/settings/account`);
+  await page.goto(`/#/organizations/${orgId}/settings/joining`);
   await expect(page.getByTestId("script-token-Join domain")).toBeVisible();
   await expect(page.getByTestId("script-token-string")).toHaveCount(0);
 
@@ -122,7 +127,7 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
   await page.goto("/#/vault");
   await page.getByText("Domain admin").first().click();
   await view.getByRole("button", { name: "Edit" }).click();
-  const edit = page.getByRole("dialog", { name: /Edit Login/ });
+  const edit = page.getByRole("dialog", { name: /Edit login/i });
   await edit.getByLabel("Password", { exact: true }).fill("not-a-real-password-2");
   await edit.getByRole("button", { name: "Save" }).click();
   await expect(edit).toBeHidden();
@@ -141,7 +146,7 @@ test("an owner makes a script token for chosen fields, sees it once, an edit rea
 
   // The list shows the token and its use.
   await page.goto("/#/vault");
-  await page.goto(`/#/organizations/${orgId}/settings/account`);
+  await page.goto(`/#/organizations/${orgId}/settings/joining`);
   const row = page.getByTestId("script-token-Join domain");
   await expect(row).toContainText("1 item");
   await expect(row).toContainText("from 127.0.0.1");

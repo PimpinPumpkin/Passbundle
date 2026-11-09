@@ -1,7 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
 import {
+  entraPort,
   fixturePort,
+  groupsServerPort,
   hostResolverRules,
   limitsServerPort,
   mailHttpPort,
@@ -60,6 +62,20 @@ export default defineConfig({
       timeout: 60_000,
     },
     {
+      command: "node server.mjs",
+      env: { KK_GROUPS: "1", KK_PORT: groupsServerPort },
+      url: `https://127.0.0.1:${groupsServerPort}/alive`,
+      ignoreHTTPSErrors: true,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
+      command: "node entra-standin.mjs",
+      url: `http://127.0.0.1:${entraPort}/alive`,
+      reuseExistingServer: false,
+      timeout: 30_000,
+    },
+    {
       command: "node fixture-server.mjs",
       url: `https://127.0.0.1:${fixturePort}/alive`,
       ignoreHTTPSErrors: true,
@@ -76,9 +92,12 @@ export default defineConfig({
       testDir: "tests/mail",
       use: { baseURL: `https://127.0.0.1:${mailServerPort}` },
     },
+    // The command-line tool (KK_CLI, a build of passbundle-clients apps/cli),
+    // against the main test server. No browser.
+    { name: "cli", testDir: "tests/cli" },
     {
       name: "chromium",
-      testIgnore: ["api/**", "mail/**"],
+      testIgnore: ["api/**", "mail/**", "cli/**"],
       use: { ...devices["Desktop Chrome"] },
     },
   ],

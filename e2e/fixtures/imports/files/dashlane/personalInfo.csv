@@ -1,0 +1,11 @@
+type,title,first_name,middle_name,last_name,login,date_of_birth,place_of_birth,email,email_type,item_name,phone_number,address,country,state,city,zip,address_recipient,address_building,address_apartment,address_floor,address_door_code,job_title,url
+name,Mx,Test,Q,Person,tperson,,,,,,,,,,,,,,,,,,
+email,,,,,,,,test.person@example.com,personal,Test's email,,,,,,,,,,,,,
+number,,,,,,,,,,Test's number,+1 555 0100,,,,,,,,,,,,
+address,,,,,,,,,,Test's address,,1 Example Street,US,CA,Exampleville,90000,Test Person,,,,,,
+name,,Test,,Person,,,,,,,,,,,,,,,,,,,
+email,,,,,,,,t.person@corp.example.com,personal,Test's email,,,,,,,,,,,,,
+number,,,,,,,,,,Test's number,+1 555 0199,,,,,,,,,,,,
+name,,Zoë,,Ångström-Ñúñez,,,,,,,,,,,,,,,,,,,
+email,,,,,,,,zoe@unicode.example.com,personal,Zoë's email,,,,,,,,,,,,,
+address,,,,,,,,,,Zoë's address,,,SE,,Malmö,,Zoë Ångström-Ñúñez,,,,,,

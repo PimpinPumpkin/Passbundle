@@ -5,7 +5,7 @@
 // different role in one client.
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUp, webUserFor } from "./support/web";
+import { reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) =>
@@ -19,12 +19,12 @@ test("an MSP admin chooses a technician's clients, role, and install commands, a
   const techContext = await browser.newContext();
   const tech = await techContext.newPage();
   const techUser = webUserFor("access-tech", testInfo.repeatEachIndex);
-  await signUp(tech, techUser);
+  await signUpWithAuthenticator(tech, techUser);
 
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
   const adminUser = webUserFor("access-admin", testInfo.repeatEachIndex);
-  await signUp(admin, adminUser);
+  await signUpWithAuthenticator(admin, adminUser);
   await admin.goto("/#/msp");
   await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Wingtip IT");
   await admin.getByRole("button", { name: "Create MSP" }).click();
@@ -72,15 +72,8 @@ test("an MSP admin chooses a technician's clients, role, and install commands, a
   );
 
   // The technician sees only that client, without its install command, and
-  // opens it where their role starts. Reloading locks the vault; unlock it.
-  // (It returns to the console, where they accepted the invitation.)
-  await tech.reload();
-  await tech
-    .getByRole("textbox", { name: /^Master password/ })
-    .fill(techUser.password);
-  const unlock = tech.getByRole("button", { name: "Unlock", exact: true });
-  await unlock.click();
-  await expect(unlock).toBeHidden();
+  // opens it where their role starts, once a reload syncs their vault.
+  await reloadVault(tech);
   await tech.goto("/#/vault");
   await tech.goto("/#/msp");
   const techDental = tech.getByTestId("msp-client-Acme Dental");
@@ -89,7 +82,7 @@ test("an MSP admin chooses a technician's clients, role, and install commands, a
   await expect(
     techDental.getByRole("button", { name: "Install command" }),
   ).toHaveCount(0);
-  await techDental.getByRole("link", { name: "Open" }).click();
+  await techDental.getByRole("link", { name: "Admin console" }).click();
   await expect(tech).toHaveURL(/#\/organizations\/[^/]+\/members/);
   await expect(tech.getByRole("button", { name: "Invite member" })).toBeVisible();
   await expect(tech.getByRole("link", { name: "Policies" })).toHaveCount(0);
@@ -145,7 +138,7 @@ test("an MSP admin chooses a technician's clients, role, and install commands, a
   // Admin at Acme Dental still, so its policies are theirs; not at Baker Law.
   await tech.goto("/#/vault");
   await tech.goto("/#/msp");
-  await tech.getByTestId("msp-client-Baker Law").getByRole("link", { name: "Open" }).click();
+  await tech.getByTestId("msp-client-Baker Law").getByRole("link", { name: "Admin console" }).click();
   await expect(tech.getByRole("button", { name: "Invite member" })).toBeVisible();
   await expect(tech.getByRole("link", { name: "Policies" })).toHaveCount(0);
 

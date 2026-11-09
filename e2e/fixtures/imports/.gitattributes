@@ -1,0 +1,3 @@
+# Each export's exact bytes are the point (CRLF or LF, a byte order mark): never convert them.
+files/** -text
+expected/** -text

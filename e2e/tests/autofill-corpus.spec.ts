@@ -113,7 +113,6 @@ const corpus: Fixture[] = [
     what: "aria-labels only, from the username field",
     steps: [{ field: "#i_17" }],
     want: { "#i_17": "username", "#i_18": "password" },
-    known: "a text field named only by an aria-label isn't taken for a username, so it gets no menu",
   },
   {
     file: "change-password.html",

@@ -7,7 +7,7 @@ import { generateKeyPairSync } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 
 import { Api } from "./api/support";
-import { confirmMember, signUp, webUserFor } from "./support/web";
+import { confirmMember, signUp, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
@@ -22,10 +22,10 @@ async function newOrganization(page: Page, name: string, kind: RegExp) {
   return page.url().replace(/\/members.*$/, "");
 }
 
-/** The organization's Settings page, opened afresh. */
+/** The organization's Joining and security settings, opened afresh. */
 async function openSettings(page: Page, org: string) {
   await page.goto("/#/vault");
-  await page.goto(`${org}/settings`);
+  await page.goto(`${org}/settings/joining`);
   await expect(page.getByRole("heading", { name: "Install command" })).toBeVisible();
 }
 
@@ -34,7 +34,7 @@ test("a business's organization starts with its policies and an install command,
   request,
 }, testInfo) => {
   test.setTimeout(150_000);
-  await signUp(page, webUserFor("own-it-owner", testInfo.repeatEachIndex));
+  await signUpWithAuthenticator(page, webUserFor("own-it-owner", testInfo.repeatEachIndex));
   await page.goto("/#/create-organization");
   await expect(page.getByRole("radio", { name: /A business/ })).toBeChecked();
   const org = await newOrganization(page, "Northpoint Logistics", /A business/);

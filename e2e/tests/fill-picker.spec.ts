@@ -67,13 +67,13 @@ async function openWebVault(context: BrowserContext, user: { email: string; pass
   await vault.goto(`${serverUrl}/#/vault`);
   const email = vault.getByRole("textbox", { name: /Email address/ });
   const unlock = vault.getByRole("button", { name: "Unlock" });
-  const vaultTitle = vault.getByRole("heading", { name: "All vaults" }).first();
+  const vaultTitle = vault.getByRole("heading", { name: "All items" }).first();
   await expect(email.or(unlock).or(vaultTitle)).toBeVisible({ timeout: 30_000 });
   if (await email.isVisible()) {
     await email.fill(user.email);
     await vault.getByRole("button", { name: "Continue" }).click();
     await vault.getByRole("textbox", { name: /Master password/ }).fill(user.password);
-    await vault.getByRole("button", { name: "Log in", exact: true }).click();
+    await vault.getByRole("button", { name: "Sign in", exact: true }).click();
   } else if (await unlock.isVisible()) {
     await vault.getByRole("textbox", { name: /Master password/ }).fill(user.password);
     await unlock.click();
@@ -260,7 +260,7 @@ test("the web vault shows a fill rule in plain language, keeps it through an edi
 
   // Editing and saving the item there keeps the rule.
   await view.getByRole("button", { name: "Edit" }).click();
-  const edit = vault.getByRole("dialog", { name: /Edit Login/ });
+  const edit = vault.getByRole("dialog", { name: /Edit login/i });
   await expect(edit.getByText("keykeeper.fill")).toHaveCount(0);
   await edit.getByRole("textbox", { name: "Notes" }).fill("Edited in the web vault.");
   await edit.getByRole("button", { name: "Save" }).click();
@@ -276,7 +276,7 @@ test("the web vault shows a fill rule in plain language, keeps it through an edi
   // Removing the rule in the editor: saved, it no longer fills.
   const saved = vault.getByRole("dialog", { name: "View Login" });
   await saved.getByRole("button", { name: "Edit" }).click();
-  const removing = vault.getByRole("dialog", { name: /Edit Login/ });
+  const removing = vault.getByRole("dialog", { name: /Edit login/i });
   const rules = removing.getByTestId("keykeeper-fill-rules-editor");
   await expect(rules).toContainText("bank.example.test: the field with id custno gets the Customer ID field");
   await rules.getByRole("button", { name: /^Remove the rule: bank\.example\.test/ }).click();

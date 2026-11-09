@@ -1,6 +1,7 @@
 // The install command's join asks first, in a window from the extension.
 // "Not now" joins nothing and isn't asked again at the next unlock, and a
-// token meant for another server never leaves the browser. The recovery test
+// token meant for another server never leaves the browser; the person is
+// told once which server to sign in to instead. The recovery test
 // covers saying yes. See DESIGN.md, "Onboarding through the RMM".
 import type { Page } from "@playwright/test";
 
@@ -16,7 +17,7 @@ import {
   userFor,
 } from "./support/extension";
 
-test("the install command's join asks first; Not now joins nothing, and a token for another server goes nowhere", async ({
+test("the install command's join asks first; Not now joins nothing, and a token for another server goes nowhere and says where to sign in", async ({
   context,
   extensionId,
   request,
@@ -60,10 +61,16 @@ test("the install command's join asks first; Not now joins nothing, and a token 
         const enrollment = main.keykeeperEnrollment;
         // Let the run the unlock started, with the real (empty) policy, finish first.
         await enrollment.run(userId);
+        // What the extension tells the person, kept here to read back.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const notices: [string, string][] = ((self as any).joinNotices ??= []);
         enrollment.platform = {
           ...enrollment.platform,
           managedToken: async () => enrollmentToken,
           managedServer: async () => server,
+          notify: async (title: string, message: string) => {
+            notices.push([title, message]);
+          },
         };
         return enrollment.run(userId);
       },
@@ -71,16 +78,45 @@ test("the install command's join asks first; Not now joins nothing, and a token 
     );
   const prompts = () => context.pages().filter((p) => p.url().includes("keykeeper-join"));
 
-  // A token for another server isn't sent anywhere, and nothing asks.
-  expect(await run("https://vault.elsewhere.example.test")).toBe("other-server");
+  // A token for another server isn't sent anywhere, and nothing asks, but
+  // the person hears why, once, rather than nothing happening.
+  const notices = () =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    context.serviceWorkers()[0].evaluate(() => (self as any).joinNotices as [string, string][]);
+  const elsewhere = "https://vault.elsewhere.example.test";
+  expect(await run(elsewhere)).toBe("other-server");
   expect(prompts()).toHaveLength(0);
+  const signedInTo = new URL(serverUrl).host;
+  expect(await notices()).toEqual([
+    [
+      "Sign in to vault.elsewhere.example.test to join your organization",
+      `Your IT admin set up this browser for vault.elsewhere.example.test, but you're signed in to ${signedInTo}. To join your organization, sign in to vault.elsewhere.example.test instead.`,
+    ],
+  ]);
+  expect(await run(elsewhere)).toBe("other-server");
+  expect(await notices()).toHaveLength(1);
 
-  // For this server, it asks first.
+  // For this server, it asks first, and says what the organization's admins
+  // will see once Members' own passwords is on (DESIGN.md, "Members' own
+  // passwords"); a client added without the default policies has it off.
+  const memberHealth = await api.call(
+    admin,
+    "PUT",
+    `/api/keykeeper/organizations/${orgId}/member-health-setting`,
+    { enabled: true },
+  );
+  expect(memberHealth.status, JSON.stringify(memberHealth.body)).toBe(200);
   const outcome = run(serverUrl);
   let prompt: Page | undefined;
   await expect.poll(() => (prompt = prompts()[0])).toBeTruthy();
   await expect(prompt!.getByTestId("keykeeper-join")).toContainText(
-    "Your IT set up this browser so you can join Prompt Dental.",
+    "Your IT admin set up this browser so you can join Prompt Dental.",
+  );
+  await expect(prompt!.getByTestId("keykeeper-join-later")).toHaveText(
+    "Not now asks again in 7 days.",
+  );
+  await expect(prompt!.getByTestId("keykeeper-join-member-health")).toHaveText(
+    "Admins at Prompt Dental will see how many of your own passwords are weak, reused, or exposed. Never which ones.",
   );
   // This test server sends no email, so the client offers no account recovery.
   await expect(prompt!.getByText("Account recovery")).toHaveCount(0);

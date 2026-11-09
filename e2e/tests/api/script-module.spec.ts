@@ -23,7 +23,12 @@ import { type APIRequestContext, expect, test } from "@playwright/test";
 
 import { port } from "../../paths.mjs";
 
-import { Api, encString, type Account } from "./support";
+import { Api, withMasterPassword, encString, type Account } from "./support";
+
+// The master password these changes need is checked the way a sign-in is
+// (600,000 rounds of PBKDF2 on the server, slow in its debug build), so tests
+// that make several get more time.
+test.describe.configure({ timeout: 120_000 });
 
 const hasPwsh = spawnSync("pwsh", ["-NoProfile", "-Command", "1"]).status === 0;
 test.skip(!hasPwsh && !process.env.CI, "PowerShell 7 isn't installed here; tier 1 runs this");
@@ -68,14 +73,19 @@ async function makeToken(
   const authSecret = hkdf(seed, "passbundle script auth v1", 32);
   const tokenKey = hkdf(seed, "passbundle script key v1", 64);
   const revision = (await api.call(owner, "GET", `/api/ciphers/${itemId}`)).body.revisionDate;
-  const created = await api.call(owner, "POST", `/api/keykeeper/organizations/${orgId}/script-tokens`, {
-    id,
-    name: "Join domain",
-    expiresAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),
-    authHash: createHash("sha256").update(authSecret).digest("base64"),
-    sealedKey: encString("sealed"),
-    grants: [{ itemId, copy: copyFor(id, tokenKey), revision, sealedSpec: encString("spec") }],
-  });
+  const created = await api.call(
+    owner,
+    "POST",
+    `/api/keykeeper/organizations/${orgId}/script-tokens`,
+    withMasterPassword(owner, {
+      id,
+      name: "Join domain",
+      expiresAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+      authHash: createHash("sha256").update(authSecret).digest("base64"),
+      sealedKey: encString("sealed"),
+      grants: [{ itemId, copy: copyFor(id, tokenKey), revision, sealedSpec: encString("spec") }],
+    }),
+  );
   expect(created.status, JSON.stringify(created.body)).toBe(200);
   return { id, tokenString: `pbs1_${id.replace(/-/g, "")}_${seed.toString("base64url")}` };
 }

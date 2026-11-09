@@ -11,7 +11,9 @@ import {
   type Page,
 } from "@playwright/test";
 
-import { brand, hostResolverRules, paths, port } from "../../paths.mjs";
+import { hostResolverRules, paths, port } from "../../paths.mjs";
+import { answerTwoStep, hasAuthenticator } from "./two-step";
+import { skipImport } from "./web";
 
 const chromeUserAgent =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
@@ -21,9 +23,12 @@ export const serverUrl = `https://127.0.0.1:${port}`;
 /**
  * A real Chromium profile with the built extension loaded, in a new folder:
  * close it, then remove the folder. Extensions need the full Chromium build,
- * not the headless shell, so this uses channel "chromium".
+ * not the headless shell, so this uses channel "chromium". `rules` replaces
+ * the host resolver rules, for a test with hosts of its own.
  */
-export async function launchWithExtension(): Promise<{ context: BrowserContext; profile: string }> {
+export async function launchWithExtension(
+  rules = hostResolverRules,
+): Promise<{ context: BrowserContext; profile: string }> {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), "keykeeper-ext-"));
   const context = await chromium.launchPersistentContext(profile, {
     channel: "chromium",
@@ -37,7 +42,7 @@ export async function launchWithExtension(): Promise<{ context: BrowserContext; 
       // Headless Chromium says "HeadlessChrome/", which upstream's browser
       // detection misreads as Safari. Real users never send it.
       `--user-agent=${chromeUserAgent}`,
-      hostResolverRules,
+      rules,
     ],
   });
   return { context, profile };
@@ -97,7 +102,7 @@ export async function createAccount(
     .getByRole("textbox", { name: /Confirm master password/ })
     .fill(user.password);
   await web.getByRole("button", { name: "Create account" }).click();
-  await web.waitForURL(/#\/vault/);
+  await skipImport(web);
   return web;
 }
 
@@ -114,24 +119,26 @@ export async function logInPopup(popup: Page, user: User, server = serverUrl) {
   // The carousel renders its buttons before Angular wires them up, and an early
   // click is dropped. Click until the app actually navigates.
   await expect(async () => {
-    await popup.getByRole("button", { name: "Log in" }).click();
+    await popup.getByRole("button", { name: "Sign in" }).click();
     await expect(popup).toHaveURL(/#\/login/, { timeout: 1000 });
   }).toPass();
-  await popup
-    .getByRole("button", { name: new RegExp(brand.domain.replace(".", "\\.")) })
-    .click();
-  await popup.getByRole("menuitem", { name: /self-hosted/i }).click();
-  await popup.getByRole("textbox", { name: /Server URL/ }).fill(server);
-  await popup.getByRole("button", { name: "Save" }).click();
+  // "Where's your vault?" (DESIGN.md, "The look"): our own server, typed in place.
+  await popup.getByRole("button", { name: "Self-hosted" }).click();
+  await popup.getByRole("textbox", { name: "Server address" }).fill(server);
   await popup.getByLabel(/Email address/).fill(user.email);
   await popup.getByRole("button", { name: "Continue" }).click();
   await popup
     .getByRole("textbox", { name: /Master password/ })
     .fill(user.password);
-  await popup.getByRole("button", { name: "Log in", exact: true }).click();
+  await popup.getByRole("button", { name: "Sign in", exact: true }).click();
+  // Someone the tests gave an authenticator app (an MSP's staff, an owner or
+  // admin of a Business organization) answers two-step login.
+  if (hasAuthenticator(user.email)) {
+    await answerTwoStep(popup, user.email);
+  }
   // Key derivation and the first sync take a while on slow CI runners.
   await expect(
-    popup.getByRole("heading", { name: /Vault/ }).first(),
+    popup.getByRole("heading", { name: /Items/ }).first(),
   ).toBeVisible({
     timeout: 30_000,
   });

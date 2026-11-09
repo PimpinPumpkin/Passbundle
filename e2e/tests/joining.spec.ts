@@ -7,7 +7,7 @@
 // tests cover the emailed link and its lifetime. See DESIGN.md, "Joining".
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUp, webUserFor, type WebUser } from "./support/web";
+import { signUp, signUpWithAuthenticator, type WebUser, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
@@ -33,7 +33,7 @@ async function createOrganization(owner: Page, name: string): Promise<string> {
  */
 async function openMembers(owner: Page, orgId: string) {
   await owner.goto("/#/vault");
-  await expect(owner.getByRole("heading", { name: /vaults/i }).first()).toBeVisible();
+  await expect(owner.getByRole("heading", { name: "All items" })).toBeVisible();
   await owner.goto(`/#/organizations/${orgId}/members`);
   await expect(owner.getByRole("button", { name: "Invite member" })).toBeVisible();
 }
@@ -43,7 +43,7 @@ async function invite(owner: Page, orgId: string, email: string) {
   await owner.getByRole("button", { name: "Invite member" }).click();
   const dialog = owner.getByRole("dialog", { name: /Invite member/ });
   await dialog.getByRole("textbox", { name: /Email/ }).fill(email);
-  await dialog.getByRole("button", { name: "Save" }).click();
+  await dialog.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(dialog).toBeHidden();
 }
 
@@ -74,8 +74,8 @@ test("someone invited gets in without anyone confirming them, unless the organiz
   const autoOrg = await createOrganization(owner, "Corner Bakery");
   const approvalOrg = await createOrganization(owner, "Harbor Clinic");
 
-  // Harbor Clinic asks for approval, on its Settings page.
-  await owner.goto(`/#/organizations/${approvalOrg}/settings/account`);
+  // Harbor Clinic asks for approval, in its settings: Joining and security.
+  await owner.goto(`/#/organizations/${approvalOrg}/settings/joining`);
   const joining = owner.getByTestId("org-joining");
   await expect(joining.getByTestId("org-joining-source")).toHaveText("The default.");
   await joining.getByRole("checkbox", { name: "Let people in when they accept an invitation" }).uncheck();
@@ -108,7 +108,7 @@ test("an MSP's joining default reaches its clients, a client can have its own, a
 }, testInfo) => {
   test.setTimeout(120_000);
   const admin = await (await browser.newContext()).newPage();
-  await signUp(admin, webUserFor("joining-msp-admin", testInfo.repeatEachIndex));
+  await signUpWithAuthenticator(admin, webUserFor("joining-msp-admin", testInfo.repeatEachIndex));
   await admin.goto("/#/msp");
   await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Northwind IT");
   await admin.getByRole("button", { name: "Create MSP" }).click();
@@ -116,7 +116,7 @@ test("an MSP's joining default reaches its clients, a client can have its own, a
   await admin.getByRole("button", { name: "Add client" }).click();
   await expect(toast(admin, "Added Acme Dental")).toBeVisible();
   const client = admin.getByTestId("msp-client-Acme Dental");
-  await client.getByRole("link", { name: "Open" }).click();
+  await client.getByRole("link", { name: "Admin console" }).click();
   await admin.waitForURL(/#\/organizations\/[0-9a-f-]{36}/);
   const clientId = /organizations\/([0-9a-f-]{36})/.exec(admin.url())![1];
 
@@ -133,7 +133,7 @@ test("an MSP's joining default reaches its clients, a client can have its own, a
   // The client follows it.
   const settings = async () => {
     await admin.goto("/#/vault");
-    await admin.goto(`/#/organizations/${clientId}/settings/account`);
+    await admin.goto(`/#/organizations/${clientId}/settings/joining`);
     return admin.getByTestId("org-joining");
   };
   let card = await settings();

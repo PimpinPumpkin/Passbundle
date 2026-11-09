@@ -229,6 +229,9 @@ $env:DOMAIN = $ServerUrl
 $env:SIGNUPS_ALLOWED = "true"
 $env:SIGNUPS_VERIFY = "false"
 $env:DISABLE_ICON_DOWNLOAD = "true"
+# A test of Windows Hello on one computer: the web vault and the extension
+# here are new devices to each other, which the new-device check would hold.
+$env:NEW_DEVICE_CHECK = "false"
 $env:LOG_FILE = Join-Path $serverDir "server.log"
 Start-Process -FilePath (Join-Path $serverDir "vaultwarden.exe") -WorkingDirectory $serverDir -WindowStyle Hidden
 $up = $false

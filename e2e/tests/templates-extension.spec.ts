@@ -6,7 +6,7 @@ import type { Page } from "@playwright/test";
 
 async function openTemplates(popup: Page) {
   // The plus icon's glyph is part of the button's accessible name.
-  await popup.getByRole("button", { name: /^\W*New$/ }).click();
+  await popup.getByRole("button", { name: /^\W*Add$/ }).click();
   await popup.getByRole("menuitem", { name: "From template" }).click();
   await expect(popup.getByRole("heading", { name: "New item from a template" })).toBeVisible();
 }

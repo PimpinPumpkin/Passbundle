@@ -1,14 +1,16 @@
-// MSP templates in the console: an MSP admin makes a template in their own
-// vault and adds it for every client, and it applies to all of them, a client
-// added later included; editing it changes every client's copy without
-// anything else to click; the copies show once, under "From <MSP>", when
-// making a new item; narrowing it to one client can take the others' copies
-// away; and removing it can take the copies away. Real keys
-// throughout: each copy is encrypted for its client in the browser. See
+// MSP templates in the console: an MSP admin makes a template in an
+// organization the MSP's admins share (never their own vault) and adds it for
+// every client, and it applies to all of them, a client added later included;
+// editing it changes every client's copy without anything else to click; the
+// copies show once, where the template is, when making a new item, and
+// nothing says who a template came from; narrowing it to one client can take
+// the others' copies away; and removing it can take the copies away. Real
+// keys throughout: each copy is encrypted for its client in the browser, and
+// only into clients this browser made, which carry its client seal. See
 // DESIGN.md, "MSP templates".
 import { expect, test, type Page } from "@playwright/test";
 
-import { signUp, webUserFor } from "./support/web";
+import { menu, newTemplate, pick, signUpWithAuthenticator, templatePicker, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) =>
@@ -20,6 +22,16 @@ async function addClient(page: Page, name: string) {
   await expect(toast(page, `Added ${name}`)).toBeVisible();
 }
 
+/** A family-style organization of the admin's own, which isn't a client. */
+async function createOrganization(page: Page, name: string) {
+  await page.goto("/#/create-organization");
+  await page.getByRole("textbox", { name: /Organization name/ }).fill(name);
+  await page.getByRole("radio", { name: /A family or a group/ }).check();
+  await page.getByRole("button", { name: "Create organization" }).click();
+  await expect(toast(page, `Created ${name}`)).toBeVisible();
+  await page.waitForURL(/#\/organizations\/[0-9a-f-]{36}\/members/);
+}
+
 /** Saving an item opens its View dialog; closes it. */
 async function closeView(page: Page) {
   const view = page.getByRole("dialog", { name: /^View/ });
@@ -27,12 +39,10 @@ async function closeView(page: Page) {
   await expect(view).toBeHidden();
 }
 
-/** Opens "New item from a template" in the vault. */
+/** Opens the New item picker's templates in the vault. */
 async function templateChooser(page: Page) {
   await page.goto("/#/vault");
-  await page.getByRole("button", { name: "New", exact: true }).click();
-  await page.getByRole("menuitem", { name: "From template" }).click();
-  return page.getByRole("dialog", { name: "New item from a template" });
+  return templatePicker(page);
 }
 
 test("a template added for every client applies to all of them, a new client included, edits reach every client on their own, and removing it can take the copies away", async ({
@@ -42,7 +52,7 @@ test("a template added for every client applies to all of them, a new client inc
   const context = await browser.newContext();
   const admin = await context.newPage();
   const adminUser = webUserFor("msp-admin-templates", testInfo.repeatEachIndex);
-  await signUp(admin, adminUser);
+  await signUpWithAuthenticator(admin, adminUser);
   await admin.goto("/#/msp");
   await admin
     .getByRole("textbox", { name: "Your MSP's name" })
@@ -56,14 +66,13 @@ test("a template added for every client applies to all of them, a new client inc
   await expect(templates).toContainText("No templates yet.");
   await expect(templates).toContainText("Make a template first");
 
-  // A template in the admin's own vault.
-  let chooser = await templateChooser(admin);
-  await chooser.getByRole("button", { name: "Create template" }).click();
-  await admin
-    .getByRole("dialog", { name: "New template" })
-    .getByRole("button", { name: "Notes" })
-    .click();
-  const editor = admin.getByRole("dialog", { name: /^New/ });
+  // A template in the MSP's own organization, in its shared folder.
+  await createOrganization(admin, "Northwind Team");
+  await admin.goto("/#/vault");
+  await pick(admin, "Northwind Team");
+  await pick(admin, "Default shared folder");
+  await newTemplate(admin, "notes");
+  const editor = admin.getByRole("dialog", { name: /^Add/ });
   await editor.getByRole("textbox", { name: /Item name/ }).fill("Firewall");
   await editor.getByRole("button", { name: "Add field" }).click();
   const addField = admin.getByRole("dialog", { name: "Add field" });
@@ -108,19 +117,23 @@ test("a template added for every client applies to all of them, a new client inc
   await edit.getByRole("button", { name: "Save" }).click();
   await expect(edit).toBeHidden();
   await closeView(admin);
+  // Acme Dental's copy, in its Templates collection, gets the new field.
   await expect(async () => {
-    const picker = await templateChooser(admin);
-    await picker
-      .getByRole("region", { name: "From Northwind IT" })
-      .getByRole("button", { name: "Firewall", exact: true })
+    await admin.goto("/#/vault");
+    await pick(admin, "Acme Dental");
+    await pick(admin, "Templates");
+    await admin
+      .getByRole("row")
+      .filter({ hasText: "Acme Dental" })
+      .getByText("Firewall", { exact: true })
       .click();
-    const item = admin.getByRole("dialog", { name: /^New/ });
+    const copy = admin.getByRole("dialog", { name: /^View/ });
     try {
-      await expect(
-        item.getByRole("textbox", { name: "Firmware version", exact: true }),
-      ).toBeVisible({ timeout: 1000 });
+      await expect(copy.getByText("Firmware version", { exact: true })).toBeVisible({
+        timeout: 1000,
+      });
     } finally {
-      await item.getByRole("button", { name: "Cancel" }).click();
+      await copy.getByRole("button", { name: "Close" }).first().click();
     }
   }).toPass({ timeout: 60_000, intervals: [2_000] });
 
@@ -140,16 +153,16 @@ test("a template added for every client applies to all of them, a new client inc
     `Firewall was applied to 3 clients (by ${adminUser.email})`,
   );
 
-  // Making an item: the three clients' copies show once, from the MSP; the
-  // admin's own shows under their own templates.
-  chooser = await templateChooser(admin);
-  const fromMsp = chooser.getByRole("region", { name: "From Northwind IT" });
-  await expect(fromMsp.getByRole("button")).toHaveCount(1);
+  // Making an item: the three clients' copies are the same as the template,
+  // so it shows once, where it is; nothing says who it came from.
+  let chooser = await templateChooser(admin);
+  await expect(chooser.getByRole("button", { name: "Firewall", exact: true })).toHaveCount(1);
   await expect(
     chooser
-      .getByRole("region", { name: "My templates" })
+      .getByRole("region", { name: "Northwind Team" })
       .getByRole("button", { name: "Firewall", exact: true }),
   ).toBeVisible();
+  await expect(chooser.getByRole("region", { name: /^From / })).toHaveCount(0);
   await admin.keyboard.press("Escape");
 
   // A client's copy isn't in the vault's lists, only in the client's Templates
@@ -158,14 +171,18 @@ test("a template added for every client applies to all of them, a new client inc
   const firewalls = admin.getByRole("row").filter({ hasText: "Firewall" });
   await expect(firewalls.first()).toBeVisible();
   await expect(firewalls.filter({ hasText: "Acme Dental" })).toHaveCount(0);
-  await admin.getByRole("button", { name: "vault: Acme Dental" }).click();
-  await admin.getByRole("button", { name: "Filter: Templates" }).click();
+  // In the left menu: Acme Dental, then its Templates collection under it,
+  // the only one once Acme Dental is picked.
+  await pick(admin, "Acme Dental");
+  await expect(admin).toHaveURL(/(organizationId|vaultId)=/);
+  await expect(menu(admin).getByRole("button", { name: "Templates", exact: true })).toHaveCount(1);
+  await pick(admin, "Templates");
   await firewalls.filter({ hasText: "Acme Dental" }).getByText("Firewall", { exact: true }).click();
   await expect(
     admin
       .getByRole("dialog", { name: /^View/ })
       .getByTestId("keykeeper-template-definition"),
-  ).toContainText("It comes from Northwind IT, which keeps it up to date.");
+  ).toContainText("It's a copy of a template kept up to date elsewhere");
   await closeView(admin);
 
   // Only one client now: the others' copies can go to their trash.
@@ -183,7 +200,7 @@ test("a template added for every client applies to all of them, a new client inc
   await expect(row).not.toContainText("Every client");
   await expect(row.getByTestId("msp-template-status")).toHaveText("Up to date");
   chooser = await templateChooser(admin);
-  await expect(chooser.getByRole("region", { name: "From Northwind IT" }).getByRole("button")).toHaveCount(1);
+  await expect(chooser.getByRole("button", { name: "Firewall", exact: true })).toHaveCount(1);
   await admin.keyboard.press("Escape");
 
   // Removing it, from the clients too.
@@ -195,10 +212,10 @@ test("a template added for every client applies to all of them, a new client inc
   await expect(templates).toContainText("No templates yet.");
   chooser = await templateChooser(admin);
   await expect(
-    chooser.getByRole("region", { name: "My templates" }),
+    chooser
+      .getByRole("region", { name: "Northwind Team" })
+      .getByRole("button", { name: "Firewall", exact: true }),
   ).toBeVisible();
-  await expect(
-    chooser.getByRole("region", { name: "From Northwind IT" }),
-  ).toHaveCount(0);
+  await expect(chooser.getByRole("region", { name: "Acme Dental" })).toHaveCount(0);
   await context.close();
 });

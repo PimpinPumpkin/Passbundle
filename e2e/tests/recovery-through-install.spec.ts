@@ -20,7 +20,7 @@ import {
   test,
   userFor,
 } from "./support/extension";
-import { confirmMember, signUp, webUserFor } from "./support/web";
+import { confirmMember, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 const mailServer = `https://127.0.0.1:${mailServerPort}`;
 const newPassword = "a brand new passphrase for 2026";
@@ -38,7 +38,7 @@ test("an MSP admin recovers the account of someone who joined through the instal
     ignoreHTTPSErrors: true,
   });
   const admin = await adminContext.newPage();
-  await signUp(admin, webUserFor("recovery-admin", testInfo.repeatEachIndex));
+  await signUpWithAuthenticator(admin, webUserFor("recovery-admin", testInfo.repeatEachIndex));
   await admin.goto("/#/msp");
   await admin
     .getByRole("textbox", { name: "Your MSP's name" })
@@ -59,6 +59,8 @@ test("an MSP admin recovers the account of someone who joined through the instal
   const joinParts = { secret: part("JoinSecret"), orgKey: part("OrgKey") };
   expect(joinParts.secret).not.toBeNull();
   expect(joinParts.orgKey).not.toBeNull();
+  // Next to it, the fingerprint phrase the person will be shown, to compare.
+  const phrase = (await admin.getByTestId("msp-install-phrase").locator("span").textContent())!.trim();
 
   // The person has an account with an item, and signs in to the extension.
   const person = userFor("recovery-person", testInfo.repeatEachIndex);
@@ -111,7 +113,16 @@ test("an MSP admin recovers the account of someone who joined through the instal
   await expect(question).toContainText(
     "Recovery Dental's admins will be able to reset your master password",
   );
-  await expect(prompt!.getByTestId("keykeeper-join-fingerprint")).toHaveText(/^\w+(-\w+){4}$/);
+  // Five words joined by dashes. Some words have a dash of their own ("yo-yo"),
+  // so there can be more than five parts.
+  await expect(prompt!.getByTestId("keykeeper-join-fingerprint")).toHaveText(/^\w+(-\w+){4,}$/);
+  // It's the one the MSP sees next to the install command, and the prompt
+  // says to compare them, and that Not now asks again in a week.
+  await expect(prompt!.getByTestId("keykeeper-join-fingerprint")).toHaveText(phrase);
+  await expect(prompt!.getByTestId("keykeeper-join-compare")).toHaveText(
+    "To be sure this is really Recovery Dental, ask your IT admin to read you the phrase they see next to its install command. If it doesn't match, choose Not now and tell them.",
+  );
+  await expect(prompt!.getByTestId("keykeeper-join-later")).toHaveText("Not now asks again in 7 days.");
   // The answer closes the window.
   await answerAndClose(prompt!, prompt!.getByRole("button", { name: "Join", exact: true }));
   expect(await outcome).toBe("joined");
@@ -122,7 +133,7 @@ test("an MSP admin recovers the account of someone who joined through the instal
   await admin.goto("/#/msp");
   await admin
     .getByTestId("msp-client-Recovery Dental")
-    .getByRole("link", { name: "Open" })
+    .getByRole("link", { name: "Admin console" })
     .click();
   await confirmMember(admin, person.email);
 
@@ -150,7 +161,7 @@ test("an MSP admin recovers the account of someone who joined through the instal
   await later
     .getByRole("textbox", { name: /^Master password/ })
     .fill(newPassword);
-  await later.getByRole("button", { name: "Log in", exact: true }).click();
+  await later.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(later.getByText("Before recovery").first()).toBeVisible({
     timeout: 30_000,
   });

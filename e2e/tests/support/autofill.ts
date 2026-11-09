@@ -3,6 +3,7 @@
 import type { BrowserContext, Frame, Page } from "@playwright/test";
 
 import { expect } from "./extension";
+import { newItem } from "./web";
 
 // The extension scans a page shortly after it loads and only then watches for
 // a form submission. People take longer than that to start typing; tests
@@ -43,6 +44,22 @@ export const codeFieldId: Record<string, string> = {
 
 export const hasNotificationBar = (page: Page) =>
   page.frames().some((f) => f.url().includes("notification/bar.html"));
+
+/**
+ * What the save or update prompt on a page offers: the password it would save,
+ * from the extension's background (through upstream's `self.bitwardenMain`
+ * debugging handle), or null when the page has no prompt waiting.
+ */
+export async function offeredPassword(context: BrowserContext, page: Page): Promise<string | null> {
+  const worker = context.serviceWorkers()[0];
+  return worker.evaluate(async (url) => {
+    const tab = (await chrome.tabs.query({})).find((t) => t.url === url);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const queue: any[] = (self as any).bitwardenMain.notificationBackground.notificationQueue ?? [];
+    const prompt = queue.find((n) => n.tab?.id === tab?.id);
+    return prompt?.data?.newPassword ?? prompt?.password ?? null;
+  }, page.url());
+}
 
 // Finds elements anywhere in a frame, including inside closed shadow roots,
 // through the DevTools protocol. Page scripts can't do this; tests can.
@@ -98,11 +115,12 @@ export async function addLogin(
     password: string;
     uri: string;
     customFields?: Record<string, string>;
+    /** Asks for the master password before it fills or shows its secrets. */
+    reprompt?: boolean;
   },
 ) {
-  await web.getByRole("button", { name: "New", exact: true }).click();
-  await web.getByRole("menuitem", { name: "Login" }).click();
-  const dialog = web.getByRole("dialog", { name: "New Login" });
+  await newItem(web, "Login");
+  const dialog = web.getByRole("dialog", { name: "Add login" });
   await dialog.getByRole("textbox", { name: /Item name/ }).fill(item.name);
   await dialog.getByRole("textbox", { name: "Username", exact: true }).fill(item.username);
   await dialog.getByRole("textbox", { name: "Password", exact: true }).fill(item.password);
@@ -114,6 +132,9 @@ export async function addLogin(
     await addField.getByRole("button", { name: "Add", exact: true }).click();
     await expect(addField).toBeHidden();
     await dialog.getByRole("textbox", { name: label, exact: true }).fill(value);
+  }
+  if (item.reprompt) {
+    await dialog.getByRole("checkbox", { name: "Master password re-prompt" }).check();
   }
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog).toBeHidden();

@@ -14,6 +14,7 @@ entry="/usr/share/applications/com.passbundle.app.desktop"
 icon="/usr/share/icons/hicolor/256x256/apps/com.passbundle.app.png"
 chrome="/etc/opt/chrome/policies/managed"
 edge="/etc/opt/edge/policies/managed"
+firefox="/etc/firefox/policies/policies.json"
 foreign="$chrome/another-vendor.json"
 person="${SUDO_USER:-runner}"
 server_url="https://vault.example.test"
@@ -52,6 +53,19 @@ check "refuses a server address that would break out of the JSON" refuses "https
 check "refuses an enrollment token of the wrong shape" refuses "43 letters" --enrollment-token short
 check "refuses a browser it doesn't manage" refuses "chrome, edge" --browsers firefox
 check "refuses an option it doesn't have" refuses "Unknown option" --surprise
+# A line break or other control character. grep checks line by line, so each
+# address, token, and secret here has a line that would pass alone.
+nl='
+'
+cr=$(printf '\r')
+tab=$(printf '\t')
+check "refuses a server address with a line break in it" refuses "https://" --server-url "$server_url$nl\"}, \"PasswordManagerEnabled\": true, \"x\": {\"y\": \""
+check "refuses a server address with a carriage return and line break in it" refuses "https://" --server-url "https://x.test$cr$nl$server_url"
+check "refuses an enrollment token with a line break in it" refuses "43 letters" --enrollment-token "$token$nl\", \"PasswordManagerEnabled\": true, \"x\": \""
+check "refuses a join secret with a line break in it" refuses "43 letters" --join-secret "x$nl$join_secret"
+check "refuses an organization key fingerprint with a line break after it" refuses "43 letters" --org-key "$org_key$nl"
+check "refuses a browser list with a line break in it" refuses "chrome, edge" --browsers "chrome${nl}edge"
+check "refuses a browser list with a tab in it" refuses "chrome, edge" --browsers "chrome${tab}edge"
 
 # Another vendor already has a policy file. We must not touch it.
 mkdir -p "$chrome"
@@ -72,8 +86,11 @@ check "Edge forces our extension" policy_is "$edge/passbundle.json" \
   'p["ExtensionInstallForcelist"] == ["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;https://edge.microsoft.com/extensionwebstorebase/v1/crx"]'
 check "Chrome password manager off" policy_is "$chrome/passbundle.json" 'p["PasswordManagerEnabled"] is False'
 check "Edge password manager off" policy_is "$edge/passbundle.json" 'p["PasswordManagerEnabled"] is False'
+check "Chrome takes native-messaging hosts from the machine only" policy_is "$chrome/passbundle.json" 'p["NativeMessagingUserLevelHosts"] is False'
+check "Edge takes native-messaging hosts from the machine only" policy_is "$edge/passbundle.json" 'p["NativeMessagingUserLevelHosts"] is False'
 check "Chrome card autofill off" policy_is "$chrome/passbundle.json" 'p["AutofillCreditCardEnabled"] is False'
 check "address autofill untouched" policy_is "$chrome/passbundle.json" '"AutofillAddressEnabled" not in p'
+check "Firefox card autofill off" policy_is "$firefox" 'p == {"policies": {"AutofillCreditCardEnabled": False}}'
 check "no extension settings without the console's values" policy_is "$chrome/passbundle.json" '"3rdparty" not in p'
 check "the policy files are root's and read-only" sh -c "[ \"\$(stat -c '%U:%G %a' '$chrome/passbundle.json')\" = 'root:root 644' ]"
 check "the other vendor's file is untouched" sh -c "[ \"\$(cat '$foreign')\" = \"\$1\" ]" _ "$foreign_before"
@@ -99,6 +116,9 @@ check "Chrome extension gets the join secret" policy_is "$chrome/passbundle.json
 check "Edge extension gets the organization key fingerprint" policy_is "$edge/passbundle.json" \
   "${ext}[\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"][\"orgKeyFingerprint\"] == \"$org_key\""
 check "Edge address autofill off" policy_is "$edge/passbundle.json" 'p["AutofillAddressEnabled"] is False'
+check "Firefox card and address autofill off" policy_is "$firefox" \
+  'p == {"policies": {"AutofillCreditCardEnabled": False, "AutofillAddressEnabled": False}}'
+check "Firefox's policies are root's and read-only" sh -c "[ \"\$(stat -c '%U:%G %a' '$firefox')\" = 'root:root 644' ]"
 check "the app gets the server, without a trailing slash" policy_is /etc/passbundle/policy.json "p == {\"ServerUrl\": \"$server_url\"}"
 check "the app's policy is root's and read-only" sh -c "[ \"\$(stat -c '%U:%G %a' /etc/passbundle/policy.json)\" = 'root:root 644' ]"
 
@@ -107,6 +127,25 @@ out=$(sh "$script" --disable-card-autofill --disable-address-autofill --server-u
   --enrollment-token "$token" --join-secret "$join_secret" --org-key "$org_key" 2>&1)
 echo "$out"
 check "nothing changed" sh -c "printf '%s' \"\$1\" | grep -q 'nothing changed'" _ "$out"
+
+echo "Card and address autofill left as they are"
+sh "$script" --server-url "$server_url/" --enrollment-token "$token" --join-secret "$join_secret" \
+  --org-key "$org_key" > /dev/null || failures=$((failures + 1))
+check "Chrome card autofill no longer set" policy_is "$chrome/passbundle.json" '"AutofillCreditCardEnabled" not in p'
+check "our Firefox policies are gone" test ! -e "$firefox"
+
+echo "Another vendor's Firefox policies"
+mkdir -p "$(dirname "$firefox")"
+printf '{ "policies": { "DisableTelemetry": true } }\n' > "$firefox"
+firefox_before=$(cat "$firefox")
+out=$(sh "$script" --disable-card-autofill 2>&1)
+check "says it leaves them alone" sh -c "printf '%s' \"\$1\" | grep -q 'policies.json is another vendor'" _ "$out"
+check "leaves them alone" sh -c "[ \"\$(cat '$firefox')\" = \"\$1\" ]" _ "$firefox_before"
+sh "$script" --remove > /dev/null || failures=$((failures + 1))
+check "removing leaves them alone too" sh -c "[ \"\$(cat '$firefox')\" = \"\$1\" ]" _ "$firefox_before"
+rm -f "$firefox"
+sh "$script" --disable-card-autofill --disable-address-autofill --server-url "$server_url/" \
+  --enrollment-token "$token" --join-secret "$join_secret" --org-key "$org_key" > /dev/null || failures=$((failures + 1))
 
 echo "The app"
 sudo -u "$person" env DISPLAY="${DISPLAY:-:99}" "$app/passbundle" > /dev/null 2>&1 &
@@ -129,6 +168,7 @@ check "the icon is gone" test ! -e "$icon"
 check "our Chrome policies are gone" test ! -e "$chrome/passbundle.json"
 check "our Edge policies are gone" test ! -e "$edge/passbundle.json"
 check "the app's policy is gone" test ! -e /etc/passbundle/policy.json
+check "our Firefox policies are gone" test ! -e "$firefox"
 check "the other vendor's file is still there" sh -c "[ \"\$(cat '$foreign')\" = \"\$1\" ]" _ "$foreign_before"
 check "removing again is fine" sh "$script" --remove
 rm -f "$foreign"

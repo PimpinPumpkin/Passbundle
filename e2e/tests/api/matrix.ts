@@ -34,7 +34,7 @@ export function expectRefused(result: Result, label: string) {
   const refused =
     [401, 403, 404].includes(result.status) ||
     (result.status === 400 &&
-      /permission|not found|not allowed|access|only|no rights|not owned|can't be deleted/i.test(
+      /permission|not found|not allowed|isn.t allowed|access|only|no rights|not owned|can.t be deleted|can.t be restored/i.test(
         message,
       ));
   expect(
