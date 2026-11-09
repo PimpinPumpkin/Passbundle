@@ -38,6 +38,8 @@ Single sign-on tests use `entra-standin.mjs`, a local stand-in for Microsoft Ent
 
 The seats tests (`tests/api/msp-seats.spec.ts`) start a server of their own whose seats job runs every second (`KK_SEATS_SCHEDULE`), and write earlier days into its SQLite database, on `KK_SEATS_SERVER_PORT` (default 8105).
 
+The new-device check's tests (`tests/api/new-device-check.spec.ts`, `tests/new-device-check.spec.ts`, `tests/cli/new-device-check.spec.ts`) start a server of their own with the check on (`KK_NEW_DEVICE=1`), email, and a tiny location database of made-up places (`fixtures/location/make.mjs`), on `KK_NEW_DEVICE_SERVER_PORT` (default 8106). Every other test server turns the check off, since its tests sign in from fresh browsers and API calls.
+
 The security key tests (`tests/connector-origins.spec.ts`) start a server of their own named `vault.connectors.test`, since WebAuthn won't take an IP address as a site's name, on `KK_CONNECTOR_SERVER_PORT` (default 8103).
 
 The required policy tests (`tests/api/msp-required-policies.spec.ts`) start a server of their own that sends email and needs single organization before account recovery (`KK_SINGLE_ORG_FOR_RECOVERY=1`, upstream's `ENFORCE_SINGLE_ORG_WITH_RESET_PW_POLICY`), on `KK_SINGLE_ORG_SERVER_PORT` (default 8104).

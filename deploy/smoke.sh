@@ -52,6 +52,7 @@ email="smoke-$RANDOM@example.test"
 hash=$(b64 "hash-$email")
 
 make_account() {
+  device_token=""
   token=$(api /identity/accounts/register/send-verification-email -H 'Content-Type: application/json' \
     -d "{\"email\":\"$email\",\"name\":\"Smoke\",\"receiveMarketingEmails\":false}" | tr -d '"')
   api /identity/accounts/register/finish -H 'Content-Type: application/json' -d "{
@@ -61,11 +62,21 @@ make_account() {
     \"kdf\":0,\"kdfIterations\":600000}" > /dev/null || fail "couldn't make an account"
 }
 
+# The new-device check (on by default): the account's first sign-in isn't
+# asked, and gives the device a token of its own, which it sends back as
+# two-step login's remembered token from then on, so it isn't new again.
+device_token=""
 sign_in() {
-  access=$(api /identity/connect/token --data-urlencode grant_type=password --data-urlencode "username=$email" \
+  local answer remembered=()
+  [ -n "$device_token" ] && remembered=(--data-urlencode twoFactorProvider=5 --data-urlencode "twoFactorToken=$device_token")
+  answer=$(api /identity/connect/token --data-urlencode grant_type=password --data-urlencode "username=$email" \
     --data-urlencode "password=$hash" --data-urlencode "scope=api offline_access" --data-urlencode client_id=web \
     --data-urlencode deviceType=10 --data-urlencode deviceIdentifier=3f8b6a2e-0d4c-4b61-9a37-5c0e00000001 \
-    --data-urlencode deviceName=smoke | sed -E 's/.*"access_token":"([^"]+)".*/\1/') || fail "couldn't sign in"
+    --data-urlencode deviceName=smoke "${remembered[@]}") || fail "couldn't sign in"
+  access=$(echo "$answer" | sed -E 's/.*"access_token":"([^"]+)".*/\1/')
+  token=$(echo "$answer" | sed -nE 's/.*"TwoFactorToken":"([^"]+)".*/\1/p')
+  [ -n "$token" ] && device_token=$token
+  [ -n "$device_token" ] || fail "no device token"
   api /api/accounts/profile -H "Authorization: Bearer $access" | grep -q "\"email\":\"$email\"" || fail "no profile"
 }
 

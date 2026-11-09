@@ -102,6 +102,15 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 - The sign-in waits for the second step holding the login hash and the stretched master key, in memory only, so the slow KDF runs once. Duo's address and a key's challenge are asked for again, with the same request, once one was tried or it's old.
 - The code or answer goes back with the same request.
 
+**The new-device check** (DESIGN.md, "New-device check"). An account without two-step login signing in with its password on a device it has never used is held: the server answers 400 with `KeykeeperNewDeviceCheck` (its id, a token, the two-digit number, its status, and whether a code by email can be sent now, later, or never). The core recognizes it before two-step login's offer and the wrong-code mapping, and makes it a sign-in step of its own (`Step::NewDevice`, `SignIn::NeedsApproval`):
+- The check's token stays in the core, with the login hash and the stretched key, so the KDF runs once; the screens get the number and the states, never the token.
+- The app asks every 3 seconds (`POST /api/keykeeper/new-device-check/status`, the id and token in the body, never the address); 404 means it has ended. Once it's approved, the core sends the sign-in again with `newDeviceOtp=<token>`.
+- "Email me a code" (`POST /api/keykeeper/new-device-check/email`): now, after a day's wait when the account's devices can approve but the person can't reach them, or never (someone two-step login is required of). The 8-digit code goes back as `newDeviceOtp`.
+- Signing in again from the same device while it waits gets the same check, with a new token. A refusal for a role that requires two-step login, with no device that can approve, is said as the server says it.
+- Calls: `pb_new_device_status`, `pb_new_device_email`, `pb_new_device_code`; answers carry `step: "newDevice"` with the check.
+
+**The device token.** A device that gets in gets a token of its own in the answer's `TwoFactorToken`. The core keeps it per account, beside the refresh token, by server and email (so the sign-in screen finds it before the account is on the device), and sends it on every password sign-in as two-step login's remembered token (provider 5, `twoFactorRemember=0`). It's dropped when the server answers with two-step login instead, and kept at sign-out. So the check never asks a device it knows again, and two-step login's "Don't ask again on this device" works in the apps too.
+
 **Unlocking later** is steps 1 and 3 without the network: the KDF settings are kept with the email, and the encrypted user key is in the cached sync.
 
 **The session.** The access token is refreshed with the refresh token a minute before it expires. When the server refuses the refresh token, the app is signed out and asks for the master password.
@@ -169,6 +178,7 @@ The apps make an account the way upstream's apps do, so it opens in the web vaul
 | The last sync, as the server sent it (secrets still encrypted) | the app's data folder |
 | When to lock by itself (below) | the app's data folder, kept for whoever signs in on this device |
 | Refresh token | the OS's secret store: Keychain (macOS, iOS), Credential Manager (Windows), Secret Service (Linux), Keystore (Android) |
+| The device token (DESIGN.md, "New-device check") | the OS's secret store, beside the refresh token: service "PassBundle device token", account `<email> on <server>` (Android: `tokens/<hash>.device.sealed`) |
 | Access token | memory only |
 | Whether screenshots of PassBundle are allowed (macOS and Windows; DESIGN.md, "Screenshots") | the app's data folder |
 | (Where) | the OS's local app data folder, in `PassBundle`: `AppData\Local` on Windows, `Application Support` on macOS, `~/.local/share` on Linux. Where the OS has modes, the folder is the person's alone (700, and one of theirs that others can open, as earlier builds made it, is closed to them) and each file is readable only by them (600) from the moment it's made: written whole as a new file, never through one a stopped write left, and renamed into place. The secret store entry is service `PassBundle`, account `<email> on <server>`. |
@@ -182,7 +192,7 @@ The apps make an account the way upstream's apps do, so it opens in the web vaul
 
 - **Several accounts** (DESIGN.md, "Several accounts in the apps"): each account's own rows above (its server, email, KDF settings, kept sync, lock choices, approvals, and generator choices) are in a folder of its own, `accounts/<id>` in the app's folder, and `accounts.json` lists the accounts, the one shown, this install's device identifier, and the server and email last signed in to or out of. How the app looks and whether screenshots are allowed are the device's, in the app's folder. Each account's refresh token is its own secret store entry, named by its server and email as before.
 - **No secret store** (a Linux desktop without a keyring running): nothing is kept. The vault still unlocks from this device, and the app asks to sign in again to sync.
-- **Signing out** of an account forgets its folder (its kept sync and choices), its refresh token, and its biometric unlock; its server and email stay, for the sign-in screen. The other accounts stay as they are. Locking and signing out forget the account's icons and history too.
+- **Signing out** of an account forgets its folder (its kept sync and choices), its refresh token, and its biometric unlock (not its device token, so signing in again on this device isn't a new device); its server and email stay, for the sign-in screen. The other accounts stay as they are. Locking and signing out forget the account's icons and history too.
 - **Unlock with Windows Hello or Touch ID:** through the desktop agent, with the extension's enrollment (below).
 - **"Never lock"** (keeping the user key on disk) isn't offered.
 
@@ -285,6 +295,10 @@ Design, October 26, 2026. Someone signing in on the web vault or the browser ext
 - **Errors:** "Confirm it's you first." (`confirmFirst` across the bridge, and the app asks), and refusals that say the request expired, was answered, or changed.
 - **Tests:** the vectors (every phrase, the vectors' wrap opening, the core's own wrap opening with the request's private key, and the refused keys); the server's dates and the device names; against a real server (`core/tests/server.rs`): listing with the right phrase, address, and time, approving refused before confirming and with another phrase, the key opening only with the request's private key, the asking device signing in with it, biometrics confirming only with this vault's key, unlocking not confirming, a confirmation used up by a denial and by a failure, denying, turning confirming off after confirming, another account seeing nothing, and locking forgetting them; on the vectors' vault (`core/tests/approvals.rs`), turning confirming off; through a real agent (`core/tests/agent.rs`), the approval's own prompt; and the app's tests of the prompt, its replacement in place, prompting once per device, and Settings.
 
+**New-device checks** (DESIGN.md, "New-device check") are listed beside the requests above, in the same 10-second asking, without holding the app (`GET /api/keykeeper/new-device-checks`; `pb_sign_in_requests` answers `checks` and `locationSource` too), and only while unlocked:
+- The prompt: "Approve this sign-in?", the device, where it comes from (or "Unknown location") with its address, when, how long is left, and the location's credit when a location is shown. A field for the number shown on the new device, and Approve (off until two digits are typed), Deny, and Not now (it comes back after 2 minutes).
+- The core sends only exactly two digits (`App::answer_new_device_check`, `pb_answer_new_device_check`); a wrong number denies the sign-in at once, and the server tells the account. No key goes, so it asks for no confirmation: the number, shown only on the new device, is the proof.
+
 ## Servers
 
 Where the apps sign in, so nobody types a server address who doesn't have to:
@@ -346,7 +360,8 @@ The core's errors are the words the screens show (`core/src/error.rs`): plain wo
   - signing up as an app would;
   - a wrong password, said the same as an email with no account, and two-step login with an authenticator code;
   - sync, saving, editing, refusing an edit from a stale copy, trash, and refreshing the session;
-  - an organization made with its key sealed to the owner's public key, and its items.
+  - an organization made with its key sealed to the owner's public key, and its items;
+  - the new-device check, on a server started with `NEW_DEVICE_CHECK=true` (`PB_TEST_SERVER_NEW_DEVICE`): the first sign-in isn't asked, a new device waits, another session lists it without its number and approves it with the number, the new device finishes and keeps its device token, signed out and in again it isn't asked, without the token it is, signing in again while it waits finds the same check, a wrong number and Deny deny it, and a locked vault lists and answers nothing. Its email states and codes are unit tests (the test server sends no email).
 - **With the web vault** (`e2e/tests/core-interop.spec.ts`, tier 1, with the core's `interop` tool built from `passbundle-apps`): the web vault makes an account, an organization, and an item in each, and the core opens them. The core saves its own item in each, and the web vault shows every field as the core wrote it. Real keys on both sides. The tool trusts the test server's throwaway certificate through a `test-trust` build feature the app never has.
 
 ## New passwords
