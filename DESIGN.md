@@ -541,7 +541,7 @@ In order:
 3. The browser's default profile.
 4. Ask once.
 
-Personal profiles are never imported by default.
+Personal profiles are never imported by default. The extension changes the browser's own card and address autofill only in work profiles, ones where it's signed in to an account in the organization ("Addresses and cards").
 
 ## Defaults (Business preset)
 
@@ -554,7 +554,7 @@ Personal profiles are never imported by default.
 | Two-step login | Required for owners, admins, custom roles that manage members, policies, or account recovery, and everyone an MSP brings in: an authenticator app, a security key or passkey, or Duo with the server's own Duo account, not email codes (see "Two-step login for admins"). Everyone else: not required by default; an organization can require it of everyone, and anyone no rule covers who has no two-step login gets a nudge to set it up (see "Two-step login for everyone"). |
 | Master password | Minimum strength, plus a breached-password check. If the breach service can't be reached (offline or firewalled), signup continues without it and Health re-checks later. Upstream silently failed the form instead. |
 | Vault lock | When the computer locks; in the web vault, which can't see that, after 15 minutes without use (`docs/core.md`, "Locking by policy") |
-| Browser password manager on managed devices | Saving and password autofill off. Card and address autofill: optional toggles, default unchanged. |
+| Browser password manager on managed devices | Saving and password autofill off. Card and address autofill: the organization's setting, left as is by default (see "Addresses and cards"). |
 | Private items when someone leaves | Stay with the org |
 | Offboarding | Access revoked immediately. Shared passwords the person could see are listed for rotation: removing or revoking someone says what they can open, then lists the logins whose passwords they could see (built; see "Access and offboarding"). |
 | Collections | "Everyone" and "Admins" created automatically |
@@ -1573,9 +1573,90 @@ Built on the inherited emergency access feature (web vault and server). Bitwarde
 
 Disable it, don't purge it.
 
-- **Browser level:** policies `PasswordManagerEnabled`, `AutofillCreditCardEnabled`, and `AutofillAddressEnabled` in Chrome and Edge, plus the Firefox equivalents.
-- **Profile level:** the extension sets the same switches through the browser's privacy API, only in profiles where it is active.
+- **Browser level:** policies `PasswordManagerEnabled`, `AutofillCreditCardEnabled`, and `AutofillAddressEnabled` in Chrome and Edge, plus the Firefox equivalents. Card and address autofill follow the organization's setting ("Addresses and cards"), and Firefox gets those two from the install scripts too.
+- **Profile level:** the extension sets the same switches through the browser's privacy API, only in profiles where it is active. Built for cards and addresses, in work profiles only ("Addresses and cards", "Work and personal profiles"); not yet for password saving, which upstream's own "Make PassBundle your default password manager" does at a click.
 - **Open:** does the policy stop already-saved passwords from filling? Sources disagree. Tier 2 settles it.
+
+## Addresses and cards
+
+The owner's words (November 2026): "We should have support for general autofill functionality too rather than just passwords. Then we can actually be managing the whole autofill system in Chrome/FF/Edge etc. IT people will really like that option." So PassBundle is where people's addresses and payment cards live and fill from, and IT controls the browsers' own card and address autofill, as it already does for passwords ("Browser password manager").
+
+### What fills today, and what we fixed
+
+Upstream's extension already fills cards and identities (an identity is a name, address, email, phone, and company). An audit of its code in November 2026 found:
+
+- **Where it fills from:** the popup's Fill, the context menu's card and identity lists, two keyboard commands with no key until the person sets one, and the menu inside a field, which lists cards on card fields and identities on address fields, with New card and New identity. Never on page load: autofill on page load is logins only. Items that ask for the master password ask first, everywhere.
+- **Steps on one page:** fields a checkout adds later (an address step, then payment, without leaving the page) are read again and get the menu, and a fill takes the visible fields there at that moment.
+- **Matching:** a field's autocomplete hint first when it's a card or address hint, then its name, id, labels, and placeholder. A one-field expiry follows the format the page shows (MM/YY, MM/YYYY, MMYY, and others). Identities honor upstream's address hints with `section-`, `shipping`, and `billing`.
+- **Gaps fixed now** (`apps/browser/src/autofill/keykeeper/card-fields.ts` and `identity-fields.ts`, called from upstream's fill script in `// Keykeeper:` blocks, with unit tests that fail without them):
+  - **The cardholder's name went into a shipping name.** On a one-page checkout, "name" in a shipping address's field matched the card's name before "Name on card" did. Now a field whose autocomplete hint names something else (`shipping name`, `address-level2`) is never guessed into a card, and the card's own hints decide first: `cc-name`, `cc-number`, `cc-exp`, `cc-exp-month`, `cc-exp-year`, `cc-csc`, `cc-type`.
+  - **Split names on cards:** `cc-given-name` and `cc-family-name` get the first and last parts of the cardholder's name, not all of it each.
+  - **Look-alike words:** the CVV's `cid` matched a city field named `cidade`, and `card-m` a "Cardmember name" field as the month. Both now match only whole words.
+  - **Expiry lists:** a month list is matched by its options' values and words ("3", "03", "March", "Mar"), and a year list by "2027" or "27", whichever the list has. When nothing matches, the list is left alone; before, the raw value was written in, leaving nothing chosen.
+  - **Phone numbers in parts:** `tel-country-code`, `tel-area-code`, `tel-local`, and the rest each got the whole phone number, and the country code field got the country ("US"). Now the parts are left alone unless the identity's number splits cleanly (the country code from a leading `+`, and a 10-digit North American number into its area code and the rest).
+  - **Card numbers for people who can't see them:** someone whose folder hides an item's passwords also can't see a card's number or security code, but a card fill typed them into text fields. Now, as for passwords ("Choosing what fills where"), they go only into fields the page masks (`type="password"`), and the rest of the card fills as before.
+- **Gaps left for later** ("Not yet" below): the menu inside a field opens on address fields only when they have an autocomplete hint or are email fields, and never on a list (`select`) or a text area; a state or country outside the US and Canada that isn't written as its code; and filling into other sites' frames (below).
+- **Frames:** cards and identities fill every frame of the tab with visible fields, from any site, which is how a checkout's payment fields work when each is a frame of the payment service's own. Only logins get upstream's check against other sites' frames. So a widget from another site with visible card fields would get the card too. Upstream's visibility check (at least 10 by 10 pixels, not nearly transparent) is the only bar. A decision for the owner below.
+
+### IT control of the browsers' own autofill
+
+- **The setting:** "Browsers' card and address autofill", on the organization's Settings page (Joining and security), for its owners and admins and its MSP's admins (not technicians), as for assisted password change; anyone else gets "not found" (`GET` and `PUT /api/keykeeper/organizations/<id>/browser-autofill`, `{"mode": "unchanged" | "off" | "offAndImport"}`).
+  - **Leave as is** (the default): PassBundle doesn't touch them.
+  - **Off:** Chrome, Edge, and Firefox stop saving and filling cards and addresses where PassBundle can reach them (below). What the browser already saved stays there: disabled, not purged, as for passwords.
+  - **Off, and offer to bring them into PassBundle:** the same, and each person gets one offer to move their saved cards and addresses in ("Bringing saved addresses and cards in").
+  - One setting covers cards and addresses together (the install scripts take them separately, and could again here if a client asks).
+- **Storage and sync:** one row per organization (`org_browser_autofill`; none means leave as is), going with the organization. Members learn it with the organization in sync (`keykeeperBrowserAutofill` on each profile organization; upstream's apps ignore it), and a change of it changes every member's account so their apps sync at the next unlock, as assisted password change does. It needs no master password: it changes a browser feature, not who gets in.
+- **Events:** each change is in the organization's event log (1682 left as is, 1683 off, 1684 off with the offer), medium for its security tools, and for an MSP's client in the MSP's activity log too (`client_browser_autofill_set`, 9195, medium).
+- **An MSP's clients:** a default policy, "Turn off the browsers' card and address autofill", with one option, "Offer to bring them into PassBundle" (type 1003, `{"offer": true}`), so following, own settings, Use default, and required for every client work as for the others ("Default policies"). On means off in the browsers, as upstream's policies restrict when they're on. It isn't in the Business preset ("Defaults": card and address autofill are left as they are by default). It isn't an upstream policy for the same reason as assisted password change's switch ("Assisted password change", "Organizations", "Why not a policy").
+- **Where PassBundle can enforce it:**
+  - **Computers the install command set up:** the install command carries the setting. While it's off, the command adds the card and address options (`-DisableCardAutofill -DisableAddressAutofill` on Windows, `--disable-card-autofill --disable-address-autofill` on a Mac and Linux), and the scripts write the browsers' own policies: `AutofillCreditCardEnabled` and `AutofillAddressEnabled` set to false, for Chrome and Edge, and for Firefox, which reads the same two names (Windows: `HKLM\SOFTWARE\Policies\Mozilla\Firefox`; a Mac: the profile's `org.mozilla.firefox` payload with `EnterprisePoliciesEnabled`; Linux: `/etc/firefox/policies/policies.json`, written only when it's ours or absent, since Firefox reads one such file, and another vendor's is left alone with a warning). Changing the setting changes the command, and the console says to run the new one on computers set up before. Run again without the options, the Windows script takes back only the card and address policies it set itself (it records them under `HKLM\SOFTWARE\PassBundle\BrowserPolicies`), never another vendor's; the Mac profile and the Linux files are written whole, so they follow the options anyway.
+  - **Each browser profile, through the extension** (Chrome and Edge): the extension sets the browser's `privacy.services.autofillCreditCardEnabled` and `autofillAddressEnabled` to false in a work profile (below). An extension's setting can't be changed in the browser's settings while the extension is on, and a force-installed extension can't be turned off, so on a managed computer this holds even before the install command's policies arrive, and on a computer nobody manages it holds while the extension is installed. When the organization goes back to leave as is (or the account leaves it, or signs out), the extension lets go of the settings it took, never one the person had set themselves with upstream's "Make PassBundle your default password manager". Firefox's privacy API has no such switches, so in Firefox only the policies do it.
+  - **Permission:** the browser's privacy API needs the `privacy` permission. Upstream asks for it only when someone turns on its own override; ours asks at install (by brand, in the manifest, as native messaging is), so nothing needs a click and nothing to approve on managed installs. The cost: Chrome's install warning adds "Change your privacy-related settings" (a decision for the owner).
+- **Work and personal profiles** ("Which browser profiles"): the extension changes a profile's switches only where it's signed in to an account that's a confirmed member of an organization whose setting is off: that's a work profile. A profile where the extension is signed out, or signed in only to accounts outside such an organization, is personal and never touched. Someone who signs in to their work account in a profile has made it a work profile, and the popup says so once ("Acme Dental turned off Chrome's own card and address autofill in this profile"). A browser's machine policy can't be limited to some profiles: on a computer the install command set up, the policies cover every profile, the personal ones too, and the setting says so ("On computers the install command set up, this covers every profile in Chrome, Edge, and Firefox"). That's the computer's owner's choice, made by running the command with the setting off.
+- **What the desktop agent will report** (not yet built; the agent has no login and reports through the extension it talks to): for each browser on the computer and each of its profiles, the machine's policies for passwords, cards, and addresses (set to off, set to on, or not set, and by whom: ours or another vendor's), whether the profile has PassBundle and is a work profile, and what the profile's own switches are and what controls them (a policy, PassBundle, another extension, or the person). The console shows it per member and computer, with what doesn't match the organization's setting first. Until then, the extension's own view of its profile is what we have, and it isn't sent anywhere.
+
+### Bringing saved addresses and cards in
+
+- **The guided import, today:** Chrome, Edge, and Firefox export only passwords; none of them exports saved cards or addresses. Safari's "Export Browsing Data" can include payment cards, without their security codes, but we haven't seen its card file from a real export, so it isn't taken yet. So for cards and addresses, the guided import is a side-by-side page: the extension opens the browser's own payment methods and addresses pages (Chrome and Edge; Firefox's are in its settings, which an extension can't open, so the steps say where), and New card and New identity in PassBundle next to them, one at a time. Other password managers' exports with cards and identities already import ("Importing from other password managers").
+- **The offer** ("Off, and offer to bring them into PassBundle"): once per account in each work profile, the popup shows "Acme Dental turned off Chrome's own card and address autofill. Bring your saved cards and addresses into PassBundle, so they fill from here." with Show me how (the page above) and Not now. Either ends it in that profile.
+- **The automatic import, later** (the desktop agent, once it's signed): after the person's first sign-in, the agent reads the saved cards and addresses of the profiles "Which browser profiles" chooses, the same rules as passwords: the profile signed in with the invited email, then one whose email is at an organization's domain, then the default profile, else it asks once; personal profiles are never read by default. It reads them on the computer the way it reads saved passwords ("Import helper"), and hands them to the unlocked extension over the agent's encrypted channel ("Biometric unlock"). The extension encrypts each as a new item, as it does any item, and saves it to the person's own vault. Nothing is written to disk or sent to the server unencrypted, and the agent keeps nothing once the extension has them.
+  - **Cards:** the number, the name on the card, the expiry, and the brand. The security code only when the browser stored one: Chrome keeps one only for a card where the person turned saving it on, and Firefox and Safari never do. A card without one is imported without it; nothing asks for it. A card kept in the person's Google or Microsoft account shows on the computer only as its last four digits, so it's listed at the end for the person to add by hand, never imported half.
+  - **Addresses:** become identities (name, address, email, phone, company), the same as a New identity.
+  - **Duplicates:** a card with the same number as one already in the vault, or an address with the same name, first line, and postal code, isn't imported again.
+  - It ends with a summary, as the passwords' does.
+- **What PassBundle keeps for a card:** upstream's card item, unchanged: the name on the card, the number, the brand, the expiry month and year, and the security code, each encrypted with the item's key like any field. The number and the security code are hidden fields: shown only on request, and treated like a password for someone whose folder hides passwords (above).
+
+### Decisions for the owner
+
+My picks are the conservative ones, and they're what's built.
+
+1. **The default:** leave as is, everywhere: a new organization, the Business preset, and every MSP's defaults. My pick, matching the Business preset's table.
+2. **One setting for cards and addresses together:** my pick. Separate ones if a client asks; the scripts already take them apart.
+3. **Machine policies reach personal profiles** on a computer the install command set up, since a browser takes them per computer. My pick: yes, said beside the setting. The alternative would leave the policies out and rely on the extension, which only reaches work profiles.
+4. **What a work profile is:** a profile where PassBundle is signed in to an account in the organization. My pick: the simplest rule the extension can know, said once in that profile's popup.
+5. **The `privacy` permission at install** (the extra install warning). My pick: yes, so the setting holds without anyone clicking.
+6. **Cards into other sites' frames:** a checkout's payment fields are often frames of the payment service's own, so a rule against other sites' frames would break most checkouts unless it knows the payment services. My pick for later: fill a card into the page's own site, the frame the person started the fill from, and frames of payment services on a short built-in list; until then, upstream's behavior, with the visibility check.
+
+### Tests
+
+- **Server unit tests:** the setting's three values, no row as leave as is, the same again changing nothing, the setting going with its organization, the default's option as its effect, and a required default refusing a change in the client.
+- **API tests** (`e2e/tests/api/browser-autofill.spec.ts`): the owner, an admin, and an MSP's admin read and change it; a member, a manager, a custom role, a technician, another organization's owner, and someone outside get "not found"; a bad value is refused; the members' sync says it; the events, at a webhook; the install command's answer carries it; an MSP's default reaching the clients that follow it, its option, Use default, and required for every client refusing a change with a 400.
+- **Clients unit tests:** the extension's switches (a work profile is turned off; a personal one is left alone; letting go only of what it took; nothing on Firefox), the install command's options, the setting's card, the fill fixes above, and the offer.
+- **End to end** (`e2e/tests/addresses-and-cards.spec.ts`, local test pages only): a one-page checkout with a shipping address and a card fills the address from an identity and the card from a card, the name on the card only in its own field; a checkout in two steps on one page, where the payment fields appear after Continue, fills the card there from the menu inside the field; month and year lists choose the right options; and with the organization's setting off, the extension's profile has Chrome's card and address autofill off and controlled by PassBundle, and back to leave as is, released. `e2e/tests/install-commands.spec.ts`: with the setting off, every command carries the options, and the real `make-profile.sh` writes them for Chrome, Edge, and Firefox. The installers' own tests check the policies each script writes (`installer/macos/tests/test_profile.py` in tier 1; tier 2 on Linux and Windows).
+
+### Status
+
+Built (November 2026): the fill fixes above, the setting and its MSP default (passbundle-server `keykeeper_browser_autofill.rs`), the Settings page's card and the console's default (passbundle-clients), the extension's switches and the offer, the install command's options, and Firefox in the install scripts.
+
+### Not yet
+
+- The desktop agent's report, and the automatic import of cards and addresses (both wait on the signed agent).
+- Taking Safari's card export, once we have a real one to make a test file from.
+- The menu inside a field on address fields known only by name or label, and on lists and text areas.
+- States and countries outside the US and Canada written as names, and lists whose values are full names.
+- The frame rule for cards (decision 6).
+- The fill picker and fill rules for card and identity values (today they're for logins; only "Never fill this field" applies to every item).
+- The rest of Firefox in the install scripts (its extension and its password manager).
 
 ## Passkeys
 
