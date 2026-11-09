@@ -42,6 +42,8 @@ The new-device check's tests (`tests/api/new-device-check.spec.ts`, `tests/new-d
 
 The security key tests (`tests/connector-origins.spec.ts`) start a server of their own named `vault.connectors.test`, since WebAuthn won't take an IP address as a site's name, on `KK_CONNECTOR_SERVER_PORT` (default 8103).
 
+The test tenants tests (`tests/api/test-tenants.spec.ts`, `tests/test-tenants-web.spec.ts`) run `tools/test-tenants` as a person would, against a server of their own set up as the hosted test server is while the tool seeds it (`KK_LIKE_TEST_SERVER=1`: no email, the new-device check on, and sign-up only at the tool's domains, `KK_SIGNUPS_DOMAINS`), on `KK_TEST_TENANTS_SERVER_PORT` (default 8107).
+
 The required policy tests (`tests/api/msp-required-policies.spec.ts`) start a server of their own that sends email and needs single organization before account recovery (`KK_SINGLE_ORG_FOR_RECOVERY=1`, upstream's `ENFORCE_SINGLE_ORG_WITH_RESET_PW_POLICY`), on `KK_SINGLE_ORG_SERVER_PORT` (default 8104).
 
 ## Website screenshots

@@ -138,10 +138,15 @@ jobs:
         run: cargo test --features sqlite,postgresql
       - name: Build
         run: cargo build --features sqlite,postgresql
+      # The server, and its script for the IP location database, which the
+      # test server's deploy installs with a monthly timer (ops,
+      # passbundle-test/setup-vps.sh).
+      - name: Collect the build
+        run: mkdir -p out && cp target/debug/vaultwarden tools/update-ip-location.sh out/
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: server
-          path: target/debug/vaultwarden
+          path: out
           retention-days: 3
 
   # The web vault and the Chrome extension build on runners of their own.
