@@ -235,6 +235,10 @@ function layout({ meta, body, file }, route) {
   if (meta.script && !/^[a-z-]+$/.test(meta.script)) throw new Error(`${file}: script must be a name like demo`);
   if (meta.script && !fs.existsSync(path.join(staticDir, `${meta.script}.js`))) throw new Error(`${file}: no static/${meta.script}.js`);
   const script = meta.script ? `\n<script src="/${meta.script}.js" defer></script>` : "";
+  // "index: no" keeps one page out of search engines whatever site.json's
+  // "indexed" says, and out of the sitemap.
+  if (meta.index && meta.index !== "no") throw new Error(`${file}: index can only be "no"`);
+  const unlisted = meta.index === "no" ? `\n<meta name="robots" content="noindex">` : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -242,7 +246,7 @@ function layout({ meta, body, file }, route) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>${THEME_SCRIPT}</script>
 <title>${escape(title)}</title>
-<meta name="description" content="${escape(meta.description)}">
+<meta name="description" content="${escape(meta.description)}">${unlisted}
 <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B0D0E" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
@@ -367,16 +371,19 @@ const routes = [];
 let pages = 0;
 for (const rel of fs.readdirSync(pagesDir).filter((f) => f.endsWith(".html"))) {
   const route = routeOf(rel);
-  const html = layout(parse(path.join(pagesDir, rel)), route ?? "/404");
+  const page = parse(path.join(pagesDir, rel));
+  const html = layout(page, route ?? "/404");
   const out = route == null ? path.join(dist, "404.html") : path.join(dist, route, "index.html");
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, html);
-  if (route != null) routes.push(route);
+  if (route != null && page.meta.index !== "no") routes.push(route);
   pages++;
 }
-// robots.txt turns every crawler away while the site isn't indexed. Once it
-// is, robots.txt lets them in and points at sitemap.xml, which lists every
-// page but the 404.
+// robots.txt lets crawlers in either way. While the site isn't indexed they
+// have to fetch a page to see its noindex header: turned away here, they'd
+// never see it, and a search engine could still list an address it found
+// linked somewhere else. Once the site is indexed, robots.txt also points at
+// sitemap.xml, which lists every page but the 404 and those with "index: no".
 if (site.indexed) {
   const urls = routes.sort().map((route) => `  <url><loc>${ORIGIN}${route}</loc></url>`);
   fs.writeFileSync(
@@ -385,7 +392,7 @@ if (site.indexed) {
   );
   fs.writeFileSync(path.join(dist, "robots.txt"), `User-agent: *\nAllow: /\n\nSitemap: ${ORIGIN}/sitemap.xml\n`);
 } else {
-  fs.writeFileSync(path.join(dist, "robots.txt"), "User-agent: *\nDisallow: /\n");
+  fs.writeFileSync(path.join(dist, "robots.txt"), "User-agent: *\nAllow: /\n");
 }
 console.log(`built ${pages} pages into ${path.relative(process.cwd(), dist) || dist}`);
 if (placeholders.length > 0) {

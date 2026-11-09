@@ -99,9 +99,11 @@ const site = JSON.parse(fs.readFileSync(path.join(here, "site.json"), "utf8"));
 
 // Search engines: "indexed" in site.json decides, and what the build wrote
 // for them has to agree with it. Not indexed is an X-Robots-Tag: noindex
-// header on every path, a robots.txt that turns every crawler away, and no
-// sitemap. Indexed is neither of the first two, and a sitemap.xml of every
-// page but the 404, which robots.txt points at.
+// header on every path and no sitemap. Indexed is no such header, and a
+// sitemap.xml that robots.txt points at, listing every page but the 404 and
+// those that keep themselves out ("index: no" at the top of the page).
+// robots.txt never turns crawlers away: one that's turned away never sees
+// the noindex header, and the address can still be listed.
 const noindex = /^\/\*\n(?:[ \t]+.*\n)*?[ \t]+X-Robots-Tag: noindex$/m.test(fs.readFileSync(path.join(dist, "_headers"), "utf8"));
 const robots = fs.existsSync(path.join(dist, "robots.txt")) ? fs.readFileSync(path.join(dist, "robots.txt"), "utf8") : "";
 const shut = /^Disallow: \/$/m.test(robots);
@@ -110,7 +112,7 @@ const sitemap = fs.existsSync(sitemapFile) ? fs.readFileSync(sitemapFile, "utf8"
 let search;
 if (site.indexed === false) {
   if (!noindex) problems.push("_headers: the site isn't indexed, and the block for every path has no X-Robots-Tag: noindex");
-  if (!shut) problems.push("robots.txt: the site isn't indexed, and this doesn't disallow everything");
+  if (shut) problems.push("robots.txt: the site isn't indexed, and this turns crawlers away, so they'd never see the noindex header");
   if (sitemap != null) problems.push("sitemap.xml: the site isn't indexed, so there shouldn't be one");
   search = `search engines: told not to index the site (site.json, "indexed": false)`;
 } else if (site.indexed === true) {
@@ -119,6 +121,7 @@ if (site.indexed === false) {
   if (!robots.includes(`Sitemap: ${ORIGIN}/sitemap.xml`)) problems.push("robots.txt: doesn't point at the sitemap");
   const listed = [...(sitemap ?? "").matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
   const built = htmlFiles(dist)
+    .filter((file) => !fs.readFileSync(file, "utf8").includes('<meta name="robots" content="noindex">'))
     .map((file) => path.relative(dist, file).split(path.sep).join("/"))
     .filter((rel) => rel !== "404.html")
     .map((rel) => `${ORIGIN}/${rel.replace(/index\.html$/, "")}`);
