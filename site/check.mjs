@@ -2,10 +2,13 @@
 // every path the PassBundle apps link to exists, and nothing breaks the
 // site's promises (no scripts but our own files, no em dashes). Run after
 // build.mjs:
-//   node site/check.mjs            the preview
-//   node site/check.mjs --launch   also refuses what isn't ready for
-//                                  passbundle.com: highlighted placeholders
-//                                  and links in site.json still empty
+//   node site/check.mjs            the preview. Lists what's not filled in
+//                                  yet: what blocks passbundle.com, and
+//                                  what doesn't
+//   node site/check.mjs --launch   also refuses what passbundle.com can't go
+//                                  live without: highlighted placeholders,
+//                                  and an empty links.vault or
+//                                  links.extensionZip in site.json
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -92,16 +95,35 @@ if (!fs.readFileSync(path.join(dist, "_headers"), "utf8").includes(`script-src '
 }
 
 const site = JSON.parse(fs.readFileSync(path.join(here, "site.json"), "utf8"));
-const unset = Object.entries(site.links)
+// Links passbundle.com can go live without, because the pages read true
+// while they're empty: with links.vault filled in and links.signup empty,
+// they say new accounts aren't open yet and how to ask for one, and the store
+// listings arrive whenever each store approves the extension. Any other
+// empty link blocks.
+const CAN_WAIT = {
+  signup: "new accounts: until then, with links.vault filled in, the pages say they aren't open yet and how to ask for one",
+  chrome: "the Chrome Web Store listing",
+  edge: "the Edge Add-ons listing",
+  firefox: "the Firefox Add-ons listing",
+};
+const empty = Object.entries(site.links)
   .filter(([, v]) => v === "")
-  .map(([k]) => `site.json: links.${k} is empty`);
+  .map(([k]) => k);
+const blocking = [
+  ...todos,
+  ...empty.filter((k) => !(k in CAN_WAIT)).map((k) => `site.json: links.${k} is empty`),
+];
+const waiting = empty.filter((k) => k in CAN_WAIT).map((k) => `site.json: links.${k} is empty (${CAN_WAIT[k]})`);
 
-if (launch) problems.push(...todos, ...unset);
+if (launch) problems.push(...blocking);
 if (problems.length > 0) {
   console.error(problems.join("\n"));
   process.exit(1);
 }
 console.log(`site ok: ${REQUIRED.length} required paths, ${links} internal links`);
-if (!launch && todos.length + unset.length > 0) {
-  console.log(`not ready for launch (${todos.length + unset.length}):\n  ${[...todos, ...unset].join("\n  ")}`);
+if (blocking.length > 0) {
+  console.log(`blocks going live on passbundle.com (${blocking.length}):\n  ${blocking.join("\n  ")}`);
+}
+if (waiting.length > 0) {
+  console.log(`not filled in, and doesn't block (${waiting.length}):\n  ${waiting.join("\n  ")}`);
 }

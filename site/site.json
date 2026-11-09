@@ -1,5 +1,5 @@
 {
-  "_": "Prices and links the pages use as {{name}}. An empty link isn't live yet: pages fall back to /download/ (Sign in, to its Web card), and `check.mjs --launch` refuses to pass until it's filled in.",
+  "_": "Prices and links the pages use as {{name}}. An empty link isn't live yet: pages fall back to /download/ (Sign in, to its Web card). `check.mjs --launch` refuses to pass while links.vault or links.extensionZip is empty; links.signup and the store listings (chrome, edge, firefox) can stay empty. site/README.md, \"Going live\", has the steps.",
   "prices": {
     "premium": "$15",
     "families": "$36",

@@ -7,7 +7,8 @@
 //
 // Pages can use:
 //   {{prices.premium}}, {{links.vault}}: values from site.json. An empty link
-//     isn't live yet and becomes /download/ (check.mjs --launch refuses it).
+//     isn't live yet and becomes /download/ (check.mjs lists the empty ones,
+//     and which of them --launch refuses).
 //     {{links.extensionZip|links.extension}} is the first of them that isn't
 //     empty.
 //   <x-if link="vault">...</x-if>: what's inside, only once that link is
