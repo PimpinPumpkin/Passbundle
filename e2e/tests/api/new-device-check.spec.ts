@@ -6,7 +6,8 @@
 // and the new device signs in with its token, once; a wrong number denies it,
 // with an email; a request without a number changes nothing; only the
 // account's other signed-in sessions answer it; it ends after 10 minutes; the
-// same device signing in again finds the same check; a device it knows, with
+// same device signing in again continues it only with the check's token, so
+// nobody can take over a sign-in in progress; a device it knows, with
 // its token, isn't asked, and the same identifier without it is; an account
 // with two-step login, and an API key, aren't asked; with no device that can
 // approve, a code by email; with one, a code only after a day's wait, and
@@ -239,12 +240,11 @@ test("a new device waits; the right number typed on another device approves it, 
   expect(waiting.body.locationSource).toEqual({ name: "IP Geolocation by DB-IP", url: "https://db-ip.com" });
 
   // Until then the new device can't sign in with its token: it's held again,
-  // with a new token (any sign-in from it while it waits gets one).
+  // the same check, with the same token (it's the check's one holder).
   expect((await status(check)).body.status).toBe("waiting");
   const early = await signIn(who, phone, { newDeviceOtp: check.token });
   expect(early.status).toBe(400);
-  expect(early.body.KeykeeperNewDeviceCheck.id).toBe(check.id);
-  check.token = early.body.KeykeeperNewDeviceCheck.token;
+  expect(early.body.KeykeeperNewDeviceCheck).toMatchObject({ id: check.id, number: check.number, token: check.token });
 
   const approved = await approve(api, session, check.id, { number: check.number });
   expect(approved.status, JSON.stringify(approved.body)).toBe(200);
@@ -349,17 +349,26 @@ test("only the account's other signed-in sessions answer it", async () => {
   expect((await status(check)).body.status).toBe("waiting");
 });
 
-test("it ends after 10 minutes, and the same device signing in again finds the same check", async () => {
+test("it ends after 10 minutes; signing in again continues it only with its token", async () => {
   const api = new Api(http);
   const { who, session } = await account(api, "fay");
   const phone = device(BERLIN);
   const first = await held(who, phone);
+  // With its token (sent while it waits), the same check, number, and token.
+  const kept = await signIn(who, phone, { newDeviceOtp: first.token });
+  expect(kept.status).toBe(400);
+  expect(kept.body.KeykeeperNewDeviceCheck).toMatchObject({ id: first.id, number: first.number, token: first.token });
+  expect((await status(first)).body.status).toBe("waiting");
+
+  // Without it (a reload that lost it, or anyone else with the password and
+  // this device's identifier), the check ends, denied by nobody, and a new
+  // one starts with a new token.
   const again = await held(who, phone);
-  expect(again.id).toBe(first.id);
-  expect(again.number).toBe(first.number);
+  expect(again.id).not.toBe(first.id);
   expect(again.token).not.toBe(first.token);
-  // The old token stops working.
   expect((await status(first)).status).toBe(404);
+  expect((await approve(api, session, first.id, { number: first.number })).status).toBe(404);
+  expect((await list(api, session)).body.data.map((r: { id: string }) => r.id)).toEqual([again.id]);
   expect((await status(again)).body.status).toBe("waiting");
 
   expect(await ageChecks(who.email, 11)).toBe(1);
@@ -367,7 +376,36 @@ test("it ends after 10 minutes, and the same device signing in again finds the s
   expect((await list(api, session)).body.data).toEqual([]);
   expect((await approve(api, session, again.id, { number: again.number })).status).toBe(404);
   // A new sign-in starts a new check.
-  expect((await held(who, phone)).id).not.toBe(first.id);
+  expect((await held(who, phone)).id).not.toBe(again.id);
+});
+
+test("signing in again can't take over a sign-in in progress, or the approval it got", async () => {
+  const api = new Api(http);
+  const { who, session } = await account(api, "gil");
+  // Someone signs in on a new device, and approves it on their laptop.
+  const phone = device(BERLIN);
+  const theirs = await held(who, phone);
+  expect((await approve(api, session, theirs.id, { number: theirs.number })).body.approved).toBe(true);
+  expect((await status(theirs)).body.status).toBe("approved");
+
+  // Someone else with the password and that device's identifier (but not the
+  // check's token) signs in from it before it finishes: they get a new check,
+  // waiting, and the approval stays with nobody.
+  const taker = { ...phone, ip: CANADA };
+  const taken = await held(who, taker);
+  expect(taken.id).not.toBe(theirs.id);
+  expect((await status(taken, CANADA)).body.status).toBe("waiting");
+  for (const otp of [theirs.token, taken.token]) {
+    const tried = await signIn(who, taker, { newDeviceOtp: otp });
+    expect(tried.status, otp).toBe(400);
+    expect(tried.body.access_token).toBeUndefined();
+  }
+  // The first holder's approval is gone with its check: it starts over.
+  expect((await status(theirs)).status).toBe(404);
+  const back = await signIn(who, phone, { newDeviceOtp: theirs.token });
+  expect(back.status).toBe(400);
+  expect(back.body.access_token).toBeUndefined();
+  expect(back.body.KeykeeperNewDeviceCheck.id).not.toBe(theirs.id);
 });
 
 test("an account with two-step login isn't asked", async () => {
@@ -434,8 +472,10 @@ test("with a device that can approve, a code by email only after a day's wait", 
 
   // A day later, signing in again on that device offers the code.
   await ageChecks(who.email, 24 * 60 + 1);
+  // (The page closed long ago, so without the check's token: a new check,
+  // which keeps the day's wait.)
   const back = await held(who, phone);
-  expect(back.id).toBe(check.id);
+  expect(back.id).not.toBe(check.id);
   expect(back.email).toBe("now");
   const sent = await email(back);
   expect(sent.body.codeSent).toBe(true);
