@@ -262,6 +262,7 @@ ${kind === "doc" ? `<div class="paper">\n${expand(body.trim(), file)}\n</div>` :
       <a class="brand" href="/" aria-label="PassBundle home">${brandMark}
       </a>
       <p>The password manager for MSPs and every client they look after, for businesses with their own IT, and for everyone at home.</p>
+      <p>PassBundle is free and open-source software. The apps, browser extension, and web vault are licensed under the GNU GPLv3, and the server under the GNU AGPLv3.</p>
       <p class="quiet">This site has no cookies and no trackers, and loads nothing from anyone else.</p>
     </div>
     <nav aria-label="Product">
