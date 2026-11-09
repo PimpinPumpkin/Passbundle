@@ -35,6 +35,17 @@ On a real computer and the Pixel, with logins saved for each:
 - [ ] Passkeys: create one on a site that offers it (passkeys.io, or your Google/Microsoft account if you're willing), then sign in with it.
 - [ ] Note any site where the menu doesn't appear, fills the wrong field, or needs two clicks. These go into the autofill scoreboard.
 
+## iPhone (once there's an Apple Developer account)
+
+CI runs the iPhone app and the AutoFill extension's own code on a simulator, but iOS lets a password manager into AutoFill only in a build signed with a provisioning profile, and Face ID, NFC, and push only on a real iPhone (docs/phones.md, "Not yet"). With a TestFlight build:
+- [ ] **Face ID:** sign in, accept "Unlock with Face ID next time?", lock, and unlock with Face ID. It asks by itself as PassBundle opens locked. Add a second account (Settings, Accounts) and turn Face ID on for it too: each unlocks on its own.
+- [ ] **Turn on AutoFill:** after unlocking, "Turn on AutoFill" opens Settings at AutoFill & Passwords; switch PassBundle on, come back, and the sheet says it's on.
+- [ ] **Filling:** in Safari, on a site you have a login for, the keyboard's bar suggests it; picking it asks for Face ID and fills. With two accounts, the key icon's list shows each unlocked account's logins, labeled, and "Other accounts" unlocks the rest. In an app with a sign-in form, the same.
+- [ ] **Passkeys:** on passkeys.io (or a site that offers them), make a passkey: iOS asks where to save it, PassBundle names the site, asks which account with two unlocked, and saves it. Sign out of the site and sign in with it from iOS's sheet.
+- [ ] **Screen recording:** start one from Control Center with PassBundle open: the vault is covered, saying why, until the recording stops.
+- [ ] **Locking:** with "When the phone locks" on, lock the phone with PassBundle open: it's locked when you come back.
+- [ ] **Two-step login:** a YubiKey 5Ci or a USB-C YubiKey types its code into the field; a security key says the iPhone can't use one yet and offers the other ways; Duo opens in iOS's sign-in sheet and comes back by itself.
+
 ## Bringing passwords over
 
 - [ ] Each file in `~/Documents/PassBundle-demo/fake-exports/`, through the sign-up screen's import tiles and Tools > Import. Spot-check a few items against the README's notes.
