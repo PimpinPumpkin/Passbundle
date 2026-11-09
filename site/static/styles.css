@@ -1567,10 +1567,24 @@ main.wide .downloads .card h2 {
   vertical-align: 0;
 }
 
+/* Web, until the hosted vault opens: a sentence where its button will be. */
+.card .get-soon {
+  margin-top: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
 /* Whose logos those are, at the foot of the page. */
 .get-marks {
   max-width: 760px;
   font-size: 13px;
+}
+
+/* Arriving at one card by its address (Sign in leads to #web) marks it. */
+@media (min-width: 641px) {
+  .get-card:target {
+    box-shadow: var(--shadow-resting), 0 0 0 2px var(--brand);
+  }
 }
 
 /* Under them: installing the extension, opening a test build, the command
@@ -5313,10 +5327,28 @@ main.doc > .paper {
       cursor: pointer;
     }
 
-    .get-tabs label:has(input:checked) {
+    /* No tab is picked when the page opens. Until one is, the address
+       picks the card (Sign in leads to /download/#web), and Phone shows
+       when the address names none. */
+    .get-tabs label:has(input:checked),
+    .get-section:not(:has(.get-tabs input:checked)):has(#browser:target) .get-tabs label:has(input[value="browser"]),
+    .get-section:not(:has(.get-tabs input:checked)):has(#computer:target) .get-tabs label:has(input[value="computer"]),
+    .get-section:not(:has(.get-tabs input:checked)):has(#web:target) .get-tabs label:has(input[value="web"]),
+    .get-section:not(:has(.get-tabs input:checked)):not(:has(#browser:target, #computer:target, #web:target)) .get-tabs label:has(input[value="phone"]) {
       background: var(--surface);
       color: var(--text);
       box-shadow: var(--shadow-resting), 0 0 0 1px var(--edge);
+    }
+
+    .get-section:not(:has(.get-tabs input:checked)):has(.get-card:target) .get-card:not(:target),
+    .get-section:not(:has(.get-tabs input:checked)):not(:has(.get-card:target)) .get-card:not(#phone) {
+      display: none;
+    }
+
+    /* Arriving at a card by its address leaves the page at its top, with
+       the switcher in view. */
+    .get .get-card {
+      scroll-margin-top: 100vh;
     }
 
     .get-tabs label:has(input:focus-visible) {

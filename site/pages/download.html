@@ -11,7 +11,7 @@ layout: wide
 <section class="get-section">
   <div class="get-tabs" role="radiogroup" aria-label="Downloads for">
     <label><input type="radio" name="get" value="browser"><x-tile icon="browser" tone="sapphire" class="small"></x-tile>Browser</label>
-    <label><input type="radio" name="get" value="phone" checked><x-tile icon="phone" tone="emerald" class="small"></x-tile>Phone</label>
+    <label><input type="radio" name="get" value="phone"><x-tile icon="phone" tone="emerald" class="small"></x-tile>Phone</label>
     <label><input type="radio" name="get" value="computer"><x-tile icon="laptop" tone="onyx" class="small"></x-tile>Computer</label>
     <label><input type="radio" name="get" value="web"><x-tile icon="globe" tone="brand" class="small"></x-tile>Web</label>
   </div>
@@ -59,8 +59,9 @@ layout: wide
       <h2><x-tile icon="globe" tone="brand"></x-tile>Web</h2>
       <p>The web vault: your whole vault in any browser, with nothing to install.</p>
       <div class="get-do">
-        <div class="actions"><a class="button" href="#server">Run your own server</a></div>
-        <p class="fine">Every PassBundle server has one, at the server's own address. Ours, vault.passbundle.com, opens at launch.</p>
+        <x-if link="vault"><div class="actions"><a class="button primary" href="{{links.vault}}">Sign in</a></div></x-if>
+        <x-if not link="vault"><p class="get-soon">Sign-in opens at vault.passbundle.com at launch.</p></x-if>
+        <p class="fine">On a server you run, the web vault is at <a href="#server">your server's address</a>.</p>
       </div>
     </div>
   </div>
