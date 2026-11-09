@@ -1,0 +1,6 @@
+{
+  "name": "passbundle-test-tenants",
+  "private": true,
+  "type": "module",
+  "description": "Seeds a PassBundle server with test tenants; see README.md. Its packages are the end-to-end tests' (cd e2e && npm ci)."
+}
