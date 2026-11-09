@@ -79,6 +79,9 @@ test("a custom template is made in the ordinary editor, and new items start with
     await addField.getByRole("textbox", { name: /Field label/ }).fill(label);
     await addField.getByRole("button", { name: "Add", exact: true }).click();
     await expect(addField).toBeHidden();
+    // The editor moves to the new field once it has announced it, a moment
+    // later; a label typed before then would land in this field instead.
+    await expect(editor.getByRole("textbox", { name: label, exact: true })).toBeFocused();
   }
   // A value in the template is a default for new items.
   await editor.getByRole("textbox", { name: "Site", exact: true }).fill("Main office");
