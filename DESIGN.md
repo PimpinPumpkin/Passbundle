@@ -49,7 +49,9 @@ Status: kept up to date as work lands (last checked November 6, 2026). Each feat
       - It keeps the session's refresh token in the Keychain, and unlocks with Face ID or Touch ID: the user key is a Keychain item for this device only that needs the person's current biometrics, voided when a face or finger is added. It goes between the Keychain and the core without passing through Dart.
       - It locks the phone way, as on Android, including when the phone locks. The vault stays out of the app switcher's snapshot.
       - CI runs it on an iPhone simulator: the core's tests, and the app's own tests (signing in to a real server on the runner), with debug builds' stand-in for the Face ID prompt.
-      - Next: the AutoFill extension and passkeys, written on branches of passbundle-apps (`ios-autofill-pr`, `ios-passkeys2`, October 22) that aren't merged and need an Apple Developer account for a real run. The real prompt gets checked by hand on an iPhone.
+      - It fills websites in Safari and other apps through its AutoFill extension (SwiftUI, linked to the same core, reading the kept vault from the App Group beside the app without changing it, and unlocking with Face ID or the master password), from each account unlocked there, labeled by account; and it gives iOS each login's username and domains after each sync, so iOS suggests them above the keyboard. It offers to turn AutoFill on after unlocking, opening Settings' own page for it.
+      - CI checks the extension is built with its entitlements and the core, and registered with iOS; turning it on in Settings and filling a sign-in page in Safari run once builds are signed with an Apple Developer account (`docs/phones.md`, "Order and tests").
+      - Next: passkeys in the same extension, written on passbundle-apps' `ios-passkeys2` branch (October 22), which isn't merged. The real prompt gets checked by hand on an iPhone.
     - **The prototype, measured in CI** (October 21, 2026; first launch on CI machines; Linux in a virtual display with software rendering, which inflates its memory):
 
       | | Windows | macOS | Linux |
@@ -1498,7 +1500,7 @@ In the app's folder (`docs/core.md`, "What's kept where"), as before 0700 with e
 - **The browser extension filling from several accounts at once.** Upstream's design fills from the active account only; ours keeps that for now. Later.
 - **Sign-in requests for a locked account:** they show once it's unlocked, as with one account. While no vault is shown (the account shown is locked), none are asked for.
 - **Unlocking a locked account from Android's autofill list** while another is unlocked: the list offers the unlocked accounts' logins; the app unlocks the others.
-- **iOS's AutoFill extension** (not in the app yet) will list every unlocked account's the same way.
+- **iOS's AutoFill extension** has nothing unlocked when it starts (it's a process of its own), so it asks to unlock the account the app shows, and lists the logins of each account unlocked in it, labeled the same way; each account unlocks there with its own Face ID item or master password (`docs/phones.md`, "Autofill").
 
 ### Tests
 
