@@ -10,6 +10,8 @@
 //     isn't live yet and becomes /download/ (check.mjs --launch refuses it).
 //     {{links.extensionZip|links.extension}} is the first of them that isn't
 //     empty.
+//   <x-if link="vault">...</x-if>: what's inside, only once that link is
+//     filled in. <x-if not link="vault">...</x-if>: only until then.
 //   <x-shot name="msp-console" alt="..." frame="desktop"></x-shot>: a
 //     screenshot from static/shots, with its dark version in dark mode. Add
 //     `eager` for one that's on screen when the page opens, and `class` to
@@ -154,6 +156,13 @@ function value(keys, file) {
   return "/download/";
 }
 
+/** <x-if link="vault">: its contents once that link is filled in; with `not`, until then. */
+function when(tag, inner, file) {
+  const a = attrs(tag);
+  if (typeof site.links[a.link] !== "string") throw new Error(`${file}: <x-if> needs a link from site.json, like link="vault"`);
+  return (site.links[a.link] !== "") === !("not" in a) ? inner : "";
+}
+
 /** <x-part>: a shared piece of a page, from parts/. */
 function part(tag, file) {
   const a = attrs(tag);
@@ -171,6 +180,7 @@ function part(tag, file) {
 function expand(html, file) {
   return html
     .replace(/<x-part\b([^>]*)><\/x-part>/g, (_, t) => part(t, file))
+    .replace(/<x-if\b([^>]*)>([\s\S]*?)<\/x-if>/g, (_, t, inner) => when(t, inner, file))
     .replace(/<x-shot\b([^>]*)><\/x-shot>/g, (_, t) => shot(t, file))
     .replace(/<x-art\b([^>]*)><\/x-art>/g, (_, t) => art(t, file))
     .replace(/<x-tile\b([^>]*)><\/x-tile>/g, (_, t) => tile(t, file))
@@ -195,9 +205,9 @@ function layout({ meta, body, file }, route) {
   const kind = meta.layout === "wide" ? "wide" : "doc";
   const current = (href) => (route.startsWith(href) ? ' aria-current="page"' : "");
   const links = NAV.map(([href, label]) => `<a href="${href}"${current(href)}>${label}</a>`).join("\n        ");
-  // "Log in" goes to the hosted web vault (links.vault), and isn't shown
-  // until that's filled in: before launch there's nothing there to log in to.
-  const vault = site.links.vault;
+  // "Sign in" goes to the hosted web vault (links.vault). Until that's
+  // filled in, it goes to Download's Web card, which says when sign-in opens.
+  const signIn = site.links.vault || "/download/#web";
   // Our own scripts only, by name, from static/: "script: tour" is /tour.js.
   if (meta.script && !/^[a-z-]+$/.test(meta.script)) throw new Error(`${file}: script must be a name like demo`);
   if (meta.script && !fs.existsSync(path.join(staticDir, `${meta.script}.js`))) throw new Error(`${file}: no static/${meta.script}.js`);
@@ -228,13 +238,15 @@ function layout({ meta, body, file }, route) {
         ${links}
     </nav>
     ${THEME_BUTTON}
-    <div class="header-actions">${vault ? `\n      <a class="login" href="${vault}">Log in</a>` : ""}
+    <div class="header-actions">
+      <a class="login" href="${signIn}">Sign in</a>
       <a class="button primary small" href="/download/">Download</a>
     </div>
     <details class="menu">
       <summary><span class="menu-word">Menu</span><svg class="menu-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 5h14M3 10h14M3 15h14"/></svg></summary>
       <nav aria-label="Menu">
-        ${links}${vault ? `\n        <a href="${vault}">Log in</a>` : ""}
+        ${links}
+        <a href="${signIn}">Sign in</a>
         ${THEME_MENU_BUTTON}
         <a class="button primary" href="/download/">Download</a>
       </nav>
@@ -250,6 +262,7 @@ ${kind === "doc" ? `<div class="paper">\n${expand(body.trim(), file)}\n</div>` :
       <a class="brand" href="/" aria-label="PassBundle home">${brandMark}
       </a>
       <p>The password manager for MSPs and every client they look after, for businesses with their own IT, and for everyone at home.</p>
+      <p>PassBundle is free and open-source software. The apps, browser extension, and web vault are licensed under the GNU GPLv3, and the server under the GNU AGPLv3.</p>
       <p class="quiet">This site has no cookies and no trackers, and loads nothing from anyone else.</p>
     </div>
     <nav aria-label="Product">

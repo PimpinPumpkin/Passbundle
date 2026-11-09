@@ -392,7 +392,7 @@ Do each step in Chrome; repeat the starred ones (*) in Edge and Firefox.
 
 **Change password on the site**
 - [ ] As Alex, on a login he can edit, "Change password" opens a short dialog first (a new tab, the new password saved first, the old one kept). Not offered for an http website, an item with no password, an item in the trash, or for Chloe on Client portals.
-- [ ] As Kai Anderson, "Change password" shows beside items on Health's weak, reused, and exposed lists.
+- [ ] As Kai Anderson, the popup has no Health page (section 6), so "Change password" is only in a login's view. Note it if a Health entry appears.
 - [ ] Real sites and the "Did the new password work?" card are in section 4.
 
 **Other**
@@ -579,7 +579,8 @@ DESIGN or the apps say these aren't built; note it only if one appears:
 - Members' own passwords in the MSP console and in the apps.
 - The domain breach report (waits on a Have I Been Pwned key), and upstream's data breach report without a key.
 - Fill rules for everyone (PassBundle's signed site rules, "This didn't fill"); upstream's Fill Assist stays off.
-- Assisted password change in the apps, recipes for real sites, starting it from the web vault, and frames.
+- A Health page in the browser extension (upstream's is behind a feature flag this server doesn't turn on).
+- Assisted password change in the apps, recipes for real sites, starting it from the web vault or from Health in the extension, and frames.
 - Script access in the CLI, tokens bound to a machine, and a technician permission for it.
 - The agent's report of browsers and profiles; browser extension management; Firefox's password manager in the install scripts.
 - Moving a client between MSPs, linking an existing organization as a client, MSP sign-up on the hosted service, and key fingerprints when staff are added.
