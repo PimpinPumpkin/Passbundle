@@ -134,3 +134,67 @@ test("the install command comes for Windows, Mac, and Linux with the same token,
   await expect(command).toHaveText(windowsShape);
   await expect(command).toContainText(`-EnrollmentToken '${token}' -JoinSecret '${secret}' -OrgKey '${orgKey}'`);
 });
+
+test("with the browsers' card and address autofill turned off, every command turns them off too, and the Mac profile does it for Chrome, Edge, and Firefox", async ({
+  browser,
+}, testInfo) => {
+  test.setTimeout(150_000);
+  const admin = await (await browser.newContext()).newPage();
+  await signUpWithAuthenticator(admin, webUserFor("install-autofill-admin", testInfo.repeatEachIndex));
+  await admin.goto("/#/msp");
+  await admin.getByRole("textbox", { name: "Your MSP's name" }).fill("Contoso IT");
+  await admin.getByRole("button", { name: "Create MSP" }).click();
+  await admin.getByRole("textbox", { name: "New client's name" }).fill("Fabrikam Dental");
+  await admin.getByRole("button", { name: "Add client" }).click();
+  await expect(toast(admin, "Added Fabrikam Dental")).toBeVisible();
+
+  // The client's Settings page: turn them off (DESIGN.md, "Addresses and cards").
+  await admin.getByTestId("msp-client-Fabrikam Dental").getByRole("link", { name: "Admin console" }).click();
+  await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
+  await admin.goto(admin.url().replace(/\/members.*$/, "/settings/joining"));
+  const setting = admin.getByTestId("browser-autofill-setting");
+  await expect(setting.getByRole("radio", { name: /Leave as is/ })).toBeChecked({ timeout: 30_000 });
+  await expect(setting.getByTestId("browser-autofill-setting-computers")).toContainText(
+    "covers every profile in Chrome, Edge, and Firefox",
+  );
+  await setting.getByRole("radio", { name: /^Turn off\b/ }).first().check();
+  await setting.getByRole("button", { name: "Save" }).click();
+  await expect(toast(admin, "The browsers' card and address autofill are off")).toBeVisible();
+
+  await admin.goto("/#/msp");
+  await admin
+    .getByTestId("msp-client-Fabrikam Dental")
+    .getByRole("button", { name: "Install command" })
+    .click();
+  const panel = admin.getByTestId("msp-install");
+  const command = panel.getByTestId("msp-install-command");
+  await expect(panel.getByTestId("msp-install-autofill-off")).toContainText(
+    "turns off the browsers' own card and address autofill",
+  );
+  await expect(command).toHaveText(
+    new RegExp(`-OrgKey '${PART}' -DisableCardAutofill -DisableAddressAutofill$`),
+  );
+  await panel.getByTestId("msp-install-platform").getByText("Linux", { exact: true }).click();
+  await expect(command).toHaveText(
+    new RegExp(`--org-key '${PART}' --disable-card-autofill --disable-address-autofill$`),
+  );
+
+  // The real make-profile.sh turns them off in each browser's payload.
+  await panel.getByTestId("msp-install-platform").getByText("Mac", { exact: true }).click();
+  await expect(command).toHaveAttribute("data-platform", "macos");
+  const made = run(
+    (await command.textContent())!,
+    new RegExp(
+      `^\\./make-profile\\.sh --server-url '${SERVER}' --enrollment-token '${PART}' --join-secret '${PART}' --org-key '${PART}' --disable-card-autofill --disable-address-autofill > ${escape(brand.macProfile)}$`,
+    ),
+    path.join(installer, "macos/make-profile.sh"),
+    "make-profile.sh",
+  );
+  expect(made.status, made.stderr).toBe(0);
+  const profile = fs.readFileSync(path.join(made.dir, brand.macProfile), "utf8");
+  for (const key of ["AutofillCreditCardEnabled", "AutofillAddressEnabled"]) {
+    // Chrome's, Edge's, and Firefox's payloads.
+    expect(profile.split(`<key>${key}</key>\n\t\t\t<false/>`)).toHaveLength(4);
+  }
+  expect(profile).toContain("<string>org.mozilla.firefox</string>");
+});

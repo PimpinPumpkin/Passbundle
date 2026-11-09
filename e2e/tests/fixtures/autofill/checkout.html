@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Checkout</title>
+  </head>
+  <body>
+    <!-- A one-page checkout: a shipping address, then the card, in one form.
+         The shipping name is a field named "name", which upstream's card fill
+         took for the name on the card. The month list has a blank and a "--"
+         before 01 to 12, so it isn't 12 or 13 options long. -->
+    <form action="/signed-in.html" method="post">
+      <fieldset id="shipping">
+        <legend>Shipping address</legend>
+        <label for="name">Full name</label>
+        <input id="name" name="name" autocomplete="shipping name" />
+        <label for="address1">Address</label>
+        <input id="address1" name="address1" autocomplete="shipping address-line1" />
+        <label for="city">City</label>
+        <input id="city" name="city" autocomplete="shipping address-level2" />
+        <label for="zip">ZIP code</label>
+        <input id="zip" name="zip" autocomplete="shipping postal-code" />
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email" />
+      </fieldset>
+      <fieldset id="payment">
+        <legend>Payment</legend>
+        <label for="ccname">Name on card</label>
+        <input id="ccname" name="ccname" autocomplete="cc-name" />
+        <label for="ccnumber">Card number</label>
+        <input id="ccnumber" name="ccnumber" autocomplete="cc-number" inputmode="numeric" />
+        <label for="ccmonth">Expiry month</label>
+        <select id="ccmonth" name="ccmonth" autocomplete="cc-exp-month">
+          <option value="">Month</option>
+          <option value="--">--</option>
+          <option value="01">01</option>
+          <option value="02">02</option>
+          <option value="03">03</option>
+          <option value="04">04</option>
+          <option value="05">05</option>
+          <option value="06">06</option>
+          <option value="07">07</option>
+          <option value="08">08</option>
+          <option value="09">09</option>
+          <option value="10">10</option>
+          <option value="11">11</option>
+          <option value="12">12</option>
+        </select>
+        <label for="ccyear">Expiry year</label>
+        <select id="ccyear" name="ccyear" autocomplete="cc-exp-year">
+          <option value="">Year</option>
+          <option value="2026">2026</option>
+          <option value="2027">2027</option>
+          <option value="2028">2028</option>
+          <option value="2029">2029</option>
+          <option value="2030">2030</option>
+          <option value="2031">2031</option>
+          <option value="2032">2032</option>
+          <option value="2033">2033</option>
+          <option value="2034">2034</option>
+          <option value="2035">2035</option>
+        </select>
+        <label for="cvc">Security code</label>
+        <input id="cvc" name="cvc" autocomplete="cc-csc" inputmode="numeric" />
+      </fieldset>
+      <button type="submit">Place order</button>
+    </form>
+  </body>
+</html>
