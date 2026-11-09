@@ -21,11 +21,17 @@ const withGroups = process.env.KK_GROUPS === "1";
 // server themselves. Every other server turns the check off: their tests sign
 // in from fresh browsers and API calls, each a new device.
 const withNewDevice = process.env.KK_NEW_DEVICE === "1";
+// KK_LIKE_TEST_SERVER=1 starts one set up as the hosted test server is
+// (ops, passbundle-test/setup-vps.sh) while the test tenants tool seeds it
+// (tools/test-tenants/README.md): no email, the new-device check on, sign-up
+// only at the domains in KK_SIGNUPS_DOMAINS, invitations that don't let anyone
+// in without approval, and MSPs allowed (tests/api/test-tenants.spec.ts).
+const likeTestServer = process.env.KK_LIKE_TEST_SERVER === "1";
 // KK_DATA_DIR keeps the data in that folder, and keeps it when the server
 // stops, so a test can start the same server again (reload-key.spec.ts: the
 // server forgets reload keys when it restarts). Such a server is a side one.
 const keptData = process.env.KK_DATA_DIR;
-const side = withMail || withLimits || withGroups || withNewDevice || !!keptData;
+const side = withMail || withLimits || withGroups || withNewDevice || likeTestServer || !!keptData;
 
 for (const [name, p] of Object.entries({
   server: paths.serverBin,
@@ -167,7 +173,7 @@ const child = spawn(paths.serverBin, [], {
           SMTP_TIMEOUT: "5",
         }
       : {}),
-    NEW_DEVICE_CHECK: withNewDevice ? "true" : "false",
+    NEW_DEVICE_CHECK: withNewDevice || likeTestServer ? "true" : "false",
     ...(withNewDevice ? { IP_LOCATION_DATABASE: locationDatabase } : {}),
     WEB_VAULT_FOLDER: paths.webVault,
     WEB_VAULT_ENABLED: "true",
@@ -188,7 +194,7 @@ const child = spawn(paths.serverBin, [], {
     // address; tests run on this machine alone, so invitations still let
     // people in, as most tests expect. The limits server keeps the default,
     // where an owner or admin approves those joins (tests/api/joining.spec.ts).
-    ...(!withMail && !withLimits ? { INVITE_JOINS_WITHOUT_EMAIL: "true" } : {}),
+    ...(!withMail && !withLimits && !likeTestServer ? { INVITE_JOINS_WITHOUT_EMAIL: "true" } : {}),
     // KK_SEATS_SCHEDULE: when the job that records MSP clients' seats runs
     // (DESIGN.md, "Seats by client"), for a side server whose test needs it
     // to run now and again (tests/api/msp-seats.spec.ts), so the scheduler
@@ -196,7 +202,16 @@ const child = spawn(paths.serverBin, [], {
     ...(keptData && process.env.KK_SEATS_SCHEDULE
       ? { MSP_SEATS_SCHEDULE: process.env.KK_SEATS_SCHEDULE, JOB_POLL_INTERVAL_MS: "250" }
       : {}),
-    SIGNUPS_ALLOWED: "true",
+    ...(likeTestServer
+      ? {
+          SIGNUPS_ALLOWED: "false",
+          SIGNUPS_DOMAINS_WHITELIST: process.env.KK_SIGNUPS_DOMAINS ?? "",
+          // The server's own hashing of the hash the apps send, at its
+          // least: in a debug build it takes most of the time of seeding
+          // 31 people and taking them down, and nothing tested depends on it.
+          PASSWORD_ITERATIONS: "100000",
+        }
+      : { SIGNUPS_ALLOWED: "true" }),
     SIGNUPS_VERIFY: "false",
     MSP_SIGNUPS_ALLOWED: "true",
     DISABLE_ICON_DOWNLOAD: "true",
@@ -228,6 +243,8 @@ const child = spawn(paths.serverBin, [], {
             /(\.log)?$/,
             withNewDevice
               ? "-new-device$1"
+              : likeTestServer
+              ? "-test-tenants$1"
               : withMail
               ? "-mail$1"
               : withLimits

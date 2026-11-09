@@ -4,7 +4,9 @@
 // stretched master key, an RSA key pair, organization keys wrapped to each
 // member's public key, and values encrypted as type 2 (AES-256-CBC with
 // HMAC-SHA256). Everything else in the API tests uses stand-ins
-// (tests/api/support.ts), since the server never decrypts anything.
+// (tests/api/support.ts), since the server never decrypts anything. The test
+// tenants tool (tools/test-tenants) makes its accounts, organizations, and
+// items with these too.
 import {
   constants,
   createCipheriv,
@@ -56,7 +58,8 @@ function expand(prk: Buffer, info: string): Buffer {
     .digest();
 }
 
-function rsaKeyPair() {
+/** An RSA key pair as an account's or organization's: the public key as SPKI, the private key as PKCS #8, both DER. */
+export function rsaKeyPair() {
   const { publicKey, privateKey } = generateKeyPairSync("rsa", {
     modulusLength: 2048,
     publicKeyEncoding: { type: "spki", format: "der" },
@@ -64,6 +67,30 @@ function rsaKeyPair() {
   });
   return { publicKey, privateKey };
 }
+
+/**
+ * What a master password gives, as upstream's apps derive it (PBKDF2, 600,000
+ * iterations): the master password hash the apps send, and the stretched
+ * master key that wraps the account's own key.
+ */
+export function masterKeys(email: string, password: string) {
+  const masterKey = pbkdf2Sync(password, email, KDF_ITERATIONS, 32, "sha256");
+  const passwordHash = pbkdf2Sync(
+    masterKey,
+    password,
+    1,
+    32,
+    "sha256",
+  ).toString("base64");
+  const stretched = Buffer.concat([
+    expand(masterKey, "enc"),
+    expand(masterKey, "mac"),
+  ]);
+  return { passwordHash, stretched };
+}
+
+/** The KDF settings an account made with masterKeys has, as registration sends them. */
+export const KDF = { kdf: 0, kdfIterations: KDF_ITERATIONS } as const;
 
 export type RealAccount = {
   email: string;
@@ -85,18 +112,7 @@ export async function realAccount(
   email = `${prefix}-${randomUUID().slice(0, 8)}@cli.example.test`,
 ): Promise<RealAccount> {
   const password = `correct horse ${randomUUID()}`;
-  const masterKey = pbkdf2Sync(password, email, KDF_ITERATIONS, 32, "sha256");
-  const passwordHash = pbkdf2Sync(
-    masterKey,
-    password,
-    1,
-    32,
-    "sha256",
-  ).toString("base64");
-  const stretched = Buffer.concat([
-    expand(masterKey, "enc"),
-    expand(masterKey, "mac"),
-  ]);
+  const { passwordHash, stretched } = masterKeys(email, password);
   const userKey = randomBytes(64);
   const { publicKey, privateKey } = rsaKeyPair();
 

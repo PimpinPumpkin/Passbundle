@@ -36,6 +36,10 @@ export const seatsServerPort = process.env.KK_SEATS_SERVER_PORT ?? "8105";
 // which the new-device check's tests start themselves (tests/api/
 // new-device-check.spec.ts and the others named for it).
 export const newDeviceServerPort = process.env.KK_NEW_DEVICE_SERVER_PORT ?? "8106";
+// A server set up as the hosted test server is while the test tenants tool
+// seeds it (server.mjs, KK_LIKE_TEST_SERVER), which the tool's tests start
+// themselves (tests/api/test-tenants.spec.ts).
+export const testTenantsServerPort = process.env.KK_TEST_TENANTS_SERVER_PORT ?? "8107";
 // A stand-in for Microsoft Entra ID's sign-in (entra-standin.mjs), which
 // every test server uses for single sign-on, and its DNS server (UDP) for
 // domain checks.
