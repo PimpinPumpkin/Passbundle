@@ -88,6 +88,10 @@ Organization events use upstream's codes; 1190, 1191, and 1690 to 1693 are PassB
 | 1006 | Failed to log in: wrong two-step code | medium |
 | 1007 | Exported their vault | high |
 | 1010 | Asked to approve a new device | low |
+| 1090 | Signed in on a new device, waiting for approval | low |
+| 1091 | Approved a sign-in on a new device | medium |
+| 1092 | Denied a sign-in on a new device | high |
+| 1093 | Asked for a code by email to sign in on a new device | high |
 | 1100 | Created an item | low |
 | 1101 | Edited an item | low |
 | 1102 | Deleted an item for good | medium |

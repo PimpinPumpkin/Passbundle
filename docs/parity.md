@@ -165,7 +165,7 @@ Checked October 23, 2026; the PassBundle column, the gaps list, and the rows bel
 | Lock timing | Many choices; lock or log out | Per-platform choices | **Built** | Our apps lock after idle time, on sleep or screen lock, and by policy. | [bw-timeout] [op-unlock] |
 | Signing in to the vault with a passkey | Yes (web app and Chromium extensions) | Beta, new Individual accounts | **Missing** | Our server doesn't support it. | [bw-passkeylogin] [op-passkey-unlock] |
 | Two-step login methods | Authenticator, email, security keys (free); Duo, YubiKey OTP (Premium) | Authenticator, security keys, Duo (Business) | **Partly** | The server has all five of Bitwarden's, inherited, for every account; organization-wide Duo isn't supported. Our apps sign in with all five and a recovery code; security keys aren't in the iPhone app yet (DESIGN.md, "Two-step login in the apps"). | [bw-2fa] [op-2fa] |
-| New-device protection | Email code for accounts without two-step login | Secret Key plus two-step login | **Partly** | An email on each new-device sign-in (inherited, `REQUIRE_DEVICE_EMAIL`), not a code. | [bw-ndv] [op-signin-report] |
+| New-device protection | Email code for accounts without two-step login | Secret Key plus two-step login | **Built** | For accounts without two-step login, a new device waits until the person types its two-digit number on a device already signed in (number matching), or, with no such device, gives a code by email; a device out of reach gets the code only after a day. Prompts, emails, and the event log say roughly where it comes from, from a location database on the server's own disk (DESIGN.md, "New-device check"). | [bw-ndv] [op-signin-report] |
 
 ## Developers
 
