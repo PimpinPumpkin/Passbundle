@@ -96,7 +96,16 @@ test("the install command's join asks first; Not now joins nothing, and a token 
   expect(await run(elsewhere)).toBe("other-server");
   expect(await notices()).toHaveLength(1);
 
-  // For this server, it asks first.
+  // For this server, it asks first, and says what the organization's admins
+  // will see once Members' own passwords is on (DESIGN.md, "Members' own
+  // passwords"); a client added without the default policies has it off.
+  const memberHealth = await api.call(
+    admin,
+    "PUT",
+    `/api/keykeeper/organizations/${orgId}/member-health-setting`,
+    { enabled: true },
+  );
+  expect(memberHealth.status, JSON.stringify(memberHealth.body)).toBe(200);
   const outcome = run(serverUrl);
   let prompt: Page | undefined;
   await expect.poll(() => (prompt = prompts()[0])).toBeTruthy();
@@ -105,6 +114,9 @@ test("the install command's join asks first; Not now joins nothing, and a token 
   );
   await expect(prompt!.getByTestId("keykeeper-join-later")).toHaveText(
     "Not now asks again in 7 days.",
+  );
+  await expect(prompt!.getByTestId("keykeeper-join-member-health")).toHaveText(
+    "Admins at Prompt Dental will see how many of your own passwords are weak, reused, or exposed. Never which ones.",
   );
   // This test server sends no email, so the client offers no account recovery.
   await expect(prompt!.getByText("Account recovery")).toHaveCount(0);
