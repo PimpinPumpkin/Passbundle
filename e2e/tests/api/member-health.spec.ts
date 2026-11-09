@@ -1,9 +1,10 @@
 // Members' own passwords, in numbers (DESIGN.md, "Members' own passwords"): a
 // member's apps report how many of their own logins there are and how many
 // are weak, reused, and exposed; an organization's owners and admins see the
-// numbers for each confirmed member, by membership id; nobody else sees
-// anything, and a refusal is 404, never one that signs anyone out. Bad
-// numbers get a plain 400.
+// numbers for each confirmed member, by membership id, while the
+// organization has the setting on; nobody else sees anything, and a refusal
+// is 404, never one that signs anyone out. Bad numbers get a plain 400. The
+// setting itself is in member-health-setting.spec.ts.
 import { expect, test } from "@playwright/test";
 
 import { type Account, Api, serverDatabase } from "./support";
@@ -12,6 +13,13 @@ const report = (api: Api, who: Account | null, numbers: unknown) =>
   api.call(who, "PUT", "/api/keykeeper/own-health", numbers);
 const view = (api: Api, who: Account | null, orgId: string) =>
   api.call(who, "GET", `/api/keykeeper/organizations/${orgId}/member-health`);
+/** Turns the organization's Members' own passwords on, as its owner or admin. */
+async function share(api: Api, who: Account, orgId: string) {
+  const saved = await api.call(who, "PUT", `/api/keykeeper/organizations/${orgId}/member-health-setting`, {
+    enabled: true,
+  });
+  expect(saved.status, JSON.stringify(saved.body)).toBe(200);
+}
 
 test("a member's numbers reach the organization's owners and admins, by membership, and nobody else", async ({
   request,
@@ -27,16 +35,20 @@ test("a member's numbers reach the organization's owners and admins, by membersh
     api.account("OtherOwner"),
   ]);
   const orgId = await api.organization(owner, "Contoso");
+  await share(api, owner, orgId);
   const adminId = await api.addMember(owner, orgId, admin, "admin");
   const anaId = await api.addMember(owner, orgId, ana, "user");
   await api.addMember(owner, orgId, ben, "user");
   await api.addCustomMember(owner, orgId, poc, { manageUsers: true });
   const otherOrg = await api.organization(otherOwner, "Fabrikam");
+  await share(api, otherOwner, otherOrg);
 
   const sent = await report(api, ana, { logins: 12, weak: 2, reused: 3, exposed: 1 });
   expect(sent.status, JSON.stringify(sent.body)).toBe(200);
   expect(sent.body).toMatchObject({
     object: "keykeeperOwnHealth",
+    kept: true,
+    seenBy: [{ id: orgId, name: "Contoso" }],
     logins: 12,
     weak: 2,
     reused: 3,
@@ -95,11 +107,15 @@ test("people who aren't confirmed members, revoked members, and an MSP's people 
     api.account("Own"),
   ]);
   const orgId = await api.organization(owner, "Contoso");
+  await share(api, owner, orgId);
   await api.addMember(owner, orgId, invited, "user", { confirm: false });
   const revokedId = await api.addMember(owner, orgId, revoked, "user");
   for (const who of [owner, invited, revoked]) {
     expect((await report(api, who, { logins: 5, weak: 1, reused: 0 })).status).toBe(200);
   }
+  // Only the confirmed one's report was kept: nobody sees the invited
+  // member's numbers yet.
+  expect((await report(api, invited, { logins: 5, weak: 1, reused: 0 })).body.kept).toBe(false);
   expect(
     (await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${revokedId}/revoke`)).status,
   ).toBe(200);
@@ -114,10 +130,16 @@ test("people who aren't confirmed members, revoked members, and an MSP's people 
   // the client's; the client's own people are listed.
   const mspId = await api.msp(tech, "Northwind IT");
   const clientId = await api.client(tech, mspId, "Lakeside Clinic");
+  await share(api, tech, clientId);
   await api.addMember(tech, clientId, own, "user");
   for (const who of [tech, own]) {
     expect((await report(api, who, { logins: 2, weak: 0, reused: 1 })).status).toBe(200);
   }
+  // The client never sees the MSP's person's numbers, so they aren't kept.
+  expect((await report(api, tech, { logins: 2, weak: 0, reused: 1 })).body).toMatchObject({
+    kept: false,
+    seenBy: [],
+  });
   const clientMembers = await api.members(tech, clientId);
   const listed = await ids(tech, clientId);
   expect(listed).toEqual([clientMembers.find((m) => m.email === own.email)!.id]);
@@ -153,6 +175,7 @@ test("a report without exposed keeps the last breach check, and deleting the acc
   const api = new Api(request);
   const [owner, ana] = await Promise.all([api.account("Owner"), api.account("Ana")]);
   const orgId = await api.organization(owner, "Contoso");
+  await share(api, owner, orgId);
   const anaId = await api.addMember(owner, orgId, ana, "user");
   const row = async () =>
     (await view(api, owner, orgId)).body.data.find((r: { memberId: string }) => r.memberId === anaId);

@@ -16,6 +16,8 @@ const VAULT_LOCK = 9;
 // Two-step login for admins: a default that isn't an upstream policy (DESIGN.md,
 // "Two-step login for admins").
 const ADMIN_TWO_STEP = 1000;
+// Members' own passwords: another of ours (DESIGN.md, "Members' own passwords").
+const MEMBER_HEALTH = 1002;
 const CONFIRMED = 2;
 const REVOKED = -1;
 
@@ -134,7 +136,7 @@ test("a new MSP's defaults are the Business policies, and a new client starts wi
       .filter((p) => p.enabled)
       .map((p) => p.type)
       .sort((a, b) => a - b),
-  ).toEqual([MASTER_PASSWORD, SINGLE_ORG, VAULT_LOCK, ADMIN_TWO_STEP]);
+  ).toEqual([MASTER_PASSWORD, SINGLE_ORG, VAULT_LOCK, ADMIN_TWO_STEP, MEMBER_HEALTH]);
   expect(
     start.defaults.find((p) => p.type === MASTER_PASSWORD)!.data,
   ).toMatchObject({ minLength: 12, minComplexity: 3 });
@@ -167,6 +169,7 @@ test("a new MSP's defaults are the Business policies, and a new client starts wi
     SINGLE_ORG,
     VAULT_LOCK,
     ADMIN_TWO_STEP,
+    MEMBER_HEALTH,
   ]);
 });
 
