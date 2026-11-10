@@ -210,6 +210,20 @@ const child = spawn(paths.serverBin, [], {
     // server keeps the defaults: plans not enforced, and no admin page.
     ...(keptData && process.env.KK_PLANS_ENFORCED === "1" ? { PLANS_ENFORCED: "true" } : {}),
     ...(keptData && process.env.KK_ADMIN_TOKEN ? { ADMIN_TOKEN: process.env.KK_ADMIN_TOKEN } : {}),
+    // KK_PLANS_CAPS=1, for the plans tests' third server: the operator's own
+    // caps, below what any plan gives (2 MB of attachments for a person, 3 MB
+    // for an organization, and 1 MB of Send files), and a made-up key for the
+    // data breach report, whose lookups the server is told never to make
+    // (HTTP_REQUEST_BLOCK_REGEX), so nothing leaves this machine.
+    ...(keptData && process.env.KK_PLANS_CAPS === "1"
+      ? {
+          USER_ATTACHMENT_LIMIT: "2048",
+          ORG_ATTACHMENT_LIMIT: "3072",
+          USER_SEND_LIMIT: "1024",
+          HIBP_API_KEY: "made-up-for-tests",
+          HTTP_REQUEST_BLOCK_REGEX: "haveibeenpwned\\.com",
+        }
+      : {}),
     ...(likeTestServer
       ? {
           SIGNUPS_ALLOWED: "false",

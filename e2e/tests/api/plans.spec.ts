@@ -1,6 +1,8 @@
 // Plans (DESIGN.md, "Plans and billing"): the first piece, which records a
 // plan for a person, an organization, or an MSP, works out what each person
-// gets from it, and tells the apps in the sync. Nothing is refused yet.
+// gets from it, and tells the apps in the sync; and the second, Premium's
+// limits, where plans are enforced: attaching files (by the plan of whoever
+// owns the item), sending files, and the data breach report.
 //
 // - Where plans aren't enforced (every server but one here, and every
 //   self-hosted server unless it turns PLANS_ENFORCED on), a sync says what it
@@ -10,6 +12,10 @@
 //   each organization's `usersGetPremium`, `maxStorageGb`, `seats`, and
 //   `productTierType` are true values, and `keykeeperPlan` says the rest.
 //   `enabled` stays true: a plan never suspends an organization.
+// - Where they are, only adding is refused, with one sentence in `message`.
+//   Downloading, removing, and exporting files never look at a plan, and a
+//   file Send made with Premium works after it ends. The operator's own caps
+//   still apply, and a plan never gives more than one.
 // - Only the operator writes a plan, through the admin page. A signed-in
 //   person can only read one they manage, and anyone else gets "not found",
 //   never 403, which would sign the web vault out.
@@ -19,9 +25,11 @@
 // first and last) are the server's unit tests'.
 //
 // The operator's route needs the admin page, which no other test server has
-// on, so these tests start two servers of their own: one that enforces plans
-// and one that doesn't. Each takes an admin token made up for the run, which
-// is kept in memory only.
+// on, so these tests start three servers of their own: one that enforces
+// plans, one that doesn't, and one that enforces them under the operator's
+// own caps, with a key for the breach report whose lookups it never makes.
+// Each takes an admin token made up for the run, which is kept in memory
+// only.
 import { type ChildProcess, spawn } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -32,9 +40,9 @@ import { fileURLToPath } from "node:url";
 
 import { type APIRequestContext, expect, test } from "@playwright/test";
 
-import { plansOffServerPort, plansServerPort } from "../../paths.mjs";
+import { plansCapsServerPort, plansOffServerPort, plansServerPort } from "../../paths.mjs";
 
-import { type Account, Api, type Result } from "./support";
+import { type Account, Api, type Result, encString } from "./support";
 
 const e2eDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -125,6 +133,7 @@ async function startServer(
   playwright: { request: { newContext(options: object): Promise<APIRequestContext> } },
   port: string,
   enforced: boolean,
+  extra: Record<string, string> = {},
 ): Promise<PlansServer> {
   const adminToken = randomBytes(32).toString("base64url");
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "keykeeper-e2e-plans-"));
@@ -136,6 +145,7 @@ async function startServer(
       KK_DATA_DIR: dataDir,
       KK_ADMIN_TOKEN: adminToken,
       ...(enforced ? { KK_PLANS_ENFORCED: "1" } : {}),
+      ...extra,
     },
     stdio: "ignore",
   });
@@ -296,6 +306,227 @@ async function listen(port: string, account: Account) {
   return { syncs: () => syncs, close: () => socket.destroy() };
 }
 
+/** What a refusal says, as the server writes it (DESIGN.md, "What the server refuses"). */
+const ATTACHING_IS_PREMIUM = "Attaching files is part of Premium.";
+const SENDING_FILES_IS_PREMIUM = "Sending files is part of Premium. Sending text is free.";
+const BREACH_REPORT_IS_PREMIUM = "The data breach report is part of Premium.";
+const ORGANIZATION_ENDED =
+  "This organization's plan has ended, so nothing new can be added. Everything in it can still be opened, changed, exported, and deleted.";
+/** Storage that's full, with whose it is ("Your", "Acme's") and the real figure. */
+const full = (whose: string, size: string) => `${whose} ${size} for attachments is full. Delete some to make room.`;
+/** What the server has always said to someone who can't change the item. */
+const NOT_WRITABLE = "Cipher is not write accessible";
+/**
+ * What the server says, as it always has, when it's told never to reach a
+ * host (HTTP_REQUEST_BLOCK_REGEX), as the third server is for the breach
+ * report's: the kind of error, with the reason only in its log.
+ */
+const BLOCKED_LOOKUP = "CustomHttpClient";
+
+const MB = 1024 * 1024;
+/** The largest file the server takes, which an upload's first step can ask room for without sending it. */
+const LARGEST = 525 * MB;
+
+/** A refusal: the server's ordinary 400, with one sentence in `message`. */
+function expectRefused(answer: Result, sentence: string) {
+  expect(answer.status, JSON.stringify(answer.body)).toBe(400);
+  expect(answer.body.message).toBe(sentence);
+}
+
+/** A file's bytes as an app uploads them. They're encrypted already, so any bytes do. */
+const bytesOf = (size: number, fill: number) => Buffer.alloc(size, fill);
+
+/** What a Send says it holds, as the apps make one: text, which every plan has. */
+const textSend = () => ({
+  type: 0,
+  key: encString("send-key"),
+  name: encString("send-name"),
+  notes: null,
+  text: { text: encString("send-text"), hidden: false },
+  deletionDate: fromNow(7 * DAY),
+  expirationDate: null,
+  maxAccessCount: null,
+  password: null,
+  disabled: false,
+  hideEmail: false,
+});
+/** The name a file Send's file goes by, which its upload has to repeat. */
+const SEND_FILE_NAME = "send-file.bin";
+/** A Send of a file of this size. */
+const fileSend = (size: number) => ({
+  ...textSend(),
+  type: 1,
+  text: null,
+  file: { fileName: SEND_FILE_NAME },
+  fileLength: size,
+});
+
+/** The answer the breach report has always given where the server has no key: a link to the site's own free page. */
+const breachLink = (username: string) => {
+  const name = encodeURIComponent(username);
+  return [
+    {
+      name: "HaveIBeenPwned",
+      title: "Manual HIBP Check",
+      domain: "haveibeenpwned.com",
+      breachDate: "2019-08-18T00:00:00Z",
+      addedDate: "2019-08-18T00:00:00Z",
+      description: `Go to: <a href="https://haveibeenpwned.com/account/${name}" target="_blank" rel="noreferrer">https://haveibeenpwned.com/account/${name}</a> for a manual check.<br/><br/>HaveIBeenPwned API key not set!<br/>Go to <a href="https://haveibeenpwned.com/API/Key" target="_blank" rel="noreferrer">https://haveibeenpwned.com/API/Key</a> to purchase an API key from HaveIBeenPwned.<br/><br/>`,
+      logoPath: "vw_static/hibp.png",
+      pwnCount: 0,
+      dataClasses: ["Error - No API key set!"],
+    },
+  ];
+};
+
+/** Someone's breach report for an address, as the web vault's report asks for it. */
+const breachReport = (api: Api, as: Account | null, username: string) =>
+  api.call(as, "GET", `/api/hibp/breach?username=${encodeURIComponent(username)}`);
+
+/** Attachments and Sends as the apps make and fetch them, on one server. */
+class Files {
+  constructor(
+    private readonly request: APIRequestContext,
+    private readonly api: Api,
+  ) {}
+
+  private headers(as: { token: string } | null) {
+    return as ? { Authorization: `Bearer ${as.token}` } : {};
+  }
+
+  private async multipart(as: { token: string } | null, path: string, data: Buffer, key = true, name = "file.bin") {
+    return result(
+      await this.request.fetch(path, {
+        method: "POST",
+        headers: this.headers(as),
+        multipart: {
+          ...(key ? { key: encString("attachment-key") } : {}),
+          data: { name, mimeType: "application/octet-stream", buffer: data },
+        },
+      }),
+    );
+  }
+
+  /**
+   * An upload's first step, as the apps take it: the server makes a record
+   * of the file's size, which counts as kept from then on, and says where
+   * the file goes.
+   */
+  declare(as: Account | null, itemId: string, size: number): Promise<Result> {
+    return this.api.call(as, "POST", `/api/ciphers/${itemId}/attachment/v2`, {
+      key: encString("attachment-key"),
+      fileName: encString("attachment-name"),
+      fileSize: size,
+    });
+  }
+
+  /** The second step: the file itself, for the record the first made. */
+  upload(as: Account | null, itemId: string, attachmentId: string, data: Buffer): Promise<Result> {
+    return this.multipart(as, `/api/ciphers/${itemId}/attachment/${attachmentId}`, data, false);
+  }
+
+  /** Both steps, which have to go through. Returns the attachment's id. */
+  async attach(as: Account, itemId: string, data: Buffer): Promise<string> {
+    const declared = await this.declare(as, itemId, data.length);
+    expect(declared.status, JSON.stringify(declared.body)).toBe(200);
+    const uploaded = await this.upload(as, itemId, declared.body.attachmentId, data);
+    expect(uploaded.status, JSON.stringify(uploaded.body)).toBe(200);
+    return declared.body.attachmentId;
+  }
+
+  /**
+   * The older way, in one request, which older clients and scripts use, or
+   * the organization view's route for it (`attachment-admin`).
+   */
+  attachInOne(
+    as: Account | null,
+    itemId: string,
+    data: Buffer,
+    route: "attachment" | "attachment-admin" = "attachment",
+  ): Promise<Result> {
+    return this.multipart(as, `/api/ciphers/${itemId}/${route}`, data);
+  }
+
+  /**
+   * Replaces a file with another, as the apps do for each file when an item
+   * moves into an organization: the old one goes, and the new one is added.
+   */
+  replace(as: Account, itemId: string, attachmentId: string, data: Buffer): Promise<Result> {
+    return this.multipart(as, `/api/ciphers/${itemId}/attachment/${attachmentId}/share`, data);
+  }
+
+  /** A file, downloaded as an app does: its address, then its bytes. */
+  async download(as: Account, itemId: string, attachmentId: string): Promise<Buffer> {
+    const where = await this.api.call(as, "GET", `/api/ciphers/${itemId}/attachment/${attachmentId}`);
+    expect(where.status, JSON.stringify(where.body)).toBe(200);
+    const file = await this.request.get(where.body.url);
+    expect(file.status()).toBe(200);
+    return file.body();
+  }
+
+  remove(as: Account, itemId: string, attachmentId: string): Promise<Result> {
+    return this.api.call(as, "DELETE", `/api/ciphers/${itemId}/attachment/${attachmentId}`);
+  }
+
+  /** The ids of an item's files, as someone's sync carries them, which is what the apps export a vault from. */
+  async inSync(as: Account, itemId: string): Promise<string[]> {
+    const sync = await this.api.call(as, "GET", "/api/sync?excludeDomains=true");
+    expect(sync.status, JSON.stringify(sync.body)).toBe(200);
+    const item = sync.body.ciphers.find((c: { id: string }) => c.id === itemId);
+    expect(item, `item ${itemId} in the sync of ${as.email}`).toBeTruthy();
+    return (item.attachments ?? []).map((a: { id: string }) => a.id).sort();
+  }
+
+  /** A file Send's first step: the Send, and where its file goes. */
+  declareSend(as: Account | null, size: number): Promise<Result> {
+    return this.api.call(as, "POST", "/api/sends/file/v2", fileSend(size));
+  }
+
+  /** A file Send's second step: the file. */
+  uploadSend(as: Account, sendId: string, fileId: string, data: Buffer): Promise<Result> {
+    return this.multipart(as, `/api/sends/${sendId}/file/${fileId}`, data, false, SEND_FILE_NAME);
+  }
+
+  /** A file Send, both steps, which have to go through. */
+  async sendFile(as: Account, data: Buffer): Promise<{ sendId: string; accessId: string; fileId: string }> {
+    const declared = await this.declareSend(as, data.length);
+    expect(declared.status, JSON.stringify(declared.body)).toBe(200);
+    const made = {
+      sendId: declared.body.sendResponse.id,
+      accessId: declared.body.sendResponse.accessId,
+      fileId: declared.body.sendResponse.file.id,
+    };
+    const uploaded = await this.uploadSend(as, made.sendId, made.fileId, data);
+    expect(uploaded.status, JSON.stringify(uploaded.body)).toBe(200);
+    return made;
+  }
+
+  /** What someone given a Send's link gets, with no account: its file's bytes. */
+  async receive(accessId: string, fileId: string): Promise<Buffer> {
+    const token = await this.request.post("/identity/connect/token", {
+      form: { grant_type: "send_access", client_id: "send", scope: "api.send.access", send_id: accessId },
+    });
+    expect(token.status(), await token.text()).toBe(200);
+    const access = await this.request.post(`/api/sends/access/file/${fileId}`, {
+      headers: { Authorization: `Bearer ${(await token.json()).access_token}` },
+    });
+    expect(access.status(), await access.text()).toBe(200);
+    const file = await this.request.get((await access.json()).url);
+    expect(file.status()).toBe(200);
+    return file.body();
+  }
+}
+
+/** Gives members of an organization its one shared folder: each `edit` or `view`. */
+async function share(api: Api, owner: Account, orgId: string, collectionId: string, grants: [string, "edit" | "view"][]) {
+  const saved = await api.call(owner, "PUT", `/api/organizations/${orgId}/collections/${collectionId}`, {
+    name: encString("shared-files"),
+    users: grants.map(([id, how]) => ({ id, readOnly: how === "view", hidePasswords: false, manage: false })),
+    groups: [],
+  });
+  expect(saved.status, JSON.stringify(saved.body)).toBe(200);
+}
+
 test.describe("where plans aren't enforced and the admin page is off, as on every other test server", () => {
   test("a sync says what it has always said, and adds only that plans aren't enforced", async ({ request }) => {
     const api = new Api(request);
@@ -389,6 +620,38 @@ test.describe("where plans aren't enforced, with an operator", () => {
     expect((await operator.remove("organizations", orgId)).status).toBe(200);
     expect(await profileOf(api, owner)).toEqual(before.owner);
     expect(await revisionOf(api, owner)).toBe(revision.owner);
+  });
+
+  test("nothing a plan would refuse is refused: files, file Sends, and the breach report answer as they always have", async ({
+    request,
+  }) => {
+    const api = new Api(request);
+    const files = new Files(request, api);
+    const ended = await api.account("plans-off-ended");
+    const nobody = await api.account("plans-off-nobody");
+    const owner = await api.account("plans-off-files-owner");
+    const orgId = await api.organization(owner, "Plans Off Files");
+    const collectionId = await api.collection(owner, orgId);
+    const sharedItem = await api.orgItem(owner, orgId, collectionId);
+    // Plans that ended long ago, which would refuse all of it if they were
+    // enforced; and someone with no plan at all, who would be on Free.
+    await operator.set("users", ended.userId, paidUntil("premium", fromNow(-60 * DAY), false));
+    await operator.set("organizations", orgId, paidUntil("business", fromNow(-60 * DAY), false));
+
+    const data = bytesOf(1000, 6);
+    for (const who of [ended, nobody]) {
+      const itemId = await api.personalItem(who);
+      const id = await files.attach(who, itemId, data);
+      const inOne = await files.attachInOne(who, itemId, data);
+      expect(inOne.status, JSON.stringify(inOne.body)).toBe(200);
+      expect(await files.download(who, itemId, id)).toEqual(data);
+      const send = await files.sendFile(who, data);
+      expect(await files.receive(send.accessId, send.fileId)).toEqual(data);
+      const asked = await breachReport(api, who, "someone@example.test");
+      expect(asked).toEqual({ status: 200, body: breachLink("someone@example.test") });
+    }
+    const shared = await files.attach(owner, sharedItem, data);
+    expect(await files.download(owner, sharedItem, shared)).toEqual(data);
   });
 });
 
@@ -1210,5 +1473,342 @@ test.describe("where plans are enforced", () => {
     expect((await operator.read("users", person.userId)).body).toEqual(again);
     expect((await operator.remove("users", person.userId)).status).toBe(200);
     expect((await operator.read("users", person.userId)).body.plan).toBeNull();
+  });
+
+  test("a person's own items: Free attaches nothing, Premium up to its 5 GB, and after Premium every file still downloads, syncs, and can be removed", async ({
+    request,
+  }) => {
+    test.setTimeout(120_000);
+    const api = new Api(request);
+    const files = new Files(request, api);
+    const person = await api.account("plans-files-person");
+    const itemId = await api.personalItem(person);
+    const first = bytesOf(1000, 1);
+    const second = bytesOf(2000, 2);
+
+    // On Free, every way of adding a file is refused, and nothing is kept.
+    expectRefused(await files.declare(person, itemId, first.length), ATTACHING_IS_PREMIUM);
+    expectRefused(await files.attachInOne(person, itemId, first), ATTACHING_IS_PREMIUM);
+    expectRefused(await files.attachInOne(person, itemId, first, "attachment-admin"), ATTACHING_IS_PREMIUM);
+    expect(await files.inSync(person, itemId)).toEqual([]);
+    // Nobody signed in is turned away before any plan is asked.
+    expect((await files.declare(null, itemId, first.length)).status).toBe(401);
+    expect((await files.attachInOne(null, itemId, first)).status).toBe(401);
+
+    // Premium: both ways.
+    await operator.set("users", person.userId, paidUntil("premium", fromNow(30 * DAY)));
+    const firstId = await files.attach(person, itemId, first);
+    const inOne = await files.attachInOne(person, itemId, second);
+    expect(inOne.status, JSON.stringify(inOne.body)).toBe(200);
+    const secondId = (await files.inSync(person, itemId)).find((id) => id !== firstId)!;
+
+    // Its 5 GB: nine of the largest files leave too little room for a tenth.
+    const large: string[] = [];
+    for (let i = 0; i < 9; i += 1) {
+      const declared = await files.declare(person, itemId, LARGEST);
+      expect(declared.status, JSON.stringify(declared.body)).toBe(200);
+      large.push(declared.body.attachmentId);
+    }
+    expectRefused(await files.declare(person, itemId, LARGEST), full("Your", "5 GB"));
+    // A file that takes the place of one the same size adds nothing, and goes through.
+    const replaced = await files.replace(person, itemId, firstId, first);
+    expect(replaced.status, JSON.stringify(replaced.body)).toBe(200);
+    const kept = await files.inSync(person, itemId);
+    expect(kept).not.toContain(firstId);
+    const movedId = kept.find((id) => id !== secondId && !large.includes(id))!;
+    expect(await files.download(person, itemId, movedId)).toEqual(first);
+    // Deleting makes room.
+    expect((await files.remove(person, itemId, large.pop()!)).status).toBe(200);
+    const again = await files.declare(person, itemId, LARGEST);
+    expect(again.status, JSON.stringify(again.body)).toBe(200);
+    large.push(again.body.attachmentId);
+
+    // Premium ends: adding is refused again, a file that would replace one too,
+    // and the one it would have replaced stays.
+    await operator.set("users", person.userId, paidUntil("premium", fromNow(-60 * DAY), false));
+    expectRefused(await files.declare(person, itemId, first.length), ATTACHING_IS_PREMIUM);
+    expectRefused(await files.attachInOne(person, itemId, first), ATTACHING_IS_PREMIUM);
+    expectRefused(await files.replace(person, itemId, movedId, first), ATTACHING_IS_PREMIUM);
+    // Everything attached with Premium downloads, is in the sync the apps
+    // export a vault from, and can be removed, though it's all over Free's
+    // limit of nothing.
+    expect(await files.download(person, itemId, movedId)).toEqual(first);
+    expect(await files.download(person, itemId, secondId)).toEqual(second);
+    expect(await files.inSync(person, itemId)).toEqual([movedId, secondId, ...large].sort());
+    for (const id of [movedId, secondId, ...large]) {
+      const removed = await files.remove(person, itemId, id);
+      expect(removed.status, JSON.stringify(removed.body)).toBe(200);
+    }
+    expect(await files.inSync(person, itemId)).toEqual([]);
+  });
+
+  test("a shared item goes by its organization's plan, the sentence names the organization, and only someone who could add a file hears it", async ({
+    request,
+  }) => {
+    test.setTimeout(180_000);
+    const api = new Api(request);
+    const files = new Files(request, api);
+    const owner = await api.account("plans-shared-owner");
+    const admin = await api.account("plans-shared-admin");
+    const manager = await api.account("plans-shared-manager");
+    const editor = await api.account("plans-shared-editor");
+    const viewer = await api.account("plans-shared-viewer");
+    const outsider = await api.account("plans-shared-outsider");
+    const orgId = await api.organization(owner, "Plans Shared Org");
+    const collectionId = await api.collection(owner, orgId);
+    await api.addMember(owner, orgId, admin, "admin");
+    const managerId = await api.addMember(owner, orgId, manager, "manager");
+    const editorId = await api.addMember(owner, orgId, editor, "user");
+    const viewerId = await api.addMember(owner, orgId, viewer, "user");
+    await share(api, owner, orgId, collectionId, [
+      [managerId, "edit"],
+      [editorId, "edit"],
+      [viewerId, "view"],
+    ]);
+    // Another organization's owner, with a plan in effect of its own.
+    const elsewhere = await api.organization(outsider, "Plans Shared Elsewhere");
+    await operator.set("organizations", elsewhere, paidUntil("business", fromNow(30 * DAY)));
+    const itemId = await api.orgItem(owner, orgId, collectionId);
+    const canAdd = [owner, admin, manager, editor];
+    const cannot = [viewer, outsider];
+    const data = bytesOf(1000, 4);
+    const noPlan = "Plans Shared Org has no plan, so files can't be attached to its items.";
+    const theirs = (size: string) => full("Plans Shared Org's", size);
+
+    // No plan: refused for everyone who could add a file, even someone with
+    // Premium of their own, and the sentence names the organization.
+    await operator.set("users", editor.userId, paidUntil("premium", fromNow(30 * DAY)));
+    for (const who of canAdd) {
+      expectRefused(await files.declare(who, itemId, data.length), noPlan);
+      expectRefused(await files.attachInOne(who, itemId, data, "attachment-admin"), noPlan);
+    }
+    // Anyone else hears what they always have, and nothing about a plan.
+    for (const who of cannot) {
+      expectRefused(await files.declare(who, itemId, data.length), NOT_WRITABLE);
+      expectRefused(await files.attachInOne(who, itemId, data), NOT_WRITABLE);
+    }
+    expect((await files.declare(null, itemId, data.length)).status).toBe(401);
+
+    // Business: every one of them adds a file, and nobody else does.
+    await operator.set("organizations", orgId, paidUntil("business", fromNow(30 * DAY)));
+    const attached: string[] = [];
+    for (const who of canAdd) {
+      attached.push(await files.attach(who, itemId, data));
+    }
+    for (const who of cannot) {
+      expectRefused(await files.declare(who, itemId, data.length), NOT_WRITABLE);
+    }
+
+    // Five people, so the least an organization gets: 5 GB, whatever anyone's
+    // own plan gives.
+    const large: string[] = [];
+    const fill = async (count: number) => {
+      for (let i = 0; i < count; i += 1) {
+        const declared = await files.declare(owner, itemId, LARGEST);
+        expect(declared.status, JSON.stringify(declared.body)).toBe(200);
+        large.push(declared.body.attachmentId);
+      }
+    };
+    await fill(9);
+    for (const who of canAdd) {
+      expectRefused(await files.declare(who, itemId, LARGEST), theirs("5 GB"));
+    }
+    // 1 GB a person: two more people, 7 GB.
+    for (const name of ["plans-shared-sixth", "plans-shared-seventh"]) {
+      await api.addMember(owner, orgId, await api.account(name), "user");
+    }
+    await fill(4);
+    expectRefused(await files.declare(owner, itemId, LARGEST), theirs("7 GB"));
+
+    // A file whose record was made while the plan was in effect, and which
+    // arrives after it ends.
+    const waiting = await files.declare(editor, itemId, data.length);
+    expect(waiting.status, JSON.stringify(waiting.body)).toBe(200);
+
+    // The plan ends: nothing new, for anyone.
+    await operator.set("organizations", orgId, paidUntil("business", fromNow(-60 * DAY), false));
+    for (const who of canAdd) {
+      expectRefused(await files.declare(who, itemId, data.length), ORGANIZATION_ENDED);
+      expectRefused(await files.attachInOne(who, itemId, data), ORGANIZATION_ENDED);
+    }
+    expectRefused(await files.upload(editor, itemId, waiting.body.attachmentId, data), ORGANIZATION_ENDED);
+    for (const who of cannot) {
+      expectRefused(await files.declare(who, itemId, data.length), NOT_WRITABLE);
+    }
+    // Every file downloads for whoever can open the item, is in the
+    // organization's export, and can be removed.
+    for (const who of [...canAdd, viewer]) {
+      expect(await files.download(who, itemId, attached[0])).toEqual(data);
+    }
+    const exported = await api.call(owner, "GET", `/api/organizations/${orgId}/export`);
+    expect(exported.status, JSON.stringify(exported.body)).toBe(200);
+    const inExport = exported.body.ciphers.find((c: { id: string }) => c.id === itemId);
+    const everyFile = [...attached, ...large, waiting.body.attachmentId].sort();
+    expect(inExport.attachments.map((a: { id: string }) => a.id).sort()).toEqual(everyFile);
+    expect((await files.remove(editor, itemId, attached[3])).status).toBe(200);
+    for (const id of everyFile.filter((id) => id !== attached[3])) {
+      const removed = await files.remove(owner, itemId, id);
+      expect(removed.status, JSON.stringify(removed.body)).toBe(200);
+    }
+    expect(await files.inSync(owner, itemId)).toEqual([]);
+  });
+
+  test("Free sends text and not files, Premium sends files by any of its three ways, and a file Send outlives Premium", async ({
+    request,
+  }) => {
+    test.setTimeout(120_000);
+    const api = new Api(request);
+    const files = new Files(request, api);
+    const person = await api.account("plans-send-person");
+    const data = bytesOf(1500, 5);
+
+    // On Free: text, and no file.
+    expectRefused(await files.declareSend(person, data.length), SENDING_FILES_IS_PREMIUM);
+    const text = await api.call(person, "POST", "/api/sends", textSend());
+    expect(text.status, JSON.stringify(text.body)).toBe(200);
+    const sends = await api.call(person, "GET", "/api/sends");
+    expect(sends.body.data.map((s: { type: number }) => s.type)).toEqual([0]);
+    expect((await files.declareSend(null, data.length)).status).toBe(401);
+
+    // Premium: a file Send, which someone with no account receives.
+    await operator.set("users", person.userId, paidUntil("premium", fromNow(30 * DAY)));
+    const sent = await files.sendFile(person, data);
+    expect(await files.receive(sent.accessId, sent.fileId)).toEqual(data);
+    // Another, whose file is still on its way when Premium ends.
+    const waiting = await files.declareSend(person, data.length);
+    expect(waiting.status, JSON.stringify(waiting.body)).toBe(200);
+
+    // Premium ends: no new file Send, and text as ever.
+    await operator.set("users", person.userId, paidUntil("premium", fromNow(-60 * DAY), false));
+    expectRefused(await files.declareSend(person, data.length), SENDING_FILES_IS_PREMIUM);
+    expect((await api.call(person, "POST", "/api/sends", textSend())).status).toBe(200);
+    // The file Sends made with Premium keep working until they expire or are
+    // deleted, the one whose file arrives now too.
+    expect(await files.receive(sent.accessId, sent.fileId)).toEqual(data);
+    const late = waiting.body.sendResponse;
+    const uploaded = await files.uploadSend(person, late.id, late.file.id, data);
+    expect(uploaded.status, JSON.stringify(uploaded.body)).toBe(200);
+    expect(await files.receive(late.accessId, late.file.id)).toEqual(data);
+    for (const id of [sent.sendId, late.id]) {
+      expect((await api.call(person, "DELETE", `/api/sends/${id}`)).status).toBe(200);
+    }
+
+    // Premium's features come with a place in an organization whose plan is
+    // in effect, and with an MSP's staff: files on their own items, and file
+    // Sends.
+    const seat = await api.account("plans-send-seat");
+    const orgId = await api.organization(seat, "Plans Send Org");
+    const staff = await api.account("plans-send-staff");
+    const mspId = await api.msp(staff, "Plans Send MSP");
+    for (const who of [seat, staff]) {
+      expectRefused(await files.declareSend(who, data.length), SENDING_FILES_IS_PREMIUM);
+    }
+    await operator.set("organizations", orgId, paidUntil("business", fromNow(30 * DAY)));
+    await operator.set("msps", mspId, open("msp"));
+    for (const who of [seat, staff]) {
+      const made = await files.sendFile(who, data);
+      expect(await files.receive(made.accessId, made.fileId)).toEqual(data);
+      const itemId = await api.personalItem(who);
+      const id = await files.attach(who, itemId, data);
+      expect(await files.download(who, itemId, id)).toEqual(data);
+    }
+  });
+
+  test("without a key of the server's own, the breach report is the link it has always been, on every plan", async ({
+    request,
+  }) => {
+    const api = new Api(request);
+    const person = await api.account("plans-breach-link");
+    const asked = "someone@example.test";
+    expect(await breachReport(api, person, asked)).toEqual({ status: 200, body: breachLink(asked) });
+    await operator.set("users", person.userId, paidUntil("premium", fromNow(30 * DAY)));
+    expect(await breachReport(api, person, asked)).toEqual({ status: 200, body: breachLink(asked) });
+    expect((await breachReport(api, null, asked)).status).toBe(401);
+  });
+});
+
+test.describe("where plans are enforced and the operator caps storage below them", () => {
+  test.use({ baseURL: `https://127.0.0.1:${plansCapsServerPort}` });
+
+  let server: PlansServer | undefined;
+  let operator: Operator;
+
+  test.beforeAll(async ({ playwright }) => {
+    // server.mjs, KK_PLANS_CAPS: 2 MB for a person, 3 MB for an organization,
+    // 1 MB of Send files, and a key for the breach report.
+    server = await startServer(playwright, plansCapsServerPort, true, { KK_PLANS_CAPS: "1" });
+    operator = server.operator;
+  });
+
+  test.afterAll(async () => {
+    await stopServer(server);
+  });
+
+  test("a cap the operator set is the most a plan gives, and the sentence says the cap", async ({ request }) => {
+    const api = new Api(request);
+    const files = new Files(request, api);
+    const person = await api.account("plans-caps-person");
+    await operator.set("users", person.userId, paidUntil("premium", fromNow(30 * DAY)));
+    const itemId = await api.personalItem(person);
+    const file = bytesOf(MB, 7);
+
+    // Premium gives 5 GB, and the cap 2 MB: the cap, to the last byte.
+    const fileId = await files.attach(person, itemId, file);
+    expectRefused(await files.declare(person, itemId, MB + 1), full("Your", "2 MB"));
+    const rest = await files.declare(person, itemId, MB);
+    expect(rest.status, JSON.stringify(rest.body)).toBe(200);
+    expectRefused(await files.declare(person, itemId, 1), full("Your", "2 MB"));
+    expectRefused(await files.attachInOne(person, itemId, bytesOf(1, 7)), full("Your", "2 MB"));
+    // Full, its files still download, and removing one makes room.
+    expect(await files.download(person, itemId, fileId)).toEqual(file);
+    expect((await files.remove(person, itemId, rest.body.attachmentId)).status).toBe(200);
+    expect((await files.declare(person, itemId, MB)).status).toBe(200);
+
+    // On Free, what the plan says comes first.
+    const free = await api.account("plans-caps-free");
+    expectRefused(await files.declare(free, await api.personalItem(free), 1), ATTACHING_IS_PREMIUM);
+
+    // An organization's plan gives it 5 GB, and the cap 3 MB.
+    const orgId = await api.organization(person, "Plans Capped Org");
+    const collectionId = await api.collection(person, orgId);
+    const shared = await api.orgItem(person, orgId, collectionId);
+    await operator.set("organizations", orgId, paidUntil("business", fromNow(30 * DAY)));
+    expect((await files.declare(person, shared, 3 * MB)).status).toBe(200);
+    expectRefused(await files.declare(person, shared, 1), full("Plans Capped Org's", "3 MB"));
+  });
+
+  test("a file Send's allowance stays the server's, and the plan is asked first", async ({ request }) => {
+    const api = new Api(request);
+    const files = new Files(request, api);
+    const person = await api.account("plans-caps-sender");
+
+    expectRefused(await files.declareSend(person, MB + 1), SENDING_FILES_IS_PREMIUM);
+    await operator.set("users", person.userId, paidUntil("premium", fromNow(30 * DAY)));
+    // What the server has always said past its 1 MB.
+    expectRefused(await files.declareSend(person, MB + 1), "Send storage limit exceeded with this file");
+    expect((await files.declareSend(person, MB)).status).toBe(200);
+    expectRefused(await files.declareSend(person, 1), "Send storage limit reached! Delete some sends to free up space");
+  });
+
+  test("with a key, the breach report is Premium's: Free is refused, and Premium reaches the lookup", async ({
+    request,
+  }) => {
+    const api = new Api(request);
+    const asked = "someone@example.test";
+    const free = await api.account("plans-caps-breach-free");
+    expectRefused(await breachReport(api, free, asked), BREACH_REPORT_IS_PREMIUM);
+    expect((await breachReport(api, null, asked)).status).toBe(401);
+
+    // Premium, and a place in an organization whose plan is in effect, get
+    // past the plan to the lookup itself, which this server is told never to
+    // make: it stops there, before anything leaves the machine.
+    const premium = await api.account("plans-caps-breach-premium");
+    await operator.set("users", premium.userId, paidUntil("premium", fromNow(30 * DAY)));
+    const seat = await api.account("plans-caps-breach-seat");
+    const orgId = await api.organization(seat, "Plans Breach Org");
+    await operator.set("organizations", orgId, paidUntil("business", fromNow(30 * DAY)));
+    for (const who of [premium, seat]) {
+      expectRefused(await breachReport(api, who, asked), BLOCKED_LOOKUP);
+    }
   });
 });
