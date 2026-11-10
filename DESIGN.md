@@ -1668,6 +1668,104 @@ Upstream's web vault locks on every reload, whatever the vault timeout: it keeps
 
 **Status:** built; reviewed twice, the second review's fixes waiting for the reviewer.
 
+## Unlock with a PIN
+
+A PIN the person chooses, to unlock our apps on one device in place of typing the master password each time: a sibling of biometric unlock, per account, kept only on the device. The browser extension already has upstream's PIN; this is our apps' own, and it doesn't share upstream's storage format. It's key handling, so this note and the vectors came before the code.
+
+**Status:** designed; being built in `passbundle-apps` (the core, `core/src/pin.rs`, and the app). Offered on the Mac (with a Secure Enclave), Windows, Android, and the iPhone. Not offered on Linux (below, with the reason).
+
+**What's kept, and what never is:**
+
+- **The PIN is never kept**, logged, put in an error's words, or sent anywhere. The core holds it in memory that's overwritten when it's done (`zeroize`), and the app clears its field as it clears the master password's.
+- **What's kept is the account's user key, wrapped under a key made from the PIN**, and that wrapped key is then sealed to the device (below), so the file alone isn't enough to start guessing where the device can help.
+- **The PIN itself:** 4 characters or more, at most 128, any characters (digits, letters, anything the keyboard types), used exactly as typed, as UTF-8: nothing is trimmed, folded, or normalized.
+
+**Making the key (v1):**
+
+- **PIN key** (32 bytes) = Argon2id (version 0x13) of the PIN, with a salt of 16 random bytes made new at each setup, 64 MiB of memory, 3 passes, and 4 lanes.
+- **The floor:** v1 writes exactly those parameters, and opens a record only if its memory is 64 MiB or more, its passes 3 or more, and its lanes 4 or more, each within the most the core takes anywhere (1,024 MiB, 10 passes, 16 lanes: `core/src/kdf.rs`). Anything weaker is refused before the PIN is used, so a changed file can't make guessing cheaper. That floor is upstream's Argon2id default for a master password, and above what the core makes for a master password by default (PBKDF2-SHA256, 600,000 iterations, `core/src/signup.rs`: OWASP treats that and Argon2id at 19 MiB, 2 passes, 1 lane as the same minimum). On the Mac this was written on, one try takes about a tenth of a second.
+- **Wrapping key** (64 bytes: an AES-256 key, then an HMAC-SHA256 key) = HKDF-Expand-SHA256 with the PIN key as the PRK and this info: the label `keykeeper PIN unlock v1`, then, each after one zero byte, the server's address as the account's settings keep it, the account's id on that server (the sync's `profile.id`), and the account's own id on this device (`accounts/<id>`). None of the three may hold a zero byte. So a wrapped key made for one account, server, device folder, or version opens under no other: the wrong ones make a different wrapping key, and the MAC refuses.
+- **Wrapped key** = the 64-byte user key as a type-2 EncString under the wrapping key (AES-256-CBC with PKCS#7, HMAC-SHA256 over the IV then the ciphertext, the MAC checked first, in constant time, with a random 16-byte IV): the construction the core already uses for every vault key. A wrong PIN is a MAC that doesn't match. No new cipher mode.
+- **The record** is JSON: `{"version":1,"salt":…,"memoryMib":64,"iterations":3,"parallelism":4,"wrapped":"2.…"}`. It never reaches the disk as it is: it's sealed to the device first.
+
+**Sealed to the device.** A PIN is short: every 4-digit PIN can be tried against a wrapped key in about a quarter of an hour on one laptop, whatever the KDF. So the record is kept where biometric unlock keeps its key on each platform, and is of no use copied off the device:
+
+| | Where the sealed record is kept | What a copy of the disk gives |
+|---|---|---|
+| **Android** | AES-256-GCM under a key in the Android Keystore that never leaves it (`passbundle-pin`, its own key, apart from the one that seals the session), as the biometric key is; the file is in the app's private storage | Nothing to guess against: the Keystore key isn't in the copy. |
+| **iPhone** | AES-256-GCM under a random key the app keeps in the Keychain, this device only, readable only while the phone is unlocked (`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`), so it's in no backup that another device can restore | Nothing to guess against: the Keychain key isn't usable off the phone. |
+| **Mac** | Sealed to a Secure Enclave key made for this PIN, with no fingerprint asked (Touch ID's seal, under its own label: ECDH to an ephemeral P-256 key, HKDF-SHA256, AES-256-GCM, the account in the authenticated data). The enclave key's wrapped form is kept beside the record; only that Mac's Secure Enclave can use it. Never the login keychain, as for Touch ID and the session (`docs/core.md`, "The Mac without an Apple developer account") | Nothing to guess against, off that Mac. On that Mac, a program running as the person can use the enclave key (no fingerprint guards it) and then guess. |
+| **Windows** | Wrapped with DPAPI for the person's Windows account, the protection the agent's store has for the Windows Hello key (`CryptProtectData`, never with a prompt), from the core itself; no new agent command, since any program running as the person can talk to the agent anyway | With BitLocker or device encryption on: nothing. Without it: the copy holds the DPAPI keys too, protected by the person's Windows password. Someone who knows or guesses that password offline can then guess the PIN, at Argon2id's cost. Unlike Windows Hello's key, no TPM stands in the way. |
+| **Linux** | Not offered | (see below) |
+
+- **Linux isn't offered a PIN.** It has no biometric unlock and no agent, and nothing device-bound to keep the record in: a keyring may be missing, and one that's there is unlocked by the login and kept in a file on the same disk. A copy of the disk would hold everything needed to try every 4-digit PIN in minutes, and a PIN that only works until the app closes isn't what people would expect of the setting. So Settings doesn't show it there. Not yet: a PIN for the time the app stays open (the record in memory only), or one sealed with a TPM.
+- **A Mac without a Secure Enclave** (Intel Macs before the T2 chip) isn't offered one either, for the same reason, and neither is the iPhone's AutoFill extension, which keeps asking for Face ID or the master password.
+- **No "ask for the master password when the app starts".** Where a PIN is offered, the record is sealed to the device, so the PIN works after a restart, as biometrics do. Where it couldn't be sealed, there's no PIN at all, which is stricter than that option would be.
+- **The file:** `accounts/<id>/pin.json`, in the account's own folder (0700, the file 0600): `{"version":1,"wrongTries":0,"madeFor":…,"sealed":…}`. `sealed` is the record above, sealed to the device; `madeFor` is the SHA-256 of the account's protected user key as the sync had it at setup (`profile.key`), which changes when the master password, the KDF settings, or the account's key do.
+
+**Setting it up** (Settings, "Unlock", "Unlock with a PIN", next to biometrics):
+
+- **The master password is typed again**, in the same sheet as the new PIN (typed twice). The core checks it the way unlocking does before it makes anything (`App::set_pin`), so someone at an unlocked app can't set a PIN they know, and a session opened by biometrics or by a PIN can't set one without it. That's stricter than biometrics, whose switch in Settings asks only for the device's own prompt.
+- Refused, with a plain reason: a wrong master password, a PIN shorter than 4 or longer than 128 characters, a device that can't seal, an organization that doesn't allow it.
+- Setting a new PIN replaces the old record and starts the count of wrong tries at zero.
+
+**Unlocking** (`App::unlock_with_pin`), in this order:
+
+1. No record, or one this version can't read: there's no PIN; the master password is asked for.
+2. The organization's policy and `madeFor` are checked against the vault kept on this device; a PIN that shouldn't be there any more is removed (below).
+3. **The count of wrong tries is read before anything is derived.** At 5 or more the record is removed and the answer is that the PIN was turned off.
+4. The device opens the seal. A seal that no longer opens (the Keystore key or enclave key is gone, a restored backup) removes the PIN; it isn't a wrong try.
+5. The count is written back one higher **before** Argon2id runs, and if it can't be written the try is refused. So closing the app in the middle of a try doesn't give the try back.
+6. Argon2id, HKDF, the MAC. A right PIN opens the vault from the kept sync and writes the count back to zero. A wrong one leaves the count where step 5 put it: the fifth removes the record and says the PIN was turned off and the master password is needed; before that, the answer says how many tries are left.
+
+- **The count is per account, kept in the file**, so restarting the app doesn't reset it. Only a right PIN or a master password unlock clears it; unlocking with biometrics doesn't.
+- It's a count on this device only. It has nothing to do with the server's sign-in limits, and the server never hears of it.
+- **The lock screen** shows the PIN field when the account has a PIN, with "Use your master password instead" under it, and biometrics as before if they're on. After the fifth wrong try it shows the master password field and says: "Unlocking with a PIN was turned off after 5 wrong tries. Use your master password."
+
+**When the PIN is removed** (the file is deleted; it's per account, and another account's is never touched):
+
+- Turning it off in Settings.
+- Signing out, and removing the account from the device (its folder goes).
+- 5 wrong tries in a row.
+- **The server ending this device's session** (a sync answered "signed out"): that's how a new master password, new KDF settings, a rotated account key, or "Deauthorize sessions" somewhere else first shows on this device, since each changes the account's security stamp. Biometric unlock keeps its key then, and removes it only when the key stops opening the vault; a PIN is weaker, so it goes at once.
+- After any sync: `profile.key` no longer matching `madeFor` (the master password, KDF, or key changed and this device heard of it another way), or the organization's policy now forbidding a PIN.
+- A PIN whose key no longer opens the kept vault (the key was rotated), or whose device seal no longer opens.
+- **The limit:** a device that hasn't synced since the change can't know of it. Its PIN still opens the vault it kept, as its biometrics and the old master password do, until it next reaches the server.
+
+**Organizations.** Upstream has a policy for this, and our server and web vault already carry it: "Remove Unlock with PIN" (policy type 14). The core reads it from the sync (`LockPolicy.remove_unlock_with_pin`, `core/src/lock_policy.rs`; owners are exempt, as upstream exempts them). While it's on, the setting is shown turned off with "Your organization doesn't allow unlocking with a PIN.", setting one is refused in the core, and a PIN set before is removed at the next sync or the next unlock, whichever comes first.
+
+**A PIN is never the master password.** It opens the vault and nothing else:
+
+- An item's master password re-prompt, a passkey's check by master password, approving a sign-in from another device, and turning off "confirm approvals" all take the master password (or, for approvals, biometrics) as before. No PIN call sets what those check (`reprompted`, `confirmed`).
+- **Biometrics can't be turned on in a session a PIN opened.** The core remembers that the vault was opened with a PIN (`opened_with_pin`, until it locks or the master password unlocks it) and refuses to hand the user key to the device's biometric store then; Settings shows the switch off with "Unlock with your master password to turn this on." So a short PIN can't be traded up for a fingerprint.
+- Changing the master password, exporting, and account recovery aren't in our apps yet; when they are, they take the master password itself, and this note binds them.
+- The phone's offer to turn on biometrics appears only after a master password unlock, as before; a PIN unlock doesn't bring it up.
+
+**The server knows nothing.** No request carries the PIN, the record, the count, or the fact that a PIN is set. Nothing about encryption, sync, or signing in changes. The session's refresh token is kept as it was (`docs/core.md`), and a PIN unlock takes up the session the same way a master password unlock does.
+
+**Threat model:**
+
+- **A copy of the disk or a backup:** the table above, per platform.
+- **Someone who picks up the unlocked device, locked app:** 5 tries, then the master password. They can't set a PIN of their own in an unlocked app without the master password.
+- **A program running as the person** can use the device's store as the app does, put the count back, and guess a 4-digit PIN in minutes on its own. That's out of scope, as for every password manager and as for biometric unlock here: such a program can read an unlocked vault's memory.
+- **A restored copy of `pin.json`** puts an old count back. It needs the same access as the line above.
+- **Someone who knows the PIN and has the unlocked device** has the vault, as with any unlock; they still can't see items that ask for the master password again, turn on biometrics, or approve a sign-in.
+- **The server, or someone who breaches it:** learns nothing and holds nothing that helps.
+- **A PIN reused from the phone's lock screen or a bank card** is the person's choice; the app doesn't check it against anything. Not yet: refusing the most common PINs.
+
+**Test vectors** are `docs/vectors/pin-unlock-v1.json`, made by `make-pin-unlock-v1.mjs` with Node's own crypto, apart from the core: a PIN, a salt, and the parameters give the PIN key; the label, server, and ids give the wrapping key; a fixed IV gives the wrapped key, byte for byte. Refusals: a wrong PIN, another account id, another server, another device folder, another version label, a changed MAC, a changed ciphertext, and parameters under the floor. A second part, `macDeviceSeal`, has the Mac's seal with a software P-256 key standing in for the enclave, which the Swift code must match (`tools/mac-touch-id-test.sh`). The core's copy is `core/tests/vectors/pin-unlock-v1.json`, and CI checks the two are the same.
+
+**Tests:**
+
+- The core's unit tests: the vectors; a wrong PIN; the count, across a restart, and that it's read before the KDF and written before it; the fifth wrong try; what clears the count and what doesn't; each removal above; one account's PIN never opening or touching another's; the policy; a device that can't seal; that a PIN never satisfies a re-prompt or a confirmation, and that biometrics can't be turned on after it; that the PIN isn't in the file, an error, or the debug output.
+- The app's tests, as biometric unlock has them: the setting, setting one up, the lock screen with a PIN and the way back to the master password, the wrong tries and the "turned off" message, and the policy's reason.
+- The Mac's seal against the vectors, and with the real Secure Enclave where there is one (`tools/mac-touch-id-test.sh`, no prompt, no keychain).
+- By hand, on real hardware (`docs/hands-on-testing.md`): each platform's store, a restart, and a copied file on another device.
+
+**Not yet:** a PIN on Linux; a TPM-bound key on Windows; a PIN in the iPhone's AutoFill extension; refusing common PINs; a longer wait between tries in place of removing the PIN; a PIN for the browser extension that's ours (it has upstream's).
+
+**Files:** `core/src/pin.rs` (the key, the wrap, the record, the count), `core/src/secrets.rs` (sealing to the device), `core/src/app.rs` (`set_pin`, `unlock_with_pin`, `remove_pin`, and the removals), `core/src/ffi.rs` (`pb_pin_*`), `app/lib/pin.dart` and the lock screen in `app/lib/sign_in.dart`, `app/macos/Runner/DeviceSeal.swift`, `app/ios/Runner/DeviceSeal.swift`, `app/android/.../Keystore.kt`.
+
 ## Health (better than Watchtower)
 
 Reports are only useful if they lead to a fix.
