@@ -1680,6 +1680,11 @@ main.wide > section.home-hero {
   font-weight: 640;
 }
 
+/* "open-source" stays whole: a narrow screen would break it after the hyphen. */
+.home-hero h1 .nowrap {
+  white-space: nowrap;
+}
+
 /* Under the headline: the sentence on the left, the buttons on the right. */
 .home-hero-side {
   flex: 1 1 100%;

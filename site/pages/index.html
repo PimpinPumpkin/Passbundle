@@ -5,7 +5,7 @@ layout: wide
 script: tour
 -->
 <section class="home-hero">
-  <h1>A free and open-source password manager</h1>
+  <h1>A free and <span class="nowrap">open-source</span> password manager</h1>
   <div class="home-hero-side">
     <p class="lead">One click fills in your password, your two-step code, or your passkey. The Free plan covers every device, and your vault is encrypted on yours so only you can read it.</p>
     <div class="actions">
@@ -98,7 +98,7 @@ script: tour
   <ul class="lines">
     <li><strong>No ads or trackers</strong><span>We never sell data.</span></li>
     <li><strong>Free and open source</strong><span>All of our code is public under the GNU GPLv3 and AGPLv3, so anyone can read the code that handles their passwords.</span></li>
-    <li><strong>Our server or yours</strong><span>Run the open-source server yourself, or use our hosted service once it opens at launch.</span></li>
+    <li><strong>Our server or yours</strong><span>Run the open-source server yourself, or use our hosted service<x-if not link="vault"> once it opens at launch</x-if>.</span></li>
   </ul>
   <p><a class="more" href="/security/">How PassBundle keeps your vault safe</a></p>
 </section>
@@ -130,7 +130,7 @@ script: tour
     </details>
     <details>
       <summary>Do I need a domain or any IT setup?</summary>
-      <p>No. Sign up with any email address. Businesses don't need a domain, Active Directory, or an identity provider either; the install command works on any Windows computer, joined to a domain or not.</p>
+      <p>No. An account takes any email address. Businesses don't need a domain, Active Directory, or an identity provider either; the install command works on any Windows computer, joined to a domain or not.</p>
     </details>
     <details>
       <summary>Can my family share passwords?</summary>
@@ -138,7 +138,7 @@ script: tour
     </details>
     <details>
       <summary>Is PassBundle open source?</summary>
-      <p>Yes. All of our code is public, so anyone can check what it does. The apps, the browser extension, and the web vault are under the GNU GPLv3, and the server is under the GNU AGPLv3. Run the server yourself, or use our hosted service once it opens at launch.</p>
+      <p>Yes. All of our code is public, so anyone can check what it does. The apps, the browser extension, and the web vault are under the GNU GPLv3, and the server is under the GNU AGPLv3. Run the server yourself, or use our hosted service<x-if not link="vault"> once it opens at launch</x-if>.</p>
     </details>
   </div>
   <p class="faq-more"><a class="more" href="/help/">More questions and help</a></p>
@@ -148,9 +148,13 @@ script: tour
   <div class="split-head">
     <h2 id="get-title">Get PassBundle</h2>
     <div class="split-side">
-      <p class="lead">The apps for Windows, Mac, Linux, and Android are test builds that sign in to a server you run yourself. The extension goes into the Chrome, Edge, and Firefox stores, and our hosted service opens, at launch.</p>
+      <x-if not link="vault"><p class="lead">The apps for Windows, Mac, Linux, and Android are test builds that sign in to a server you run yourself. The extension isn't in the browsers' stores yet, and our hosted service opens at launch.</p></x-if>
+      <x-if link="vault"><p class="lead">The apps for Windows, Mac, Linux, and Android are test builds, and the extension isn't in the browsers' stores yet. All of them sign in to our hosted service, or to a server you run yourself.</p></x-if>
+      <x-if link="vault" until="signup"><p class="lead">New accounts on our hosted service aren't open yet. To ask for one, see <a href="/contact/">Contact</a>.</p></x-if>
       <div class="actions">
-        <a class="button primary" href="/download/">Download</a>
+        <x-if link="signup"><a class="button primary" href="{{links.signup}}">Create an account</a>
+        <a class="button" href="/download/">Download</a></x-if>
+        <x-if not link="signup"><a class="button primary" href="/download/">Download</a></x-if>
         <a class="button" href="/download/#server">Run your own server</a>
       </div>
     </div>
