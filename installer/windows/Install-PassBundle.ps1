@@ -11,10 +11,12 @@
     - optionally gives the extension its server address and the client's
       enrollment token, join secret, and organization key fingerprint, so
       people join the client after they sign in (the extension asks first,
-      and checks the organization's key against the fingerprint).
+      and checks the organization's key against the fingerprint). A PassBundle
+      extension loaded by hand gets the same settings, under PassBundle's own
+      ID, which is fixed in this script too and never force-installed.
   With the agent's files in an "agent" folder next to this script, it also
   installs the desktop agent to Program Files: it starts at every sign-in,
-  the browsers can reach it for Windows Hello unlock (our extension only), and
+  the browsers can reach it for Windows Hello unlock (our extensions only), and
   a SYSTEM task installs its signed updates. Without them, policies only.
   With the app's files in an "app" folder next to this script, it installs the
   PassBundle app next to the agent, with a Start menu shortcut: the agent's
@@ -66,6 +68,15 @@ $Extensions = @{
   Chrome = @{ Id = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; UpdateUrl = "https://clients2.google.com/service/update2/crx" }
   Edge   = @{ Id = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; UpdateUrl = "https://edge.microsoft.com/extensionwebstorebase/v1/crx" }
 }
+# PassBundle's own extension ID, which a Chrome or Edge build loaded by hand
+# has (from the public key in its manifest; passbundle-clients' brand.json,
+# extension.chromiumId). It may reach the agent and gets the extension's
+# managed settings, like the store IDs. It is never force-installed: it has
+# no update URL, so it stays out of $Extensions. A browser gives this ID to
+# anything loaded by hand with our public key, which takes developer mode and
+# the person's own action on this machine; the same is true of a store ID.
+# See DESIGN.md, "PassBundle's extension IDs".
+$OwnExtension = "cenoidjoogmoieibpcokkafjnaabhokg"
 $PolicyRoots = @{
   Chrome = "HKLM:\SOFTWARE\Policies\Google\Chrome"
   Edge   = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
@@ -155,35 +166,44 @@ function Add-ForcedExtension([string] $Browser) {
 }
 
 # Settings the browser hands our extension (chrome.storage.managed), under the
-# extension's own policy key, which no other vendor uses.
-function Get-ManagedPolicyPath([string] $Browser) {
-  Join-Path $PolicyRoots[$Browser] "3rdparty\extensions\$($Extensions[$Browser].Id)\policy"
+# extension's own policy key, which no other vendor uses. A browser's store
+# extension gets them, and so does a build loaded by hand, under our own ID.
+function Get-ManagedExtensionIds([string] $Browser) {
+  @($Extensions[$Browser].Id, $OwnExtension)
+}
+
+function Get-ManagedPolicyPath([string] $Browser, [string] $Id) {
+  Join-Path $PolicyRoots[$Browser] "3rdparty\extensions\$Id\policy"
 }
 
 function Set-ManagedSettings([string] $Browser) {
-  $path = Get-ManagedPolicyPath $Browser
-  if ($ServerUrl) {
-    $environment = Join-Path $path "environment"
-    if (-not (Test-Path $environment)) { New-Item -Path $environment -Force | Out-Null }
-    New-ItemProperty -Path $environment -Name "base" -Value $ServerUrl.TrimEnd("/") -PropertyType String -Force | Out-Null
-  }
-  if ($EnrollmentToken) {
-    if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
-    New-ItemProperty -Path $path -Name "enrollmentToken" -Value $EnrollmentToken -PropertyType String -Force | Out-Null
-  }
-  if ($JoinSecret) {
-    if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
-    New-ItemProperty -Path $path -Name "joinSecret" -Value $JoinSecret -PropertyType String -Force | Out-Null
-  }
-  if ($OrgKey) {
-    if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
-    New-ItemProperty -Path $path -Name "orgKeyFingerprint" -Value $OrgKey -PropertyType String -Force | Out-Null
+  foreach ($id in @(Get-ManagedExtensionIds $Browser)) {
+    $path = Get-ManagedPolicyPath $Browser $id
+    if ($ServerUrl) {
+      $environment = Join-Path $path "environment"
+      if (-not (Test-Path $environment)) { New-Item -Path $environment -Force | Out-Null }
+      New-ItemProperty -Path $environment -Name "base" -Value $ServerUrl.TrimEnd("/") -PropertyType String -Force | Out-Null
+    }
+    if ($EnrollmentToken) {
+      if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
+      New-ItemProperty -Path $path -Name "enrollmentToken" -Value $EnrollmentToken -PropertyType String -Force | Out-Null
+    }
+    if ($JoinSecret) {
+      if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
+      New-ItemProperty -Path $path -Name "joinSecret" -Value $JoinSecret -PropertyType String -Force | Out-Null
+    }
+    if ($OrgKey) {
+      if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
+      New-ItemProperty -Path $path -Name "orgKeyFingerprint" -Value $OrgKey -PropertyType String -Force | Out-Null
+    }
   }
 }
 
 function Remove-ManagedSettings([string] $Browser) {
-  $extensionKey = Split-Path (Get-ManagedPolicyPath $Browser) -Parent
-  if (Test-Path $extensionKey) { Remove-Item -Path $extensionKey -Recurse -Force }
+  foreach ($id in @(Get-ManagedExtensionIds $Browser)) {
+    $extensionKey = Split-Path (Get-ManagedPolicyPath $Browser $id) -Parent
+    if (Test-Path $extensionKey) { Remove-Item -Path $extensionKey -Recurse -Force }
+  }
 }
 
 function Remove-ForcedExtension([string] $Browser) {
@@ -214,14 +234,16 @@ function Install-Agent {
   if (-not (Test-Path $InstallDir)) { New-Item -Path $InstallDir -ItemType Directory | Out-Null }
   foreach ($name in $AgentFiles) { Copy-AgentFile $name }
 
-  # The native-messaging host, for our extensions only.
+  # The native-messaging host, for our extensions only: the store IDs and
+  # our own, each fixed in this script.
+  $agentExtensions = @($Extensions.Values | ForEach-Object { $_.Id }) + $OwnExtension
   $manifest = Join-Path $InstallDir "$HostName.json"
   $json = [ordered]@{
     name            = $HostName
     description     = "PassBundle desktop agent"
     path            = Join-Path $InstallDir "passbundle-agent-host.exe"
     type            = "stdio"
-    allowed_origins = @($Extensions.Values | ForEach-Object { "chrome-extension://$($_.Id)/" } | Sort-Object)
+    allowed_origins = @($agentExtensions | ForEach-Object { "chrome-extension://$_/" } | Sort-Object)
   } | ConvertTo-Json
   # UTF-8 without a byte-order mark, which browsers' JSON parsers expect.
   [System.IO.File]::WriteAllText($manifest, $json, (New-Object System.Text.UTF8Encoding $false))

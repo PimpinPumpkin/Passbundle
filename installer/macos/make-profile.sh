@@ -9,7 +9,9 @@
 #   - optionally gives the extension its server address and the client's
 #     enrollment token, join secret, and organization key fingerprint, so
 #     people join the client after they sign in (the extension asks first,
-#     and checks the organization's key against the fingerprint).
+#     and checks the organization's key against the fingerprint). A PassBundle
+#     extension loaded by hand gets the same settings, under PassBundle's own
+#     ID, which is fixed here too and never force-installed.
 # It also gives the desktop agent its server address.
 # The same options make the same profile, so the MDM replaces it in place.
 #
@@ -27,6 +29,12 @@ CHROME_EXTENSION="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 CHROME_UPDATE_URL="https://clients2.google.com/service/update2/crx"
 EDGE_EXTENSION="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 EDGE_UPDATE_URL="https://edge.microsoft.com/extensionwebstorebase/v1/crx"
+# PassBundle's own extension ID, which a Chrome or Edge build loaded by hand
+# has (from the public key in its manifest; passbundle-clients' brand.json,
+# extension.chromiumId). It gets the extension's settings, like the store
+# IDs. It is never force-installed: it has no update URL. See DESIGN.md,
+# "PassBundle's extension IDs".
+OWN_EXTENSION="cenoidjoogmoieibpcokkafjnaabhokg"
 # The profile's identity, fixed so a new profile replaces the old one.
 PROFILE="com.passbundle.profile"
 PROFILE_UUID="AB9F110B-7156-4A6E-ADFD-888DD9FD0935"
@@ -34,6 +42,8 @@ CHROME_UUID="93B8F60B-D521-4DE9-A3ED-FA3344774246"
 EDGE_UUID="FE508B21-38FB-452C-955B-5438E249A6EE"
 CHROME_SETTINGS_UUID="283E62E3-1035-4C9A-9A6A-17C26AE62BBA"
 EDGE_SETTINGS_UUID="FC9C684E-85E4-429D-97A3-E8235C4EA8F0"
+CHROME_OWN_SETTINGS_UUID="415C06B6-7A10-40EE-9360-8E99B4DA4303"
+EDGE_OWN_SETTINGS_UUID="1BE97439-229F-41FA-9320-1521CF8CB6D4"
 AGENT_UUID="BD47697A-955E-4F2F-944A-697C68BC198E"
 FIREFOX_UUID="474AE330-7ED7-4B3B-B65D-3420FE6D4DFB"
 
@@ -166,7 +176,8 @@ browser() {
   payload_end
 }
 
-# What the browser hands our extension (chrome.storage.managed).
+# What the browser hands our extension (chrome.storage.managed): the store's
+# extension, and a build loaded by hand, which has our own ID.
 extension_settings() {
   payload_start "$1.extensions.$2" "$3" "$4" "$5"
   if [ -n "$server_url" ]; then
@@ -207,13 +218,17 @@ for b in $browsers; do
   case "$b" in
     chrome)
       browser com.google.Chrome chrome "$CHROME_UUID" "Chrome" "$CHROME_EXTENSION" "$CHROME_UPDATE_URL"
-      [ -z "$server_url$token$join_secret$org_key" ] ||
+      if [ -n "$server_url$token$join_secret$org_key" ]; then
         extension_settings com.google.Chrome "$CHROME_EXTENSION" chrome-extension "$CHROME_SETTINGS_UUID" "PassBundle in Chrome"
+        extension_settings com.google.Chrome "$OWN_EXTENSION" chrome-own-extension "$CHROME_OWN_SETTINGS_UUID" "PassBundle in Chrome, loaded by hand"
+      fi
       ;;
     edge)
       browser com.microsoft.Edge edge "$EDGE_UUID" "Edge" "$EDGE_EXTENSION" "$EDGE_UPDATE_URL"
-      [ -z "$server_url$token$join_secret$org_key" ] ||
+      if [ -n "$server_url$token$join_secret$org_key" ]; then
         extension_settings com.microsoft.Edge "$EDGE_EXTENSION" edge-extension "$EDGE_SETTINGS_UUID" "PassBundle in Edge"
+        extension_settings com.microsoft.Edge "$OWN_EXTENSION" edge-own-extension "$EDGE_OWN_SETTINGS_UUID" "PassBundle in Edge, loaded by hand"
+      fi
       ;;
   esac
 done

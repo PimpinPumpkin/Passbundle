@@ -13,7 +13,9 @@
 #   - optionally gives the extension its server address and the client's
 #     enrollment token, join secret, and organization key fingerprint, so
 #     people join the client after they sign in (the extension asks first,
-#     and checks the organization's key against the fingerprint).
+#     and checks the organization's key against the fingerprint). A PassBundle
+#     extension loaded by hand gets the same settings, under PassBundle's own
+#     ID, which is fixed in this script too and never force-installed.
 # Without the app's folder, it sets the policies only. The policies are a
 # file of our own in each browser's managed policies folder; other vendors'
 # files are left alone. The desktop agent isn't installed: on Linux it has no
@@ -46,6 +48,14 @@ CHROME_EXTENSION="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 CHROME_UPDATE_URL="https://clients2.google.com/service/update2/crx"
 EDGE_EXTENSION="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 EDGE_UPDATE_URL="https://edge.microsoft.com/extensionwebstorebase/v1/crx"
+# PassBundle's own extension ID, which a Chrome or Edge build loaded by hand
+# has (from the public key in its manifest; passbundle-clients' brand.json,
+# extension.chromiumId). It gets the extension's settings, like the store
+# IDs. It is never force-installed: it has no update URL. A browser gives this
+# ID to anything loaded by hand with our public key, which takes developer
+# mode and the person's own action on this machine; the same is true of a
+# store ID. See DESIGN.md, "PassBundle's extension IDs".
+OWN_EXTENSION="cenoidjoogmoieibpcokkafjnaabhokg"
 
 fail() {
   echo "$1" >&2
@@ -199,10 +209,9 @@ one_line() { # name value
   plain "$1$2" || fail "$1 has to be on one line, with no control characters."
 }
 
-# What the browser hands our extension (chrome.storage.managed).
-extension_settings() {
-  [ -n "$server_url$token$join_secret$org_key" ] || return 0
-  printf ',\n  "3rdparty": {\n    "extensions": {\n      "%s": {' "$1"
+# One extension's settings, by its ID.
+extension_entry() { # extension
+  printf '\n      "%s": {' "$1"
   sep=""
   if [ -n "$server_url" ]; then
     one_line base "$server_url"
@@ -217,7 +226,18 @@ extension_settings() {
     printf '%s\n        "%s": "%s"' "$sep" "$name" "$value"
     sep=","
   done
-  printf '\n      }\n    }\n  }'
+  printf '\n      }'
+}
+
+# What the browser hands our extension (chrome.storage.managed): the store's
+# extension, and a build loaded by hand, which has our own ID.
+extension_settings() { # store-extension
+  [ -n "$server_url$token$join_secret$org_key" ] || return 0
+  printf ',\n  "3rdparty": {\n    "extensions": {'
+  extension_entry "$1"
+  printf ','
+  extension_entry "$OWN_EXTENSION"
+  printf '\n    }\n  }'
 }
 
 policy() { # extension update-url

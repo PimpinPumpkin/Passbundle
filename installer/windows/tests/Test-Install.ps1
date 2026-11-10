@@ -8,6 +8,10 @@ $chromeRoot = "HKLM:\SOFTWARE\Policies\Google\Chrome"
 $edgeRoot = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
 $firefoxRoot = "HKLM:\SOFTWARE\Policies\Mozilla\Firefox"
 $ownPolicies = "HKLM:\SOFTWARE\PassBundle\BrowserPolicies"
+# PassBundle's own extension ID, which a build loaded by hand has (DESIGN.md,
+# "PassBundle's extension IDs"): it gets the extension's settings and may
+# reach the agent, and nothing force-installs it.
+$ownId = "cenoidjoogmoieibpcokkafjnaabhokg"
 $failures = 0
 
 function Check([string] $Name, [scriptblock] $Condition) {
@@ -24,11 +28,21 @@ function Dword([string] $Root, [string] $Name) {
   if (-not (Test-Path $Root)) { return $null }
   (Get-Item $Root).GetValue($Name)
 }
+# The extensions a browser has managed settings for, by ID.
+function ManagedIds([string] $Root) {
+  $path = "$Root\3rdparty\extensions"
+  if (-not (Test-Path $path)) { return @() }
+  @(Get-ChildItem $path | ForEach-Object { $_.PSChildName })
+}
 
 # Another vendor already force-installs an extension. We must not touch it.
 $foreign = "cccccccccccccccccccccccccccccccc;https://clients2.google.com/service/update2/crx"
 New-Item -Path "$chromeRoot\ExtensionInstallForcelist" -Force | Out-Null
 New-ItemProperty -Path "$chromeRoot\ExtensionInstallForcelist" -Name "1" -Value $foreign -PropertyType String -Force | Out-Null
+
+# What was there before us, so the checks below see only what we add.
+$chromeHad = @(ManagedIds $chromeRoot)
+$edgeHad = @(ManagedIds $edgeRoot)
 
 $serverUrl = "https://vault.example.test"
 $token = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJ0123456"
@@ -43,6 +57,8 @@ Check "Chrome keeps the other vendor's extension" { $chromeList -contains $forei
 Check "Chrome forces our extension exactly once" { @($chromeList | Where-Object { $_ -like "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;*" }).Count -eq 1 }
 Check "Chrome forces nothing else of ours" { $chromeList.Count -eq 2 }
 Check "Edge forces our extension exactly once" { @($edgeList | Where-Object { $_ -like "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;*" }).Count -eq 1 }
+Check "Edge forces nothing else" { @($edgeList).Count -eq 1 }
+Check "Nothing force-installs our own extension ID" { -not (@(@($chromeList) + @($edgeList)) -like "*$ownId*") }
 Check "Chrome password manager off" { (Dword $chromeRoot "PasswordManagerEnabled") -eq 0 }
 Check "Edge password manager off" { (Dword $edgeRoot "PasswordManagerEnabled") -eq 0 }
 Check "Chrome takes native-messaging hosts from the machine only" { (Dword $chromeRoot "NativeMessagingUserLevelHosts") -eq 0 }
@@ -83,6 +99,23 @@ Check "Chrome extension gets the enrollment token" { (Managed $chromeRoot "aaaaa
 Check "Edge extension gets the enrollment token" { (Managed $edgeRoot "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" "" "enrollmentToken") -eq $token }
 Check "Chrome extension gets the join secret" { (Managed $chromeRoot "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" "" "joinSecret") -eq $joinSecret }
 Check "Edge extension gets the organization key fingerprint" { (Managed $edgeRoot "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" "" "orgKeyFingerprint") -eq $orgKey }
+# A build loaded by hand has our own ID, so the same settings go there too.
+Check "A Chrome extension loaded by hand gets the server address" { (Managed $chromeRoot $ownId "\environment" "base") -eq $serverUrl }
+Check "A Chrome extension loaded by hand gets the enrollment token" { (Managed $chromeRoot $ownId "" "enrollmentToken") -eq $token }
+Check "A Chrome extension loaded by hand gets the join secret" { (Managed $chromeRoot $ownId "" "joinSecret") -eq $joinSecret }
+Check "A Chrome extension loaded by hand gets the organization key fingerprint" { (Managed $chromeRoot $ownId "" "orgKeyFingerprint") -eq $orgKey }
+Check "An Edge extension loaded by hand gets the server address" { (Managed $edgeRoot $ownId "\environment" "base") -eq $serverUrl }
+Check "An Edge extension loaded by hand gets the enrollment token" { (Managed $edgeRoot $ownId "" "enrollmentToken") -eq $token }
+Check "An Edge extension loaded by hand gets the join secret" { (Managed $edgeRoot $ownId "" "joinSecret") -eq $joinSecret }
+Check "An Edge extension loaded by hand gets the organization key fingerprint" { (Managed $edgeRoot $ownId "" "orgKeyFingerprint") -eq $orgKey }
+# The settings go to our extensions only: each browser's store ID and our own.
+Check "Chrome hands the settings to no other extension" {
+  (@(ManagedIds $chromeRoot | Where-Object { $chromeHad -notcontains $_ } | Sort-Object) -join ",") -eq "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,$ownId"
+}
+Check "Edge hands the settings to no other extension" {
+  (@(ManagedIds $edgeRoot | Where-Object { $edgeHad -notcontains $_ } | Sort-Object) -join ",") -eq "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,$ownId"
+}
+Check "Still nothing force-installs our own extension ID" { -not (@(@(Forcelist $chromeRoot) + @(Forcelist $edgeRoot)) -like "*$ownId*") }
 
 # Bad values are refused before anything is written.
 $refusedHttp = $false
@@ -147,10 +180,11 @@ if ($haveAgent) {
   Check "The host's manifest names our host and its program" {
     $manifest.name -eq $hostName -and $manifest.type -eq "stdio" -and (Test-Path $manifest.path)
   }
-  Check "The host allows our two extensions and nothing else" {
+  Check "The host allows our extensions (the two store IDs and our own) and nothing else" {
     -not (Compare-Object @($manifest.allowed_origins) @(
         "chrome-extension://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/",
-        "chrome-extension://bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/"))
+        "chrome-extension://bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/",
+        "chrome-extension://$ownId/"))
   }
   Check "The manifest has no byte-order mark" { [System.IO.File]::ReadAllBytes($manifestPath)[0] -eq [byte][char]"{" }
   foreach ($key in $hostKeys) {
@@ -224,6 +258,9 @@ if ($env:KK_SKIP_REMOVE -ne "1") {
   Check "Remove restores the password manager setting" { $null -eq (Dword $chromeRoot "PasswordManagerEnabled") }
   Check "Remove restores user-level native-messaging hosts" { $null -eq (Dword $edgeRoot "NativeMessagingUserLevelHosts") }
   Check "Remove drops the extension's settings" { -not (Test-Path "$chromeRoot\3rdparty\extensions\aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") }
+  Check "Remove drops the Edge extension's settings" { -not (Test-Path "$edgeRoot\3rdparty\extensions\bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb") }
+  Check "Remove drops the settings for an extension loaded by hand, in Chrome" { -not (Test-Path "$chromeRoot\3rdparty\extensions\$ownId") }
+  Check "Remove drops the settings for an extension loaded by hand, in Edge" { -not (Test-Path "$edgeRoot\3rdparty\extensions\$ownId") }
   Check "Remove drops Firefox's card policy" { $null -eq (Dword $firefoxRoot "AutofillCreditCardEnabled") }
   Check "Remove forgets which policies it set" { -not (Test-Path $ownPolicies) }
   if ($haveAgent) {
