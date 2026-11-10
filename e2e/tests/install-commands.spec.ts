@@ -3,7 +3,9 @@
 // secret, and key fingerprint. The Mac's command is run here with the real
 // make-profile.sh, and the profile it writes for the MDM holds them; the
 // Linux command is run with the real install script, which takes every
-// argument and stops only because this isn't root.
+// argument and stops only because this isn't root. The scripts also hand the
+// settings to a build loaded by hand, under PassBundle's own extension ID
+// (brand.json's), which is checked against each script and DESIGN.md here.
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -124,15 +126,49 @@ test("the install command comes for Windows, Mac, and Linux with the same token,
     ["joinSecret", secret],
     ["orgKeyFingerprint", orgKey],
   ]) {
-    // Once for Chrome's copy of the extension's settings, once for Edge's.
-    expect(profile.split(`<key>${key}</key>\n\t\t\t<string>${value}</string>`)).toHaveLength(3);
+    // Chrome's and Edge's copies of the extension's settings, each once for
+    // the store's extension and once for a build loaded by hand.
+    expect(profile.split(`<key>${key}</key>\n\t\t\t<string>${value}</string>`)).toHaveLength(5);
   }
   expect(profile).toContain(`<string>${server}</string>`);
+  // The build loaded by hand has the extension ID this build's brand gives.
+  for (const browser of ["com.google.Chrome", "com.microsoft.Edge"]) {
+    expect(profile).toContain(`<string>${browser}.extensions.${brand.extension.chromiumId}</string>`);
+  }
+  expect(profile).not.toContain(`${brand.extension.chromiumId};`);
 
   // Back to Windows: the same command as before.
   await choose("Windows");
   await expect(command).toHaveText(windowsShape);
   await expect(command).toContainText(`-EnrollmentToken '${token}' -JoinSecret '${secret}' -OrgKey '${orgKey}'`);
+});
+
+// A Chrome or Edge build loaded by hand has PassBundle's own extension ID
+// (brand.json's chromiumId, from the public key in its manifest). Each install
+// script has that ID written into it, so it can't read brand.json: this keeps
+// the copies and DESIGN.md's the same, and the ID out of every force-install
+// list (DESIGN.md, "PassBundle's extension IDs").
+test("the install scripts and DESIGN.md name the extension's own ID as brand.json has it, and never force-install it", () => {
+  const own: string = brand.extension.chromiumId;
+  expect(own).toMatch(/^[a-p]{32}$/);
+  const scripts = [
+    ["windows/Install-PassBundle.ps1", `$OwnExtension = "${own}"`],
+    ["macos/install-passbundle.sh", `OWN_EXTENSION="${own}"`],
+    ["macos/make-profile.sh", `OWN_EXTENSION="${own}"`],
+    ["linux/install-passbundle.sh", `OWN_EXTENSION="${own}"`],
+  ];
+  for (const [file, declaration] of scripts) {
+    const lines = fs.readFileSync(path.join(installer, file), "utf8").split("\n");
+    // Written once, as a fixed value: every use is by its name.
+    expect(lines.filter((line) => line.includes(own)), file).toEqual([declaration]);
+    // Never on a line with an update URL or a force-install list.
+    expect(
+      lines.filter((line) => /own_?extension/i.test(line) && /forcelist|update_?url/i.test(line)),
+      file,
+    ).toEqual([]);
+  }
+  const design = fs.readFileSync(path.join(installer, "../DESIGN.md"), "utf8");
+  expect(design).toContain(`- **Chrome and Edge:** \`${own}\``);
 });
 
 test("with the browsers' card and address autofill turned off, every command turns them off too, and the Mac profile does it for Chrome, Edge, and Firefox", async ({
