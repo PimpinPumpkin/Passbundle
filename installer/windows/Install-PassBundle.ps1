@@ -6,14 +6,19 @@
   Run once with admin rights, typically from an RMM. For each targeted browser it:
     - force-installs the PassBundle extension (IDs are fixed in this script, never passed in),
     - turns off the browser's own password saving and filling,
-    - optionally turns off card and address autofill (in Firefox too, which
-      reads the same two policies; the rest of Firefox isn't managed yet),
+    - optionally turns off card and address autofill,
     - optionally gives the extension its server address and the client's
       enrollment token, join secret, and organization key fingerprint, so
       people join the client after they sign in (the extension asks first,
       and checks the organization's key against the fingerprint). A PassBundle
       extension loaded by hand gets the same settings, under PassBundle's own
       ID, which is fixed in this script too and never force-installed.
+  Firefox gets the same password, card, and address policies under its own
+  key, and nothing else: no extension (ours isn't signed by Mozilla yet). The
+  password ones are Firefox's PasswordManagerEnabled and OfferToSaveLogins,
+  both off unless -KeepBrowserPasswordManager. The key is the machine's
+  (Mozilla documents it for Firefox and Firefox ESR), so it doesn't matter
+  where Firefox is installed.
   With the agent's files in an "agent" folder next to this script, it also
   installs the desktop agent to Program Files: it starts at every sign-in,
   the browsers can reach it for Windows Hello unlock (our extensions only), and
@@ -83,9 +88,13 @@ $PolicyRoots = @{
 }
 # Firefox takes the card and address autofill policies under the same names.
 $FirefoxRoot = "HKLM:\SOFTWARE\Policies\Mozilla\Firefox"
-# The card and address policies this script set itself, so a run without
-# their options takes back only those, never another vendor's. Each value is
-# named "<browser>.<policy>". See DESIGN.md, "Addresses and cards".
+# Firefox's own password manager: PasswordManagerEnabled (also takes away
+# about:logins and the passwords settings) and OfferToSaveLogins.
+$FirefoxPasswordPolicies = @("PasswordManagerEnabled", "OfferToSaveLogins")
+# The card and address policies this script set itself, and Firefox's
+# password policies, so a run without their options takes back only those,
+# never another vendor's. Each value is named "<browser>.<policy>". See
+# DESIGN.md, "Addresses and cards".
 $OwnPolicies = "HKLM:\SOFTWARE\PassBundle\BrowserPolicies"
 
 # The desktop agent. See DESIGN.md, "Desktop agent" and "Biometric unlock".
@@ -113,8 +122,9 @@ function Set-Dword([string] $Path, [string] $Name, [int] $Value) {
   New-ItemProperty -Path $Path -Name $Name -Value $Value -PropertyType DWord -Force | Out-Null
 }
 
-# Turns a card or address autofill policy off and records that this script
-# did, unless it was off already by someone else's choice, which stays theirs.
+# Turns a card or address autofill policy (or a Firefox password policy) off
+# and records that this script did, unless it was off already by someone
+# else's choice, which stays theirs.
 function Set-OwnAutofillPolicy([string] $Browser, [string] $Root, [string] $Name) {
   $record = "$Browser.$Name"
   $ours = (Test-Path $OwnPolicies) -and ((Get-Item $OwnPolicies).GetValueNames() -contains $record)
@@ -123,8 +133,9 @@ function Set-OwnAutofillPolicy([string] $Browser, [string] $Root, [string] $Name
   Set-Dword $OwnPolicies $record 1
 }
 
-# Takes back a card or address autofill policy this script set, if it's still
-# as the script left it, and forgets it. Anyone else's stays.
+# Takes back a card or address autofill policy (or a Firefox password policy)
+# this script set, if it's still as the script left it, and forgets it.
+# Anyone else's stays.
 function Remove-OwnAutofillPolicy([string] $Browser, [string] $Root, [string] $Name) {
   $record = "$Browser.$Name"
   if (-not ((Test-Path $OwnPolicies) -and ((Get-Item $OwnPolicies).GetValueNames() -contains $record))) { return }
@@ -351,9 +362,12 @@ foreach ($browser in $Browsers) {
   Write-Output "Applied PassBundle policies for $browser"
 }
 
-# Firefox: only card and address autofill, as the options say.
+# Firefox: its password manager, and card and address autofill, as the
+# options say. A run with -KeepBrowserPasswordManager takes back the password
+# policies this script set before, as a run without the card and address
+# options takes those back.
 if ($Remove) {
-  foreach ($name in "AutofillCreditCardEnabled", "AutofillAddressEnabled") {
+  foreach ($name in $FirefoxPasswordPolicies + @("AutofillCreditCardEnabled", "AutofillAddressEnabled")) {
     Remove-OwnAutofillPolicy "Firefox" $FirefoxRoot $name
   }
   if (Test-Path $OwnPolicies) { Remove-Item -Path $OwnPolicies -Recurse -Force }
@@ -362,8 +376,12 @@ if ($Remove) {
     Remove-Item -Path $ownRoot -Force
   }
 } else {
+  foreach ($name in $FirefoxPasswordPolicies) {
+    if ($KeepBrowserPasswordManager) { Remove-OwnAutofillPolicy "Firefox" $FirefoxRoot $name }
+    else { Set-OwnAutofillPolicy "Firefox" $FirefoxRoot $name }
+  }
   Set-AutofillPolicies "Firefox" $FirefoxRoot
-  if ($DisableCardAutofill -or $DisableAddressAutofill) {
-    Write-Output "Applied PassBundle's card and address autofill policies for Firefox"
+  if (-not $KeepBrowserPasswordManager -or $DisableCardAutofill -or $DisableAddressAutofill) {
+    Write-Output "Applied PassBundle policies for Firefox"
   }
 }

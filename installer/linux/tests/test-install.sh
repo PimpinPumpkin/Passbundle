@@ -15,6 +15,7 @@ icon="/usr/share/icons/hicolor/256x256/apps/com.passbundle.app.png"
 chrome="/etc/opt/chrome/policies/managed"
 edge="/etc/opt/edge/policies/managed"
 firefox="/etc/firefox/policies/policies.json"
+firefox_added="/etc/passbundle/firefox-policies-added"
 foreign="$chrome/another-vendor.json"
 person="${SUDO_USER:-runner}"
 server_url="https://vault.example.test"
@@ -90,7 +91,8 @@ check "Chrome takes native-messaging hosts from the machine only" policy_is "$ch
 check "Edge takes native-messaging hosts from the machine only" policy_is "$edge/passbundle.json" 'p["NativeMessagingUserLevelHosts"] is False'
 check "Chrome card autofill off" policy_is "$chrome/passbundle.json" 'p["AutofillCreditCardEnabled"] is False'
 check "address autofill untouched" policy_is "$chrome/passbundle.json" '"AutofillAddressEnabled" not in p'
-check "Firefox card autofill off" policy_is "$firefox" 'p == {"policies": {"AutofillCreditCardEnabled": False}}'
+check "Firefox password manager and card autofill off, and nothing else" policy_is "$firefox" \
+  'p == {"policies": {"PasswordManagerEnabled": False, "OfferToSaveLogins": False, "AutofillCreditCardEnabled": False}}'
 check "no extension settings without the console's values" policy_is "$chrome/passbundle.json" '"3rdparty" not in p'
 check "our own extension ID is nowhere in them" sh -c "! grep -q cenoidjoogmoieibpcokkafjnaabhokg '$chrome/passbundle.json' '$edge/passbundle.json'"
 check "the policy files are root's and read-only" sh -c "[ \"\$(stat -c '%U:%G %a' '$chrome/passbundle.json')\" = 'root:root 644' ]"
@@ -128,8 +130,8 @@ check "Chrome still forces only its store extension" policy_is "$chrome/passbund
 check "Edge still forces only its store extension" policy_is "$edge/passbundle.json" \
   'p["ExtensionInstallForcelist"] == ["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;https://edge.microsoft.com/extensionwebstorebase/v1/crx"]'
 check "Edge address autofill off" policy_is "$edge/passbundle.json" 'p["AutofillAddressEnabled"] is False'
-check "Firefox card and address autofill off" policy_is "$firefox" \
-  'p == {"policies": {"AutofillCreditCardEnabled": False, "AutofillAddressEnabled": False}}'
+check "Firefox password manager, card, and address autofill off" policy_is "$firefox" \
+  'p == {"policies": {"PasswordManagerEnabled": False, "OfferToSaveLogins": False, "AutofillCreditCardEnabled": False, "AutofillAddressEnabled": False}}'
 check "Firefox's policies are root's and read-only" sh -c "[ \"\$(stat -c '%U:%G %a' '$firefox')\" = 'root:root 644' ]"
 check "the app gets the server, without a trailing slash" policy_is /etc/passbundle/policy.json "p == {\"ServerUrl\": \"$server_url\"}"
 check "the app's policy is root's and read-only" sh -c "[ \"\$(stat -c '%U:%G %a' /etc/passbundle/policy.json)\" = 'root:root 644' ]"
@@ -144,17 +146,45 @@ echo "Card and address autofill left as they are"
 sh "$script" --server-url "$server_url/" --enrollment-token "$token" --join-secret "$join_secret" \
   --org-key "$org_key" > /dev/null || failures=$((failures + 1))
 check "Chrome card autofill no longer set" policy_is "$chrome/passbundle.json" '"AutofillCreditCardEnabled" not in p'
+check "Firefox keeps only its password manager off" policy_is "$firefox" \
+  'p == {"policies": {"PasswordManagerEnabled": False, "OfferToSaveLogins": False}}'
+
+echo "The browsers' password managers kept"
+sh "$script" --keep-browser-password-manager --server-url "$server_url/" --enrollment-token "$token" \
+  --join-secret "$join_secret" --org-key "$org_key" > /dev/null || failures=$((failures + 1))
+check "Chrome password manager no longer set" policy_is "$chrome/passbundle.json" '"PasswordManagerEnabled" not in p'
 check "our Firefox policies are gone" test ! -e "$firefox"
 
 echo "Another vendor's Firefox policies"
+# Firefox reads one policies file, so ours are added to theirs: only policies
+# it doesn't have, and nothing of theirs changes. One of theirs is already off.
 mkdir -p "$(dirname "$firefox")"
-printf '{ "policies": { "DisableTelemetry": true } }\n' > "$firefox"
+printf '{ "policies": { "DisableTelemetry": true, "OfferToSaveLogins": false } }\n' > "$firefox"
+chmod 640 "$firefox"
+out=$(sh "$script" --disable-card-autofill 2>&1)
+echo "$out"
+check "adds ours to theirs" policy_is "$firefox" \
+  "p['policies'] == {'DisableTelemetry': True, 'OfferToSaveLogins': False, 'PasswordManagerEnabled': False, 'AutofillCreditCardEnabled': False}"
+check "keeps their file's owner and mode" sh -c "[ \"\$(stat -c '%U:%G %a' '$firefox')\" = 'root:root 640' ]"
+check "lists only the policies it added" sh -c "[ \"\$(cat '$firefox_added')\" = \"\$(printf 'PasswordManagerEnabled\nAutofillCreditCardEnabled')\" ]"
+check "its list is root's and read-only" sh -c "[ \"\$(stat -c '%U:%G %a' '$firefox_added')\" = 'root:root 644' ]"
+out=$(sh "$script" --disable-card-autofill 2>&1)
+check "again, nothing changed" sh -c "printf '%s' \"\$1\" | grep -q 'nothing changed'" _ "$out"
+sh "$script" --keep-browser-password-manager --disable-card-autofill > /dev/null || failures=$((failures + 1))
+check "the password manager kept: takes back its own password policy, not theirs" policy_is "$firefox" \
+  "p['policies'] == {'DisableTelemetry': True, 'OfferToSaveLogins': False, 'AutofillCreditCardEnabled': False}"
+sh "$script" --remove > /dev/null || failures=$((failures + 1))
+check "removing takes back the rest of ours, and leaves theirs" policy_is "$firefox" \
+  "p == {'policies': {'DisableTelemetry': True, 'OfferToSaveLogins': False}}"
+check "and their file's owner and mode" sh -c "[ \"\$(stat -c '%U:%G %a' '$firefox')\" = 'root:root 640' ]"
+check "and its list is gone" test ! -e "$firefox_added"
+printf '{ "policies": { "DisableTelemetry": true, } }\n' > "$firefox"
 firefox_before=$(cat "$firefox")
 out=$(sh "$script" --disable-card-autofill 2>&1)
-check "says it leaves them alone" sh -c "printf '%s' \"\$1\" | grep -q 'policies.json is another vendor'" _ "$out"
-check "leaves them alone" sh -c "[ \"\$(cat '$firefox')\" = \"\$1\" ]" _ "$firefox_before"
+check "a file that isn't JSON: says it leaves it alone" sh -c "printf '%s' \"\$1\" | grep -q 'policies.json is another vendor.*left alone'" _ "$out"
+check "and leaves it alone" sh -c "[ \"\$(cat '$firefox')\" = \"\$1\" ]" _ "$firefox_before"
 sh "$script" --remove > /dev/null || failures=$((failures + 1))
-check "removing leaves them alone too" sh -c "[ \"\$(cat '$firefox')\" = \"\$1\" ]" _ "$firefox_before"
+check "removing leaves it alone too" sh -c "[ \"\$(cat '$firefox')\" = \"\$1\" ]" _ "$firefox_before"
 rm -f "$firefox"
 sh "$script" --disable-card-autofill --disable-address-autofill --server-url "$server_url/" \
   --enrollment-token "$token" --join-secret "$join_secret" --org-key "$org_key" > /dev/null || failures=$((failures + 1))
@@ -181,6 +211,7 @@ check "our Chrome policies are gone" test ! -e "$chrome/passbundle.json"
 check "our Edge policies are gone" test ! -e "$edge/passbundle.json"
 check "the app's policy is gone" test ! -e /etc/passbundle/policy.json
 check "our Firefox policies are gone" test ! -e "$firefox"
+check "and no list of Firefox policies is left" test ! -e "$firefox_added"
 check "the other vendor's file is still there" sh -c "[ \"\$(cat '$foreign')\" = \"\$1\" ]" _ "$foreign_before"
 check "removing again is fine" sh "$script" --remove
 rm -f "$foreign"

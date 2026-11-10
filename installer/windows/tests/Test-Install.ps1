@@ -68,6 +68,12 @@ Check "Address autofill untouched" { $null -eq (Dword $chromeRoot "AutofillAddre
 Check "Firefox card autofill off" { (Dword $firefoxRoot "AutofillCreditCardEnabled") -eq 0 }
 Check "Firefox address autofill untouched" { $null -eq (Dword $firefoxRoot "AutofillAddressEnabled") }
 Check "It records the card policies it set" { (Dword $ownPolicies "Firefox.AutofillCreditCardEnabled") -eq 1 }
+Check "Firefox password manager off" { (Dword $firefoxRoot "PasswordManagerEnabled") -eq 0 }
+Check "Firefox doesn't offer to save passwords" { (Dword $firefoxRoot "OfferToSaveLogins") -eq 0 }
+Check "It records Firefox's password policies it set" {
+  (Dword $ownPolicies "Firefox.PasswordManagerEnabled") -eq 1 -and (Dword $ownPolicies "Firefox.OfferToSaveLogins") -eq 1
+}
+Check "Firefox gets no extension" { -not (Test-Path "$firefoxRoot\Extensions") -and -not (Test-Path "$firefoxRoot\ExtensionSettings") }
 
 # The organization's setting goes back to leave as is, so the install command
 # loses its options: a run without them takes back only the card and address
@@ -86,6 +92,26 @@ Check "Without the options, Firefox's are taken back" {
 }
 Check "Another vendor's Edge address policy stays" { (Dword $edgeRoot "AutofillAddressEnabled") -eq 0 }
 Remove-ItemProperty -Path $edgeRoot -Name "AutofillAddressEnabled"
+Check "Without the card and address options, Firefox's password manager is still off" { (Dword $firefoxRoot "PasswordManagerEnabled") -eq 0 }
+
+# The organization keeps the browsers' password managers: a run with
+# -KeepBrowserPasswordManager takes back Firefox's password policies, which
+# this script set, and leaves another vendor's.
+& $script -KeepBrowserPasswordManager -ServerUrl "$serverUrl/" -EnrollmentToken $token | Out-Null
+Check "Kept, Firefox's password policies are taken back" {
+  $null -eq (Dword $firefoxRoot "PasswordManagerEnabled") -and $null -eq (Dword $firefoxRoot "OfferToSaveLogins")
+}
+Check "and no longer recorded" {
+  $null -eq (Dword $ownPolicies "Firefox.PasswordManagerEnabled") -and $null -eq (Dword $ownPolicies "Firefox.OfferToSaveLogins")
+}
+New-ItemProperty -Path $firefoxRoot -Name "OfferToSaveLogins" -Value 0 -PropertyType DWord -Force | Out-Null
+& $script -ServerUrl "$serverUrl/" -EnrollmentToken $token | Out-Null
+Check "Firefox password manager off again" { (Dword $firefoxRoot "PasswordManagerEnabled") -eq 0 }
+Check "Another vendor's Firefox policy isn't recorded as ours" { $null -eq (Dword $ownPolicies "Firefox.OfferToSaveLogins") }
+& $script -KeepBrowserPasswordManager -ServerUrl "$serverUrl/" -EnrollmentToken $token | Out-Null
+Check "Another vendor's Firefox policy stays" { (Dword $firefoxRoot "OfferToSaveLogins") -eq 0 }
+Check "Ours goes" { $null -eq (Dword $firefoxRoot "PasswordManagerEnabled") }
+Remove-ItemProperty -Path $firefoxRoot -Name "OfferToSaveLogins"
 & $script -DisableCardAutofill -ServerUrl "$serverUrl/" -EnrollmentToken $token -JoinSecret $joinSecret -OrgKey $orgKey | Out-Null
 
 # The extension's own settings: server address and enrollment token.
@@ -262,6 +288,9 @@ if ($env:KK_SKIP_REMOVE -ne "1") {
   Check "Remove drops the settings for an extension loaded by hand, in Chrome" { -not (Test-Path "$chromeRoot\3rdparty\extensions\$ownId") }
   Check "Remove drops the settings for an extension loaded by hand, in Edge" { -not (Test-Path "$edgeRoot\3rdparty\extensions\$ownId") }
   Check "Remove drops Firefox's card policy" { $null -eq (Dword $firefoxRoot "AutofillCreditCardEnabled") }
+  Check "Remove drops Firefox's password policies" {
+    $null -eq (Dword $firefoxRoot "PasswordManagerEnabled") -and $null -eq (Dword $firefoxRoot "OfferToSaveLogins")
+  }
   Check "Remove forgets which policies it set" { -not (Test-Path $ownPolicies) }
   if ($haveAgent) {
     Check "Remove uninstalls the agent" { -not (Test-Path $installDir) }
