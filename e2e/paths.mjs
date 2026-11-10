@@ -40,15 +40,16 @@ export const newDeviceServerPort = process.env.KK_NEW_DEVICE_SERVER_PORT ?? "810
 // seeds it (server.mjs, KK_LIKE_TEST_SERVER), which the tool's tests start
 // themselves (tests/api/test-tenants.spec.ts).
 export const testTenantsServerPort = process.env.KK_TEST_TENANTS_SERVER_PORT ?? "8107";
+// Two servers with the admin page on, one that enforces plans and one that
+// doesn't, which the tests of what the web vault and the extension show on
+// each plan start themselves (tests/plans-ui.spec.ts).
+export const plansUiServerPort = process.env.KK_PLANS_UI_SERVER_PORT ?? "8112";
+export const plansUiOffServerPort = process.env.KK_PLANS_UI_OFF_SERVER_PORT ?? "8113";
 // Two servers with the admin page on, which the plans tests start themselves
 // (tests/api/plans.spec.ts): one that enforces plans (server.mjs,
 // KK_PLANS_ENFORCED), and one that doesn't, as every other server here.
 export const plansServerPort = process.env.KK_PLANS_SERVER_PORT ?? "8108";
 export const plansOffServerPort = process.env.KK_PLANS_OFF_SERVER_PORT ?? "8109";
-// Two more of the same, which the tests of what the web vault and the
-// extension show on each plan start themselves (tests/plans-ui.spec.ts).
-export const plansUiServerPort = process.env.KK_PLANS_UI_SERVER_PORT ?? "8112";
-export const plansUiOffServerPort = process.env.KK_PLANS_UI_OFF_SERVER_PORT ?? "8113";
 // A stand-in for Microsoft Entra ID's sign-in (entra-standin.mjs), which
 // every test server uses for single sign-on, and its DNS server (UDP) for
 // domain checks.

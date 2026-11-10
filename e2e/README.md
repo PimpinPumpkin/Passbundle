@@ -44,9 +44,11 @@ The security key tests (`tests/connector-origins.spec.ts`) start a server of the
 
 The test tenants tests (`tests/api/test-tenants.spec.ts`, `tests/test-tenants-web.spec.ts`) run `tools/test-tenants` as a person would, against a server of their own set up as the hosted test server is while the tool seeds it (`KK_LIKE_TEST_SERVER=1`: no email, the new-device check on, and sign-up only at the tool's domains, `KK_SIGNUPS_DOMAINS`), on `KK_TEST_TENANTS_SERVER_PORT` (default 8107).
 
+The tests of what the web vault and the extension show on each plan (`tests/plans-ui.spec.ts`, `tests/plans-ui-extension.spec.ts`) start two servers of their own with the admin page on, as the plans tests below do: one that enforces plans on `KK_PLANS_UI_SERVER_PORT` (default 8112), and one that doesn't on `KK_PLANS_UI_OFF_SERVER_PORT` (default 8113). They give and take away Premium the way the plans tests do.
+
 The required policy tests (`tests/api/msp-required-policies.spec.ts`) start a server of their own that sends email and needs single organization before account recovery (`KK_SINGLE_ORG_FOR_RECOVERY=1`, upstream's `ENFORCE_SINGLE_ORG_WITH_RESET_PW_POLICY`), on `KK_SINGLE_ORG_SERVER_PORT` (default 8104).
 
-The plans tests (`tests/api/plans.spec.ts`) start two servers of their own with the admin page on (`KK_ADMIN_TOKEN`, a token made up for the run and kept in memory), since that's where the operator sets a plan by hand: one that enforces plans (`KK_PLANS_ENFORCED=1`) on `KK_PLANS_SERVER_PORT` (default 8108), and one that doesn't on `KK_PLANS_OFF_SERVER_PORT` (default 8109). They move a plan's dates, never the clock. The tests of what the web vault and the extension show on each plan (`tests/plans-ui.spec.ts`, `tests/plans-ui-extension.spec.ts`) start the same two kinds of server on `KK_PLANS_UI_SERVER_PORT` (default 8112) and `KK_PLANS_UI_OFF_SERVER_PORT` (default 8113), and give and take away Premium the same way. Every other test server leaves plans unenforced and the admin page off.
+The plans tests (`tests/api/plans.spec.ts`) start two servers of their own with the admin page on (`KK_ADMIN_TOKEN`, a token made up for the run and kept in memory), since that's where the operator sets a plan by hand: one that enforces plans (`KK_PLANS_ENFORCED=1`) on `KK_PLANS_SERVER_PORT` (default 8108), and one that doesn't on `KK_PLANS_OFF_SERVER_PORT` (default 8109). They move a plan's dates, never the clock. Every other test server leaves plans unenforced and the admin page off.
 
 ## Website screenshots
 
