@@ -1,8 +1,10 @@
 """Checks how install-passbundle.sh adds PassBundle's Firefox policies to
-another vendor's policies file, and takes them back. It installs nothing: it
-takes the script's own merge program and runs it on files in a temporary
-folder, so it's safe on any computer (tier 1 runs it). Tier 2
-(tests/test-install.sh) runs the whole script as root.
+another vendor's policies file, and takes them back, and that it never
+creates Firefox's system-wide policies file while a Firefox installation has
+a policies file of its own, which that file would hide. It installs nothing:
+it takes the script's own merge program and Firefox functions and runs them
+on files in a temporary folder, so it's safe on any computer (tier 1 runs
+it). Tier 2 (tests/test-install.sh) runs the whole script as root.
 
     python3 -I installer/linux/tests/test_firefox_policies.py
 """
@@ -16,7 +18,8 @@ import tempfile
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parent.parent / "install-passbundle.sh"
-found = re.search(r"<< 'PYTHON'\n(.*?)\nPYTHON\n", SCRIPT.read_text(encoding="utf-8"), re.S)
+TEXT = SCRIPT.read_text(encoding="utf-8")
+found = re.search(r"<< 'PYTHON'\n(.*?)\nPYTHON\n", TEXT, re.S)
 if not found:
     raise SystemExit("install-passbundle.sh has no Firefox merge program (between << 'PYTHON' and PYTHON)")
 PROGRAM = found.group(1)
@@ -170,6 +173,163 @@ check(
     policies.is_symlink() and target.read_text(encoding="utf-8") == '{"policies": {}}\n' and "left alone" in run.stderr and run.stdout == "",
 )
 policies.unlink()
+
+print("A Firefox installation with a policies file of its own")
+# Firefox on Linux reads /etc/firefox/policies/policies.json instead of the
+# one in its installation's distribution folder whenever the first exists, so
+# the script must never create it while an installation has one. These run
+# the script's own Firefox functions in a shell, with its paths moved into a
+# temporary folder and a stand-in for put_file, which makes files root's.
+INSTALLS = re.findall(r'^FIREFOX_INSTALLS="([^"]*)"$', TEXT, re.M)
+INSTALLS = INSTALLS[0].split() if len(INSTALLS) == 1 else []
+check(
+    "it looks in the folders Linux puts Firefox in",
+    {
+        "/usr/lib/firefox",
+        "/usr/lib64/firefox",
+        "/usr/lib/firefox-esr",
+        "/usr/lib64/firefox-esr",
+        "/opt/firefox",
+        "/usr/local/firefox",
+        "/usr/lib/firefox-beta",
+        "/usr/lib/firefox-nightly",
+        "/usr/lib/firefox-devedition",
+        "/snap/firefox/current/usr/lib/firefox",
+    }
+    <= set(INSTALLS),
+)
+
+
+def shell_function(name):
+    if name == "firefox_merge_program":
+        pattern = r"^firefox_merge_program\(\) \{\n.*?^PYTHON\n\}"
+    else:
+        pattern = rf"^{name}\(\) \{{.*?^\}}"
+    found = re.search(pattern, TEXT, re.M | re.S)
+    if not found:
+        raise SystemExit(f"install-passbundle.sh has no {name} function")
+    return found.group(0)
+
+
+FUNCTIONS = "\n".join(
+    shell_function(name)
+    for name in (
+        "firefox_policy",
+        "firefox_policy_is_ours",
+        "firefox_names",
+        "firefox_merge_program",
+        "merge_firefox_policy",
+        "remove_firefox_policy",
+        "firefox_install_policies",
+        "install_firefox_policy",
+    )
+)
+root = folder / "computer"
+if " " in str(root):
+    raise SystemExit(f"the temporary folder {root} has a space in it, which the script's folder list can't take")
+system = root / "etc" / "firefox" / "policies" / "policies.json"
+system_added = root / "etc" / "passbundle" / "firefox-policies-added"
+
+
+def install(password="", card="", address=""):
+    """Runs the script's install_firefox_policy, as install_policies does."""
+    program = "\n".join(
+        [
+            "set -eu",
+            f'FIREFOX_POLICY="{system}"',
+            f'FIREFOX_ADDED="{system_added}"',
+            'FIREFOX_INSTALLS="' + " ".join(f"{root}{path}" for path in INSTALLS) + '"',
+            'CHANGED=""',
+            'put_file() { mkdir -p "$(dirname "$1")"; cat > "$1"; CHANGED=yes; }',
+            FUNCTIONS,
+            'install_firefox_policy "$1" "$2" "$3"',
+            'printf "%s" "$CHANGED"',
+        ]
+    )
+    return subprocess.run(["sh", "-c", program, "sh", password, card, address], capture_output=True, text=True)
+
+
+def installation_policy(path, text='{"policies": {"DisableAppUpdate": true}}\n'):
+    file = root / path.lstrip("/") / "distribution" / "policies.json"
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(text, encoding="utf-8")
+    return file
+
+
+def clean():
+    for file in sorted(root.rglob("*"), reverse=True):
+        file.rmdir() if file.is_dir() and not file.is_symlink() else file.unlink()
+
+
+def blocked(run, *files):
+    return (
+        run.returncode == 0
+        and not system.exists()
+        and all(str(file) in run.stderr for file in files)
+        and "doesn't write that file" in run.stderr
+    )
+
+
+root.mkdir()
+run = install("yes")
+check(
+    "with no installation's own file, it writes the system-wide one",
+    run.returncode == 0 and run.stdout == "yes" and json.loads(system.read_text(encoding="utf-8")) == {"policies": {"PasswordManagerEnabled": False, "OfferToSaveLogins": False}},
+)
+clean()
+(root / "usr" / "lib" / "firefox" / "distribution").mkdir(parents=True)
+(root / "usr" / "lib" / "firefox" / "distribution" / "distribution.ini").write_text("[Global]\n", encoding="utf-8")
+run = install("yes")
+check("a distribution folder without a policies file doesn't stop it", run.returncode == 0 and system.exists())
+clean()
+
+stopped = 0
+for path in INSTALLS:
+    file = installation_policy(path)
+    before = file.read_bytes()
+    run = install("yes", "yes")
+    if blocked(run, file) and all(name in run.stderr for name in PASSWORD + [CARD]) and file.read_bytes() == before and run.stdout == "":
+        stopped += 1
+    else:
+        print(f"      {path}: {run.stderr.strip()}")
+    clean()
+check(
+    f"a policies file in any of those installations stops it, untouched, with a warning naming it and what to set ({stopped} of {len(INSTALLS)})",
+    stopped == len(INSTALLS) > 0,
+)
+
+install("yes")
+file = installation_policy("/opt/firefox")
+run = install("yes")
+check("ours, written before an installation had its own, is taken away, which lets Firefox read theirs again", blocked(run, file) and run.stdout == "yes")
+clean()
+
+file = installation_policy("/usr/lib/firefox-esr")
+vendor_text = '{"policies": {"DisableTelemetry": true}}\n'
+system.parent.mkdir(parents=True)
+system.write_text(vendor_text, encoding="utf-8")
+run = install("yes")
+check(
+    "another vendor's system-wide file, which Firefox already reads instead, still gets ours added",
+    run.returncode == 0
+    and json.loads(system.read_text(encoding="utf-8"))["policies"] == {"DisableTelemetry": True, "PasswordManagerEnabled": False, "OfferToSaveLogins": False},
+)
+run = install()
+check("and taken back", run.returncode == 0 and system.read_text(encoding="utf-8") == '{\n  "policies": {\n    "DisableTelemetry": true\n  }\n}\n')
+check("its own file stays as it was", file.read_text(encoding="utf-8") == '{"policies": {"DisableAppUpdate": true}}\n')
+clean()
+
+install("yes")
+installation_policy("/usr/lib/firefox")
+run = install()
+check("nothing asked for: ours is taken away, with no warning", run.returncode == 0 and not system.exists() and run.stderr == "")
+clean()
+
+link = root / "usr" / "local" / "firefox" / "distribution" / "policies.json"
+link.parent.mkdir(parents=True)
+link.symlink_to(root / "nowhere.json")
+check("a link there counts, even a broken one", blocked(install("yes"), link))
+clean()
 
 if failures:
     print(f"{failures} failed")

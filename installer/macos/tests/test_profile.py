@@ -362,7 +362,9 @@ for script, declaration, name in (
 # writes for Chrome and the one it writes whole for Firefox, from the script's
 # own functions, for every combination, and the options reaching both the same
 # way (installer/linux/tests/test_firefox_policies.py checks adding them to
-# another vendor's file). Windows can't run here, so its lines are read.
+# another vendor's file, and that a Firefox installation's own policies file
+# stops the script writing its own). Windows can't run here, so its lines are
+# read.
 linux = LINUX.read_text(encoding="utf-8")
 
 
@@ -400,8 +402,9 @@ check(
 check(
     "linux/install-passbundle.sh: Firefox's password policies follow --keep-browser-password-manager, as Chrome's and Edge's do",
     'firefox_password=yes\n  [ -z "$keep_password_manager" ] || firefox_password=""' in linux
-    and 'firefox_policy "$firefox_password" "$card" "$address" > "$written"' in linux
-    and 'merge_firefox_policy "$firefox_password" "$card" "$address"' in linux,
+    and 'install_firefox_policy "$firefox_password" "$card" "$address"' in linux
+    and 'firefox_policy "$1" "$2" "$3" > "$firefox_written"' in function(linux, "install_firefox_policy")
+    and 'merge_firefox_policy "$1" "$2" "$3"' in function(linux, "install_firefox_policy"),
 )
 merge = re.search(r"<< 'PYTHON'\n(.*?)\nPYTHON\n", linux, re.S)
 check(

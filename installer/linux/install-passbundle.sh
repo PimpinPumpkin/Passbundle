@@ -23,7 +23,9 @@
 # file of our own in each browser's managed policies folder; other vendors'
 # files are left alone. Firefox reads only one policies file, so when another
 # vendor's is there, ours are added to it (with python3, where the computer
-# has it), and nothing of theirs is changed.
+# has it), and nothing of theirs is changed. When there's none but a Firefox
+# installation has a policies file in its own folder, which ours would hide,
+# Firefox is left as it is, with a warning.
 # The desktop agent isn't installed: on Linux it has no tray and no biometric
 # unlock yet. Running it again changes nothing.
 #
@@ -46,16 +48,26 @@ APP_POLICY="/etc/passbundle/policy.json"
 CHROME_POLICIES="/etc/opt/chrome/policies/managed"
 EDGE_POLICIES="/etc/opt/edge/policies/managed"
 # Firefox's system-wide policies file, the one Mozilla documents for Linux.
-# Firefox reads one policies file, so ours is written whole only where there's
-# none or it's ours; another vendor's gets our policies added to it, and
-# nothing of theirs is changed. Mozilla's docs say the Flatpak build can't read
+# Firefox reads one policies file: this one whenever it exists, and only
+# otherwise the one in its installation's distribution folder, which this one
+# then hides (Firefox's EnterprisePoliciesParent.sys.mjs,
+# _getLocalConfigurationFile). So ours is written whole only where there's
+# none or it's ours, and never while a Firefox installation below has a
+# policies file of its own. Another vendor's file here gets our policies
+# added to it, and nothing of theirs is changed. The Flatpak build can't read
 # this file (it reads policies from a folder of its own under
-# /var/lib/flatpak, which this script doesn't write); they don't say whether
-# the Snap or a distribution's own Firefox package reads it.
+# /var/lib/flatpak, which this script doesn't write); the Snap asks to read
+# /etc/firefox.
 FIREFOX_POLICY="/etc/firefox/policies/policies.json"
 # The Firefox policies this script added to another vendor's policies file,
 # one name per line, so that it takes back only those.
 FIREFOX_ADDED="/etc/passbundle/firefox-policies-added"
+# Firefox installation folders whose distribution/policies.json the file above
+# would hide: where Mozilla's .deb and .rpm packages install each channel
+# (/usr/lib/firefox, -esr, -beta, -nightly, -devedition), distributions' own
+# packages, where people unpack Mozilla's download, and the Snap's. A Firefox
+# unpacked anywhere else isn't found.
+FIREFOX_INSTALLS="/usr/lib/firefox /usr/lib64/firefox /usr/lib/firefox-esr /usr/lib64/firefox-esr /usr/lib/firefox-beta /usr/lib/firefox-nightly /usr/lib/firefox-devedition /opt/firefox /usr/local/firefox /snap/firefox/current/usr/lib/firefox"
 # The only extensions this can ever force-install, the same as
 # Install-PassBundle.ps1's. Placeholders until the store listings exist.
 CHROME_EXTENSION="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -453,7 +465,8 @@ merge_firefox_policy() { # password card address
 }
 
 # Takes Firefox's policies file away if it's ours, or takes this script's
-# policies back out of another vendor's.
+# policies back out of another vendor's. Taking ours away only lets Firefox
+# read an installation's own policies file again, so it's always safe.
 remove_firefox_policy() {
   if firefox_policy_is_ours; then
     rm -f "$FIREFOX_POLICY" "$FIREFOX_ADDED"
@@ -463,6 +476,43 @@ remove_firefox_policy() {
     merge_firefox_policy "" "" ""
   else
     rm -f "$FIREFOX_ADDED"
+  fi
+}
+
+# The policies files Firefox installations have in their own distribution
+# folders, comma-separated, or nothing. A link counts, even a broken one.
+firefox_install_policies() {
+  found=""
+  for dir in $FIREFOX_INSTALLS; do
+    file="$dir/distribution/policies.json"
+    if [ -e "$file" ] || [ -L "$file" ]; then
+      found="${found:+$found, }$file"
+    fi
+  done
+  printf '%s' "$found"
+}
+
+# Firefox's policies, as the options say (password card address). Where
+# FIREFOX_POLICY is another vendor's, Firefox already reads it instead of any
+# installation's own file, so ours are added to it. Where it isn't there (or
+# it's ours) and an installation has its own policies file, creating ours
+# would switch theirs off, so this leaves Firefox alone (and takes its own file
+# away) and says what to set in theirs. Files in installation folders belong
+# to a package or another vendor and are never changed.
+install_firefox_policy() { # password card address
+  installed=$(firefox_install_policies)
+  if [ -z "$1$2$3" ]; then
+    remove_firefox_policy
+  elif [ -f "$FIREFOX_POLICY" ] && ! firefox_policy_is_ours; then
+    merge_firefox_policy "$1" "$2" "$3"
+  elif [ -n "$installed" ]; then
+    remove_firefox_policy
+    echo "Warning: Firefox has policies of its own in $installed, and it stops reading them when $FIREFOX_POLICY exists, so this script doesn't write that file and leaves Firefox as it is. Set $(firefox_names "$1" "$2" "$3") to false in $installed to turn them off in Firefox." >&2
+  else
+    firefox_written=$(mktemp)
+    firefox_policy "$1" "$2" "$3" > "$firefox_written"
+    put_file "$FIREFOX_POLICY" < "$firefox_written"
+    rm -f "$firefox_written" "$FIREFOX_ADDED"
   fi
 }
 
@@ -499,15 +549,7 @@ install_policies() {
   # options say.
   firefox_password=yes
   [ -z "$keep_password_manager" ] || firefox_password=""
-  if [ -z "$firefox_password$card$address" ]; then
-    remove_firefox_policy
-  elif [ -f "$FIREFOX_POLICY" ] && ! firefox_policy_is_ours; then
-    merge_firefox_policy "$firefox_password" "$card" "$address"
-  else
-    firefox_policy "$firefox_password" "$card" "$address" > "$written"
-    put_file "$FIREFOX_POLICY" < "$written"
-    rm -f "$FIREFOX_ADDED"
-  fi
+  install_firefox_policy "$firefox_password" "$card" "$address"
   # The app signs in to the organization's server without asking.
   if [ -n "$server_url" ]; then
     one_line ServerUrl "$server_url"

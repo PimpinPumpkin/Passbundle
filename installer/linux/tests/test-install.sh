@@ -35,6 +35,22 @@ check() {
   fi
 }
 
+# Firefox reads /etc/firefox/policies/policies.json instead of a policies.json
+# in its installation's own folder, so the script won't write it while one of
+# the folders it looks in has one. This machine's own Firefox may have one: it
+# goes aside for the test and comes back at the end, so the checks below see
+# what the script does without one, and then with one of the test's own.
+firefox_installs=$(sed -n 's/^FIREFOX_INSTALLS="\(.*\)"$/\1/p' "$script")
+firefox_aside=$(mktemp -d)
+for dir in $firefox_installs; do
+  if [ -e "$dir/distribution/policies.json" ]; then
+    echo "This machine's Firefox in $dir has its own policies.json; it's set aside until the end:"
+    cat "$dir/distribution/policies.json"
+    mkdir -p "$firefox_aside$dir"
+    mv "$dir/distribution/policies.json" "$firefox_aside$dir/" || echo "couldn't set it aside, so the Firefox checks below will fail"
+  fi
+done
+
 # Reads a policy file and checks one value, in Python's JSON (so the file must parse).
 policy_is() { # file python-expression-of-p
   python3 -I -c "import json, sys; p = json.load(open(sys.argv[1])); sys.exit(0 if ($2) else 1)" "$1"
@@ -189,6 +205,32 @@ rm -f "$firefox"
 sh "$script" --disable-card-autofill --disable-address-autofill --server-url "$server_url/" \
   --enrollment-token "$token" --join-secret "$join_secret" --org-key "$org_key" > /dev/null || failures=$((failures + 1))
 
+echo "A Firefox installation with its own policies file"
+# /usr/local/firefox is one of the folders the script looks in, and not where
+# this machine's Firefox is.
+installation="/usr/local/firefox"
+if [ -e "$installation" ]; then
+  echo "FAIL  $installation is already there, so these checks can't use it"
+  failures=$((failures + 1))
+else
+  mkdir -p "$installation/distribution"
+  printf '{ "policies": { "DisableAppUpdate": true } }\n' > "$installation/distribution/policies.json"
+  installation_before=$(cat "$installation/distribution/policies.json")
+  out=$(sh "$script" --disable-card-autofill --disable-address-autofill --server-url "$server_url/" \
+    --enrollment-token "$token" --join-secret "$join_secret" --org-key "$org_key" 2>&1)
+  echo "$out"
+  check "says so, naming that file and what to set in it" sh -c "printf '%s' \"\$1\" | grep -q 'policies of its own in $installation/distribution/policies.json.*Set PasswordManagerEnabled, OfferToSaveLogins, AutofillCreditCardEnabled, AutofillAddressEnabled to false'" _ "$out"
+  check "takes our system-wide Firefox file away, so Firefox reads theirs again" test ! -e "$firefox"
+  check "leaves theirs as it was" sh -c "[ \"\$(cat '$installation/distribution/policies.json')\" = \"\$1\" ]" _ "$installation_before"
+  sh "$script" --disable-card-autofill > /dev/null || failures=$((failures + 1))
+  check "and doesn't write ours again" test ! -e "$firefox"
+  check "Chrome's policies are still written" policy_is "$chrome/passbundle.json" 'p["PasswordManagerEnabled"] is False'
+  rm -rf "$installation"
+  sh "$script" --disable-card-autofill --disable-address-autofill --server-url "$server_url/" \
+    --enrollment-token "$token" --join-secret "$join_secret" --org-key "$org_key" > /dev/null || failures=$((failures + 1))
+  check "without it, ours is written again" policy_is "$firefox" 'p["policies"]["PasswordManagerEnabled"] is False'
+fi
+
 echo "The app"
 sudo -u "$person" env DISPLAY="${DISPLAY:-:99}" "$app/passbundle" > /dev/null 2>&1 &
 sleep 5
@@ -215,6 +257,14 @@ check "and no list of Firefox policies is left" test ! -e "$firefox_added"
 check "the other vendor's file is still there" sh -c "[ \"\$(cat '$foreign')\" = \"\$1\" ]" _ "$foreign_before"
 check "removing again is fine" sh "$script" --remove
 rm -f "$foreign"
+
+# This machine's own Firefox policies back where they were.
+for dir in $firefox_installs; do
+  if [ -e "$firefox_aside$dir/policies.json" ]; then
+    mv "$firefox_aside$dir/policies.json" "$dir/distribution/policies.json"
+  fi
+done
+rm -rf "$firefox_aside"
 
 # Leave the policies applied for the browser check that follows.
 sh "$script" --disable-card-autofill > /dev/null
