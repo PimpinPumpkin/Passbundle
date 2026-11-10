@@ -45,10 +45,6 @@ export const testTenantsServerPort = process.env.KK_TEST_TENANTS_SERVER_PORT ?? 
 // KK_PLANS_ENFORCED), and one that doesn't, as every other server here.
 export const plansServerPort = process.env.KK_PLANS_SERVER_PORT ?? "8108";
 export const plansOffServerPort = process.env.KK_PLANS_OFF_SERVER_PORT ?? "8109";
-// A third that enforces plans, with the operator's own caps on storage below
-// what any plan gives, and a key for the data breach report (server.mjs,
-// KK_PLANS_CAPS).
-export const plansCapsServerPort = process.env.KK_PLANS_CAPS_SERVER_PORT ?? "8111";
 // A stand-in for Microsoft Entra ID's sign-in (entra-standin.mjs), which
 // every test server uses for single sign-on, and its DNS server (UDP) for
 // domain checks.
@@ -62,6 +58,10 @@ export const connectorServerPort = process.env.KK_CONNECTOR_SERVER_PORT ?? "8103
 // recovery (ENFORCE_SINGLE_ORG_WITH_RESET_PW_POLICY), which the policy tests
 // start themselves (tests/api/msp-required-policies.spec.ts).
 export const singleOrgServerPort = process.env.KK_SINGLE_ORG_SERVER_PORT ?? "8104";
+// A third plans server, which enforces plans with the operator's own caps on
+// storage below what any plan gives, and a key for the data breach report
+// (server.mjs, KK_PLANS_CAPS), which the plans tests start themselves.
+export const plansCapsServerPort = process.env.KK_PLANS_CAPS_SERVER_PORT ?? "8111";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??
