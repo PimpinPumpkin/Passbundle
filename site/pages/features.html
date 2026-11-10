@@ -1,13 +1,13 @@
 <!--
 title: Features
-description: What PassBundle does that other password managers don't: choose what fills each field, a one-line rollout that turns off the browsers' own password saving, a guided import that skips what you have, credentials for RMM scripts, and default policies across every client.
+description: What PassBundle does that other password managers don't: choose what fills each field, a one-line rollout that turns off the browsers' own password saving, a browser import that skips what you have, credentials for RMM scripts, and default policies across every client.
 layout: wide
 -->
 <section class="page-hero">
   <span class="eyebrow">Features</span>
-  <h1>The parts other password managers leave to you.</h1>
+  <h1>What PassBundle has that other password managers don't</h1>
   <div class="home-hero-side">
-    <p class="lead">Autofill, passkeys, sharing, two-step login, and reports are all here. This page is about what we added that other password managers don't have, from filling the odd field on your bank's sign-in page to setting up a whole office with one command.</p>
+    <p class="lead">Autofill, passkeys, sharing, two-step login, and reports are all here. This page is about what we added, such as filling an odd field on your bank's sign-in page and setting up a whole office with one command.</p>
     <div class="actions">
       <a class="button primary" href="/download/">Get PassBundle, free</a>
       <a class="button" href="/#demo">Try the demo</a>
@@ -66,12 +66,12 @@ layout: wide
   <div class="row">
     <div class="row-text">
       <span class="eyebrow">Import from your browser</span>
-      <h2>Bring your browser's passwords without the mess.</h2>
-      <p class="lead">PassBundle walks you through your browser's own export, step by step for Chrome, Edge, Brave, Firefox, and Safari, then sorts it: what you already have is left out, and a login whose password differs from yours goes to a folder to check, not over the top of it.</p>
+      <h2>A browser import that skips what you already have</h2>
+      <p class="lead">The desktop app brings in the passwords saved in the browsers on your computer, with no export file. It lists every browser profile and reads nothing until you choose Import. What you already have is left out, and a login whose password differs from yours goes to a folder to check instead of replacing yours.</p>
       <ul class="checks">
-        <li>Duplicates in the file are left out too</li>
-        <li>A reminder to delete the export, with how on your computer</li>
-        <li>Then how to turn the browser's own saving off</li>
+        <li>Chrome, Edge, Brave, Vivaldi, Opera, Chromium, and Firefox, on Windows, Mac, and Linux</li>
+        <li>Chrome on Windows often keeps its passwords so that only Chrome can read them. PassBundle doesn't get around that. It walks you through Chrome's own export instead, as it does for Safari, and reminds you to delete the export file</li>
+        <li>Afterward, it turns off the browser's own password saving in the profiles it read, and what they saved stays</li>
       </ul>
     </div>
     <div class="stage" role="img" aria-label="An import from Chrome: 212 logins added, 18 already in the vault and left out, and 3 with a different password put in a folder to check">
@@ -91,7 +91,7 @@ layout: wide
       <p class="lead">Give a script a token that reads only the items you choose, then call <code>Get-PassBundleCredential</code> from PowerShell. The script never holds more than it needs, and you see every read.</p>
       <ul class="checks">
         <li>Tokens expire, can be limited to your networks, and stop the moment you revoke them</li>
-        <li>End-to-end encrypted: the server can't read what a token reads</li>
+        <li>End-to-end encrypted, so the server can't read what a token reads</li>
         <li>Nothing to install, on Windows PowerShell 5.1 or PowerShell 7. It isn't code-signed yet, so computers that run only signed scripts refuse it</li>
       </ul>
     </div>
@@ -110,19 +110,19 @@ layout: wide
       <li><strong>No confirm step</strong><span>People you invite, and people who join with the install command, get in without anyone clicking Confirm, with a check a hacked server can't fake.</span></li>
       <li><strong>Default policies, and required ones</strong><span>An MSP sets policies once for every client. A client can set its own, unless you make one required for every client.</span></li>
       <li><strong>Site fixes</strong><span>Fix a site with the fill picker and, if you like, share the fix. Once three people make the same one, it fills for everyone on the server; MSPs can apply their staff's fixes to every client.</span></li>
-      <li><strong>Folders down to the capability</strong><span>Let a team see a folder's items without their passwords, or add to a folder without changing it.</span></li>
+      <li><strong>Folder permissions by capability</strong><span>Let a team see a folder's items without their passwords, or add to a folder without changing it.</span></li>
       <li><strong>Item history</strong><span>Every edit keeps the version before, with who saved it, and you can restore it.</span></li>
       <li><strong>Templates and expiration dates</strong><span>Wi-Fi, servers, licenses, certificates, and your own, with reminders from the browser extension before something expires.</span></li>
-      <li><strong>One-time codes stay codes</strong><span>A code typed into a sign-in page is never saved as your password.</span></li>
+      <li><strong>One-time codes aren't saved</strong><span>A code typed into a sign-in page is never saved as your password.</span></li>
       <li><strong>Events to your security tools</strong><span>Microsoft Sentinel, syslog over TLS, or a signed webhook, from one client or every client at once. Not yet tried with Sentinel, Huntress, or Blumira themselves.</span></li>
-      <li><strong>Private by default on the desktop</strong><span>On Windows and Mac, the desktop app keeps itself out of screenshots and screen sharing unless you allow them.</span></li>
+      <li><strong>Hidden from screenshots on the desktop</strong><span>On Windows and Mac, the desktop app keeps itself out of screenshots and screen sharing unless you allow them.</span></li>
     </ul>
   </div>
 </section>
 
 <section class="flow" aria-labelledby="everything-title">
   <div class="split-head page-head">
-    <h2 id="everything-title">Everything else you'd expect</h2>
+    <h2 id="everything-title">Standard features</h2>
     <div class="split-side">
       <p class="lead">Passkeys, autofill in the browser and on Android, the password generator, two-step login with an authenticator app, a security key, or email, weak, reused, and exposed password reports, legacy contacts, Send, fingerprint or face unlock on Android, and imports from about 70 other apps.</p>
       <p><a class="more" href="/pricing/#compare">Every feature, plan by plan</a></p>
@@ -134,12 +134,11 @@ layout: wide
   <div class="split-head page-head">
     <h2 id="next-title">Coming next</h2>
     <div class="split-side">
-      <p class="lead">In the plan and not built yet, or built and not yet checked for real.</p>
+      <p class="lead">These are planned and not built yet, or built and not yet checked for real.</p>
     </div>
   </div>
   <ul class="lines">
     <li><strong>Browser extensions report</strong><span>Every other extension installed on your computers and what it can read, with an alert when one with broad access appears.</span></li>
-    <li><strong>Import on its own</strong><span>The desktop app brings in the browsers' saved passwords after you sign in, with no export file, once it's signed for Windows and Mac.</span></li>
     <li><strong>Sign in with Microsoft Entra ID</strong><span>Built, and not yet checked with a real Microsoft 365 tenant.</span></li>
   </ul>
 </section>

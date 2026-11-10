@@ -4,14 +4,15 @@ The PassBundle website: the home page (with the demo and the questions), Feature
 
 Light or dark like the visitor's device: a near-white neutral ground (`#FAFAF8`) with the logo's emerald as the one accent in light mode, a near-black neutral ground (`#0B0D0E`) with mint in dark mode and no color washes, deep green bands where a page changes the subject, flat tinted tiles (each kind of item keeps its color as a soft tint, with the glyph in that color), and the logo's emerald tile, the one glossy tile (as the app icon), with "passbundle" in two tones. Every text passes WCAG AA in both themes. The site moved to this look in November 2026, and the apps' item tiles are flat too (DESIGN.md, "The look"), as the screenshots show.
 
-- `pages/`: one file per page, with a title and description at the top. `index.html` is `/`, `help.html` is `/help/`. `layout: wide` is for marketing pages built from sections; the rest are reading pages on one panel. `parts/` holds pieces of pages kept in their own file (`<x-part name="tour"></x-part>`). `script: tour` loads `/tour.js`, deferred: only our own files, by name, and the CSP (`script-src 'self'`) refuses anything else.
-- `site.json`: prices and links, used in pages as `{{prices.premium}}` or `{{links.apps}}`, so a price changes in one place. An empty link isn't live yet: pages fall back to `/download/` until it's filled in, and the header's Log in shows only once `links.vault` is. `links.apps` is the apps' test releases on GitHub; the Download page links there, never to one version.
+- `pages/`: one file per page, with a title and description at the top (and `index: no` on a page search engines shouldn't list, "Search engines"). `index.html` is `/`, `help.html` is `/help/`. `layout: wide` is for marketing pages built from sections; the rest are reading pages on one panel. `parts/` holds pieces of pages kept in their own file (`<x-part name="tour"></x-part>`). `script: tour` loads `/tour.js`, deferred: only our own files, by name, and the CSP (`script-src 'self'`) refuses anything else.
+- `site.json`: prices and links, used in pages as `{{prices.premium}}` or `{{links.apps}}`, so a price changes in one place. An empty link isn't live yet: pages fall back to `/download/` until it's filled in. The header's Sign in goes to `links.vault`, and until that's filled in, to Download's Web card (`/download/#web`), which says when sign-in opens. `links.vault` and `links.signup` also decide what the pages say about the hosted service and new accounts ("Going live"). `"indexed"` says whether search engines may index the built site ("Search engines"). `links.apps` is the apps' test releases on GitHub; the Download page links there, never to one version. `{{links.extensionZip|links.extension}}` is the first of the two that's filled in: the Download button for the extension goes to the newest release's zip, or to the list of extension releases until the first one is out.
 - `<x-shot name="msp-console" alt="..." frame="desktop">`: a screenshot from `static/shots`, with its dark version in dark mode. Until `e2e/site-shots/` has made it, it's a placeholder the size of its `frame` (`desktop`, `popup`, or `panel`), and `check.mjs --launch` refuses it.
 - `<x-tile icon="console" tone="sapphire">`: a tile tinted with its tone and its glyph in that tone, as the apps show each kind of item, with a glyph from `icons.mjs` (the apps' own glyphs, and some drawn for the site). Tones: brand, sapphire, topaz, amethyst, turquoise, onyx, aquamarine, garnet, emerald, ruby, gold.
 - `<x-art name="LockIcon">`: one of the apps' drawings from `art/`, inline so it takes the page's colors.
-- `static/`: copied as is: the stylesheet, fonts (with their license), screenshots, favicon, `security.txt`, and Cloudflare Pages' `_headers` (security headers) and `_redirects` (the apps' old help-article and product links).
+- `<x-if link="vault">...</x-if>`: kept only when that link in `site.json` is filled in. `<x-if not link="vault">` is kept only while it's empty. `<x-if link="vault" until="signup">` is kept only once the first is filled in and while the second is empty: the hosted vault open for signing in before new accounts are. Download's Web card shows one of three things this way: a sentence saying when sign-in opens, then a Sign in button with a line saying new accounts aren't open yet, then Sign in and Create an account (`<x-if link="signup">`; the build refuses `links.signup` without `links.vault`). One `<x-if>` can't go inside another, and a page's title and description at the top don't take them.
+- `static/`: copied as is: the stylesheet, fonts (with their license), screenshots, the browsers' logos (`browsers/`, see below), favicon, `security.txt`, and Cloudflare Pages' `_headers` (security headers) and `_redirects` (the apps' old help-article and product links). `robots.txt` and `sitemap.xml` aren't here: the build writes them ("Search engines").
 - `art/`: drawings copied from passbundle-clients `brand/artwork/` (made by `draw.mjs` there). Copy again when they change.
-- `build.mjs` wraps each page in the shared header and footer into `dist/`, and lists the screenshots still to make. `check.mjs` fails on a broken link or image, a missing page, a script that isn't one of our own files (inline, or from anyone else), an inline style or event handler (the CSP blocks them), an em dash, or a placeholder the build didn't fill in.
+- `build.mjs` wraps each page in the shared header and footer into `dist/`, and lists the screenshots still to make. `check.mjs` fails on a broken link or image, a missing page, a script that isn't one of our own files (inline, or from anyone else), an inline style or event handler (the CSP blocks them), an em dash, a placeholder the build didn't fill in, or files for search engines that don't agree with `"indexed"`. Then it says whether search engines are told to index the site, and lists what isn't filled in yet, in two groups: what blocks going live on passbundle.com, and what doesn't.
 
 ```sh
 node site/build.mjs && node site/check.mjs   # build and check
@@ -19,6 +20,21 @@ site/deploy.sh                                 # build, check, and deploy the pr
 ```
 
 CI runs the build and check on every change to `site/`.
+
+Download shows its four kinds (browser, phone, computer, web) side by side, two by two below 960 pixels. On a phone they're a switcher under the title instead, and only one kind's card shows, so none is a scroll away. No tab is picked when the page opens: until someone picks one, the card named in the address shows (`/download/#web`, where the header's Sign in leads until `links.vault` is filled in), and Phone shows when the address names none. The switcher is radio buttons, `:has()`, and `:target` in `styles.css`, no script; a browser without `:has()` shows the four cards one under another.
+
+## Browser logos
+
+Download's Browser card shows the logo and name of each browser the extension works in: Chrome, Edge, and Brave, and Firefox marked as coming until its build is signed. Safari isn't shown, because there is no Safari build. The logos are the SVG files from the `@browser-logos` packages on npm (source: https://github.com/alrra/browser-logos), copied to `static/browsers/` on November 9, 2026:
+
+| File | Package | Version |
+| --- | --- | --- |
+| `chrome.svg` | `@browser-logos/chrome` | 2.0.0 |
+| `edge.svg` | `@browser-logos/edge` | 2.0.7 |
+| `brave.svg` | `@browser-logos/brave` | 3.0.13 |
+| `firefox.svg` | `@browser-logos/firefox` | 3.0.10 |
+
+They're used as they come, in an `<img>` with its width and height: not recolored, cropped, or edited. The logos are their owners' trademarks, and the fine print at the foot of Download says whose each one is, so a logo added to another page needs that line there too. To update one, get the exact version with `npm pack --ignore-scripts @browser-logos/chrome@2.0.0` in an empty folder outside the repository, unpack it without running anything from it, read the SVG to confirm it has no `<script>`, no event handlers, and no references to other files or addresses, copy it over, and change the version and date here.
 
 ## Screenshots
 
@@ -34,19 +50,57 @@ cd e2e && npx playwright test -c playwright.site.config.ts
 
 It writes 2x WebP images, light and dark, to `site/static/shots/`. It takes about five minutes.
 
+## Going live
+
+`site/deploy.sh` deploys to the preview address, https://preview.passbundle.pages.dev, never the live site. `site/deploy.sh --production` deploys passbundle.com, and refuses until `node site/check.mjs --launch` passes. That check refuses three things: a highlighted placeholder (`<mark class="todo">`: the legal ones in the privacy policy and terms, and a screenshot not made yet), an empty `links.vault`, and an empty `links.extensionZip`. It doesn't refuse an empty `links.signup` or an empty store listing (`links.chrome`, `links.edge`, `links.firefox`): the pages read true without them.
+
+On the day:
+
+1. In `site.json`, set `links.vault` to the hosted web vault's address, `https://vault.passbundle.com`.
+2. In `site.json`, set `links.extensionZip` to `https://github.com/PimpinPumpkin/Passbundle/releases/latest/download/passbundle-extension-chromium.zip`. The extension's first release has to be out first ("The extension's first release", below).
+3. In `pages/privacy.html` and `pages/terms.html`, replace each highlighted placeholder: the company's legal name, the payment processor, the server host, the storage provider, refunds, and the governing law.
+4. Run `site/deploy.sh --production`, and commit what you changed.
+
+`node site/build.mjs && node site/check.mjs` says at any time what's left, under "blocks going live on passbundle.com".
+
+Two more values in `site.json` change when you're ready, each followed by the same command:
+
+- `links.signup`, when new accounts open: `https://vault.passbundle.com/#/signup` (the web vault's sign-up page).
+- `"indexed": true`, when search engines should list the site ("Search engines").
+
+No page has to be edited for any of these. What the pages show follows the two links:
+
+| `links.vault` | `links.signup` | What the pages show |
+| --- | --- | --- |
+| empty | empty | Before launch. The hosted service "opens at launch", the apps sign in to a server you run yourself, and the header's Sign in goes to Download's Web card, which says when sign-in opens. |
+| filled in | empty | The hosted vault is open and new accounts aren't. Sign in goes to the vault, and the "opens at launch" wording is gone. Where a page would send someone to make an account, it says new accounts aren't open yet and to see Contact: Download's testing note and Web card, the homepage's last section, Help's "How do I start?", and `/browser-start/`. Contact gains a line on how to ask. |
+| filled in | filled in | New accounts are open. Download's Web card, the homepage's last section, and Help's "How do I start?" have Create an account, and the lines about asking for one are gone. |
+
+The places that follow `links.vault` alone: Download's testing note, the homepage's last section and its two "use our hosted service" lines, Help's "How do I start?", Switch's first step, and the hosted-service lines on Business and MSPs. The notes about paid plans don't follow it ("Paid plans and billing", below).
+
+While new accounts aren't open, the server has to refuse them too (`SIGNUPS_ALLOWED=false`, `deploy/README.md`): the apps and the extension have their own Create account, and the site isn't in front of it.
+
+## Search engines
+
+`"indexed"` in `site.json` is `false` for now. While it is, `build.mjs` adds `X-Robots-Tag: noindex` to the block for every path in `dist/_headers`, writes a `robots.txt` that allows everything, and writes no sitemap. Once it's `true`, the header is left out, `robots.txt` also names `https://passbundle.com/sitemap.xml`, and the build writes that sitemap with every page but the 404 and the pages that keep themselves out (below). `check.mjs` says which of the two a build is, and fails when the three files don't agree with `site.json`. A `robots.txt` or `sitemap.xml` put in `static/` stops the build.
+
+`robots.txt` never turns crawlers away. A crawler that's turned away never fetches a page, so it never sees the header, and a search engine can still list an address it found linked somewhere else, without anything from the page. Let in, it fetches the page, sees `noindex`, and leaves it out. `check.mjs` fails on a `robots.txt` that disallows everything.
+
+`index: no` at the top of a page keeps that one page out of search engines whatever `"indexed"` says: the build gives it `<meta name="robots" content="noindex">` and leaves it out of the sitemap. `/browser-start/` has it, because that page only means something right after installing the extension.
+
 ## Before launch
 
-Until launch, `site/deploy.sh` deploys to the preview address, https://preview.passbundle.pages.dev, never the live site. `site/deploy.sh --production` deploys passbundle.com, and refuses until `node site/check.mjs --launch` passes: no highlighted placeholders left (`<mark class="todo">`, such as the company's legal name and the payment processor in the privacy policy and terms, and screenshots not made yet) and every link in `site.json` filled in (the hosted web vault and sign-up, and the store listings). `node site/check.mjs` lists what's left.
+The site says what's true today, and says plainly what waits for launch. Every page was checked against the code on November 6, 2026. On November 9, these were checked again: where the apps and the extension sign in, two-step login in the apps, the automated tests on Security, the privacy policy's scope, the desktop app's import from browsers on Features, and Touch ID in the Mac app on Download and Business. As each piece arrives, change the words that wait on it:
 
-The site says what's true today, and says plainly what waits for launch (every page was checked against the code on November 6, 2026). As each piece arrives, change the words that wait on it:
-
-- **The hosted service** at vault.passbundle.com: fill in `links.vault` and `links.signup`, and take out "opens at launch" and "a server you run yourself": Download's notes and web vault card, the homepage's last section, Help's "How do I start?", Switch's first step, and the "once it opens at launch" lines on the homepage, Business, and MSPs.
-- **Paid plans and billing** (Free, Premium, Families, Business, pooled MSP seats, the trial): the "start at launch" notes on the homepage, Personal, Pricing, Business, MSPs, and Help, and the plan buttons (Try the demo, Talk to us) back to sign-up and the trial. Today every account gets Premium's features, and Families isn't limited to its number of people.
-- **The browser store listings:** fill in `links.chrome`, `links.edge`, and `links.firefox`, put the Add to buttons back on Download, and drop "once it's in their stores" from the install command's words (the homepage, Features, Business, MSPs, Help, and the demo's MSP console). The installer's extension IDs, placeholders until then, change too.
-- **Email** (hello@, privacy@, and security@) and GitHub's private vulnerability reporting: Contact, Security, `static/.well-known/security.txt`, and the Talk to us buttons, which go to Contact.
-- **Signing:** the offline update key (Security, "No remote control"), Touch ID with Apple's signing (Download's Mac card, Business's Macs question), and code signing for the script module (Features).
-- **Checks for real:** Windows Hello on a real device (Download, Personal, Pricing), Sign in with Entra and provisioning with a real Microsoft 365 tenant ("Not yet checked" on Business, MSPs, Pricing, and Features), and events with Sentinel, Huntress, and Blumira (Business, Features, MSPs).
+- **The hosted service** at vault.passbundle.com: nothing to edit. Fill in `links.vault`, and later `links.signup` ("Going live").
+- **Paid plans and billing** (Free, Premium, Families, Business, pooled MSP seats, the trial): the "start at launch" notes on the homepage, Personal, Pricing, Business, MSPs, and Help, and the plan buttons (Try the demo, Talk to us) back to sign-up and the trial. These stay as they are when `links.vault` is filled in, because billing isn't built; they're edited by hand when it is. Today every account gets Premium's features, and Families isn't limited to its number of people.
+- **The browser store listings:** fill in `links.chrome`, `links.edge`, and `links.firefox`, put Add to buttons on Download's Browser card (the zip to install by hand can stay, under them), drop "once it's in their stores" from the install command's words (the homepage, Features, Business, MSPs, Help, and the demo's MSP console), and take out "isn't in the browsers' stores yet" (the homepage's last section, Help's "How do I start?", Personal's list under the headline and "Which devices does it work on?", and Download's Browser card). A store lists the extension when it approves it, which can be after passbundle.com is live, so none of these lines names a date. The installer's extension IDs, placeholders until then, change too.
+- **Email** (hello@, privacy@, and security@) and GitHub's private vulnerability reporting: Contact, Security, `static/.well-known/security.txt`, and the Talk to us buttons, which go to Contact. Contact's line on asking for an account, which shows while new accounts aren't open, sends people to a GitHub issue until hello@ works.
+- **Signing:** the offline update key (Security, "No remote control"), Touch ID in the browser extension on a Mac with Apple's signing (Download's "Opening a test build", Business's Macs question), and code signing for the script module (Features).
+- **Checks for real:** Windows Hello on a real device (Download, Personal, Pricing), Touch ID in the Mac app on a real Mac (Download, Business), Sign in with Entra and provisioning with a real Microsoft 365 tenant ("Not yet checked" on Business, MSPs, Pricing, and Features), and events with Sentinel, Huntress, and Blumira (Business, Features, MSPs).
 - **The command-line tool's first release:** Download's card links its guide until then (`links.cli` is its releases).
+- **The extension's first release:** start **Extension release** (`.github/workflows/extension-release.yml`) from the Actions tab, on main. It builds the branded extension for Chrome, Edge, and other Chromium browsers from passbundle-clients' `keykeeper` branch, and publishes it as a release tagged `extension-v*`, with its SHA-256, marked as this repository's latest. Then fill in `links.extensionZip` with `https://github.com/PimpinPumpkin/Passbundle/releases/latest/download/passbundle-extension-chromium.zip`, which stays the newest zip from then on. Until then, Download's button goes to the list of extension releases (`links.extension`).
+- **Firefox:** release Firefox installs only extensions Mozilla has signed, which needs the owner's Mozilla add-on keys. Download's Browser card says it's coming until then.
 - **A paid Have I Been Pwned key:** Pricing's data breach report says it's a link to check by hand for now, and Premium's list leaves it out.
 - Prices and offers on the site are proposals until decided: Premium, Families, Business, the MSP seat pool, the 30-day trial, and six months free for the first MSPs.
 

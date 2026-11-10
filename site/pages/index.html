@@ -1,17 +1,18 @@
 <!--
-title: PassBundle: the open-source password manager for you, your family, and your clients
-description: One password to remember. PassBundle fills in your logins, passkeys, and cards for you, free, end-to-end encrypted, and open source, with plans for families, businesses, and MSPs.
+title: PassBundle: a free and open-source password manager
+description: PassBundle is a free and open-source password manager. It fills in your logins, passkeys, and cards, encrypts your vault end to end, and has plans for families, businesses, and MSPs.
 layout: wide
 script: tour
 -->
 <section class="home-hero">
-  <h1>Bundle your passwords.</h1>
+  <h1>A free and <span class="nowrap">open-source</span> password manager</h1>
   <div class="home-hero-side">
-    <p class="lead">One click signs you in: your password, your two-step code, or your passkey. Free on every device, and encrypted on yours so only you can read it.</p>
+    <p class="lead">One click fills in your password, your two-step code, or your passkey. The Free plan covers every device, and your vault is encrypted on yours so only you can read it.</p>
     <div class="actions">
       <a class="button primary" href="/download/">Download, free</a>
       <a class="button" href="#demo" data-watch>Watch it work</a>
     </div>
+    <p class="home-open">All of PassBundle's code is public, and anyone can read it or run it themselves. The <a href="https://github.com/PimpinPumpkin/passbundle-apps">apps</a> and the <a href="https://github.com/PimpinPumpkin/passbundle-clients">browser extension and web vault</a> are licensed under the GNU GPLv3, and the <a href="https://github.com/PimpinPumpkin/passbundle-server">server</a> under the GNU AGPLv3.</p>
     <p class="fine">The demo below runs in your browser with made-up data. Nothing you type leaves the page.</p>
   </div>
 </section>
@@ -35,7 +36,7 @@ script: tour
     <a class="door" href="/business/">
       <span class="door-who">For businesses</span>
       <span class="door-price">{{prices.business}} a person</span>
-      <span class="door-what">Sensible policies from day one, rolled out with the tools you already use.</span>
+      <span class="door-what">Starts with its policies on, and rolls out with the tools you already use.</span>
       <span class="more">PassBundle for business</span>
     </a>
     <a class="door" href="/msp/">
@@ -68,7 +69,7 @@ script: tour
     <div class="split-head">
       <div>
         <span class="eyebrow">For MSPs and IT providers</span>
-        <h2 id="for-msps-title">All your clients in one console.</h2>
+        <h2 id="for-msps-title">One console for all your clients</h2>
       </div>
       <div class="split-side">
         <p class="lead">Add a client in one step, set your policies once for all of them, and see each client's people, expiring logins, and passwords to fix, side by side.</p>
@@ -80,7 +81,7 @@ script: tour
     </div>
     <x-shot name="msp-console" frame="desktop" class="band-shot" alt="The PassBundle MSP console: five clients with their members, expiring items, and weak, reused, and exposed passwords"></x-shot>
     <ul class="band-facts">
-      <li><strong>Account recovery from day one</strong><span>An admin can reset a forgotten master password, and the vault stays intact.</span></li>
+      <li><strong>Account recovery on from the start</strong><span>An admin can reset a forgotten master password, and the vault stays intact.</span></li>
       <li><strong>Provisioning from Entra ID</strong><span>Entra ID adds and removes people for you.</span></li>
       <li><strong>One pool of seats</strong><span>Your own staff are free, and every client shares the pool.</span></li>
     </ul>
@@ -89,15 +90,15 @@ script: tour
 
 <section class="home-security" aria-labelledby="security-title">
   <div class="split-head">
-    <h2 id="security-title">Built so we can't see your passwords.</h2>
+    <h2 id="security-title">Why we can't see your passwords</h2>
     <div class="split-side">
       <p class="lead">Everything in your vault is encrypted with a key made from your master password, on your device. Our servers only ever hold the encrypted result.</p>
     </div>
   </div>
   <ul class="lines">
-    <li><strong>No ads or trackers</strong><span>And we never sell data.</span></li>
-    <li><strong>Open source</strong><span>All of our code is public, under the GPL and AGPL, so anyone can check it.</span></li>
-    <li><strong>Our server or yours</strong><span>Run the open-source server yourself, or use our hosted service once it opens at launch.</span></li>
+    <li><strong>No ads or trackers</strong><span>We never sell data.</span></li>
+    <li><strong>Free and open source</strong><span>All of our code is public under the GNU GPLv3 and AGPLv3, so anyone can read the code that handles their passwords.</span></li>
+    <li><strong>Our server or yours</strong><span>Run the open-source server yourself, or use our hosted service<x-if not link="vault"> once it opens at launch</x-if>.</span></li>
   </ul>
   <p><a class="more" href="/security/">How PassBundle keeps your vault safe</a></p>
 </section>
@@ -108,8 +109,8 @@ script: tour
   </div>
   <div class="faq">
     <details>
-      <summary>Is it really free?</summary>
-      <p>Yes. Every password on every device, autofill, passkeys, password health, and legacy contacts are free, with no ads and no trial that runs out. Paid plans start at launch: then Premium ({{prices.premium}} a year) adds built-in two-step codes, file attachments, and file Sends, and Families ({{prices.families}} a year) gives up to {{prices.familiesPeople}} people Premium and shared folders. See <a href="/pricing/">Pricing</a>.</p>
+      <summary>Is PassBundle free?</summary>
+      <p>Yes. Every password on every device, autofill, passkeys, password health, and legacy contacts are free, with no ads and no trial that runs out. Paid plans start at launch. Then Premium ({{prices.premium}} a year) adds built-in two-step codes, file attachments, and file Sends, and Families ({{prices.families}} a year) gives up to {{prices.familiesPeople}} people Premium and shared folders. See <a href="/pricing/">Pricing</a>.</p>
     </details>
     <details>
       <summary>What happens if PassBundle gets hacked?</summary>
@@ -121,7 +122,7 @@ script: tour
     </details>
     <details>
       <summary>Does it work on my phone?</summary>
-      <p>On Android, yes: a test build fills passwords and passkeys in apps and browsers, and unlocks with your fingerprint or face. The iPhone app is coming; until then, the web vault works in your phone's browser. See <a href="/download/">Download</a>.</p>
+      <p>On Android, yes. A test build fills passwords and passkeys in apps and browsers, and unlocks with your fingerprint or face. The iPhone app is coming; until then, the web vault works in your phone's browser. See <a href="/download/">Download</a>.</p>
     </details>
     <details>
       <summary>Can I bring my passwords from my browser or another app?</summary>
@@ -129,15 +130,15 @@ script: tour
     </details>
     <details>
       <summary>Do I need a domain or any IT setup?</summary>
-      <p>No. Sign up with any email address. Businesses don't need a domain, Active Directory, or an identity provider either; the install command works on any Windows computer, joined to a domain or not.</p>
+      <p>No. An account takes any email address. Businesses don't need a domain, Active Directory, or an identity provider either; the install command works on any Windows computer, joined to a domain or not.</p>
     </details>
     <details>
       <summary>Can my family share passwords?</summary>
-      <p>Yes. Families is {{prices.families}} a year for up to {{prices.familiesPeople}} people: shared folders for the bills, the Wi-Fi, and the streaming logins, and a private vault for each person that nobody else can open. See <a href="/personal/#families">PassBundle for families</a>.</p>
+      <p>Yes. Families is {{prices.families}} a year for up to {{prices.familiesPeople}} people. It has shared folders for the bills, the Wi-Fi, and the streaming logins, and a private vault for each person that nobody else can open. See <a href="/personal/#families">PassBundle for families</a>.</p>
     </details>
     <details>
       <summary>Is PassBundle open source?</summary>
-      <p>Yes. All of our code is public under the GPL and AGPL, so anyone can check what it does. Run the server yourself, or use our hosted service once it opens at launch.</p>
+      <p>Yes. All of our code is public, so anyone can check what it does. The apps, the browser extension, and the web vault are under the GNU GPLv3, and the server is under the GNU AGPLv3. Run the server yourself, or use our hosted service<x-if not link="vault"> once it opens at launch</x-if>.</p>
     </details>
   </div>
   <p class="faq-more"><a class="more" href="/help/">More questions and help</a></p>
@@ -145,11 +146,15 @@ script: tour
 
 <section class="home-get" aria-labelledby="get-title">
   <div class="split-head">
-    <h2 id="get-title">Get PassBundle for free.</h2>
+    <h2 id="get-title">Get PassBundle</h2>
     <div class="split-side">
-      <p class="lead">Test builds for Windows, Mac, Linux, and Android, on a server you run yourself. The extension goes into the Chrome, Edge, and Firefox stores, and our hosted service opens, at launch.</p>
+      <x-if not link="vault"><p class="lead">The apps for Windows, Mac, Linux, and Android are test builds that sign in to a server you run yourself. The extension isn't in the browsers' stores yet, and our hosted service opens at launch.</p></x-if>
+      <x-if link="vault"><p class="lead">The apps for Windows, Mac, Linux, and Android are test builds, and the extension isn't in the browsers' stores yet. All of them sign in to our hosted service, or to a server you run yourself.</p></x-if>
+      <x-if link="vault" until="signup"><p class="lead">New accounts on our hosted service aren't open yet. To ask for one, see <a href="/contact/">Contact</a>.</p></x-if>
       <div class="actions">
-        <a class="button primary" href="/download/">Download</a>
+        <x-if link="signup"><a class="button primary" href="{{links.signup}}">Create an account</a>
+        <a class="button" href="/download/">Download</a></x-if>
+        <x-if not link="signup"><a class="button primary" href="/download/">Download</a></x-if>
         <a class="button" href="/download/#server">Run your own server</a>
       </div>
     </div>

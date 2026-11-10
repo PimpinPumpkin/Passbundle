@@ -7,7 +7,17 @@
 //
 // Pages can use:
 //   {{prices.premium}}, {{links.vault}}: values from site.json. An empty link
-//     isn't live yet and becomes /download/ (check.mjs --launch refuses it).
+//     isn't live yet and becomes /download/ (check.mjs lists the empty ones,
+//     and which of them --launch refuses).
+//     {{links.extensionZip|links.extension}} is the first of them that isn't
+//     empty.
+//   <x-if link="vault">...</x-if>: what's inside, only once that link is
+//     filled in. <x-if not link="vault">...</x-if>: only until then.
+//     <x-if link="vault" until="signup">...</x-if>: only once the first is
+//     filled in and until the second is. That's the hosted vault open for
+//     signing in before new accounts are, which is where pages say that new
+//     accounts aren't open yet; <x-if link="signup"> is where they send
+//     people to sign up. One can't go inside another.
 //   <x-shot name="msp-console" alt="..." frame="desktop"></x-shot>: a
 //     screenshot from static/shots, with its dark version in dark mode. Add
 //     `eager` for one that's on screen when the page opens, and `class` to
@@ -40,6 +50,8 @@ const staticDir = path.join(here, "static");
 const artDir = path.join(here, "art");
 const dist = path.join(here, "dist");
 const site = JSON.parse(fs.readFileSync(path.join(here, "site.json"), "utf8"));
+// Where the site lives: each page's canonical address, and the sitemap's.
+const ORIGIN = "https://passbundle.com";
 
 const MARK =
   "M4.5 13V8.5a8.5 8.5 0 0 1 17 0V13h-4V8.5a4.5 4.5 0 0 0-9 0V13ZM4.5 13h17a4.5 4.5 0 0 1 4.5 4.5V18H0v-.5A4.5 4.5 0 0 1 4.5 13ZM0 20h26v5H0ZM0 27h26v.5a4.5 4.5 0 0 1-4.5 4.5h-17A4.5 4.5 0 0 1 0 27.5Z";
@@ -143,11 +155,35 @@ function art(tag, file) {
     .replace(/^<svg /, `<svg class="art${cls ? ` ${cls}` : ""}" aria-hidden="true" focusable="false" `);
 }
 
-function value(key, file) {
-  const v = key.split(".").reduce((o, k) => (o == null ? undefined : o[k]), site);
-  if (v === undefined) throw new Error(`${file}: no {{${key}}} in site.json`);
-  if (key.startsWith("links.") && v === "") return "/download/";
-  return v;
+function value(keys, file) {
+  for (const key of keys.split("|")) {
+    const v = key.split(".").reduce((o, k) => (o == null ? undefined : o[k]), site);
+    if (v === undefined) throw new Error(`${file}: no {{${key}}} in site.json`);
+    if (!key.startsWith("links.") || v !== "") return v;
+  }
+  return "/download/";
+}
+
+// Sign-up is on the hosted vault, so its link means nothing without the
+// vault's, and the pages count on that: <x-if link="signup"> stands for both.
+if (site.links.signup !== "" && site.links.vault === "") {
+  throw new Error("site.json: links.signup is filled in and links.vault isn't. Fill in links.vault too, or empty links.signup.");
+}
+
+/**
+ * <x-if link="vault">: its contents once that link is filled in; with `not`,
+ * until then; with until="signup", once it's filled in and until that one is.
+ */
+function when(tag, inner, file) {
+  const a = attrs(tag);
+  const filled = (key) => {
+    if (typeof site.links[key] !== "string") throw new Error(`${file}: <x-if> needs a link from site.json, like link="vault"`);
+    return site.links[key] !== "";
+  };
+  if ("not" in a && "until" in a) throw new Error(`${file}: <x-if> takes not or until, not both`);
+  if (inner.includes("<x-if")) throw new Error(`${file}: an <x-if> can't go inside another`);
+  if ("until" in a) return filled(a.link) && !filled(a.until) ? inner : "";
+  return filled(a.link) === !("not" in a) ? inner : "";
 }
 
 /** <x-part>: a shared piece of a page, from parts/. */
@@ -167,11 +203,12 @@ function part(tag, file) {
 function expand(html, file) {
   return html
     .replace(/<x-part\b([^>]*)><\/x-part>/g, (_, t) => part(t, file))
+    .replace(/<x-if\b([^>]*)>([\s\S]*?)<\/x-if>/g, (_, t, inner) => when(t, inner, file))
     .replace(/<x-shot\b([^>]*)><\/x-shot>/g, (_, t) => shot(t, file))
     .replace(/<x-art\b([^>]*)><\/x-art>/g, (_, t) => art(t, file))
     .replace(/<x-tile\b([^>]*)><\/x-tile>/g, (_, t) => tile(t, file))
     .replace(/<x-mark\b([^>]*)><\/x-mark>/g, (_, t) => mark(t))
-    .replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k) => value(k, file));
+    .replace(/\{\{\s*([\w.|]+)\s*\}\}/g, (_, k) => value(k, file));
 }
 
 // Six links: see it, what it does, who it's for, and what it costs. Demo is
@@ -191,13 +228,17 @@ function layout({ meta, body, file }, route) {
   const kind = meta.layout === "wide" ? "wide" : "doc";
   const current = (href) => (route.startsWith(href) ? ' aria-current="page"' : "");
   const links = NAV.map(([href, label]) => `<a href="${href}"${current(href)}>${label}</a>`).join("\n        ");
-  // "Log in" goes to the hosted web vault (links.vault), and isn't shown
-  // until that's filled in: before launch there's nothing there to log in to.
-  const vault = site.links.vault;
+  // "Sign in" goes to the hosted web vault (links.vault). Until that's
+  // filled in, it goes to Download's Web card, which says when sign-in opens.
+  const signIn = site.links.vault || "/download/#web";
   // Our own scripts only, by name, from static/: "script: tour" is /tour.js.
   if (meta.script && !/^[a-z-]+$/.test(meta.script)) throw new Error(`${file}: script must be a name like demo`);
   if (meta.script && !fs.existsSync(path.join(staticDir, `${meta.script}.js`))) throw new Error(`${file}: no static/${meta.script}.js`);
   const script = meta.script ? `\n<script src="/${meta.script}.js" defer></script>` : "";
+  // "index: no" keeps one page out of search engines whatever site.json's
+  // "indexed" says, and out of the sitemap.
+  if (meta.index && meta.index !== "no") throw new Error(`${file}: index can only be "no"`);
+  const unlisted = meta.index === "no" ? `\n<meta name="robots" content="noindex">` : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -205,14 +246,14 @@ function layout({ meta, body, file }, route) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>${THEME_SCRIPT}</script>
 <title>${escape(title)}</title>
-<meta name="description" content="${escape(meta.description)}">
+<meta name="description" content="${escape(meta.description)}">${unlisted}
 <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B0D0E" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="/fonts/google-sans-flex-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/styles.css">
-<link rel="canonical" href="https://passbundle.com${route}">${script}
+<link rel="canonical" href="${ORIGIN}${route}">${script}
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -224,13 +265,15 @@ function layout({ meta, body, file }, route) {
         ${links}
     </nav>
     ${THEME_BUTTON}
-    <div class="header-actions">${vault ? `\n      <a class="login" href="${vault}">Log in</a>` : ""}
+    <div class="header-actions">
+      <a class="login" href="${signIn}">Sign in</a>
       <a class="button primary small" href="/download/">Download</a>
     </div>
     <details class="menu">
       <summary><span class="menu-word">Menu</span><svg class="menu-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 5h14M3 10h14M3 15h14"/></svg></summary>
       <nav aria-label="Menu">
-        ${links}${vault ? `\n        <a href="${vault}">Log in</a>` : ""}
+        ${links}
+        <a href="${signIn}">Sign in</a>
         ${THEME_MENU_BUTTON}
         <a class="button primary" href="/download/">Download</a>
       </nav>
@@ -246,6 +289,7 @@ ${kind === "doc" ? `<div class="paper">\n${expand(body.trim(), file)}\n</div>` :
       <a class="brand" href="/" aria-label="PassBundle home">${brandMark}
       </a>
       <p>The password manager for MSPs and every client they look after, for businesses with their own IT, and for everyone at home.</p>
+      <p>PassBundle is free and open-source software. The apps, browser extension, and web vault are licensed under the GNU GPLv3, and the server under the GNU AGPLv3.</p>
       <p class="quiet">This site has no cookies and no trackers, and loads nothing from anyone else.</p>
     </div>
     <nav aria-label="Product">
@@ -309,17 +353,46 @@ const cssFile = path.join(dist, "styles.css");
 fs.writeFileSync(cssFile, themeable(fs.readFileSync(cssFile, "utf8")));
 const themeHash = crypto.createHash("sha256").update(THEME_SCRIPT).digest("base64");
 const headersFile = path.join(dist, "_headers");
-const headers = fs.readFileSync(headersFile, "utf8");
+let headers = fs.readFileSync(headersFile, "utf8");
 if (headers.split("script-src 'self';").length !== 2) throw new Error("_headers: expected one script-src 'self'; in the CSP");
-fs.writeFileSync(headersFile, headers.replace("script-src 'self';", `script-src 'self' 'sha256-${themeHash}';`));
+headers = headers.replace("script-src 'self';", `script-src 'self' 'sha256-${themeHash}';`);
+// Search engines follow "indexed" in site.json. While it's false, every path
+// is served with X-Robots-Tag: noindex. The rest is below, with the pages.
+if (typeof site.indexed !== "boolean") throw new Error('site.json: "indexed" has to be true or false');
+if (!site.indexed) {
+  if (headers.split("\n/*\n").length !== 2) throw new Error("_headers: expected one /* block, for every path");
+  headers = headers.replace("\n/*\n", "\n/*\n  X-Robots-Tag: noindex\n");
+}
+fs.writeFileSync(headersFile, headers);
+for (const made of ["robots.txt", "sitemap.xml"]) {
+  if (fs.existsSync(path.join(dist, made))) throw new Error(`static/${made}: the build writes this file, from "indexed" in site.json`);
+}
+const routes = [];
 let pages = 0;
 for (const rel of fs.readdirSync(pagesDir).filter((f) => f.endsWith(".html"))) {
   const route = routeOf(rel);
-  const html = layout(parse(path.join(pagesDir, rel)), route ?? "/404");
+  const page = parse(path.join(pagesDir, rel));
+  const html = layout(page, route ?? "/404");
   const out = route == null ? path.join(dist, "404.html") : path.join(dist, route, "index.html");
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, html);
+  if (route != null && page.meta.index !== "no") routes.push(route);
   pages++;
+}
+// robots.txt lets crawlers in either way. While the site isn't indexed they
+// have to fetch a page to see its noindex header: turned away here, they'd
+// never see it, and a search engine could still list an address it found
+// linked somewhere else. Once the site is indexed, robots.txt also points at
+// sitemap.xml, which lists every page but the 404 and those with "index: no".
+if (site.indexed) {
+  const urls = routes.sort().map((route) => `  <url><loc>${ORIGIN}${route}</loc></url>`);
+  fs.writeFileSync(
+    path.join(dist, "sitemap.xml"),
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`,
+  );
+  fs.writeFileSync(path.join(dist, "robots.txt"), `User-agent: *\nAllow: /\n\nSitemap: ${ORIGIN}/sitemap.xml\n`);
+} else {
+  fs.writeFileSync(path.join(dist, "robots.txt"), "User-agent: *\nAllow: /\n");
 }
 console.log(`built ${pages} pages into ${path.relative(process.cwd(), dist) || dist}`);
 if (placeholders.length > 0) {
