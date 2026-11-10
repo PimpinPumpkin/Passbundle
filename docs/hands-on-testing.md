@@ -134,7 +134,7 @@ There are two ways through it. Section 2 goes persona by persona: sign in as one
 - [ ] As Sam, he sees and edits every client's items (Northwind Dental's Banking and payroll included), and reads each client's Event logs. No Members page actions, no Access page, no install commands.
 - [ ] As Sam, the console's "Open" on a client's passwords to fix opens his own vault (he has no admin console role), and the health counts cover every client item he can edit.
 - [ ] As Sam, an export from a client is refused: a client's custom roles can only import.
-- [ ] As Sam in the desktop or phone app, a client's member policies (the vault lock, for example) apply to him though the server exempts him. That's a known gap; note it only if it gets in the way.
+- [ ] As Sam in the web vault or the extension, a client's member policies (removing the individual vault, single organization, turning off Send) leave him alone, as they do the client's admins. A client's vault lock applies to him in every app, as it does to its admins.
 
 **All of Harbor IT's staff**
 - [ ] As each, sign in on a browser they haven't used: the authenticator code is asked, and there's no new-device wait.
