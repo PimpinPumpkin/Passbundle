@@ -134,7 +134,7 @@ There are two ways through it. Section 2 goes persona by persona: sign in as one
 - [ ] As Sam, he sees and edits every client's items (Northwind Dental's Banking and payroll included), and reads each client's Event logs. No Members page actions, no Access page, no install commands.
 - [ ] As Sam, the console's "Open" on a client's passwords to fix opens his own vault (he has no admin console role), and the health counts cover every client item he can edit.
 - [ ] As Sam, an export from a client is refused: a client's custom roles can only import.
-- [ ] As Sam in the desktop or phone app, a client's member policies (the vault lock, for example) apply to him though the server exempts him. That's a known gap; note it only if it gets in the way.
+- [ ] As Sam in the web vault or the extension, a client's member policies (removing the individual vault, single organization, turning off Send) leave him alone, as they do the client's admins. A client's vault lock applies to him in every app, as it does to its admins.
 
 **All of Harbor IT's staff**
 - [ ] As each, sign in on a browser they haven't used: the authenticator code is asked, and there's no new-device wait.
@@ -392,7 +392,7 @@ Do each step in Chrome; repeat the starred ones (*) in Edge and Firefox.
 
 **Change password on the site**
 - [ ] As Alex, on a login he can edit, "Change password" opens a short dialog first (a new tab, the new password saved first, the old one kept). Not offered for an http website, an item with no password, an item in the trash, or for Chloe on Client portals.
-- [ ] As Kai Anderson, "Change password" shows beside items on Health's weak, reused, and exposed lists.
+- [ ] As Kai Anderson, the popup has no Health page (section 6), so "Change password" is only in a login's view. Note it if a Health entry appears.
 - [ ] Real sites and the "Did the new password work?" card are in section 4.
 
 **Other**
@@ -429,6 +429,7 @@ Do each step on all three unless it names one.
 - [ ] As Grace, Health lists weak, reused, and unsecured (http) logins and expiring items; no exposed check in the apps. A clean list says "Nothing to fix: no weak, reused, or unsecured passwords."
 - [ ] As Alex, view and edit a login, note, card, and identity; SSH keys, bank accounts, driver's licenses, and passports show with "Edit in web vault". New item: "What are you saving?" with "Website or app", "Important text", "Credit or debit card", "Personal info", "More categories", and templates grouped as each organization's, "My templates", and "Built-in".
 - [ ] As Tom, New item lists Harbor IT's Firewall template under Northwind Dental (after Confirm client).
+- [ ] As Alex, in the editor name a custom field "keykeeper.fill" (or "Keykeeper.x", or with spaces before it): saving is refused ("Field names starting with "keykeeper." are reserved.").
 - [ ] As Alex, the editor's "Expires (optional)" and "Remind me"; after unlocking, a banner "N items expire soon" with Show and Dismiss.
 - [ ] As Alex, "Version history": compare, "Show hidden values", "Restore this version", "Delete this version", "Clear history".
 - [ ] As Alex, copy a password: "Copied the password. It clears in 30 seconds." On Windows it isn't in clipboard history (Win+V); on the Mac, a clipboard manager treats it as concealed.
@@ -595,7 +596,8 @@ DESIGN or the apps say these aren't built; note it only if one appears:
 - Members' own passwords in the MSP console and in the apps.
 - The domain breach report (waits on a Have I Been Pwned key), and upstream's data breach report without a key.
 - Fill rules for everyone (PassBundle's signed site rules, "This didn't fill"); upstream's Fill Assist stays off.
-- Assisted password change in the apps, recipes for real sites, starting it from the web vault, and frames.
+- A Health page in the browser extension (upstream's is behind a feature flag this server doesn't turn on).
+- Assisted password change in the apps, recipes for real sites, starting it from the web vault or from Health in the extension, and frames.
 - Script access in the CLI, tokens bound to a machine, and a technician permission for it.
 - The agent's report of browsers and profiles; browser extension management; Firefox's password manager in the install scripts.
 - Moving a client between MSPs, linking an existing organization as a client, MSP sign-up on the hosted service, and key fingerprints when staff are added.

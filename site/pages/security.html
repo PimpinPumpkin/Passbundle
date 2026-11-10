@@ -3,7 +3,7 @@ title: Security
 description: How PassBundle protects your vault: end-to-end encryption, a server that can't decrypt, open-source code, safeguards for businesses and MSPs, and how to report a security issue.
 -->
 <h1>Security</h1>
-<p class="lead">Here's how PassBundle is built, what we can and can't see, and how to tell us if you find a problem.</p>
+<p class="lead">This page covers how PassBundle is built, what we can and can't see, and how to report a problem.</p>
 
 <h2>Your vault is encrypted on your device</h2>
 <ul>
@@ -18,19 +18,19 @@ description: How PassBundle protects your vault: end-to-end encryption, a server
 <p>Our servers store your encrypted vault and a hash that proves it's you when you sign in. That hash is hashed again on the server before it's stored, and it can't be used to decrypt anything. PassBundle's server never holds a key that can open a vault. Any feature that would need one gets redesigned or dropped.</p>
 <p>That also means we can't recover your vault if you forget your master password. Businesses can turn on account recovery, which lets their own admins reset a member's master password; see <a href="/privacy/">our privacy policy</a> for exactly who can see what.</p>
 
-<h2>Built in the open</h2>
+<h2>The code and how it's built</h2>
 <ul>
-  <li><strong>Open source.</strong> Every line of PassBundle is public on <a href="https://github.com/PimpinPumpkin/Passbundle">GitHub</a>, under the GPL and AGPL, so anyone can check it.</li>
+  <li><strong>Free and open source.</strong> All of PassBundle's code is public, so anyone can read the code that handles their passwords, and anyone can run the server themselves. The <a href="https://github.com/PimpinPumpkin/passbundle-apps">apps</a> and the <a href="https://github.com/PimpinPumpkin/passbundle-clients">browser extension and web vault</a> are under the GNU GPLv3, and the <a href="https://github.com/PimpinPumpkin/passbundle-server">server</a> is under the GNU AGPLv3.</li>
   <li><strong>Built on established projects.</strong> The web vault, the browser extension, and the server are built on two widely used open-source projects, credited at the foot of every page. We follow their security fixes every week and ship them quickly.</li>
-  <li><strong>Our own apps, on one core.</strong> The desktop and phone apps are ours: one Rust library does the encryption, the vault format, and sync for all of them, so a fix lands everywhere at once. On phones, the key for fingerprint or face unlock stays in the phone's own secure hardware.</li>
+  <li><strong>Our own apps, on one core.</strong> The desktop and phone apps are ours. One Rust library does the encryption, the vault format, and sync for all of them, so a fix reaches all of them at once. On phones, the key for fingerprint or face unlock stays in the phone's own secure hardware.</li>
   <li><strong>Encryption changes are slow on purpose.</strong> Any change to encryption, keys, or sign-in needs a written design and test vectors before it's merged.</li>
-  <li><strong>Automated tests.</strong> Every change runs through more than a hundred automated tests, from the server's API to real browsers with the real extension, on Windows, Mac, and Linux.</li>
+  <li><strong>Automated tests.</strong> Every change to the server, the web vault, or the browser extension runs through more than 400 end-to-end tests, against the real server's API and in a real browser with the real extension. The desktop and phone apps have their own tests, which run on Windows, Mac, and Linux on every change.</li>
   <li><strong>An independent audit</strong> of PassBundle's own changes is one we mean to have, and we'll publish its report here. None has been done or scheduled yet.</li>
 </ul>
 
 <h2>Protecting your account</h2>
 <ul>
-  <li><strong>Two-step login</strong> with an authenticator app, a security key such as a YubiKey, or email codes, in every plan, in the web vault, the browser extension, and PassBundle's own apps (the iPhone app doesn't take security keys yet).</li>
+  <li><strong>Two-step login</strong> with an authenticator app, a security key such as a YubiKey, or email codes, in every plan, in the web vault, the browser extension, and the PassBundle apps for Windows, Mac, Linux, and Android.</li>
   <li><strong>Password guessing is stopped per account.</strong> After 10 wrong tries, an account allows one attempt a minute, no matter where the guesses come from.</li>
   <li><strong>New devices are announced.</strong> When your account signs in on a new device, you get an email with when and from where.</li>
 </ul>

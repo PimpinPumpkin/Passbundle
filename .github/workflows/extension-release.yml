@@ -1,0 +1,373 @@
+# Browser extension releases: the branded PassBundle extension for Chrome,
+# Edge, and other Chromium browsers, built from a commit of passbundle-clients
+# (apps/browser) the way Tier 1 builds it (tier1.yml, chrome-extension), as a
+# zip to load by hand until it's in the browsers' stores (the Download page's
+# "Install the extension by hand"), and published as a release of this
+# repository with its SHA-256. Started by hand, from main. A pull request that
+# changes this file builds and checks the zip the same way, with the linked
+# passbundle-clients branch if there is one, and stops there: nothing
+# published.
+#
+# Modeled on cli-release.yml, without its signing key: nothing checks a
+# signature on a zip loaded by hand, and SHA256SUMS is there for people
+# checking a download. Four jobs, so the token that can publish never meets
+# the build's own code (npm packages' install scripts, webpack):
+#
+#   plan     the version, the commit, and the notes; read-only
+#   build    the extension, branded and zipped; no secrets, read-only
+#   check    checks the zip and writes release.json and SHA256SUMS with
+#            unzip, jq, and coreutils, running nothing from any repository;
+#            read-only
+#   publish  the only job that can write: gh release create; no secrets
+#
+# Tagged extension-v<version>.<build>: the version is the extension's own
+# (apps/browser/src/manifest.v3.json, which the browser's extensions page
+# shows), and the build is this workflow's run number, which only goes up.
+# Renaming this file starts the run number at 1 again: add an offset to BUILD
+# then, or the versions go backwards.
+#
+# The zip is always named passbundle-extension-chromium.zip, and each release
+# is marked as this repository's latest (the CLI's never are), so
+# https://github.com/PimpinPumpkin/Passbundle/releases/latest/download/passbundle-extension-chromium.zip
+# is always the newest one: the site's links.extensionZip (site/site.json).
+# The same name also keeps the unzipped folder's name the same from one
+# version to the next. The manifest carries brand.json's public key, so the
+# extension has the same ID in any folder.
+#
+# No Firefox: release Firefox installs only extensions Mozilla has signed,
+# which takes the owner's Mozilla add-on keys.
+name: Extension release
+
+on:
+  workflow_dispatch:
+    inputs:
+      clients-ref:
+        description: The passbundle-clients branch or commit to build
+        type: string
+        default: keykeeper
+  pull_request:
+    paths:
+      - .github/workflows/extension-release.yml
+
+permissions: {}
+
+concurrency:
+  # Releases one at a time; a pull request's check by itself, the newest only.
+  group: extension-release-${{ github.event_name == 'pull_request' && github.ref || 'publish' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  plan:
+    name: What to release
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      release: ${{ steps.plan.outputs.release }}
+      publish: ${{ steps.plan.outputs.publish }}
+      sha: ${{ steps.plan.outputs.sha }}
+      base: ${{ steps.plan.outputs.base }}
+      version: ${{ steps.plan.outputs.version }}
+      notes: ${{ steps.notes.outputs.notes }}
+    steps:
+      - name: Which passbundle-clients to build
+        id: ref
+        env:
+          INPUT: ${{ inputs.clients-ref }}
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          # A pull request builds the clients' branch of the same name, if
+          # there is one (as tier 1 does), else keykeeper.
+          ref=${INPUT:-keykeeper}
+          if [ -n "$BRANCH" ] &&
+            git ls-remote --exit-code --heads https://github.com/PimpinPumpkin/passbundle-clients.git "refs/heads/$BRANCH" > /dev/null; then
+            ref=$BRANCH
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-clients
+          ref: ${{ steps.ref.outputs.ref }}
+          path: clients
+          # The history, for the notes.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: The version, and whether there's anything new
+        id: plan
+        env:
+          BUILD: ${{ github.run_number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(git -C clients rev-parse HEAD)
+          # A release is built only from what's merged into keykeeper (whose
+          # tier 1 runs passed), whatever ref it was asked for.
+          if [ "$GITHUB_EVENT_NAME" != pull_request ] &&
+            ! git -C clients merge-base --is-ancestor "$sha" refs/remotes/origin/keykeeper; then
+            echo "passbundle-clients ${sha:0:10} isn't on keykeeper: releases are built only from what's merged there." >&2
+            exit 1
+          fi
+          base=$(jq -r .version clients/apps/browser/src/manifest.v3.json)
+          if ! [[ "$base" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "apps/browser/src/manifest.v3.json's version is \"$base\", not three numbers." >&2
+            exit 1
+          fi
+          version="$base.$BUILD"
+          # The newest extension release, by build number, and the commit it was built from.
+          last=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName --jq '.[].tagName' |
+            grep '^extension-v' | awk -F. '{ print $NF "\t" $0 }' | sort -n | tail -1 | cut -f2 || true)
+          last_sha=
+          if [ -n "$last" ]; then
+            gh release download "$last" --repo "$GITHUB_REPOSITORY" --pattern release.json --dir "$RUNNER_TEMP/last"
+            last_sha=$(jq -r .commit "$RUNNER_TEMP/last/release.json")
+          fi
+          {
+            echo "sha=$sha"
+            echo "base=$base"
+            echo "version=$version"
+            echo "last=$last"
+            echo "last_sha=$last_sha"
+          } >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            echo "A pull request's check: building passbundle-clients ${sha:0:10} as $version, publishing nothing." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          elif [ "$sha" = "$last_sha" ]; then
+            echo "${sha:0:10} is already $last: nothing new to release." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Releasing passbundle-clients ${sha:0:10} as $version (the last release is ${last:-none})." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: The notes, the extension's changes since the last release
+        id: notes
+        if: steps.plan.outputs.release == 'true'
+        env:
+          SHA: ${{ steps.plan.outputs.sha }}
+          BASE: ${{ steps.plan.outputs.base }}
+          VERSION: ${{ steps.plan.outputs.version }}
+          LAST: ${{ steps.plan.outputs.last }}
+          LAST_SHA: ${{ steps.plan.outputs.last_sha }}
+        run: |
+          # Our own changes are keykeeper's first-parent commits, whose
+          # subjects are written as release notes; upstream's come in merges.
+          upstream=
+          if [ -n "$LAST_SHA" ] && git -C clients merge-base --is-ancestor "$LAST_SHA" "$SHA"; then
+            since="since ${LAST#extension-v}"
+            changes=$(git -C clients log --first-parent --no-merges --format='- %s' "$LAST_SHA..$SHA" -- apps/browser libs)
+            if [ -n "$(git -C clients rev-list --first-parent --merges "$LAST_SHA..$SHA" -- apps/browser libs)" ]; then
+              upstream="- Changes from the open-source clients PassBundle is built on"
+            fi
+          elif [ -n "$LAST_SHA" ]; then
+            since="since ${LAST#extension-v}"
+            changes="- Built from a branch that doesn't follow ${LAST}'s commit"
+          else
+            since="in this first release"
+            changes="- The PassBundle extension for Chrome, Edge, and other Chromium browsers, to install by hand until it's in their stores"
+          fi
+          notes=$(
+            echo "What's new $since:"
+            echo
+            if [ -n "$changes$upstream" ]; then
+              [ -z "$changes" ] || echo "$changes"
+              [ -z "$upstream" ] || echo "$upstream"
+            else
+              echo "- Changes in the code the extension shares with the web vault"
+            fi
+            echo
+            echo "Built from PimpinPumpkin/passbundle-clients at $SHA."
+            echo
+            echo "passbundle-extension-chromium.zip is the extension for Chrome, Edge, Brave, and other Chromium browsers (version $BASE on the browser's extensions page). To install it, unzip it, open the browser's extensions page (chrome://extensions, or edge://extensions in Edge), turn on Developer mode, choose Load unpacked, and pick the unzipped folder. It doesn't update itself: for a new version, put the new zip's files in the same folder and choose Reload. Steps: https://passbundle.com/download/#extension"
+            echo
+            echo "release.json names the zip with its size and SHA-256, and SHA256SUMS lists every file's SHA-256. Firefox's version comes once Mozilla signs it."
+          )
+          echo "$notes"
+          end="NOTES_$(od -An -N12 -tx1 /dev/urandom | tr -d ' \n')"
+          printf 'notes<<%s\n%s\n%s\n' "$end" "$notes" "$end" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ needs.plan.outputs.version }}
+    needs: plan
+    if: needs.plan.outputs.release == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    # No secrets here, and nothing it can write: this is where the build's
+    # own code runs.
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+      SHA: ${{ needs.plan.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-clients
+          ref: ${{ needs.plan.outputs.sha }}
+          persist-credentials: false
+      # No npm cache: a release builds from the registry alone, as the CLI's does.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Apply branding
+        run: node brand/apply.mjs
+      - name: Build the Chrome extension
+        working-directory: apps/browser
+        run: npm run build:prod:chrome
+      - name: Check it carries our name
+        run: |
+          node -e '
+            const fs = require("fs");
+            const brand = JSON.parse(fs.readFileSync("brand/brand.json", "utf8"));
+            const msgs = JSON.parse(fs.readFileSync("apps/browser/build/_locales/en/messages.json", "utf8"));
+            const name = msgs.extName.message;
+            if (name !== brand.nameFull) throw new Error("extension name is " + name);
+            console.log(name);'
+      - name: Its license and source, and the zip
+        run: |
+          mkdir stage dist
+          cp -R apps/browser/build/. stage/
+          find stage -name '*.map' -delete
+          cp LICENSE.txt stage/LICENSE.txt
+          {
+            echo "PassBundle extension $VERSION, for Chrome, Edge, and other Chromium browsers."
+            echo
+            echo "To install it by hand: open the browser's extensions page (chrome://extensions,"
+            echo "or edge://extensions in Edge), turn on Developer mode, choose Load unpacked,"
+            echo "and pick this folder. Keep the folder: the browser loads PassBundle from it."
+            echo "Steps: https://passbundle.com/download/#extension"
+            echo
+            echo "Free software under the GNU General Public License, version 3 (LICENSE.txt),"
+            echo "based on the open-source Bitwarden clients. Its source:"
+            echo "https://github.com/PimpinPumpkin/passbundle-clients/tree/$SHA/apps/browser"
+          } > stage/README.txt
+          # The files at the top of the zip, so the folder it unzips to is
+          # the one to load.
+          (cd stage && zip -q -r -X ../dist/passbundle-extension-chromium.zip .)
+          ls -l dist
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: passbundle-extension-${{ needs.plan.outputs.version }}-unchecked
+          path: dist
+          if-no-files-found: error
+          retention-days: 7
+
+  check:
+    name: Check ${{ needs.plan.outputs.version }}
+    needs: [plan, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+    # No checkout: nothing from any repository runs here, only the runner's
+    # own tools (unzip, jq, coreutils) and this file's own shell.
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: passbundle-extension-${{ needs.plan.outputs.version }}-unchecked
+          path: unchecked
+      - name: Check the zip, and write release.json and SHA256SUMS
+        env:
+          SHA: ${{ needs.plan.outputs.sha }}
+          BASE: ${{ needs.plan.outputs.base }}
+          NOTES: ${{ needs.plan.outputs.notes }}
+        run: |
+          zip=passbundle-extension-chromium.zip
+          made=$(find unchecked -mindepth 1 -printf '%P\n')
+          if [ "$made" != "$zip" ]; then
+            echo "The build made $(tr '\n' ' ' <<< "$made"), not $zip alone." >&2
+            exit 1
+          fi
+          # Plain files and folders only, all inside the folder it unzips to.
+          if unzip -Z "unchecked/$zip" | sed '1,2d;$d' | grep -v '^[-d]'; then
+            echo "$zip holds something that isn't a file or a folder." >&2
+            exit 1
+          fi
+          if unzip -Z1 "unchecked/$zip" | grep -E '^/|(^|/)\.\.(/|$)'; then
+            echo "$zip has a path outside its folder." >&2
+            exit 1
+          fi
+          for file in manifest.json LICENSE.txt README.txt _locales/en/messages.json; do
+            if ! unzip -Z1 "unchecked/$zip" | grep -qxF "$file"; then
+              echo "$zip has no $file at its top." >&2
+              exit 1
+            fi
+          done
+          if unzip -Z1 "unchecked/$zip" | grep '\.map$'; then
+            echo "$zip has source maps." >&2
+            exit 1
+          fi
+          if ! unzip -p "unchecked/$zip" manifest.json | jq -e --arg v "$BASE" '.manifest_version == 3 and .version == $v' > /dev/null; then
+            echo "$zip's manifest.json isn't Manifest V3 at version $BASE." >&2
+            exit 1
+          fi
+          mkdir dist
+          cp "unchecked/$zip" dist/
+          jq -n -c --arg tag "extension-v$VERSION" --arg version "$VERSION" --arg extension "$BASE" --arg commit "$SHA" \
+            --arg notes "$NOTES" --arg name "$zip" --argjson size "$(stat -c %s "dist/$zip")" \
+            --arg sha "$(sha256sum "dist/$zip" | cut -d' ' -f1)" \
+            '{format: 1, app: "com.passbundle.extension", tag: $tag, version: $version, extensionVersion: $extension,
+              commit: $commit, notes: $notes, files: [{name: $name, browsers: "chromium", size: $size, sha256: $sha}]}' \
+            > dist/release.json
+          cat dist/release.json
+          (cd dist && sha256sum "$zip" release.json > SHA256SUMS && cat SHA256SUMS)
+          ls -l dist
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: passbundle-extension-${{ needs.plan.outputs.version }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish ${{ needs.plan.outputs.version }}
+    needs: [plan, check]
+    if: needs.plan.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # The only job that can write, with no secrets but its token, and no
+    # code from any repository.
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: passbundle-extension-${{ needs.plan.outputs.version }}
+          path: dist
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.plan.outputs.version }}
+          NOTES: ${{ needs.plan.outputs.notes }}
+        run: |
+          (cd dist && sha256sum -c SHA256SUMS)
+          printf '%s\n' "$NOTES" > "$RUNNER_TEMP/notes.md"
+          # This repository's latest release, so releases/latest/download/
+          # passbundle-extension-chromium.zip is this zip (site.json's
+          # links.extensionZip).
+          gh release create "extension-v$VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "PassBundle extension $VERSION for Chrome and Edge" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --latest \
+            dist/*
+          echo "Published https://github.com/$GITHUB_REPOSITORY/releases/tag/extension-v$VERSION" | tee -a "$GITHUB_STEP_SUMMARY"
