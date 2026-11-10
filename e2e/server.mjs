@@ -27,11 +27,21 @@ const withNewDevice = process.env.KK_NEW_DEVICE === "1";
 // only at the domains in KK_SIGNUPS_DOMAINS, invitations that don't let anyone
 // in without approval, and MSPs allowed (tests/api/test-tenants.spec.ts).
 const likeTestServer = process.env.KK_LIKE_TEST_SERVER === "1";
+// KK_SIGNUPS=closed starts one that isn't taking new accounts, or takes them
+// only at the email domains in KK_SIGNUPS_DOMAINS; KK_SIGNUPS=open is the
+// same server while it still takes them. KK_SIGNUPS_VERIFY=1 has the sign-up
+// form's first step send its link by email (on a server that sends email),
+// where the others hand the link's token straight back. The tests of what a
+// closed server says start such a server themselves, and start it again with
+// other settings over the same data (tests/support/closed-server.ts;
+// DESIGN.md, "New accounts on a closed server").
+const signUps = process.env.KK_SIGNUPS;
 // KK_DATA_DIR keeps the data in that folder, and keeps it when the server
 // stops, so a test can start the same server again (reload-key.spec.ts: the
 // server forgets reload keys when it restarts). Such a server is a side one.
 const keptData = process.env.KK_DATA_DIR;
-const side = withMail || withLimits || withGroups || withNewDevice || likeTestServer || !!keptData;
+const side =
+  withMail || withLimits || withGroups || withNewDevice || likeTestServer || !!signUps || !!keptData;
 
 for (const [name, p] of Object.entries({
   server: paths.serverBin,
@@ -211,8 +221,13 @@ const child = spawn(paths.serverBin, [], {
           // 31 people and taking them down, and nothing tested depends on it.
           PASSWORD_ITERATIONS: "100000",
         }
-      : { SIGNUPS_ALLOWED: "true" }),
-    SIGNUPS_VERIFY: "false",
+      : signUps === "closed"
+        ? {
+            SIGNUPS_ALLOWED: "false",
+            SIGNUPS_DOMAINS_WHITELIST: process.env.KK_SIGNUPS_DOMAINS ?? "",
+          }
+        : { SIGNUPS_ALLOWED: "true" }),
+    SIGNUPS_VERIFY: process.env.KK_SIGNUPS_VERIFY === "1" ? "true" : "false",
     MSP_SIGNUPS_ALLOWED: "true",
     DISABLE_ICON_DOWNLOAD: "true",
     // Single sign-on goes to the local stand-in for Microsoft Entra ID, and
@@ -245,6 +260,8 @@ const child = spawn(paths.serverBin, [], {
               ? "-new-device$1"
               : likeTestServer
               ? "-test-tenants$1"
+              : signUps
+              ? "-sign-ups$1"
               : withMail
               ? "-mail$1"
               : withLimits

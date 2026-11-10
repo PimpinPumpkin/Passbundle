@@ -44,6 +44,8 @@ The security key tests (`tests/connector-origins.spec.ts`) start a server of the
 
 The test tenants tests (`tests/api/test-tenants.spec.ts`, `tests/test-tenants-web.spec.ts`) run `tools/test-tenants` as a person would, against a server of their own set up as the hosted test server is while the tool seeds it (`KK_LIKE_TEST_SERVER=1`: no email, the new-device check on, and sign-up only at the tool's domains, `KK_SIGNUPS_DOMAINS`), on `KK_TEST_TENANTS_SERVER_PORT` (default 8107).
 
+The closed sign-ups tests (`tests/mail/closed-sign-ups.spec.ts`, `tests/closed-sign-ups.spec.ts`) start a server of their own that isn't taking new accounts, or takes them only at some email domains (`KK_SIGNUPS=closed`, `KK_SIGNUPS_DOMAINS`), and start it again with other settings over the same data (`tests/support/closed-server.ts`): open first (`KK_SIGNUPS=open`), to make the accounts a closed server is then asked about, with and without email, and with the sign-up form's link sent by email (`KK_SIGNUPS_VERIFY=1`). It's on `KK_CLOSED_SERVER_PORT` (default 8108).
+
 The required policy tests (`tests/api/msp-required-policies.spec.ts`) start a server of their own that sends email and needs single organization before account recovery (`KK_SINGLE_ORG_FOR_RECOVERY=1`, upstream's `ENFORCE_SINGLE_ORG_WITH_RESET_PW_POLICY`), on `KK_SINGLE_ORG_SERVER_PORT` (default 8104).
 
 ## Website screenshots
