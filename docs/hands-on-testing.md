@@ -429,6 +429,7 @@ Do each step on all three unless it names one.
 - [ ] As Grace, Health lists weak, reused, and unsecured (http) logins and expiring items; no exposed check in the apps. A clean list says "Nothing to fix: no weak, reused, or unsecured passwords."
 - [ ] As Alex, view and edit a login, note, card, and identity; SSH keys, bank accounts, driver's licenses, and passports show with "Edit in web vault". New item: "What are you saving?" with "Website or app", "Important text", "Credit or debit card", "Personal info", "More categories", and templates grouped as each organization's, "My templates", and "Built-in".
 - [ ] As Tom, New item lists Harbor IT's Firewall template under Northwind Dental (after Confirm client).
+- [ ] As Alex, in the editor name a custom field "keykeeper.fill" (or "Keykeeper.x", or with spaces before it): saving is refused ("Field names starting with "keykeeper." are reserved.").
 - [ ] As Alex, the editor's "Expires (optional)" and "Remind me"; after unlocking, a banner "N items expire soon" with Show and Dismiss.
 - [ ] As Alex, "Version history": compare, "Show hidden values", "Restore this version", "Delete this version", "Clear history".
 - [ ] As Alex, copy a password: "Copied the password. It clears in 30 seconds." On Windows it isn't in clipboard history (Win+V); on the Mac, a clipboard manager treats it as concealed.
