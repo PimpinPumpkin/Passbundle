@@ -20,6 +20,8 @@ export type CoreRead = {
     uris: string[];
     organizationId: string | null;
     fields: { name: string; value: string; hidden: boolean }[];
+    /** Each attachment's name, and its size on the server (encrypted). */
+    attachments: { id: string; name: string; size: number | null }[];
     passkey: {
       rpId: string;
       userName: string | null;
@@ -31,6 +33,12 @@ export type CoreRead = {
   }[];
   saved?: boolean;
   passkey?: Record<string, string>;
+  /**
+   * An attachment action (docs/core.md, "Attachments"): one attached (`id`,
+   * `synced`), opened (`name`, `contents` in base64), or deleted (`synced`),
+   * or what the app refused, in its words.
+   */
+  attachment?: { id?: string; synced?: boolean; name?: string; contents?: string; refused?: string };
   /** Sign-in requests (docs/core.md, "Approving a sign-in"), and one answered or refused. */
   signIn?: {
     requests: {
