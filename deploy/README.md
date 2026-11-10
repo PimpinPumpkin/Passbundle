@@ -58,6 +58,7 @@ The settings are the server's environment variables, as in Vaultwarden. The ones
 | `INVITE_JOINS_WITHOUT_EMAIL` | On a server that sends no email, whether an invitation still lets the person in without approval. Off by default: without email, nothing proves who owns the address, so whoever signs up with it first would get in. Only for a server nobody else can reach. |
 | `NEW_DEVICE_CHECK` | On by default: an account without two-step login that signs in on a device it has never used waits until the person types the new device's number on one of their signed-in devices, or uses a code by email (DESIGN.md, "New-device check"). Turn it off only for a test server. |
 | `IP_LOCATION_DATABASE` | An IP-to-location database (MaxMind DB format) for showing roughly where a sign-in comes from; `/data/ip-location.mmdb` by default. It isn't in the image: put DB-IP's free IP to City Lite there with passbundle-server's `tools/update-ip-location.sh` (on the host, against the folder mounted as `/data`), monthly. Without it, no location is shown. The server never asks another service. `IP_LOCATION_ATTRIBUTION` and `IP_LOCATION_ATTRIBUTION_URL` credit it (DB-IP's credit by default, as its CC BY 4.0 license asks); set them if you use another database. |
+| `PLANS_ENFORCED` | Off by default, and a self-hosted server leaves it off: every account and organization gets everything, as before. On, what each gets follows the plan recorded for it, and the apps are told in the sync; nothing is refused yet (see "Plans"). Set only in the environment. Its figures: `PLAN_GRACE_DAYS` (14), `PLAN_PREMIUM_STORAGE_GB` (5), `PLAN_FAMILIES_PEOPLE` (6), `PLAN_ORG_STORAGE_GB_PER_PERSON` (1), and `PLAN_ORG_STORAGE_MIN_GB` (5). |
 | `SITE_FIXES_NEED_APPROVAL` | Whether a shared site fix fills for everyone only once you approve it on the admin page's Sites list, as well as once three people with verified email addresses shared it. |
 | `ATTACHMENTS_FOLDER`, `SENDS_FOLDER` | Where file attachments and Send files go. A folder in `/data` by default, or object storage: `s3://bucket/attachments?endpoint=https://...&region=auto&default_storage_class=STANDARD`, with `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. They're encrypted by the apps before upload, like everything else. |
 
@@ -66,6 +67,18 @@ The settings are the server's environment variables, as in Vaultwarden. The ones
 `ADMIN_TOKEN` turns on the server's admin page at `/admin`, which can delete accounts and organizations and change settings. Someone who gets the token can do all of that, so leave it unset in production: set it, use the page, and unset it again (restart the container both times). Use an Argon2 hash (`passbundle-server hash`), never the token itself.
 
 Settings that could quietly send people's secrets somewhere else are set only in the environment, so the admin page can't change them: `DOMAIN` (links in emails and passkeys), every `SMTP_*` setting (sign-in codes and links go by email), `IP_HEADER` and `IP_HEADER_TRUSTED_PROXIES`, `EVENT_STREAMING_ALLOWED_NETWORKS`, `HTTP_REQUEST_BLOCK_REGEX` and `HTTP_REQUEST_BLOCK_NON_GLOBAL_IPS`, `YUBICO_SERVER`, and `DUO_HOST`. A value for one of them saved on the admin page before is ignored.
+
+## Plans
+
+The server keeps at most one plan for each person, organization, and MSP: which plan, a date it's free until (a trial or an offer), a date it's paid through or that it's paid for as it goes, and whether it renews. With `PLANS_ENFORCED` off, the default, a recorded plan changes nothing. With it on, a person gets Premium's features while their own plan is in effect, or while they hold a place in an organization, or are on the staff of an MSP, whose plan is; an MSP's plan covers each of its clients, whatever plan a client has of its own. A plan that's paid through a date and renews stays in effect for `PLAN_GRACE_DAYS` after that date; one that doesn't renew ends on it. Nothing is refused yet, no trial starts by itself, and nothing is billed: for now the apps are only told, in the sync.
+
+Only the admin page sets a plan, so only someone with `ADMIN_TOKEN` can, and each change is written to the server's log with what the plan was before. Signed in to `/admin`:
+
+- `GET /admin/plans/<users|organizations|msps>/<id>` reads the plan recorded for that person, organization, or MSP, and what applies to it now.
+- `POST /admin/plans/<users|organizations|msps>/<id>` sets it, with a JSON body: `plan` (`premium` for a person; `families` or `business` for an organization; `msp` for an MSP), `standing` (`none`, `until`, or `open`), `until` (a time, with `standing` `until`), `renews`, and optionally `freeUntil` with `freeWhy` (`trial` or `offer`) and `billed` (`prepaid`, `by_the_day`, or `by_hand`, the default). Times are UTC, like `2027-01-31T00:00:00Z`.
+- `POST /admin/plans/<users|organizations|msps>/<id>/remove` removes it.
+
+The people a changed plan reaches are told to sync. People read their own plan, and the plan of an organization or MSP they manage, at `GET /api/keykeeper/plan`; nobody sets one there.
 
 ## What the server fetches
 

@@ -40,10 +40,15 @@ export const newDeviceServerPort = process.env.KK_NEW_DEVICE_SERVER_PORT ?? "810
 // seeds it (server.mjs, KK_LIKE_TEST_SERVER), which the tool's tests start
 // themselves (tests/api/test-tenants.spec.ts).
 export const testTenantsServerPort = process.env.KK_TEST_TENANTS_SERVER_PORT ?? "8107";
+// Two servers with the admin page on, which the plans tests start themselves
+// (tests/api/plans.spec.ts): one that enforces plans (server.mjs,
+// KK_PLANS_ENFORCED), and one that doesn't, as every other server here.
+export const plansServerPort = process.env.KK_PLANS_SERVER_PORT ?? "8108";
+export const plansOffServerPort = process.env.KK_PLANS_OFF_SERVER_PORT ?? "8109";
 // A server that isn't taking new accounts, or takes them only at some email
 // domains (server.mjs, KK_SIGNUPS), which the tests of what such a server
 // says start themselves (tests/support/closed-server.ts).
-export const closedServerPort = process.env.KK_CLOSED_SERVER_PORT ?? "8108";
+export const closedServerPort = process.env.KK_CLOSED_SERVER_PORT ?? "8110";
 // A stand-in for Microsoft Entra ID's sign-in (entra-standin.mjs), which
 // every test server uses for single sign-on, and its DNS server (UDP) for
 // domain checks.

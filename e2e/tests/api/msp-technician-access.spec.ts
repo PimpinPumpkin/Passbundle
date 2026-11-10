@@ -73,6 +73,19 @@ async function collectionsSeen(api: Api, who: Account, orgId: string) {
   ).length;
 }
 
+/**
+ * Whether sync tells someone their membership in an organization came from an
+ * MSP, which is what the web vault and the extension go by when they leave
+ * MSP staff out of a client's member policies.
+ */
+async function fromMsp(api: Api, who: Account, orgId: string) {
+  const sync = await api.call(who, "GET", "/api/sync?excludeDomains=true");
+  expect(sync.status).toBe(200);
+  return sync.body.profile.organizations.find(
+    (o: { id: string }) => o.id === orgId,
+  )?.keykeeperFromMsp;
+}
+
 test("a technician limited to chosen clients is taken out of the others at once, and new clients reach only technicians with every client", async ({
   request,
 }) => {
@@ -672,6 +685,14 @@ test("a technician with a custom role works in every Business client: single org
   // policy. Turning on single organization again revokes members of other
   // organizations, but not the technician.
   await api.addMember(admin, dental, member, "user");
+  // Sync tells the apps which memberships came from the MSP, so they leave
+  // the technician out of a client's member policies as the server does, and
+  // never the client's own member.
+  for (const org of [dental, law]) {
+    expect(await fromMsp(api, tech, org)).toBe(true);
+    expect(await fromMsp(api, admin, org)).toBe(true);
+  }
+  expect(await fromMsp(api, member, dental)).toBe(false);
   const policy = async (orgId: string, type: number) => {
     const result = await api.call(
       admin,

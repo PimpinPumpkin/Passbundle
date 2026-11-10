@@ -212,6 +212,14 @@ const child = spawn(paths.serverBin, [], {
     ...(keptData && process.env.KK_SEATS_SCHEDULE
       ? { MSP_SEATS_SCHEDULE: process.env.KK_SEATS_SCHEDULE, JOB_POLL_INTERVAL_MS: "250" }
       : {}),
+    // KK_PLANS_ENFORCED=1: what an account or an organization gets depends on
+    // its plan (DESIGN.md, "Plans and billing"). KK_ADMIN_TOKEN turns the admin
+    // page on with that token, which is where the operator sets a plan by
+    // hand. Both only for a side server a test starts itself
+    // (tests/api/plans.spec.ts makes up the token for the run). Every other
+    // server keeps the defaults: plans not enforced, and no admin page.
+    ...(keptData && process.env.KK_PLANS_ENFORCED === "1" ? { PLANS_ENFORCED: "true" } : {}),
+    ...(keptData && process.env.KK_ADMIN_TOKEN ? { ADMIN_TOKEN: process.env.KK_ADMIN_TOKEN } : {}),
     ...(likeTestServer
       ? {
           SIGNUPS_ALLOWED: "false",
