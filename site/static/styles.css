@@ -1710,15 +1710,6 @@ main.wide > section.home-hero {
   font-size: 18px;
 }
 
-/* Under them, the whole width: what "free and open source" means here,
-   and where the code is. */
-.home-hero-side .home-open {
-  flex: 1 1 100%;
-  max-width: 760px;
-  font-size: 16px;
-  color: var(--label);
-}
-
 main.wide > section.home-doors,
 main.wide > section.home-rows,
 main.wide > section.home-security {
