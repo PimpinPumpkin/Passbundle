@@ -92,6 +92,7 @@ check "Chrome card autofill off" policy_is "$chrome/passbundle.json" 'p["Autofil
 check "address autofill untouched" policy_is "$chrome/passbundle.json" '"AutofillAddressEnabled" not in p'
 check "Firefox card autofill off" policy_is "$firefox" 'p == {"policies": {"AutofillCreditCardEnabled": False}}'
 check "no extension settings without the console's values" policy_is "$chrome/passbundle.json" '"3rdparty" not in p'
+check "our own extension ID is nowhere in them" sh -c "! grep -q cenoidjoogmoieibpcokkafjnaabhokg '$chrome/passbundle.json' '$edge/passbundle.json'"
 check "the policy files are root's and read-only" sh -c "[ \"\$(stat -c '%U:%G %a' '$chrome/passbundle.json')\" = 'root:root 644' ]"
 check "the other vendor's file is untouched" sh -c "[ \"\$(cat '$foreign')\" = \"\$1\" ]" _ "$foreign_before"
 rm -rf "$alone"
@@ -115,6 +116,17 @@ check "Chrome extension gets the join secret" policy_is "$chrome/passbundle.json
   "${ext}[\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"][\"joinSecret\"] == \"$join_secret\""
 check "Edge extension gets the organization key fingerprint" policy_is "$edge/passbundle.json" \
   "${ext}[\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"][\"orgKeyFingerprint\"] == \"$org_key\""
+# A build loaded by hand has our own ID, so the same settings go there too.
+# Nothing force-installs it: it has no update URL.
+everything="{\"environment\": {\"base\": \"$server_url\"}, \"enrollmentToken\": \"$token\", \"joinSecret\": \"$join_secret\", \"orgKeyFingerprint\": \"$org_key\"}"
+check "a Chrome extension loaded by hand gets the same settings, and no other extension does" policy_is "$chrome/passbundle.json" \
+  "$ext == {\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\": $everything, \"cenoidjoogmoieibpcokkafjnaabhokg\": $everything}"
+check "an Edge extension loaded by hand gets the same settings, and no other extension does" policy_is "$edge/passbundle.json" \
+  "$ext == {\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\": $everything, \"cenoidjoogmoieibpcokkafjnaabhokg\": $everything}"
+check "Chrome still forces only its store extension" policy_is "$chrome/passbundle.json" \
+  'p["ExtensionInstallForcelist"] == ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;https://clients2.google.com/service/update2/crx"]'
+check "Edge still forces only its store extension" policy_is "$edge/passbundle.json" \
+  'p["ExtensionInstallForcelist"] == ["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;https://edge.microsoft.com/extensionwebstorebase/v1/crx"]'
 check "Edge address autofill off" policy_is "$edge/passbundle.json" 'p["AutofillAddressEnabled"] is False'
 check "Firefox card and address autofill off" policy_is "$firefox" \
   'p == {"policies": {"AutofillCreditCardEnabled": False, "AutofillAddressEnabled": False}}'
