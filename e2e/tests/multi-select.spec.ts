@@ -118,6 +118,9 @@ async function offered(page: Page) {
 /** Opens one of an organization's shared folders in the admin console. */
 async function openSharedFolder(page: Page, org: string, name: string) {
   await page.goto(`/#/organizations/${org}/vault`);
+  // The admin console's own menu is there first: your vault, which may still
+  // be on screen for a moment, has a button by the folder's name too.
+  await expect(page.getByRole("link", { name: "Members", exact: true })).toBeVisible();
   await page.getByRole("button", { name, exact: true }).first().click();
   await expect(page).toHaveURL(/collectionId=[0-9a-f-]{36}/);
 }
