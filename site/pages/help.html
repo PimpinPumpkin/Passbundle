@@ -7,10 +7,12 @@ description: Getting started with PassBundle, for MSPs, their clients, and every
 
 <h2>Getting started</h2>
 <h3>How do I start?</h3>
-<p>Until launch, PassBundle runs on a server of your own. Our hosted service opens at launch, and the extension isn't in the browsers' stores yet. Get the PassBundle app for your computer or phone, or the extension for Chrome and Edge, from <a href="/download/">Get PassBundle</a>, and sign in to your server. Then bring your passwords in with <a href="/switch/">Switch to PassBundle</a>.</p>
+<x-if not link="vault"><p>Until launch, PassBundle runs on a server of your own. Our hosted service opens at launch, and the extension isn't in the browsers' stores yet. Get the PassBundle app for your computer or phone, or the extension for Chrome and Edge, from <a href="/download/">Get PassBundle</a>, and sign in to your server. Then bring your passwords in with <a href="/switch/">Switch to PassBundle</a>.</p></x-if>
+<x-if link="vault" until="signup"><p>New accounts on our hosted service aren't open yet. To ask for one, see <a href="/contact/">Contact</a>. You can also <a href="/download/#server">run your own server</a>. Once you have an account, get the PassBundle app for your computer or phone, or the extension for Chrome and Edge, from <a href="/download/">Get PassBundle</a>, and sign in. The extension isn't in the browsers' stores yet. Then bring your passwords in with <a href="/switch/">Switch to PassBundle</a>.</p></x-if>
+<x-if link="signup"><p><a href="{{links.signup}}">Create an account</a> on our hosted service, or <a href="/download/#server">run your own server</a>. Get the PassBundle app for your computer or phone, or the extension for Chrome and Edge, from <a href="/download/">Get PassBundle</a>, and sign in. The extension isn't in the browsers' stores yet. Then bring your passwords in with <a href="/switch/">Switch to PassBundle</a>.</p></x-if>
 
 <h3>Is there an app for my phone?</h3>
-<p>On Android, yes. A test build fills your passwords in apps and browsers and unlocks with your fingerprint or face. Get it from <a href="/download/#phone">Get PassBundle</a>. The iPhone app is coming; until then, open your server's web vault in Safari.</p>
+<p>On Android, yes. A test build fills your passwords in apps and browsers and unlocks with your fingerprint or face. Get it from <a href="/download/#phone">Get PassBundle</a>. The iPhone app is coming; until then, the web vault works in Safari.</p>
 
 <h3>Is there an app for my computer?</h3>
 <p>Yes, for Windows, Mac, and Linux, as test builds on <a href="/download/#computer">Get PassBundle</a>. They keep themselves up to date. The browser extension still does the filling in your browser.</p>
@@ -26,7 +28,7 @@ description: Getting started with PassBundle, for MSPs, their clients, and every
 <p>Your vault is encrypted with a key only your master password can unlock, so we can't reset it or recover your vault. If you belong to an organization that turned on account recovery, ask its admins to reset your master password. Otherwise, try your password hint, if you set one.</p>
 
 <h3>Is two-step login supported?</h3>
-<p>Yes, with authenticator apps, security keys, and email codes, in the web vault, the browser extension, and PassBundle's own apps (the iPhone app doesn't take security keys yet). Turn it on in your account's security settings. Some organizations require it.</p>
+<p>Yes, with authenticator apps, security keys, and email codes, in the web vault, the browser extension, and the PassBundle apps for Windows, Mac, Linux, and Android. Turn it on in your account's security settings. Some organizations require it.</p>
 
 <h3>Can I get back an earlier version of an item?</h3>
 <p>Yes. Open the item and choose <strong>Version history</strong>. Every edit keeps the version before, with who saved it. View one to see what changed, then restore it. In a shared folder, this follows the folder's permissions.</p>

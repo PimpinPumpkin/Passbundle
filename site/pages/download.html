@@ -1,6 +1,6 @@
 <!--
 title: Get PassBundle
-description: The PassBundle browser extension for Chrome, Edge, and Brave, test builds of the apps for Android, Windows, Mac, and Linux, the web vault, the command-line tool, and the open-source server to run them with until our hosted service opens.
+description: The PassBundle browser extension for Chrome, Edge, and Brave, test builds of the apps for Android, Windows, Mac, and Linux, the web vault, the command-line tool, and the open-source server you can run yourself.
 layout: wide
 -->
 <section class="hero solo get-hero">
@@ -16,7 +16,9 @@ layout: wide
     <label><input type="radio" name="get" value="web"><x-tile icon="globe" tone="brand" class="small"></x-tile>Web</label>
   </div>
   <div class="note get-note">
-    <p><strong>PassBundle is in testing.</strong> These are test builds. Until our hosted service opens at launch, they sign in to <a href="#server">a server you run yourself</a>.</p>
+    <x-if not link="vault"><p><strong>PassBundle is in testing.</strong> These are test builds. Until our hosted service opens at launch, they sign in to <a href="#server">a server you run yourself</a>.</p></x-if>
+    <x-if link="vault"><p><strong>PassBundle is in testing.</strong> These are test builds. They sign in to our hosted service, or to <a href="#server">a server you run yourself</a>.</p></x-if>
+    <x-if link="vault" until="signup"><p>New accounts on our hosted service aren't open yet. To ask for one, see <a href="/contact/">Contact</a>.</p></x-if>
   </div>
   <div class="get">
     <div class="card get-card" id="browser">
@@ -59,8 +61,13 @@ layout: wide
       <h2><x-tile icon="globe" tone="brand"></x-tile>Web</h2>
       <p>The web vault is your whole vault in any browser, with nothing to install.</p>
       <div class="get-do">
-        <x-if link="vault"><div class="actions"><a class="button primary" href="{{links.vault}}">Sign in</a></div></x-if>
         <x-if not link="vault"><p class="get-soon">Sign-in opens at vault.passbundle.com at launch.</p></x-if>
+        <x-if link="vault" until="signup"><div class="actions"><a class="button primary" href="{{links.vault}}">Sign in</a></div>
+        <p class="fine">New accounts aren't open yet. To ask for one, see <a href="/contact/">Contact</a>.</p></x-if>
+        <x-if link="signup"><div class="actions">
+          <a class="button primary" href="{{links.vault}}">Sign in</a>
+          <a class="button" href="{{links.signup}}">Create an account</a>
+        </div></x-if>
         <p class="fine">On a server you run, the web vault is at <a href="#server">your server's address</a>.</p>
       </div>
     </div>
@@ -89,7 +96,7 @@ layout: wide
         <li><strong>Mac:</strong> choose Open Anyway in System Settings, Privacy &amp; Security.</li>
         <li><strong>Android:</strong> let your browser install apps when it asks.</li>
       </ul>
-      <p class="fine">Windows Hello unlock is in the Windows app, not yet tried on a real Windows Hello device. Touch ID unlock waits until the Mac app is signed by Apple. Each release lists its files' SHA-256.</p>
+      <p class="fine">Windows Hello unlock is in the Windows app, not yet tried on a real Windows Hello device. Touch ID unlock is in the Mac app, not yet tried on a real Mac with Touch ID; in the browser extension on a Mac, it waits until the app is signed by Apple. Each release lists its files' SHA-256.</p>
     </div>
     <div class="card" id="cli">
       <h2><x-tile icon="code" tone="onyx"></x-tile>Command line</h2>

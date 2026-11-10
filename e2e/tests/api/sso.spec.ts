@@ -217,6 +217,14 @@ test("a domain is verified by its DNS TXT record, belongs to one organization, a
   expect(added.status, JSON.stringify(added.body)).toBe(200);
   const row = added.body.domains[0];
   expect(row).toMatchObject({ domain, txtName: domain, verifiedAt: null });
+  // Members' apps learn the organization's verified domains with each sync,
+  // for the desktop app's import from browsers ("Which browser profiles"):
+  // never one that isn't verified, which anyone can add.
+  const syncedDomains = async () =>
+    (await api.call(owner, "GET", "/api/sync?excludeDomains=true")).body.profile.organizations.find(
+      (o: { id: string }) => o.id === orgId,
+    ).keykeeperEmailDomains;
+  expect(await syncedDomains()).toEqual([]);
   expect(row.txtValue).toMatch(/^passbundle-verification=[A-Za-z0-9_-]{43}$/);
   expect((await api.call(owner, "POST", base, { domain })).status).toBe(400);
 
@@ -231,6 +239,7 @@ test("a domain is verified by its DNS TXT record, belongs to one organization, a
   const verified = await api.call(owner, "POST", `${base}/${row.id}/verify`);
   expect(verified.body.check.found).toBe(true);
   expect(verified.body.domains[0].verifiedAt).toBeTruthy();
+  expect(await syncedDomains()).toEqual([domain]);
 
   // Typing an email at the domain finds the organization's sign-in.
   const found = await (await discover()).json();
@@ -250,9 +259,10 @@ test("a domain is verified by its DNS TXT record, belongs to one organization, a
   const log = await events(api, owner, orgId);
   expect(log.filter((e) => e.domainName === domain).map((e) => e.type)).toEqual(expect.arrayContaining([2000, 2002, 2003]));
 
-  // Removing it stops discovery.
+  // Removing it stops discovery, and it's gone from the next sync.
   expect((await api.call(owner, "DELETE", `${base}/${row.id}`)).status).toBe(200);
   expect((await (await discover()).json()).data).toEqual([]);
+  expect(await syncedDomains()).toEqual([]);
   expect((await events(api, owner, orgId)).some((e) => e.type === 2001 && e.domainName === domain)).toBe(true);
 });
 
