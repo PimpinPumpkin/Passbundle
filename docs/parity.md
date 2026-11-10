@@ -90,7 +90,7 @@ Checked October 23, 2026; the PassBundle column, the gaps list, and the rows bel
 | Remove export | Yes | "Export Items" vault permission | **Partly** | The export permission of each shared folder (see "Granular permissions"), kept by the apps. No organization-wide policy: Vaultwarden doesn't have it. | [bw-policies] [op-vaults] |
 | Account recovery | Yes | Yes | **Built** | Off by default; each organization turns it on. | [bw-policies] [op-recovery] |
 | Session timeout | Yes (owners exempt) | Unlock and auto-lock enforcement | **Built** | Ours: server, web vault page, and our apps (`docs/core.md`, "Locking by policy"). The web vault stays unlocked across a reload within the timeout, where Bitwarden's locks at every reload (DESIGN.md, "Staying unlocked across a reload"). | [bw-policies] [op-policies] |
-| Remove unlock with PIN | Yes | No equivalent found | **Built** | Inherited. | [bw-policies] |
+| Remove unlock with PIN | Yes | No equivalent found | **Built** | Inherited, and our apps honor it too: the setting shows off with why, and a PIN set before is removed at the next sync or unlock. | [bw-policies] |
 | Default website matching | Yes | No equivalent found | **Built** | Inherited. | [bw-policies] |
 | Fill on page load, fill assist | Yes (two policies) | Autofill and automatic sign-in policies | **Missing** | Site fixes have their own MSP control instead. | [bw-policies] [op-policies] |
 | Remove card item type | Yes | No equivalent found | **Built** | Inherited. | [bw-policies] |
@@ -161,7 +161,7 @@ Checked October 23, 2026; the PassBundle column, the gaps list, and the rows bel
 | Printable recovery sheet | Not found in public docs | Emergency Kit | **Planned** | A printable sheet for legacy contacts, and a recovery kit in the account key proposal. | [op-kit] |
 | Travel Mode | No (forum requests) | Yes, every plan | **Missing** | | [bw-travel] [op-travel] |
 | Biometric unlock | Windows Hello, Touch ID, Linux, iOS, Android | Touch ID, Apple Watch, Face ID, Windows Hello, Android, Linux | **Partly** | Windows Hello for the extension and our app through the agent (not yet tried on real hardware); Android and iOS. Touch ID waits on code signing. None on Linux. | [bw-bio] [op-unlock] |
-| PIN unlock | Yes, with a policy to remove it | Device passcode on phones | **Partly** | Inherited in the extension. Not in our apps. | [bw-pin] [op-pin] |
+| PIN unlock | Yes, with a policy to remove it | Device passcode on phones | **Built** | Inherited in the extension. Our apps have their own, sealed to the device: on the Mac (with a Secure Enclave), Windows, Android, and the iPhone, not on Linux; 5 wrong tries turn it off (DESIGN.md, "Unlock with a PIN"). | [bw-pin] [op-pin] |
 | Lock timing | Many choices; lock or log out | Per-platform choices | **Built** | Our apps lock after idle time, on sleep or screen lock, and by policy. | [bw-timeout] [op-unlock] |
 | Signing in to the vault with a passkey | Yes (web app and Chromium extensions) | Beta, new Individual accounts | **Missing** | Our server doesn't support it. | [bw-passkeylogin] [op-passkey-unlock] |
 | Two-step login methods | Authenticator, email, security keys (free); Duo, YubiKey OTP (Premium) | Authenticator, security keys, Duo (Business) | **Partly** | The server has all five of Bitwarden's, inherited, for every account; organization-wide Duo isn't supported. Our apps sign in with all five and a recovery code; security keys aren't in the iPhone app yet (DESIGN.md, "Two-step login in the apps"). | [bw-2fa] [op-2fa] |
