@@ -517,10 +517,20 @@ DESIGN.md, "Automatic import" (the rules, each browser's files, the decisions, a
 - **Memory:** logins read are zeroizing until they're encrypted, and dropped after; a Primary Password passes through Dart once, like the master password, and is wiped at the bridge and in the core after the read. Neither is written anywhere.
 - **Tests with test hooks** (`pb_test_browsers`, `pb_test_browsers_read`): the app's tests point the core at made-up browsers in a throwaway folder and see which profiles were read. A build with test hooks looks at no other browsers; the core's own tests never look at any.
 
+## Send
+
+DESIGN.md, "Send in the apps" (the rules, the format, and the tests), in the apps (`core/src/send.rs`, `core/src/app/sends.rs`):
+
+- **Opened with the vault:** each sync's `sends`, opened with the user key when the vault opens (`Vault::sends`); a Send whose seed or name doesn't open is listed as one that can't be opened, and can only be deleted.
+- **Making and editing** (`App::save_send`): a new seed per Send (`send::new_seed`), every field under the key from it (`SendDraft::body`), the seed wrapped under the user key, and a password's proof (`send::password_proof`); `POST /api/sends` or `PUT /api/sends/<id>`, then the answer must open to the same seed and name, then a sync. `PUT /api/sends/<id>/remove-password` and `DELETE /api/sends/<id>` (`App::remove_send_password`, `App::delete_send`).
+- **The link** (`App::send_link`, `send::link`) goes only to the clipboard: `App::copy` with `sendLink` and the Send's id, as a secret (`clipboard.rs`), and the phones' native copying, which asks `App::value_to_copy` the same.
+- **Policies** (`send::SendPolicy`, from the kept sync, as the generator's policy is): "Disable Send" and "Send options", not binding owners and admins.
+- **The bridge:** `pb_sends`, `pb_send` (the editor's view, with the text and the note), `pb_save_send` (slow; the password comes as an argument of its own), `pb_remove_send_password`, `pb_delete_send`.
+
 ## Speed
 
 The KDF is most of unlocking. On ARM (Apple silicon, phones) the core uses the chip's SHA-256 instructions, so PBKDF2 at 600,000 iterations takes about 46 ms on an M1 Pro instead of 288. x86 uses its own SHA extensions.
 
 ## Not yet
 
-Sends, organization admin, the MSP console (the web vault keeps it), importing files (the web vault and the extension import them; the apps import from a computer's browsers, above), and passkeys on computers (the browser extension has them there). Each gets designed when it's next.
+Making a file Send (the apps make text Sends, below), organization admin, the MSP console (the web vault keeps it), importing files (the web vault and the extension import them; the apps import from a computer's browsers, above), and passkeys on computers (the browser extension has them there). Each gets designed when it's next.

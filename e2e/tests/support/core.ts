@@ -44,6 +44,14 @@ export type CoreRead = {
     answered?: string;
     refused?: string;
   };
+  /**
+   * A Send action (DESIGN.md, "Send in the apps"): one made (`id`, `link`),
+   * or the account's Sends as the app opens them, or what the app refused.
+   */
+  send?:
+    | { id: string; link: string }
+    | { name: string; kind: string; text: string | null; hidden: boolean; hasPassword: boolean; opens: boolean }[]
+    | { refused: string };
 };
 
 /** The test server's certificate, for the core to trust (its usual trust is the OS's). */
