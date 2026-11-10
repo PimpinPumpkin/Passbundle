@@ -47,8 +47,8 @@ export const plansServerPort = process.env.KK_PLANS_SERVER_PORT ?? "8108";
 export const plansOffServerPort = process.env.KK_PLANS_OFF_SERVER_PORT ?? "8109";
 // Two more of the same, which the tests of what the web vault and the
 // extension show on each plan start themselves (tests/plans-ui.spec.ts).
-export const plansUiServerPort = process.env.KK_PLANS_UI_SERVER_PORT ?? "8110";
-export const plansUiOffServerPort = process.env.KK_PLANS_UI_OFF_SERVER_PORT ?? "8111";
+export const plansUiServerPort = process.env.KK_PLANS_UI_SERVER_PORT ?? "8112";
+export const plansUiOffServerPort = process.env.KK_PLANS_UI_OFF_SERVER_PORT ?? "8113";
 // A stand-in for Microsoft Entra ID's sign-in (entra-standin.mjs), which
 // every test server uses for single sign-on, and its DNS server (UDP) for
 // domain checks.
