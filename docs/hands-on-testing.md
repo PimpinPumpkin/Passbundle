@@ -402,7 +402,7 @@ Do each step in Chrome; repeat the starred ones (*) in Edge and Firefox.
 - [ ] As Alex, a PIN unlock works in the extension (the apps have none).
 - [ ] As Grace, the item page's "Version history" opens "Item history": restore, delete, and clear as in the web vault; an item that asks for the master password asks again first.
 - [ ] As Ivy Park in Chrome and Edge, the card and address switches (section 2). Firefox has none.
-- [ ] The join prompt from an install command ("Join Northwind Dental?") can't be tried yet: the install scripts' extension IDs are placeholders, so a loaded-by-hand extension never gets the token (section 4).
+- [ ] The join prompt from an install command ("Join Northwind Dental?") needs a computer the command ran on: a loaded-by-hand extension in Chrome or Edge gets the token there (section 4).
 
 ### Desktop app (Windows, Mac, Linux)
 
@@ -515,7 +515,7 @@ On the simulator until a real iPhone is possible (section 1).
 **Install commands on real computers**
 - [ ] **Windows:** as Maya Chen, copy Northwind Dental's Windows command. On a Windows machine, put this repo's `installer/windows/Install-PassBundle.ps1` in a folder with an `app` folder (the Windows zip's `PassBundle` folder) and an `agent` folder (its `passbundle-agent.exe` and `passbundle-agent-host.exe`), and run the command in an administrator PowerShell. Check: PassBundle and the agent in Program Files, a Start menu shortcut, the agent in the Run key, the "PassBundle agent update" task, chrome://policy and edge://policy (password saving off, the extension's server, token, join secret, and fingerprint, NativeMessagingUserLevelHosts false). The app's sign-in says "Your organization's server: test.passbundle.com" with no Self-hosted choice, and Settings, Updates says it can't update itself and to update it the way it was installed. Run it again: nothing changes. `-Remove` leaves nothing.
 - [ ] **Windows, Pinecrest:** Pinecrest Construction's command also turns off card and address autofill in Chrome, Edge, and Firefox (their policy pages show it). Rerun without those options: it takes back only what it set.
-- [ ] **The join from a real install:** the scripts force-install placeholder extension IDs until the store listings exist, so the extension you loaded by hand doesn't get the token, and "Join Northwind Dental?" doesn't appear. Note if it does. When it can: the prompt shows Northwind's fingerprint phrase (compare with the console's), "Join" sends a join that waits for Grace's Confirm on the Members page (no email, so no domains, so never automatic here), and "Not now" asks again in 7 days.
+- [ ] **The join from a real install:** the scripts force-install placeholder extension IDs until the store listings exist, so you still load the extension by hand. They give the install command's settings to PassBundle's own extension ID too, which that extension has. So after the Windows or Linux command, in Chrome or Edge (the scripts don't set Brave's policies), it gets the token and "Join Northwind Dental?" appears. Note if it doesn't. The prompt shows Northwind's fingerprint phrase (compare with the console's), "Join" sends a join that waits for Grace's Confirm on the Members page (no email, so no domains, so never automatic here), and "Not now" asks again in 7 days.
 - [ ] **Mac:** Northwind's two Mac commands: `make-profile.sh` writes `PassBundle.mobileconfig`, which only takes effect installed by an MDM (if you have one); `install-passbundle.sh` as root with PassBundle.app next to it installs the app with its agent (a menu-bar icon, started at login). `--remove` undoes it.
 - [ ] **Linux:** Northwind's Linux command as root, with the tarball's `PassBundle` folder renamed `passbundle` next to `installer/linux/install-passbundle.sh`: the app in /opt/passbundle with a desktop entry, Chrome and Edge policies (chrome://policy), and `/etc/passbundle/policy.json` naming the server, so the app signs in there without asking. The app only says there's a new version.
 
@@ -591,7 +591,7 @@ DESIGN or the apps say these aren't built; note it only if one appears:
 - Moving a client between MSPs, linking an existing organization as a client, MSP sign-up on the hosted service, and key fingerprints when staff are added.
 - Enrolling account recovery at unlock for organizations that turn it on later; "private items stay with the organization".
 - An account key for Solo and Family accounts, and its recovery kit (DESIGN, "Account keys (open)").
-- Store listings for the extensions (the install scripts' extension IDs are placeholders).
+- Store listings for the extensions (the install scripts' store extension IDs are placeholders).
 
 ## 7. How it feels
 
