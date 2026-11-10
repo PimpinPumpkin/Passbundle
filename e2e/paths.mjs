@@ -48,7 +48,7 @@ export const plansOffServerPort = process.env.KK_PLANS_OFF_SERVER_PORT ?? "8109"
 // A third that enforces plans, with the operator's own caps on storage below
 // what any plan gives, and a key for the data breach report (server.mjs,
 // KK_PLANS_CAPS).
-export const plansCapsServerPort = process.env.KK_PLANS_CAPS_SERVER_PORT ?? "8110";
+export const plansCapsServerPort = process.env.KK_PLANS_CAPS_SERVER_PORT ?? "8111";
 // A stand-in for Microsoft Entra ID's sign-in (entra-standin.mjs), which
 // every test server uses for single sign-on, and its DNS server (UDP) for
 // domain checks.
