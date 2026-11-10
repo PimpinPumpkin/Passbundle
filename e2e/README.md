@@ -46,6 +46,8 @@ The test tenants tests (`tests/api/test-tenants.spec.ts`, `tests/test-tenants-we
 
 The required policy tests (`tests/api/msp-required-policies.spec.ts`) start a server of their own that sends email and needs single organization before account recovery (`KK_SINGLE_ORG_FOR_RECOVERY=1`, upstream's `ENFORCE_SINGLE_ORG_WITH_RESET_PW_POLICY`), on `KK_SINGLE_ORG_SERVER_PORT` (default 8104).
 
+The plans tests (`tests/api/plans.spec.ts`) start two servers of their own with the admin page on (`KK_ADMIN_TOKEN`, a token made up for the run and kept in memory), since that's where the operator sets a plan by hand: one that enforces plans (`KK_PLANS_ENFORCED=1`) on `KK_PLANS_SERVER_PORT` (default 8108), and one that doesn't on `KK_PLANS_OFF_SERVER_PORT` (default 8109). They move a plan's dates, never the clock. Every other test server leaves plans unenforced and the admin page off.
+
 ## Website screenshots
 
 `site-shots/` makes the website's screenshots from the real apps (`npx playwright test -c playwright.site.config.ts`). It isn't a test and CI doesn't run it. See `site/README.md`.
