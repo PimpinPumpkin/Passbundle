@@ -440,6 +440,11 @@ Do each step on all three unless it names one.
 - [ ] As Alex, edit the same item on two devices within a few seconds: the second save is refused and it syncs.
 - [ ] As Alex, a login that asks for the master password shows only its name until it's given.
 
+**Send**
+- [ ] As Alex, the menu's "Send" opens a window: "New Send", then Name, "Text to share", "Deleted" (in 1 hour to 30 days), "Stops opening", "Most times it can be opened", a password, "Private note", "Hide my email from whoever opens it", and "Turn this Send off". Save: "Made the Send and copied its link. It clears in 30 seconds." The link opens it in another browser, asking for the password first if it has one.
+- [ ] As Alex, a Send made in the web vault (text or file) is in the list; tapping it edits it, the copy button copies its link, and the delete button asks "Delete <name>?" first.
+- [ ] As Alex in an organization with "Remove Send" on (Grace turns it on), the list says Sends can't be made or edited, and offers only the link and Delete; with "Send options" set to not hide the email, "Hide my email" isn't offered.
+
 **Several accounts**
 - [ ] As Alex, then add Tom: the account menu (the email at the sidebar's foot) has "Add account" and "Sign out of <email>". Up to five; at five, add can't be chosen. Each keeps its own lock and settings; "Lock" locks only the one shown. "All accounts" lists every unlocked account's items with a colored label; Settings, "This account" names and colors each (more than one signed in). A new item asks "Save it in which account?". Re-adding the same email signs it in again in its place.
 - [ ] As Tom with Alex's account locked, a sign-in request for Alex shows once Alex is unlocked.
@@ -573,7 +578,7 @@ DESIGN or the apps say these aren't built; note it only if one appears:
 - Passkeys on computers (the desktop app only shows them); replacing an old passkey or choosing an existing login on phones.
 - Single sign-on in the desktop and phone apps; trusted-device unlock; other identity providers.
 - The nudge in the desktop and phone apps.
-- Send, PIN unlock, archive, exports, imports (other than opening the web vault), custom templates, organization admin, and the MSP console in the desktop and phone apps.
+- Making a file Send in the desktop and phone apps (they make text Sends); PIN unlock, archive, exports, imports (other than opening the web vault), custom templates, organization admin, and the MSP console in the desktop and phone apps.
 - Filling one-time codes, cards, and identities on Android; filling in desktop apps.
 - Typed template fields beyond text, hidden, and yes or no; a template date that sets Expires; a Templates view.
 - A system notification from the desktop agent, and phone reminders while the app is closed; email reminders.
