@@ -475,9 +475,14 @@ Do each step on all three unless it names one.
 
 On the simulator until a real iPhone is possible (section 1).
 - [ ] As Alex Morgan, sign in to the test server, then turn on "Unlock with Face ID" (in the Simulator, Features, Face ID, Enrolled, then Matching Face when it asks). The app switcher shows a plain cover.
+- [ ] As Alex, the lock screen asks for Face ID by itself when the app opens locked, but not after you pressed Lock, and its button shows a face. Settings, Locking, has the same choices as on Android.
+- [ ] As Alex, after the Face ID offer, the "Turn on AutoFill" sheet shows "Use PassBundle for AutoFill" with "Turn on", which opens Settings. On the simulator Settings doesn't list PassBundle (iOS offers a password manager only from a signed build: section 4), so come back and tap "Later": "You can turn on AutoFill in Settings any time.", it isn't asked again, and PassBundle's Settings has the same card under AutoFill.
+- [ ] As Alex and Tom Alvarez both signed in (Settings, Accounts): turn on Face ID for each. Each unlocks on its own, and signing out of one leaves the other's Face ID on.
+- [ ] As Tom, with PassBundle open and unlocked, a "Sign in with a device" request or a new-device check shows within about 10 seconds. Approving a sign-in asks for Face ID ("Approve sign-in") or the master password; a new-device check needs only the number. Closed, nothing shows (there's no push).
 - [ ] As Grace Liu, the two-step screen takes her authenticator code; "Use another way" lists "Security key (not on this device yet)", which says "This device can't use a security key with PassBundle yet...". With Duo added to an account (section 4), "Continue with Duo" opens Safari's sign-in sheet and comes back by itself.
 - [ ] As Alex, an attachment saves to Files, On My iPhone, PassBundle. No Updates in Settings (updates come from the App Store or TestFlight, later).
-- [ ] Not on iPhone yet: AutoFill, passkeys, and security keys or YubiKey codes over NFC at sign-in (section 6).
+- [ ] AutoFill and passkeys are in the app, but iOS runs them only from a signed build, so they're tried on a real iPhone (section 4). To see the extension's screens before then, open the `ios-screens` artifact of the newest run on passbundle-apps' main (the iOS job draws them on a simulator).
+- [ ] Not on iPhone yet: security keys and YubiKey codes over NFC at sign-in (section 6).
 
 ### Command-line tool
 
@@ -506,7 +511,18 @@ On the simulator until a real iPhone is possible (section 1).
 - [ ] **Recovery code:** as Alex with a method added, sign in once in an app with the recovery code shown when he set it up (typed in capitals or in groups of four works too): the app says two-step login is off now and where to turn it on again.
 
 **A real iPhone**
-- [ ] Once a build can go to a device (Apple Developer account), redo the iPhone steps on a real phone: Face ID unlock, the keyboard and large text, Duo, and when they land, AutoFill and passkeys.
+
+Once a build can go to a device (an Apple Developer account, then a TestFlight build). CI runs the iPhone app and the AutoFill extension's own code on a simulator, but iOS lets a password manager into AutoFill only in a build signed with a provisioning profile, and the real Face ID prompt and the screen-recording cover only show on a phone (docs/phones.md, "Not yet").
+- [ ] Redo the iPhone steps of section 3 on the phone: Face ID unlock with the real prompt, the keyboard and large text, and Duo.
+- [ ] **Turn on AutoFill:** as Alex Morgan, after unlocking, "Turn on AutoFill", then "Turn on" opens Settings at AutoFill & Passwords. Switch PassBundle on and come back: the row says "On" ("AutoFill is on.").
+- [ ] **Filling:** as Alex, in Safari on a site he has a login for, the bar above the keyboard suggests it; picking it asks for Face ID and fills. From the key icon, PassBundle's sheet unlocks with Face ID and lists the site's logins, and "Search all logins" finds the rest. His Chase login, which asks for the master password, says "This login asks for your master password" and fills only after it. In an app with a sign-in form, the same.
+- [ ] **A login for another site:** as Alex, in Safari on a site he has no login for, open PassBundle's sheet from the key icon, "Search all logins", and pick any login. It asks first: "Site doesn't match", with that login's saved website and the current website. "Back to the logins" fills nothing; "Autofill" fills it. A login with no website saved says "Login has no site saved" instead.
+- [ ] **Two accounts:** as Alex and Tom Alvarez both signed in, the sheet asks to unlock the account the app shows; "Switch account" unlocks the other one instead, and "Other accounts" unlocks the rest. Each asks for its own Face ID or master password. Then both accounts' logins show, labeled with the account's name, and each fills only from its own account.
+- [ ] **Suggestions follow what's unlocked:** as Alex and Tom, lock Tom's account in the app and sync Alex's. The bar above the keyboard stops suggesting Tom's logins until Tom unlocks again (iOS's list is replaced with the unlocked accounts').
+- [ ] **Passkeys:** as Alex, register a new passkey at webauthn.io (the seeded one isn't known there). iOS asks where to save it; PassBundle's sheet says "Save a passkey in PassBundle" with the website and the account's name, and with Tom unlocked there too, "Save in" asks which account. "Save passkey", then sign in with it from iOS's own sheet (Face ID). The new login shows in the app after its next sync (the extension never syncs).
+- [ ] **Screen recording:** as Alex, with the vault open, start a recording from Control Center: "PassBundle is hidden while your screen is recorded or shared." covers it until the recording stops. A screenshot can't be stopped on an iPhone, by any app.
+- [ ] **Locking:** as Alex, with "Lock when the phone locks" on, lock the phone with PassBundle in front: it's locked when you come back. With PassBundle in the background, the time away decides instead.
+- [ ] **Two-step login:** as Grace Liu, her authenticator code; "Use another way" says the iPhone can't use a security key yet and offers the other ways. If the test server offers YubiKey (above), a YubiKey plugged in types its code into the field.
 
 **Install commands on real computers**
 - [ ] **Windows:** as Maya Chen, copy Northwind Dental's Windows command. On a Windows machine, put this repo's `installer/windows/Install-PassBundle.ps1` in a folder with an `app` folder (the Windows zip's `PassBundle` folder) and an `agent` folder (its `passbundle-agent.exe` and `passbundle-agent-host.exe`), and run the command in an administrator PowerShell. Check: PassBundle and the agent in Program Files, a Start menu shortcut, the agent in the Run key, the "PassBundle agent update" task, chrome://policy and edge://policy (password saving off, the extension's server, token, join secret, and fingerprint, NativeMessagingUserLevelHosts false). The app's sign-in says "Your organization's server: test.passbundle.com" with no Self-hosted choice, and Settings, Updates says it can't update itself and to update it the way it was installed. Run it again: nothing changes. `-Remove` leaves nothing.
@@ -568,7 +584,7 @@ DESIGN or the apps say these aren't built; note it only if one appears:
 - The Solo and Family presets (their onboarding, invite links or QR codes, automatic approval), and a legacy contact suggested at onboarding or a printable sheet for the family.
 - Automatic import from the browsers (the desktop agent's import helper); guided import is built.
 - Touch ID on the Mac; biometrics on Linux; the Linux agent and Linux packages; signed and notarized apps, the signed MSI, and the CLI's signed manifest.
-- iPhone AutoFill, iPhone passkeys, security keys and YubiKey codes over NFC on iPhone, and any iPhone release.
+- Security keys and YubiKey codes over NFC on iPhone, saving a new login and filling one-time codes through iPhone's AutoFill, and any iPhone release. (iPhone AutoFill and passkeys are built and wait on a signed build: section 4.)
 - Push to phones while PassBundle is closed; the apps starting "Sign in with a device" themselves; a confirmation in the web vault's and extension's approval dialog; SSO sessions approving.
 - Passkeys on computers (the desktop app only shows them); replacing an old passkey or choosing an existing login on phones.
 - Single sign-on in the desktop and phone apps; trusted-device unlock; other identity providers.

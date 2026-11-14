@@ -124,7 +124,7 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 - **Opening such an item asks for the master password first.** Lists still show it as upstream's do; its view shows only its name until it's given, and its secrets (password, one-time code, notes, hidden fields, a card's number and code, an identity's ID numbers) don't reveal, copy, or fill. Its editor opens only after it's given, and a save must hand back the same giving (the core's `grant`), so an editor can never save blanks over secrets it couldn't show.
 - **The check:** the core derives the master key with the account's KDF settings (the same ones it unlocks with, checked the same way) and opens the kept protected user key with it. It's right only if that opens and gives the user key the vault is open with. Nothing new is stored, and nothing is sent to the server.
 - **How long it lasts:** for that item, until another item asks, or the vault locks. The core enforces it (`App::value` and the reveal calls refuse with "asks for the master password first"), so a screen can't skip it.
-- **Phones:** filling a login that asks, through Android's autofill, asks for the master password first in PassBundle's own dialog. iOS's AutoFill extension will ask in its own screen, with the extension.
+- **Phones:** filling a login that asks, through Android's autofill or iOS's AutoFill, asks for the master password first, in PassBundle's own dialog or screen.
 - **Biometrics don't stand in for it**, as in upstream's browser extension and web vault: it's there for the person who already unlocked with them.
 - **Tests** (`core/tests/reprompt.rs`, the app tests): on the sample vault with one login set to ask, its secrets are refused before the master password and given after it, a wrong password says so, giving it for another item moves it, locking forgets it, and an edit waits for it; opening the item in the app asks, a wrong password says so, and the right one shows it.
 
@@ -432,9 +432,9 @@ The generator makes a password or a passphrase, drawn uniformly with the OS's ra
 
 ## Passkeys
 
-A login can hold a passkey (upstream's `fido2Credentials`), made by the browser extension, by upstream's apps, or by ours. The apps will use them to sign in to websites and apps, on phones through the OS (Android's Credential Manager, iOS's AutoFill), the way they fill passwords.
+A login can hold a passkey (upstream's `fido2Credentials`), made by the browser extension, by upstream's apps, or by ours. The apps use them to sign in to websites and apps, on phones through the OS (Android's Credential Manager, iOS's AutoFill), the way they fill passwords.
 
-**Built so far:** the core reads a login's passkey (its key left encrypted until it signs), lists a site's passkeys, signs in with one (`pb_passkeys`, `pb_passkey_assert`), raising and saving the counter of one that counts, and makes one into a new or existing login (`pb_passkey_create`), saved before it answers. A real-server test makes passkeys and signs in with them, the signatures verified with their own public keys. The apps show a login's passkey (who it's for, when it was made). Android's passkey provider uses them (`docs/phones.md`, "Passkeys"), and they work both ways with our browser extension's (below). Not yet: iOS's.
+**Built so far:** the core reads a login's passkey (its key left encrypted until it signs), lists a site's passkeys, signs in with one (`pb_passkeys`, `pb_passkey_assert`), raising and saving the counter of one that counts, and makes one into a new or existing login (`pb_passkey_create`), saved before it answers. A real-server test makes passkeys and signs in with them, the signatures verified with their own public keys. The apps show a login's passkey (who it's for, when it was made). Android's passkey provider and iOS's AutoFill extension use them (`docs/phones.md`, "Passkeys"), and they work both ways with our browser extension's (below).
 
 **What's stored**, upstream's format, so a passkey made anywhere works everywhere. Each value is a type 2 string under the item's key, except the date:
 
