@@ -36,7 +36,7 @@ A server whose `DOMAIN` is a public `https://` address (not localhost, a private
 | Setting | Default there | Elsewhere |
 |---|---|---|
 | `SIGNUPS_VERIFY` | `true`: people verify their email address before they sign in (needs email) | `false` |
-| `USER_ATTACHMENT_LIMIT`, `ORG_ATTACHMENT_LIMIT` | 1048576 (1 GB, in KB) of file attachments per person and per organization | no limit |
+| `USER_ATTACHMENT_LIMIT`, `ORG_ATTACHMENT_LIMIT` | 1048576 (1 GB, in KB) of file attachments per person and per organization; none where `PLANS_ENFORCED` is on, since each plan says how much (see "Plans") | no limit |
 | `USER_SEND_LIMIT` | 1048576 (1 GB, in KB) of Send files per person | no limit |
 
 Set any of them to choose otherwise; `-1` means no limit. Set `SIGNUPS_ALLOWED` and `ORG_CREATION_USERS` on purpose too: whether anyone may make an account, and who may make organizations (`all`, `none`, or a list of emails).
@@ -58,7 +58,7 @@ The settings are the server's environment variables, as in Vaultwarden. The ones
 | `INVITE_JOINS_WITHOUT_EMAIL` | On a server that sends no email, whether an invitation still lets the person in without approval. Off by default: without email, nothing proves who owns the address, so whoever signs up with it first would get in. Only for a server nobody else can reach. |
 | `NEW_DEVICE_CHECK` | On by default: an account without two-step login that signs in on a device it has never used waits until the person types the new device's number on one of their signed-in devices, or uses a code by email (DESIGN.md, "New-device check"). Turn it off only for a test server. |
 | `IP_LOCATION_DATABASE` | An IP-to-location database (MaxMind DB format) for showing roughly where a sign-in comes from; `/data/ip-location.mmdb` by default. It isn't in the image: put DB-IP's free IP to City Lite there with passbundle-server's `tools/update-ip-location.sh` (on the host, against the folder mounted as `/data`), monthly. Without it, no location is shown. The server never asks another service. `IP_LOCATION_ATTRIBUTION` and `IP_LOCATION_ATTRIBUTION_URL` credit it (DB-IP's credit by default, as its CC BY 4.0 license asks); set them if you use another database. |
-| `PLANS_ENFORCED` | Off by default, and a self-hosted server leaves it off: every account and organization gets everything, as before. On, what each gets follows the plan recorded for it, and the apps are told in the sync; nothing is refused yet (see "Plans"). Set only in the environment. Its figures: `PLAN_GRACE_DAYS` (14), `PLAN_PREMIUM_STORAGE_GB` (5), `PLAN_FAMILIES_PEOPLE` (6), `PLAN_ORG_STORAGE_GB_PER_PERSON` (1), and `PLAN_ORG_STORAGE_MIN_GB` (5). |
+| `PLANS_ENFORCED` | Off by default, and a self-hosted server leaves it off: every account and organization gets everything, as before. On, what each gets follows the plan recorded for it, the apps are told in the sync, and Free can't attach or send files, or get the data breach report where the server has a key for it (see "Plans"). Set only in the environment. Its figures: `PLAN_GRACE_DAYS` (14), `PLAN_PREMIUM_STORAGE_GB` (5), `PLAN_FAMILIES_PEOPLE` (6), `PLAN_ORG_STORAGE_GB_PER_PERSON` (1), and `PLAN_ORG_STORAGE_MIN_GB` (5). |
 | `SITE_FIXES_NEED_APPROVAL` | Whether a shared site fix fills for everyone only once you approve it on the admin page's Sites list, as well as once three people with verified email addresses shared it. |
 | `ATTACHMENTS_FOLDER`, `SENDS_FOLDER` | Where file attachments and Send files go. A folder in `/data` by default, or object storage: `s3://bucket/attachments?endpoint=https://...&region=auto&default_storage_class=STANDARD`, with `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. They're encrypted by the apps before upload, like everything else. |
 
@@ -70,7 +70,16 @@ Settings that could quietly send people's secrets somewhere else are set only in
 
 ## Plans
 
-The server keeps at most one plan for each person, organization, and MSP: which plan, a date it's free until (a trial or an offer), a date it's paid through or that it's paid for as it goes, and whether it renews. With `PLANS_ENFORCED` off, the default, a recorded plan changes nothing. With it on, a person gets Premium's features while their own plan is in effect, or while they hold a place in an organization, or are on the staff of an MSP, whose plan is; an MSP's plan covers each of its clients, whatever plan a client has of its own. A plan that's paid through a date and renews stays in effect for `PLAN_GRACE_DAYS` after that date; one that doesn't renew ends on it. Nothing is refused yet, no trial starts by itself, and nothing is billed: for now the apps are only told, in the sync.
+The server keeps at most one plan for each person, organization, and MSP: which plan, a date it's free until (a trial or an offer), a date it's paid through or that it's paid for as it goes, and whether it renews. With `PLANS_ENFORCED` off, the default, a recorded plan changes nothing. With it on, a person gets Premium's features while their own plan is in effect, or while they hold a place in an organization, or are on the staff of an MSP, whose plan is; an MSP's plan covers each of its clients, whatever plan a client has of its own. A plan that's paid through a date and renews stays in effect for `PLAN_GRACE_DAYS` after that date; one that doesn't renew ends on it. No trial starts by itself yet, and nothing is billed.
+
+With `PLANS_ENFORCED` on, the server refuses only adding, each time with one sentence the apps show:
+
+- Attaching a file to a person's own item goes by their plan: none on Free ("Attaching files is part of Premium."), and `PLAN_PREMIUM_STORAGE_GB` with Premium ("Your 5 GB for attachments is full. Delete some to make room."). A shared item goes by its organization's plan: `PLAN_ORG_STORAGE_GB_PER_PERSON` for each person in it, and never less than `PLAN_ORG_STORAGE_MIN_GB`. The sentences name the organization, and once its plan has ended nothing new can be attached.
+- Creating a file Send needs Premium ("Sending files is part of Premium. Sending text is free."). How much a person may keep in Send files stays `USER_SEND_LIMIT`, on every plan.
+- The data breach report needs Premium ("The data breach report is part of Premium."), where the server has an `HIBP_API_KEY`. Without one, the report is a link to that site's own free page, for everyone.
+- `USER_ATTACHMENT_LIMIT` and `ORG_ATTACHMENT_LIMIT` have no default on a public server while plans are enforced. Set one, and no plan gives more than it; the sentence then says that figure.
+
+Downloading and removing files never look at a plan: a file attached with Premium downloads and can be removed on Free, and storage that's over its limit refuses new files and nothing else. A file Send made with Premium works until it expires or is deleted.
 
 Only the admin page sets a plan, so only someone with `ADMIN_TOKEN` can, and each change is written to the server's log with what the plan was before. Signed in to `/admin`:
 
