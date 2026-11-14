@@ -418,10 +418,10 @@ Do each step on all three unless it names one.
 - [ ] As Alex, unlock with the master password. Settings, Locking: "Lock after" (1, 5, 15, 30 minutes, 1 or 4 hours, "When the app closes"; 15 by default) and "Lock when the computer sleeps" (on). Lock after the time you set while using other apps: it counts the whole computer's idle time (on Linux, only under GNOME).
 - [ ] As Alex, "Get your master password hint" on the lock screen: note what it says on this server with no email.
 - [ ] Windows: as Alex, Settings, Unlock, "Unlock with Windows Hello" (it needs the desktop agent running; otherwise it says "Needs PassBundle's desktop agent, which isn't running"). Lock, unlock with Windows Hello; cancel the prompt once. Section 4 has the real hardware.
-- [ ] Mac and Linux: no Unlock group in Settings (Touch ID waits on Apple signing; Linux has none).
+- [ ] Mac and Linux: on a Mac with Touch ID, as Alex, Settings, Unlock, "Unlock with Touch ID" ("Instead of your master password"; it's the app's own, and section 4 has the real prompt). On a Mac without Touch ID and on Linux, no Unlock group in Settings.
 
 **Approving**
-- [ ] As Tom, Settings, "Sign-in requests" lists what's waiting, or "None waiting". "Confirm before approving" is on: approving a "Sign in with a device" request asks for the master password (Windows: Windows Hello or the master password). Turning the switch off asks first; on asks nothing.
+- [ ] As Tom, Settings, "Sign-in requests" lists what's waiting, or "None waiting". "Confirm before approving" is on: approving a "Sign in with a device" request asks for the master password (Windows: Windows Hello or the master password; a Mac with Touch ID turned on: Touch ID or the master password). Turning the switch off asks first; on asks nothing.
 - [ ] As Tom, a new-device check shows "Approve this sign-in?" with Device, Where, When, Expires in, and "Number shown on the new device"; Approve stays off until two digits are typed.
 
 **The vault**
@@ -518,7 +518,8 @@ On the simulator until a real iPhone is possible (section 1).
 **Windows Hello and Touch ID**
 - [ ] **Windows Hello in the app:** on a Windows computer with a camera, a fingerprint reader, or a PIN-backed key, as Alex Morgan, Settings, Unlock, "Unlock with Windows Hello". Lock and unlock with it; cancel once (it stays locked, and no new prompt for 10 seconds). With "Confirm before approving" on, approving a sign-in uses Windows Hello.
 - [ ] **Windows Hello in the extension:** with the "Windows Hello test kit" from a run on main (its README), which brings an extension the agent accepts: turn on "Unlock with biometrics" in the extension, lock, and unlock with Windows Hello. `Try-WindowsHello.ps1 -Remove` cleans up.
-- [ ] **Touch ID:** not offered yet (it waits on Apple signing). Note if it appears.
+- [ ] **Touch ID in the Mac app:** on a Mac with Touch ID, as Alex Morgan, Settings, Unlock, "Unlock with Touch ID". Quit and open PassBundle: the lock screen asks for Touch ID by itself ("PassBundle is trying to unlock your vault"), but not after you pressed Lock; cancel once, and the master password still works. With "Confirm before approving" on, approving a sign-in uses Touch ID. Add a fingerprint in System Settings: Touch ID turns off for the account, and the app asks for the master password.
+- [ ] **Touch ID in the extension:** not offered yet on the Mac (it waits on Apple signing). Note if it appears.
 
 **Autofill on real sites (the part people judge us on)**
 
@@ -566,14 +567,14 @@ The test server sends no email. These wait for a sending provider (docs/prelaunc
 DESIGN or the apps say these aren't built; note it only if one appears:
 
 - The Solo and Family presets (their onboarding, invite links or QR codes, automatic approval), and a legacy contact suggested at onboarding or a printable sheet for the family.
-- Automatic import from the browsers (the desktop agent's import helper); guided import is built.
+- In the desktop app's Import from browsers: importing into a shared folder (for an organization that keeps items out of Personal), saved cards and addresses, and KWallet on Linux. Importing the browsers' saved passwords is built there, and so is the guided import.
 - Touch ID on the Mac; biometrics on Linux; the Linux agent and Linux packages; signed and notarized apps, the signed MSI, and the CLI's signed manifest.
 - iPhone AutoFill, iPhone passkeys, security keys and YubiKey codes over NFC on iPhone, and any iPhone release.
 - Push to phones while PassBundle is closed; the apps starting "Sign in with a device" themselves; a confirmation in the web vault's and extension's approval dialog; SSO sessions approving.
 - Passkeys on computers (the desktop app only shows them); replacing an old passkey or choosing an existing login on phones.
 - Single sign-on in the desktop and phone apps; trusted-device unlock; other identity providers.
 - The nudge in the desktop and phone apps.
-- Send, PIN unlock, archive, exports, imports (other than opening the web vault), custom templates, organization admin, and the MSP console in the desktop and phone apps.
+- Send, PIN unlock, archive, exports, imports (other than opening the web vault, and the desktop app's Import from browsers), making a template (New item does offer the custom templates made in the web vault or the extension), organization admin, and the MSP console in the desktop and phone apps.
 - Filling one-time codes, cards, and identities on Android; filling in desktop apps.
 - Typed template fields beyond text, hidden, and yes or no; a template date that sets Expires; a Templates view.
 - A system notification from the desktop agent, and phone reminders while the app is closed; email reminders.
