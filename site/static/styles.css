@@ -1636,6 +1636,19 @@ main.wide .downloads .card h2 {
   margin-top: 8px;
 }
 
+/* A link long enough to wrap on a phone keeps its arrow after the last
+   word, not at the far edge. */
+.get-switch .more {
+  display: inline;
+  line-height: 1.5;
+}
+
+.get-switch .more::after {
+  display: inline-block;
+  margin: 0 0 0.1em 8px;
+  vertical-align: middle;
+}
+
 /* ======================================================================
    The home page: a split hero, the demo, the plans, rows that show the
    product instead of describing it, the band for MSPs, and the close.
@@ -2652,6 +2665,24 @@ main.wide .home-get h2 {
 
   .stage {
     border-radius: 18px;
+    padding: 16px;
+  }
+
+  /* The drawn lists: a badge that doesn't fit beside its name goes under
+     it, so the name isn't squeezed into a narrow column. */
+  .stage > .ui-list .ui-list-head,
+  .stage > .ui-list .ui-list-row {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .stage > .ui-list .ui-list-row {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .stage > .ui-list .ui-list-row > .badge {
+    margin-left: auto;
   }
 
   .demo-nav {
@@ -2782,6 +2813,17 @@ main.wide > section.flow.last {
   border-radius: 12px 0 0 0;
 }
 
+/* The same, for a window whose part that matters is at its bottom: cut off
+   at its right and top edges instead. */
+.stage.bleed.low {
+  padding: 0 0 clamp(24px, 3vw, 40px) clamp(24px, 3vw, 40px);
+  align-items: flex-end;
+}
+
+.stage.bleed.low .shot img {
+  border-radius: 0 0 0 12px;
+}
+
 .row.flip {
   grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
 }
@@ -2818,8 +2860,10 @@ main.wide .page-head h2 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+/* Left-aligned in a flow section, still 40px under its heading. */
 .flow .faq {
-  margin: 0;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 @media (max-width: 960px) {
