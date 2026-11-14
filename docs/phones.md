@@ -61,6 +61,14 @@ The phone's own fingerprint or face unlock, standing in for the desktop agent's 
 - **Android:** Kotlin takes the value from the core (the screen asks Kotlin to copy an item's field; the value never passes through Dart) and puts it on the clipboard marked sensitive (`ClipDescription.EXTRA_IS_SENSITIVE`, Android 13 and later), so the keyboard's clipboard preview and the system's copy notice don't show it. After 30 seconds it clears it if it's still ours. Android hides the clipboard from apps in the background, so there the app can't tell what's on it, and it clears it anyway: the 30 seconds are the promise.
 - **iOS:** Swift puts it on the pasteboard for this device only (`localOnly`, so not Universal Clipboard) with a 30-second expiry (`expirationDate`), which iOS enforces even if the app is suspended.
 
+## Attachments
+
+Attaching a file to an item (DESIGN.md, "Attachments in the apps"; `core/src/app/files.rs`). The core reads, encrypts and sends the file itself, as on computers; the native piece only picks it:
+
+- **Android** (`Picker.kt`): the system's document picker (`ACTION_OPEN_DOCUMENT`). The document is copied into `picked` in the app's cache folder under a name of the app's own, which only PassBundle can read, and the copy stops at 100 MB (the most a phone attaches; the provider's stated size is checked first). The core reads the copy from there.
+- **iPhone** (`AppDelegate.swift`, `Picker`): the Files picker, which copies the file into the app's `tmp` folder; the app moves it to `tmp/picked` under a name of its own, and deletes it at once if it's over 100 MB.
+- **Deleting the copies:** when the upload ends, however it ends (`forgetPicked`, from `app/lib/attaching.dart`), and whatever is left there (the app was stopped) when the app next starts.
+
 ## Autofill
 
 The part that's most of the work, and native, because each OS draws its own lists.

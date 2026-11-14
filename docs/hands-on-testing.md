@@ -434,6 +434,9 @@ Do each step on all three unless it names one.
 - [ ] As Alex, "Version history": compare, "Show hidden values", "Restore this version", "Delete this version", "Clear history".
 - [ ] As Alex, copy a password: "Copied the password. It clears in 30 seconds." On Windows it isn't in clipboard history (Win+V); on the Mac, a clipboard manager treats it as concealed.
 - [ ] As Alex, "Save <name>" on an attachment: it lands in Downloads, never overwriting a file of the same name.
+- [ ] As Alex, "Attach a file" on a login: the computer's own file picker; the item shows "Attaching", the file's name, a bar, and "Reading the file", "Encrypting it on this device", "Sent X of Y", then "Attached <name>." and the file in its list. The web vault opens it with the same contents. A file over 500 MB: "That file is larger than 500 MB, the most PassBundle attaches." Cancel partway: nothing is attached, and nothing is said.
+- [ ] As Alex, the delete button beside an attachment: "Delete <name>?" first; Cancel keeps it, Delete removes it here and in the web vault.
+- [ ] As Aisha, an item in Vendors (Can view) has no "Attach a file", and its attachments, if any, have Save but no delete button.
 - [ ] As Alex, "Move to trash": it says you can restore it from the web vault's trash, with "Open trash".
 - [ ] As Chloe Martin, Client portals: "Your organization hides this item's passwords from you." No reveal, copy, or one-time code. Moving it to another shared folder: "Your organization doesn't let you move it to another shared folder."
 - [ ] As Alex, turn Wi-Fi off: "Can't reach your server. You're seeing the copy on this device...", with Try again; saving says it needs the server and keeps what you typed.
@@ -468,6 +471,7 @@ Do each step on all three unless it names one.
 - [ ] As Alex, the Generator tab; Folders cards (with shared folder icons, as Grace Liu); Version history; templates; "Expiring soon"; the per-item health line ("Password strong · changed ..."); no Health list on phones.
 - [ ] As Tom, with PassBundle open and unlocked, a "Sign in with a device" request or a new-device check shows within about 10 seconds. Approving a sign-in asks for the fingerprint ("Approve sign-in") or the master password; a new-device check needs only the number. Closed, nothing shows (there's no push).
 - [ ] As Alex, Settings, "Web vault": Import, Export, and Open the web vault open the browser. Attachments save to Downloads.
+- [ ] As Alex, "Attach a file" on an item opens Android's file picker; a photo or a file from Drive attaches, with the bar and Cancel, and opens in the web vault. One over 100 MB: "That file is larger than 100 MB, the most PassBundle attaches on a phone. Attach it from a computer."
 - [ ] As Alex, Settings, Updates: Android's installer asks before installing the new version.
 - [ ] As Alex, the Back button goes back one step (two-step login to sign in, adding an account to the account shown) before it leaves the app.
 
@@ -476,7 +480,7 @@ Do each step on all three unless it names one.
 On the simulator until a real iPhone is possible (section 1).
 - [ ] As Alex Morgan, sign in to the test server, then turn on "Unlock with Face ID" (in the Simulator, Features, Face ID, Enrolled, then Matching Face when it asks). The app switcher shows a plain cover.
 - [ ] As Grace Liu, the two-step screen takes her authenticator code; "Use another way" lists "Security key (not on this device yet)", which says "This device can't use a security key with PassBundle yet...". With Duo added to an account (section 4), "Continue with Duo" opens Safari's sign-in sheet and comes back by itself.
-- [ ] As Alex, an attachment saves to Files, On My iPhone, PassBundle. No Updates in Settings (updates come from the App Store or TestFlight, later).
+- [ ] As Alex, an attachment saves to Files, On My iPhone, PassBundle; "Attach a file" opens the Files picker, and the file attaches with the bar and Cancel. No Updates in Settings (updates come from the App Store or TestFlight, later).
 - [ ] Not on iPhone yet: AutoFill, passkeys, and security keys or YubiKey codes over NFC at sign-in (section 6).
 
 ### Command-line tool
