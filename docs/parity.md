@@ -101,7 +101,7 @@ Checked October 23, 2026; the PassBundle column, the gaps list, and the rows bel
 | Network rules (IP ranges, countries, anonymizers) | No | Firewall rules (Business) | **Missing** | Script access tokens can be limited to networks; signing in can't. | [op-firewall] |
 | Travel Mode control | No | Yes (Business) | **Missing** | | [op-travel] [op-policies] |
 | Sign-in attempt limits | Not a policy | Yes (Business) | **Partly** | Server-wide limits per account (DESIGN.md, "Login limits"), not set per organization. | [op-policies] |
-| App behavior (autosave, passkey saving, file storage, required updates) | Partly, through the policies above | Yes (Business) | **Partly** | The installer turns off Chrome's and Edge's own password managers (not Firefox's yet), and self-updates can be turned off by policy. No control of saving or passkeys. | [op-policies] |
+| App behavior (autosave, passkey saving, file storage, required updates) | Partly, through the policies above | Yes (Business) | **Partly** | The installer turns off Chrome's, Edge's, and Firefox's own password managers, and self-updates can be turned off by policy. No control of saving or passkeys. | [op-policies] |
 | Set policies once for many organizations | Not described for providers | MSP policy templates, with chosen policies open to client changes | **Built** | MSP default policies; a client can have its own setting for any one policy. | [bw-providers] [op-msp-companies] |
 
 ## Admin: identity and access
