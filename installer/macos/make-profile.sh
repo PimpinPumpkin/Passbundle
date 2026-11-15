@@ -4,14 +4,18 @@
 # It sets what Install-PassBundle.ps1 sets on Windows. For Chrome and Edge, it:
 #   - force-installs the PassBundle extension (IDs are fixed here, never passed in),
 #   - turns off the browser's own password saving and filling,
-#   - optionally turns off card and address autofill, in Firefox too (it
-#     reads the same two policies; the rest of Firefox isn't managed yet),
+#   - optionally turns off card and address autofill,
 #   - optionally gives the extension its server address and the client's
 #     enrollment token, join secret, and organization key fingerprint, so
 #     people join the client after they sign in (the extension asks first,
 #     and checks the organization's key against the fingerprint). A PassBundle
 #     extension loaded by hand gets the same settings, under PassBundle's own
 #     ID, which is fixed here too and never force-installed.
+# Firefox gets the same password, card, and address policies, in a payload
+# for its own preference domain, and nothing else: no extension (ours isn't
+# signed by Mozilla yet). The password ones are Firefox's
+# PasswordManagerEnabled and OfferToSaveLogins, both off unless
+# --keep-browser-password-manager.
 # It also gives the desktop agent its server address.
 # The same options make the same profile, so the MDM replaces it in place.
 #
@@ -210,7 +214,7 @@ cat << EOF
 	<key>PayloadOrganization</key>
 	<string>PassBundle</string>
 	<key>PayloadDescription</key>
-	<string>Installs the PassBundle browser extension in Chrome and Edge, turns off their own password managers, and sets up the PassBundle desktop agent.</string>
+	<string>Installs the PassBundle browser extension in Chrome and Edge, turns off the password managers built into Chrome, Edge, and Firefox, and sets up the PassBundle desktop agent.</string>
 	<key>PayloadContent</key>
 	<array>
 EOF
@@ -232,11 +236,17 @@ for b in $browsers; do
       ;;
   esac
 done
-# Firefox takes the card and address autofill policies under the same names,
-# from its own preference domain once enterprise policies are on there.
-if [ -n "$card$address" ]; then
+# Firefox reads its policies from its own preference domain once enterprise
+# policies are on there (EnterprisePoliciesEnabled). Its password manager is
+# two policies, and it takes the card and address autofill policies under
+# the same names as Chrome and Edge.
+if [ -z "$keep_password_manager" ] || [ -n "$card$address" ]; then
   payload_start org.mozilla.firefox firefox "$FIREFOX_UUID" "Firefox"
   printf '\t\t\t<key>EnterprisePoliciesEnabled</key>\n\t\t\t<true/>\n'
+  if [ -z "$keep_password_manager" ]; then
+    off PasswordManagerEnabled
+    off OfferToSaveLogins
+  fi
   [ -z "$card" ] || off AutofillCreditCardEnabled
   [ -z "$address" ] || off AutofillAddressEnabled
   payload_end
