@@ -27,11 +27,21 @@ const withNewDevice = process.env.KK_NEW_DEVICE === "1";
 // only at the domains in KK_SIGNUPS_DOMAINS, invitations that don't let anyone
 // in without approval, and MSPs allowed (tests/api/test-tenants.spec.ts).
 const likeTestServer = process.env.KK_LIKE_TEST_SERVER === "1";
+// KK_SIGNUPS=closed starts one that isn't taking new accounts, or takes them
+// only at the email domains in KK_SIGNUPS_DOMAINS; KK_SIGNUPS=open is the
+// same server while it still takes them. KK_SIGNUPS_VERIFY=1 has the sign-up
+// form's first step send its link by email (on a server that sends email),
+// where the others hand the link's token straight back. The tests of what a
+// closed server says start such a server themselves, and start it again with
+// other settings over the same data (tests/support/closed-server.ts;
+// DESIGN.md, "New accounts on a closed server").
+const signUps = process.env.KK_SIGNUPS;
 // KK_DATA_DIR keeps the data in that folder, and keeps it when the server
 // stops, so a test can start the same server again (reload-key.spec.ts: the
 // server forgets reload keys when it restarts). Such a server is a side one.
 const keptData = process.env.KK_DATA_DIR;
-const side = withMail || withLimits || withGroups || withNewDevice || likeTestServer || !!keptData;
+const side =
+  withMail || withLimits || withGroups || withNewDevice || likeTestServer || !!signUps || !!keptData;
 
 for (const [name, p] of Object.entries({
   server: paths.serverBin,
@@ -202,6 +212,28 @@ const child = spawn(paths.serverBin, [], {
     ...(keptData && process.env.KK_SEATS_SCHEDULE
       ? { MSP_SEATS_SCHEDULE: process.env.KK_SEATS_SCHEDULE, JOB_POLL_INTERVAL_MS: "250" }
       : {}),
+    // KK_PLANS_ENFORCED=1: what an account or an organization gets depends on
+    // its plan (DESIGN.md, "Plans and billing"). KK_ADMIN_TOKEN turns the admin
+    // page on with that token, which is where the operator sets a plan by
+    // hand. Both only for a side server a test starts itself
+    // (tests/api/plans.spec.ts makes up the token for the run). Every other
+    // server keeps the defaults: plans not enforced, and no admin page.
+    ...(keptData && process.env.KK_PLANS_ENFORCED === "1" ? { PLANS_ENFORCED: "true" } : {}),
+    ...(keptData && process.env.KK_ADMIN_TOKEN ? { ADMIN_TOKEN: process.env.KK_ADMIN_TOKEN } : {}),
+    // KK_PLANS_CAPS=1, for the plans tests' third server: the operator's own
+    // caps, below what any plan gives (2 MB of attachments for a person, 3 MB
+    // for an organization, and 1 MB of Send files), and a made-up key for the
+    // data breach report, whose lookups the server is told never to make
+    // (HTTP_REQUEST_BLOCK_REGEX), so nothing leaves this machine.
+    ...(keptData && process.env.KK_PLANS_CAPS === "1"
+      ? {
+          USER_ATTACHMENT_LIMIT: "2048",
+          ORG_ATTACHMENT_LIMIT: "3072",
+          USER_SEND_LIMIT: "1024",
+          HIBP_API_KEY: "made-up-for-tests",
+          HTTP_REQUEST_BLOCK_REGEX: "haveibeenpwned\\.com",
+        }
+      : {}),
     ...(likeTestServer
       ? {
           SIGNUPS_ALLOWED: "false",
@@ -211,8 +243,13 @@ const child = spawn(paths.serverBin, [], {
           // 31 people and taking them down, and nothing tested depends on it.
           PASSWORD_ITERATIONS: "100000",
         }
-      : { SIGNUPS_ALLOWED: "true" }),
-    SIGNUPS_VERIFY: "false",
+      : signUps === "closed"
+        ? {
+            SIGNUPS_ALLOWED: "false",
+            SIGNUPS_DOMAINS_WHITELIST: process.env.KK_SIGNUPS_DOMAINS ?? "",
+          }
+        : { SIGNUPS_ALLOWED: "true" }),
+    SIGNUPS_VERIFY: process.env.KK_SIGNUPS_VERIFY === "1" ? "true" : "false",
     MSP_SIGNUPS_ALLOWED: "true",
     DISABLE_ICON_DOWNLOAD: "true",
     // Single sign-on goes to the local stand-in for Microsoft Entra ID, and
@@ -245,6 +282,8 @@ const child = spawn(paths.serverBin, [], {
               ? "-new-device$1"
               : likeTestServer
               ? "-test-tenants$1"
+              : signUps
+              ? "-sign-ups$1"
               : withMail
               ? "-mail$1"
               : withLimits

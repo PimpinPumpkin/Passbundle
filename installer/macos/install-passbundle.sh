@@ -7,7 +7,7 @@
 #     agent is inside it, an app of its own: Contents/Helpers/PassBundle Agent.app),
 #   - starts the desktop agent at every login (a LaunchAgent), and now for
 #     whoever is at the screen,
-#   - lets Chrome and Edge reach the agent, for our extension only (the
+#   - lets Chrome and Edge reach the agent, for our extensions only (the
 #     native-messaging host).
 # Browser policies and the agent's settings come from a configuration profile
 # that the MDM installs (make-profile.sh writes it): macOS takes managed
@@ -30,10 +30,18 @@ HELPER="Contents/Helpers/PassBundle Agent.app/Contents/MacOS"
 LABEL="com.passbundle.agent"
 LAUNCH_AGENT="/Library/LaunchAgents/$LABEL.plist"
 HOST_DIRS="/Library/Google/Chrome/NativeMessagingHosts /Library/Microsoft/Edge/NativeMessagingHosts"
-# The only extensions that may reach the agent. Placeholders until the store
-# listings exist, the same as Install-PassBundle.ps1's.
+# The only extensions that may reach the agent: these two and our own ID
+# below. These two are placeholders until the store listings exist, the same
+# as Install-PassBundle.ps1's.
 CHROME_EXTENSION="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 EDGE_EXTENSION="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+# PassBundle's own extension ID, which a Chrome or Edge build loaded by hand
+# has (from the public key in its manifest; passbundle-clients' brand.json,
+# extension.chromiumId). A browser gives this ID to anything loaded by hand
+# with our public key, which takes developer mode and the person's own
+# action on this Mac; the same is true of a store ID. See DESIGN.md,
+# "PassBundle's extension IDs".
+OWN_EXTENSION="cenoidjoogmoieibpcokkafjnaabhokg"
 PROGRAMS="passbundle passbundle-agent passbundle-agent-host"
 # What the app's bundle ID is, for macOS's list of what starts at login.
 APP_ID="com.passbundle.app"
@@ -138,7 +146,8 @@ install_hosts() {
   "type": "stdio",
   "allowed_origins": [
     "chrome-extension://$CHROME_EXTENSION/",
-    "chrome-extension://$EDGE_EXTENSION/"
+    "chrome-extension://$EDGE_EXTENSION/",
+    "chrome-extension://$OWN_EXTENSION/"
   ]
 }
 EOF

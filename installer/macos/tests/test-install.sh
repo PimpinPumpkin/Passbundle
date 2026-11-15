@@ -54,7 +54,8 @@ agent_stopped() { [ -z "$(agent_pid)" ]; }
 socket_ready() { [ -S "$home/Library/Caches/$label/agent.sock" ]; }
 app_running() { pgrep -u "$uid" -x passbundle; }
 
-# A host manifest for our extensions only, pointing into the installed app.
+# A host manifest for our extensions only (the two store IDs, and our own ID,
+# which a build loaded by hand has), pointing into the installed app.
 host_ok() {
   python3 -I - "$1" "$helper/Contents/MacOS/passbundle-agent-host" << 'EOF'
 import json, sys
@@ -65,6 +66,7 @@ assert m["type"] == "stdio", m
 assert m["allowed_origins"] == [
     "chrome-extension://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/",
     "chrome-extension://bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/",
+    "chrome-extension://cenoidjoogmoieibpcokkafjnaabhokg/",
 ], m
 EOF
 }
@@ -101,8 +103,8 @@ check "its signature holds" codesign --verify --deep --strict "$app"
 check "only root can change it" app_root_owned
 check "the agent starts at every login" launch_agent_ok
 check "its LaunchAgent is root's and read-only" root_owned "$launch_agent"
-check "Chrome can reach the agent, for our extension only" host_ok "$chrome_host"
-check "Edge can reach the agent, for our extension only" host_ok "$edge_host"
+check "Chrome can reach the agent, for our extensions only" host_ok "$chrome_host"
+check "Edge can reach the agent, for our extensions only" host_ok "$edge_host"
 check "the manifests are root's and read-only" root_owned "$chrome_host"
 check "the agent is running for $user" eventually agent_running
 check "launchd runs it" launchctl print "gui/$uid/$label"

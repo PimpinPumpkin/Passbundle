@@ -28,7 +28,7 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 
 ## In progress
 
-Nothing right now.
+- **Plans and billing**: the first two pieces are built. The server records a plan for a person, an organization, or an MSP, set by hand on its admin page, works out what each person gets from it, and, where `PLANS_ENFORCED` is on, tells the apps in the sync and keeps Premium's limits: attachments by plan, file Sends, and the data breach report (deploy/README.md, "Plans"). It's off by default and off on every server today. Still to come: the rest of what's refused when a plan ends, the trial and its reminders, Families, and payment.
 
 ## Next
 
@@ -45,6 +45,7 @@ Fixes from the owner's hands-on testing (docs/hands-on-testing.md) come first.
 - **Business details for the site and legal pages**: legal name, payment processor, refunds, governing law, prices (marked as placeholders in site/).
 - **A paid Have I Been Pwned key** for the report of breached accounts at a client's email domain.
 - **MSP billing**: Stripe and the prices, including which of the pool's price tiers a month falls in. What an MSP's invoice is based on is decided: seats prorated by the day (DESIGN.md, "Seats by client").
+- **Plans and billing**: thirteen choices about what each plan includes, what happens when a trial or a payment ends, and how the hosted service bills (DESIGN.md, "Plans and billing", "Decisions"; each has a pick). Enforcing plans can be built before any of them is made. Going live with payments needs a Stripe account and the prices.
 - **GitHub environments for the signing secrets**: `android-release`, `macos-release`, and `desktop-release` in passbundle-apps, and `cli-release` here, each holding its release workflow's signing secrets and deployable only from `main`; then uncomment the `environment:` line in each sign job. Until then only the way the workflows are written keeps other workflows from reading them (DESIGN.md, "Desktop updates (Windows and Linux)", "The key").
 - **Approval for every outside contributor's pull request** to run workflows (each repository's Settings, Actions, General), so a fork's pull request runs nothing until you've looked at it.
 - **Versioning on the backups bucket**, once it's made, so a backup that's overwritten or deleted can still be got back.

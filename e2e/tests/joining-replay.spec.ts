@@ -39,7 +39,10 @@ async function nextJoining(page: Page, orgId: string): Promise<Joining> {
     if (response.ok()) {
       body ??= json;
     }
-    await r.fulfill({ response, json });
+    // Only the answer is needed. The page can reload past this request, or
+    // unroute below can drop this handler while it waits for the answer, and
+    // either way the request is no longer this handler's to answer.
+    await r.fulfill({ response, json }).catch(() => {});
   });
   await reloadVault(page);
   await expect.poll(() => body, { timeout: 60_000 }).toBeTruthy();
