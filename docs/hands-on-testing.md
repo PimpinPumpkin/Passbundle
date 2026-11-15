@@ -361,7 +361,7 @@ Carmen Rivera (owner, no two-step login), Diego Rivera (admin, authenticator), S
 Do each step in Chrome; repeat the starred ones (*) in Edge and Firefox.
 
 **Signing in and the look**
-- [ ] * As Alex Morgan, "Where's your vault?": PassBundle or Self-hosted. With Self-hosted, a typo or a normal website says what's wrong under the field ("Check it for typos, and that you're online"); `http://`, `user@host`, `?query`, and `#frag` are refused; a dead address gives up after 15 seconds; Continue and Enter stay off while it's wrong. The password step names the server ("<email> · test.passbundle.com"). Under the form: "New here? Your admin sends the invite."
+- [ ] * As Alex Morgan, "Where's your vault?": PassBundle or Self-hosted. With Self-hosted, a typo or a normal website says what's wrong under the field ("Check it for typos, and that you're online"); `http://`, `user@host`, `?query`, and `#frag` are refused; a dead address gives up after 15 seconds; Continue and Enter stay off while it's wrong. The password step names the server ("<email> · test.passbundle.com"). Under the form, on a server that isn't taking new accounts: "New accounts aren't open yet. Ask for one" (the link opens the website's Contact page) for PassBundle, and "This server isn't taking new accounts. Ask the person who runs it." for a Self-hosted address once it's typed and the field is left; on a server that takes them, "New here? Create account".
 - [ ] * As Alex, the Items tab: search and Add (+), category chips with tiles, the folder filter (only once there's more than Personal), "For <site>" items with Fill, Favorites and All items, rows with a copy button. Bottom tabs are restyled. Settings, Appearance, Theme: "System", "Light", "Dark".
 - [ ] * As Alex, an item page: its tile, "Login in Personal", "Fill on this page", copy buttons, the password health line ("Password strong · changed ..."), and a history card to "Version history".
 - [ ] As Grace Liu, the folder filter lists All folders, Personal and its folders, No folder, then Northwind Dental and its folders with their icons and counts; the picked place shows as a chip ("Northwind Dental · Everyone"). A new item goes where the list shows.
@@ -399,7 +399,7 @@ Do each step in Chrome; repeat the starred ones (*) in Edge and Firefox.
 - [ ] As Alex, "Vault settings", "Import from your browser" opens in its own window.
 - [ ] As Alex, set an expiry a day away on an item: after unlocking (it checks every 6 hours), a system notification gives a count only ("1 item expires soon"), never the item's name. "Don't remind me" items never notify; signing out and in shows them again.
 - [ ] As Alex and Tom, the extension holds up to five accounts (upstream's switcher).
-- [ ] As Alex, a PIN unlock works in the extension (the apps have none).
+- [ ] As Alex, a PIN unlock works in the extension (upstream's; the apps' own PIN is in section 4, "Unlock with a PIN in the apps").
 - [ ] As Grace, the item page's "Version history" opens "Item history": restore, delete, and clear as in the web vault; an item that asks for the master password asks again first.
 - [ ] As Ivy Park in Chrome and Edge, the card and address switches (section 2). Firefox has none.
 - [ ] The join prompt from an install command ("Join Northwind Dental?") needs a computer the command ran on: a loaded-by-hand extension in Chrome or Edge gets the token there (section 4).
@@ -418,10 +418,10 @@ Do each step on all three unless it names one.
 - [ ] As Alex, unlock with the master password. Settings, Locking: "Lock after" (1, 5, 15, 30 minutes, 1 or 4 hours, "When the app closes"; 15 by default) and "Lock when the computer sleeps" (on). Lock after the time you set while using other apps: it counts the whole computer's idle time (on Linux, only under GNOME).
 - [ ] As Alex, "Get your master password hint" on the lock screen: note what it says on this server with no email.
 - [ ] Windows: as Alex, Settings, Unlock, "Unlock with Windows Hello" (it needs the desktop agent running; otherwise it says "Needs PassBundle's desktop agent, which isn't running"). Lock, unlock with Windows Hello; cancel the prompt once. Section 4 has the real hardware.
-- [ ] Mac and Linux: no Unlock group in Settings (Touch ID waits on Apple signing; Linux has none).
+- [ ] Mac and Linux: on a Mac with Touch ID, as Alex, Settings, Unlock, "Unlock with Touch ID" ("Instead of your master password"; it's the app's own, and section 4 has the real prompt). On a Mac without Touch ID and on Linux, no Unlock group in Settings.
 
 **Approving**
-- [ ] As Tom, Settings, "Sign-in requests" lists what's waiting, or "None waiting". "Confirm before approving" is on: approving a "Sign in with a device" request asks for the master password (Windows: Windows Hello or the master password). Turning the switch off asks first; on asks nothing.
+- [ ] As Tom, Settings, "Sign-in requests" lists what's waiting, or "None waiting". "Confirm before approving" is on: approving a "Sign in with a device" request asks for the master password (Windows: Windows Hello or the master password; a Mac with Touch ID turned on: Touch ID or the master password). Turning the switch off asks first; on asks nothing.
 - [ ] As Tom, a new-device check shows "Approve this sign-in?" with Device, Where, When, Expires in, and "Number shown on the new device"; Approve stays off until two digits are typed.
 
 **The vault**
@@ -479,9 +479,14 @@ Do each step on all three unless it names one.
 
 On the simulator until a real iPhone is possible (section 1).
 - [ ] As Alex Morgan, sign in to the test server, then turn on "Unlock with Face ID" (in the Simulator, Features, Face ID, Enrolled, then Matching Face when it asks). The app switcher shows a plain cover.
+- [ ] As Alex, the lock screen asks for Face ID by itself when the app opens locked, but not after you pressed Lock, and its button shows a face. Settings, Locking, has the same choices as on Android.
+- [ ] As Alex, after the Face ID offer, the "Turn on AutoFill" sheet shows "Use PassBundle for AutoFill" with "Turn on", which opens Settings. On the simulator Settings doesn't list PassBundle (iOS offers a password manager only from a signed build: section 4), so come back and tap "Later": "You can turn on AutoFill in Settings any time.", it isn't asked again, and PassBundle's Settings has the same card under AutoFill.
+- [ ] As Alex and Tom Alvarez both signed in (Settings, Accounts): turn on Face ID for each. Each unlocks on its own, and signing out of one leaves the other's Face ID on.
+- [ ] As Tom, with PassBundle open and unlocked, a "Sign in with a device" request or a new-device check shows within about 10 seconds. Approving a sign-in asks for Face ID ("Approve sign-in") or the master password; a new-device check needs only the number. Closed, nothing shows (there's no push).
 - [ ] As Grace Liu, the two-step screen takes her authenticator code; "Use another way" lists "Security key (not on this device yet)", which says "This device can't use a security key with PassBundle yet...". With Duo added to an account (section 4), "Continue with Duo" opens Safari's sign-in sheet and comes back by itself.
 - [ ] As Alex, an attachment saves to Files, On My iPhone, PassBundle; "Attach a file" opens the Files picker, and the file attaches with the bar and Cancel. No Updates in Settings (updates come from the App Store or TestFlight, later).
-- [ ] Not on iPhone yet: AutoFill, passkeys, and security keys or YubiKey codes over NFC at sign-in (section 6).
+- [ ] AutoFill and passkeys are in the app, but iOS runs them only from a signed build, so they're tried on a real iPhone (section 4). To see the extension's screens before then, open the `ios-screens` artifact of the newest run on passbundle-apps' main (the iOS job draws them on a simulator).
+- [ ] Not on iPhone yet: security keys and YubiKey codes over NFC at sign-in (section 6).
 
 ### Command-line tool
 
@@ -510,19 +515,46 @@ On the simulator until a real iPhone is possible (section 1).
 - [ ] **Recovery code:** as Alex with a method added, sign in once in an app with the recovery code shown when he set it up (typed in capitals or in groups of four works too): the app says two-step login is off now and where to turn it on again.
 
 **A real iPhone**
-- [ ] Once a build can go to a device (Apple Developer account), redo the iPhone steps on a real phone: Face ID unlock, the keyboard and large text, Duo, and when they land, AutoFill and passkeys.
+
+Once a build can go to a device (an Apple Developer account, then a TestFlight build). CI runs the iPhone app and the AutoFill extension's own code on a simulator, but iOS lets a password manager into AutoFill only in a build signed with a provisioning profile, and the real Face ID prompt and the screen-recording cover only show on a phone (docs/phones.md, "Not yet").
+- [ ] Redo the iPhone steps of section 3 on the phone: Face ID unlock with the real prompt, the keyboard and large text, and Duo.
+- [ ] **Turn on AutoFill:** as Alex Morgan, after unlocking, "Turn on AutoFill", then "Turn on" opens Settings at AutoFill & Passwords. Switch PassBundle on and come back: the row says "On" ("AutoFill is on.").
+- [ ] **Filling:** as Alex, in Safari on a site he has a login for, the bar above the keyboard suggests it; picking it asks for Face ID and fills. From the key icon, PassBundle's sheet unlocks with Face ID and lists the site's logins, and "Search all logins" finds the rest. His Chase login, which asks for the master password, says "This login asks for your master password" and fills only after it. In an app with a sign-in form, the same.
+- [ ] **A login for another site:** as Alex, in Safari on a site he has no login for, open PassBundle's sheet from the key icon, "Search all logins", and pick any login. It asks first: "Site doesn't match", with that login's saved website and the current website. "Back to the logins" fills nothing; "Autofill" fills it. A login with no website saved says "Login has no site saved" instead.
+- [ ] **Two accounts:** as Alex and Tom Alvarez both signed in, the sheet asks to unlock the account the app shows; "Switch account" unlocks the other one instead, and "Other accounts" unlocks the rest. Each asks for its own Face ID or master password. Then both accounts' logins show, labeled with the account's name, and each fills only from its own account.
+- [ ] **Suggestions follow what's unlocked:** as Alex and Tom, lock Tom's account in the app and sync Alex's. The bar above the keyboard stops suggesting Tom's logins until Tom unlocks again (iOS's list is replaced with the unlocked accounts').
+- [ ] **Passkeys:** as Alex, register a new passkey at webauthn.io (the seeded one isn't known there). iOS asks where to save it; PassBundle's sheet says "Save a passkey in PassBundle" with the website and the account's name, and with Tom unlocked there too, "Save in" asks which account. "Save passkey", then sign in with it from iOS's own sheet (Face ID). The new login shows in the app after its next sync (the extension never syncs).
+- [ ] **Screen recording:** as Alex, with the vault open, start a recording from Control Center: "PassBundle is hidden while your screen is recorded or shared." covers it until the recording stops. A screenshot can't be stopped on an iPhone, by any app.
+- [ ] **Locking:** as Alex, with "Lock when the phone locks" on, lock the phone with PassBundle in front: it's locked when you come back. With PassBundle in the background, the time away decides instead.
+- [ ] **Two-step login:** as Grace Liu, her authenticator code; "Use another way" says the iPhone can't use a security key yet and offers the other ways. If the test server offers YubiKey (above), a YubiKey plugged in types its code into the field.
 
 **Install commands on real computers**
-- [ ] **Windows:** as Maya Chen, copy Northwind Dental's Windows command. On a Windows machine, put this repo's `installer/windows/Install-PassBundle.ps1` in a folder with an `app` folder (the Windows zip's `PassBundle` folder) and an `agent` folder (its `passbundle-agent.exe` and `passbundle-agent-host.exe`), and run the command in an administrator PowerShell. Check: PassBundle and the agent in Program Files, a Start menu shortcut, the agent in the Run key, the "PassBundle agent update" task, chrome://policy and edge://policy (password saving off, the extension's server, token, join secret, and fingerprint, NativeMessagingUserLevelHosts false). The app's sign-in says "Your organization's server: test.passbundle.com" with no Self-hosted choice, and Settings, Updates says it can't update itself and to update it the way it was installed. Run it again: nothing changes. `-Remove` leaves nothing.
+- [ ] **Windows:** as Maya Chen, copy Northwind Dental's Windows command. On a Windows machine, put this repo's `installer/windows/Install-PassBundle.ps1` in a folder with an `app` folder (the Windows zip's `PassBundle` folder) and an `agent` folder (its `passbundle-agent.exe` and `passbundle-agent-host.exe`), and run the command in an administrator PowerShell. Check: PassBundle and the agent in Program Files, a Start menu shortcut, the agent in the Run key, the "PassBundle agent update" task, chrome://policy and edge://policy (password saving off, the extension's server, token, join secret, and fingerprint, NativeMessagingUserLevelHosts false). In Firefox, if it's installed: about:policies lists PasswordManagerEnabled and OfferToSaveLogins as active, both false, about:logins doesn't open, and Settings won't turn "Ask to save passwords" back on. The app's sign-in says "Your organization's server: test.passbundle.com" with no Self-hosted choice, and Settings, Updates says it can't update itself and to update it the way it was installed. Run it again: nothing changes. `-Remove` leaves nothing.
 - [ ] **Windows, Pinecrest:** Pinecrest Construction's command also turns off card and address autofill in Chrome, Edge, and Firefox (their policy pages show it). Rerun without those options: it takes back only what it set.
 - [ ] **The join from a real install:** the scripts force-install placeholder extension IDs until the store listings exist, so you still load the extension by hand. They give the install command's settings to PassBundle's own extension ID too, which that extension has. So after the Windows or Linux command, in Chrome or Edge (the scripts don't set Brave's policies), it gets the token and "Join Northwind Dental?" appears. Note if it doesn't. The prompt shows Northwind's fingerprint phrase (compare with the console's), "Join" sends a join that waits for Grace's Confirm on the Members page (no email, so no domains, so never automatic here), and "Not now" asks again in 7 days.
-- [ ] **Mac:** Northwind's two Mac commands: `make-profile.sh` writes `PassBundle.mobileconfig`, which only takes effect installed by an MDM (if you have one); `install-passbundle.sh` as root with PassBundle.app next to it installs the app with its agent (a menu-bar icon, started at login). `--remove` undoes it.
-- [ ] **Linux:** Northwind's Linux command as root, with the tarball's `PassBundle` folder renamed `passbundle` next to `installer/linux/install-passbundle.sh`: the app in /opt/passbundle with a desktop entry, Chrome and Edge policies (chrome://policy), and `/etc/passbundle/policy.json` naming the server, so the app signs in there without asking. The app only says there's a new version.
+- [ ] **Mac:** Northwind's two Mac commands: `make-profile.sh` writes `PassBundle.mobileconfig`, which only takes effect installed by an MDM (if you have one; then Firefox's about:policies lists PasswordManagerEnabled and OfferToSaveLogins as active, both false); `install-passbundle.sh` as root with PassBundle.app next to it installs the app with its agent (a menu-bar icon, started at login). `--remove` undoes it.
+- [ ] **Linux:** Northwind's Linux command as root, with the tarball's `PassBundle` folder renamed `passbundle` next to `installer/linux/install-passbundle.sh`: the app in /opt/passbundle with a desktop entry, Chrome and Edge policies (chrome://policy), and `/etc/passbundle/policy.json` naming the server, so the app signs in there without asking. Firefox from Mozilla's download or the distribution's package: about:policies lists PasswordManagerEnabled and OfferToSaveLogins as active, both false (from `/etc/firefox/policies/policies.json`). Note which Firefox it was, and whether a Snap Firefox shows them too; a Flatpak Firefox won't. If that file was there before, with another vendor's policies, theirs are still in it and still active. If the Firefox there has a `distribution/policies.json` of its own (for example in /usr/lib/firefox), the command warns, naming it, and writes nothing for Firefox, and about:policies still shows that file's policies. The app only says there's a new version.
 
 **Windows Hello and Touch ID**
 - [ ] **Windows Hello in the app:** on a Windows computer with a camera, a fingerprint reader, or a PIN-backed key, as Alex Morgan, Settings, Unlock, "Unlock with Windows Hello". Lock and unlock with it; cancel once (it stays locked, and no new prompt for 10 seconds). With "Confirm before approving" on, approving a sign-in uses Windows Hello.
 - [ ] **Windows Hello in the extension:** with the "Windows Hello test kit" from a run on main (its README), which brings an extension the agent accepts: turn on "Unlock with biometrics" in the extension, lock, and unlock with Windows Hello. `Try-WindowsHello.ps1 -Remove` cleans up.
-- [ ] **Touch ID:** not offered yet (it waits on Apple signing). Note if it appears.
+- [ ] **Touch ID in the Mac app:** on a Mac with Touch ID, as Alex Morgan, Settings, Unlock, "Unlock with Touch ID". Quit and open PassBundle: the lock screen asks for Touch ID by itself ("PassBundle is trying to unlock your vault"), but not after you pressed Lock; cancel once, and the master password still works. With "Confirm before approving" on, approving a sign-in uses Touch ID. Add a fingerprint in System Settings: Touch ID turns off for the account, and the app asks for the master password.
+- [ ] **Touch ID in the extension:** not offered yet on the Mac (it waits on Apple signing). Note if it appears.
+
+**Unlock with a PIN in the apps**
+
+On the Mac (Apple silicon, or an Intel Mac with a T2 chip), Windows, and the Pixel, and on the iPhone once a build can go to one (DESIGN.md, "Unlock with a PIN"):
+- [ ] As Alex Morgan, Settings, Unlock, "Unlock with a PIN": the sheet asks for the master password and the new PIN twice. A wrong master password, a PIN of 3 characters, and two PINs that don't match are each refused, with why. Then set it: the switch is on.
+- [ ] Lock: the lock screen asks for the PIN, with "Use your master password instead" (and back). Unlock with it. Quit PassBundle and open it again: the PIN still works.
+- [ ] A wrong PIN says how many tries are left. Quit and reopen between two wrong tries: the count goes on from where it was. The fifth turns it off: "Unlocking with a PIN was turned off after 5 wrong tries. Use your master password." The master password unlocks, and Settings shows the PIN off.
+- [ ] Set it again, then a right PIN after two wrong ones: the next wrong one says 4 tries left (the count went back to zero).
+- [ ] Where biometrics are on, they still unlock from the PIN screen. In a vault a PIN opened, Settings shows "Unlock with ..." (biometrics) off, saying "Unlock with your master password to turn this on"; an item that asks for the master password again still takes only the master password; approving a sign-in from another device asks for biometrics or the master password, never the PIN.
+- [ ] On the Pixel, a PIN unlock doesn't bring up "Unlock with fingerprint next time?".
+- [ ] Signing out, and turning it off, remove it: sign in again and it's off. With two accounts, each has its own PIN, and one account's wrong tries don't count against the other's.
+- [ ] (changes the seed) As Grace Liu, turn on "Remove Unlock with PIN" for Northwind Dental; as a Northwind member (not an owner) with a PIN set in an app, sync or unlock: the PIN is gone, and Settings shows it off, saying "Your organization doesn't allow unlocking with a PIN". Turn the policy off afterwards.
+- [ ] Linux, and an Intel Mac without a T2 chip: Settings has no "Unlock with a PIN".
+- [ ] **A copy of the file:** with a PIN set, copy the account's `pin.json` (in `accounts/<id>/` in PassBundle's folder: `~/Library/Application Support/PassBundle` on the Mac, `%LOCALAPPDATA%\PassBundle` on Windows) to the same account's folder on another computer, or (Windows) another Windows user's: the PIN doesn't work there ("Unlocking with a PIN is off on this device. Use your master password."), and the file is gone. Open the copy in a text editor: no PIN, and nothing readable but the count.
+- What a copy of the disk gives, per platform (DESIGN.md has the table): on the Mac, Android, and the iPhone, nothing to guess against, since the seal's key never leaves the device. On Windows with BitLocker or device encryption on, nothing; without it, the copy also holds Windows' DPAPI keys, protected by the person's Windows password, so someone who knows or guesses that password offline can then try PINs at Argon2id's cost (about a tenth of a second each). No TPM stands in the way there, unlike Windows Hello's key.
 
 **Autofill on real sites (the part people judge us on)**
 
@@ -570,14 +602,14 @@ The test server sends no email. These wait for a sending provider (docs/prelaunc
 DESIGN or the apps say these aren't built; note it only if one appears:
 
 - The Solo and Family presets (their onboarding, invite links or QR codes, automatic approval), and a legacy contact suggested at onboarding or a printable sheet for the family.
-- Automatic import from the browsers (the desktop agent's import helper); guided import is built.
+- In the desktop app's Import from browsers: importing into a shared folder (for an organization that keeps items out of Personal), saved cards and addresses, and KWallet on Linux. Importing the browsers' saved passwords is built there, and so is the guided import.
 - Touch ID on the Mac; biometrics on Linux; the Linux agent and Linux packages; signed and notarized apps, the signed MSI, and the CLI's signed manifest.
-- iPhone AutoFill, iPhone passkeys, security keys and YubiKey codes over NFC on iPhone, and any iPhone release.
+- Security keys and YubiKey codes over NFC on iPhone, saving a new login and filling one-time codes through iPhone's AutoFill, and any iPhone release. (iPhone AutoFill and passkeys are built and wait on a signed build: section 4.)
 - Push to phones while PassBundle is closed; the apps starting "Sign in with a device" themselves; a confirmation in the web vault's and extension's approval dialog; SSO sessions approving.
 - Passkeys on computers (the desktop app only shows them); replacing an old passkey or choosing an existing login on phones.
 - Single sign-on in the desktop and phone apps; trusted-device unlock; other identity providers.
 - The nudge in the desktop and phone apps.
-- Send, PIN unlock, archive, exports, imports (other than opening the web vault), custom templates, organization admin, and the MSP console in the desktop and phone apps.
+- Send, archive, exports, imports (other than opening the web vault, and the desktop app's Import from browsers), making a template (New item does offer the custom templates made in the web vault or the extension), organization admin, and the MSP console in the desktop and phone apps.
 - Filling one-time codes, cards, and identities on Android; filling in desktop apps.
 - Typed template fields beyond text, hidden, and yes or no; a template date that sets Expires; a Templates view.
 - A system notification from the desktop agent, and phone reminders while the app is closed; email reminders.
@@ -587,7 +619,7 @@ DESIGN or the apps say these aren't built; note it only if one appears:
 - A Health page in the browser extension (upstream's is behind a feature flag this server doesn't turn on).
 - Assisted password change in the apps, recipes for real sites, starting it from the web vault or from Health in the extension, and frames.
 - Script access in the CLI, tokens bound to a machine, and a technician permission for it.
-- The agent's report of browsers and profiles; browser extension management; Firefox's password manager in the install scripts.
+- The agent's report of browsers and profiles; browser extension management; our Firefox extension in the install scripts (it isn't signed by Mozilla yet).
 - Moving a client between MSPs, linking an existing organization as a client, MSP sign-up on the hosted service, and key fingerprints when staff are added.
 - Enrolling account recovery at unlock for organizations that turn it on later; "private items stay with the organization".
 - An account key for Solo and Family accounts, and its recovery kit (DESIGN, "Account keys (open)").

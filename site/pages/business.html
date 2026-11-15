@@ -25,7 +25,7 @@ layout: wide
 <section class="flow" aria-label="The basics">
   <ul class="lines">
     <li><strong>Set up from the start</strong><span>Account recovery, strong master passwords, one work account per person, and shared folders for everyone and for admins are on before anyone joins.</span></li>
-    <li><strong>No confirm step</strong><span>Invite someone and they're in, with nobody clicking Confirm. Your owners get an email saying who joined.</span></li>
+    <li><strong>No confirm step</strong><span>Invite someone and they're in, with nobody clicking Confirm. Whoever invited them gets an email saying they joined.</span></li>
     <li><strong>Forgotten master passwords</strong><span>With account recovery, an admin can reset a member's master password and the vault comes back intact. Everyone is told about it when they join.</span></li>
   </ul>
 </section>
@@ -38,7 +38,7 @@ layout: wide
       <p class="lead">Your organization's settings have an install command, under Joining and security. It's one line that runs our install script on a Windows or Linux computer, or makes a profile for your MDM on Macs. Run it from Intune, group policy, or any RMM.</p>
       <ul class="checks">
         <li>Installs the extension in Chrome and Edge once it's in their stores, with your server already filled in</li>
-        <li>Turns off the browsers' own password managers, without deleting what's in them</li>
+        <li>Turns off Chrome's and Edge's own password managers, without deleting what's in them</li>
         <li>Limit it to your email domains, so only your own people can use it</li>
         <li>A whole office behind one internet connection can sign up at once</li>
       </ul>
@@ -52,7 +52,7 @@ layout: wide
     <div class="row-text">
       <span class="eyebrow">Policies</span>
       <h2>Policies, each explained in a sentence</h2>
-      <p class="lead">Require two-step login, set master password strength, keep work accounts separate from personal ones, and decide whether people can export vaults.</p>
+      <p class="lead">Require two-step login, set master password strength, keep work accounts separate from personal ones, and set how long vaults stay unlocked.</p>
       <ul class="checks">
         <li>Account recovery with automatic enrollment, on by default</li>
         <li>Master passwords of at least 12 characters, checked for strength</li>
@@ -103,7 +103,7 @@ layout: wide
       <li><strong>Reports and event logs</strong><span>See weak, reused, and exposed passwords in shared folders, and who viewed or changed what.</span></li>
       <li><strong>Events to your security tools</strong><span>Send your events as they happen to Microsoft Sentinel, to syslog over TLS, or to a signed webhook. Not yet tried with Sentinel, Huntress, or Blumira themselves.</span></li>
       <li><strong>Templates for your team</strong><span>Share item templates for vendor portals, servers, and licenses, so everyone starts from the same fields.</span></li>
-      <li><strong>Expiring credentials</strong><span>Certificates, API keys, and domains carry their expiration date, and the browser extension reminds whoever has it unlocked 30, 7, and 1 days before.</span></li>
+      <li><strong>Expiring credentials</strong><span>Certificates, API keys, and domains carry their expiration date, and the browser extension reminds whoever has it unlocked 30, 7, and 1 day before.</span></li>
       <li><strong>End-to-end encrypted</strong><span>Shared items are encrypted with your organization's key, which only your members' devices hold. We never have a key that can open your vault.</span></li>
       <li><strong>Work and personal stay apart</strong><span>A work account belongs to one organization. When someone leaves, shared passwords stay with the company.</span></li>
       <li><strong>Premium for every member</strong><span>Built-in two-step codes, file attachments, and file Sends for everyone in your organization.</span></li>
