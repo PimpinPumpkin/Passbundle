@@ -28,7 +28,7 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 
 ## In progress
 
-- **Plans and billing**: the first piece is built. The server records a plan for a person, an organization, or an MSP, set by hand on its admin page, works out what each person gets from it, and, where `PLANS_ENFORCED` is on, tells the apps in the sync (deploy/README.md, "Plans"). It's off by default and off on every server today. Still to come: Premium's limits and what's refused when a plan ends, the trial and its reminders, Families, and payment.
+- **Plans and billing**: the first two pieces are built. The server records a plan for a person, an organization, or an MSP, set by hand on its admin page, works out what each person gets from it, and, where `PLANS_ENFORCED` is on, tells the apps in the sync and keeps Premium's limits: attachments by plan, file Sends, and the data breach report (deploy/README.md, "Plans"). It's off by default and off on every server today. Still to come: the rest of what's refused when a plan ends, the trial and its reminders, Families, and payment.
 
 ## Next
 
