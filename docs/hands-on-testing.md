@@ -399,7 +399,7 @@ Do each step in Chrome; repeat the starred ones (*) in Edge and Firefox.
 - [ ] As Alex, "Vault settings", "Import from your browser" opens in its own window.
 - [ ] As Alex, set an expiry a day away on an item: after unlocking (it checks every 6 hours), a system notification gives a count only ("1 item expires soon"), never the item's name. "Don't remind me" items never notify; signing out and in shows them again.
 - [ ] As Alex and Tom, the extension holds up to five accounts (upstream's switcher).
-- [ ] As Alex, a PIN unlock works in the extension (the apps have none).
+- [ ] As Alex, a PIN unlock works in the extension (upstream's; the apps' own PIN is in section 4, "Unlock with a PIN in the apps").
 - [ ] As Grace, the item page's "Version history" opens "Item history": restore, delete, and clear as in the web vault; an item that asks for the master password asks again first.
 - [ ] As Ivy Park in Chrome and Edge, the card and address switches (section 2). Firefox has none.
 - [ ] The join prompt from an install command ("Join Northwind Dental?") needs a computer the command ran on: a loaded-by-hand extension in Chrome or Edge gets the token there (section 4).
@@ -520,6 +520,21 @@ On the simulator until a real iPhone is possible (section 1).
 - [ ] **Windows Hello in the extension:** with the "Windows Hello test kit" from a run on main (its README), which brings an extension the agent accepts: turn on "Unlock with biometrics" in the extension, lock, and unlock with Windows Hello. `Try-WindowsHello.ps1 -Remove` cleans up.
 - [ ] **Touch ID:** not offered yet (it waits on Apple signing). Note if it appears.
 
+**Unlock with a PIN in the apps**
+
+On the Mac (Apple silicon, or an Intel Mac with a T2 chip), Windows, and the Pixel, and on the iPhone once a build can go to one (DESIGN.md, "Unlock with a PIN"):
+- [ ] As Alex Morgan, Settings, Unlock, "Unlock with a PIN": the sheet asks for the master password and the new PIN twice. A wrong master password, a PIN of 3 characters, and two PINs that don't match are each refused, with why. Then set it: the switch is on.
+- [ ] Lock: the lock screen asks for the PIN, with "Use your master password instead" (and back). Unlock with it. Quit PassBundle and open it again: the PIN still works.
+- [ ] A wrong PIN says how many tries are left. Quit and reopen between two wrong tries: the count goes on from where it was. The fifth turns it off: "Unlocking with a PIN was turned off after 5 wrong tries. Use your master password." The master password unlocks, and Settings shows the PIN off.
+- [ ] Set it again, then a right PIN after two wrong ones: the next wrong one says 4 tries left (the count went back to zero).
+- [ ] Where biometrics are on, they still unlock from the PIN screen. In a vault a PIN opened, Settings shows "Unlock with ..." (biometrics) off, saying "Unlock with your master password to turn this on"; an item that asks for the master password again still takes only the master password; approving a sign-in from another device asks for biometrics or the master password, never the PIN.
+- [ ] On the Pixel, a PIN unlock doesn't bring up "Unlock with fingerprint next time?".
+- [ ] Signing out, and turning it off, remove it: sign in again and it's off. With two accounts, each has its own PIN, and one account's wrong tries don't count against the other's.
+- [ ] (changes the seed) As Grace Liu, turn on "Remove Unlock with PIN" for Northwind Dental; as a Northwind member (not an owner) with a PIN set in an app, sync or unlock: the PIN is gone, and Settings shows it off, saying "Your organization doesn't allow unlocking with a PIN". Turn the policy off afterwards.
+- [ ] Linux, and an Intel Mac without a T2 chip: Settings has no "Unlock with a PIN".
+- [ ] **A copy of the file:** with a PIN set, copy the account's `pin.json` (in `accounts/<id>/` in PassBundle's folder: `~/Library/Application Support/PassBundle` on the Mac, `%LOCALAPPDATA%\PassBundle` on Windows) to the same account's folder on another computer, or (Windows) another Windows user's: the PIN doesn't work there ("Unlocking with a PIN is off on this device. Use your master password."), and the file is gone. Open the copy in a text editor: no PIN, and nothing readable but the count.
+- What a copy of the disk gives, per platform (DESIGN.md has the table): on the Mac, Android, and the iPhone, nothing to guess against, since the seal's key never leaves the device. On Windows with BitLocker or device encryption on, nothing; without it, the copy also holds Windows' DPAPI keys, protected by the person's Windows password, so someone who knows or guesses that password offline can then try PINs at Argon2id's cost (about a tenth of a second each). No TPM stands in the way there, unlike Windows Hello's key.
+
 **Autofill on real sites (the part people judge us on)**
 
 On a real computer and the Pixel, with logins saved for each:
@@ -573,7 +588,7 @@ DESIGN or the apps say these aren't built; note it only if one appears:
 - Passkeys on computers (the desktop app only shows them); replacing an old passkey or choosing an existing login on phones.
 - Single sign-on in the desktop and phone apps; trusted-device unlock; other identity providers.
 - The nudge in the desktop and phone apps.
-- Send, PIN unlock, archive, exports, imports (other than opening the web vault), custom templates, organization admin, and the MSP console in the desktop and phone apps.
+- Send, archive, exports, imports (other than opening the web vault), custom templates, organization admin, and the MSP console in the desktop and phone apps.
 - Filling one-time codes, cards, and identities on Android; filling in desktop apps.
 - Typed template fields beyond text, hidden, and yes or no; a template date that sets Expires; a Templates view.
 - A system notification from the desktop agent, and phone reminders while the app is closed; email reminders.
