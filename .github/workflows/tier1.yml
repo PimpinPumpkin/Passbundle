@@ -465,8 +465,9 @@ jobs:
 
   install-scripts:
     # The Mac and Linux install scripts: shellcheck, and the Mac configuration
-    # profile, which only an MDM installs, so this reads it back. Tier 2
-    # (macOS, Linux) installs for real.
+    # profile, which only an MDM installs, so this reads it back. Also the
+    # Linux script's merge of Firefox's policies into another vendor's file,
+    # on files in a temporary folder. Tier 2 (macOS, Linux) installs for real.
     name: Mac and Linux install scripts
     needs: refs
     runs-on: ubuntu-latest
@@ -481,6 +482,8 @@ jobs:
         run: shellcheck installer/macos/*.sh installer/macos/tests/*.sh installer/linux/*.sh installer/linux/tests/*.sh
       - name: The configuration profile
         run: python3 -I installer/macos/tests/test_profile.py
+      - name: Firefox's policies in another vendor's file (Linux)
+        run: python3 -I installer/linux/tests/test_firefox_policies.py
 
   agent-test-build:
     # The desktop agent (passbundle-apps, agent/), built with the stand-in for

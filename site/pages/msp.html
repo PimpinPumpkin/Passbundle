@@ -43,7 +43,7 @@ layout: wide
         <li>Members, people waiting to join, and last activity for each client</li>
       </ul>
     </div>
-    <div class="stage bleed">
+    <div class="stage bleed low">
       <x-shot name="msp-health" frame="desktop" alt="A client's passwords to fix in the MSP console: each item by name, with what's wrong with it"></x-shot>
     </div>
   </div>
@@ -87,7 +87,7 @@ layout: wide
       <p class="lead">Each client has its own install command, which runs our install script. Run it on the client's Windows or Linux computers from your RMM, or make a profile for your MDM on Macs, and once the extension is in the Chrome and Edge stores, people land in the right client when they sign in.</p>
       <ul class="checks">
         <li>Installs the extension in Chrome and Edge once it's in their stores, with the server filled in</li>
-        <li>Turns off the browsers' own password managers</li>
+        <li>Turns off Chrome's and Edge's own password managers</li>
         <li>Limit it to the client's email domains, and people join with no click from you</li>
         <li>A whole office can sign up at once without tripping login limits</li>
       </ul>
@@ -227,7 +227,7 @@ layout: wide
     </details>
     <details>
       <summary>Is there an API or PSA integration?</summary>
-      <p>Not yet. Billing sync with ConnectWise, HaloPSA, and Autotask is planned, so seat counts flow into your invoices.</p>
+      <p>Not directly. The MSP console shows each client's seats by month, prorated by the day, with a CSV you can bring into your PSA's invoices.</p>
     </details>
   </div>
 </section>
