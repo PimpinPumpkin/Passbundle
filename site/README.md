@@ -78,7 +78,7 @@ No page has to be edited for any of these. What the pages show follows the two l
 
 The places that follow `links.vault` alone: Download's testing note, the homepage's last section and its two "use our hosted service" lines, Help's "How do I start?", Switch's first step, and the hosted-service lines on Business and MSPs. The notes about paid plans don't follow it ("Paid plans and billing", below).
 
-While new accounts aren't open, the server has to refuse them too (`SIGNUPS_ALLOWED=false`, `deploy/README.md`): the apps and the extension have their own Create account, and the site isn't in front of it.
+While new accounts aren't open, the server has to refuse them too (`SIGNUPS_ALLOWED=false`, `deploy/README.md`): the web vault, the extension and the apps each have their own way to make an account, and the site isn't in front of any of them. Where Create account would be, the web vault and the extension then say new accounts aren't open yet (DESIGN.md, "New accounts on a closed server").
 
 ## Search engines
 
@@ -101,6 +101,7 @@ The site says what's true today, and says plainly what waits for launch. Every p
 - **The command-line tool's first release:** Download's card links its guide until then (`links.cli` is its releases).
 - **The extension's first release:** start **Extension release** (`.github/workflows/extension-release.yml`) from the Actions tab, on main. It builds the branded extension for Chrome, Edge, and other Chromium browsers from passbundle-clients' `keykeeper` branch, and publishes it as a release tagged `extension-v*`, with its SHA-256, marked as this repository's latest. Then fill in `links.extensionZip` with `https://github.com/PimpinPumpkin/Passbundle/releases/latest/download/passbundle-extension-chromium.zip`, which stays the newest zip from then on. Until then, Download's button goes to the list of extension releases (`links.extension`).
 - **Firefox:** release Firefox installs only extensions Mozilla has signed, which needs the owner's Mozilla add-on keys. Download's Browser card says it's coming until then.
+- **Firefox's password manager in the install scripts:** the scripts turn off only Chrome's and Edge's own password managers today, so the install command's words name those two (the homepage, Features, Business, MSPs, Help's two install command answers, and the demo's MSP console). Once the scripts turn off Firefox's too, those lines can say "the browsers' own password saving" again.
 - **A paid Have I Been Pwned key:** Pricing's data breach report says it's a link to check by hand for now, and Premium's list leaves it out.
 - Prices and offers on the site are proposals until decided: Premium, Families, Business, the MSP seat pool, the 30-day trial, and six months free for the first MSPs.
 
