@@ -443,6 +443,14 @@ Do each step on all three unless it names one.
 - [ ] As Alex, edit the same item on two devices within a few seconds: the second save is refused and it syncs.
 - [ ] As Alex, a login that asks for the master password shows only its name until it's given.
 
+**Import from browsers**
+- [ ] As Alex, on a computer whose browser has a few saved passwords (one the same as a login in Alex's vault, one with the same site and username but another password, one with no password): after unlocking, PassBundle offers to import them, once; "Not now" closes it and reads nothing. Later it's in the app's menu: Import from browsers.
+- [ ] The screen lists each browser profile, grouped by browser, with the account it's signed in to (or "Not signed in") and why it's chosen or not. Change the choice, then import: the summary says how many are new, how many go to "Check these: from <browser>" to compare, how many were there already, and how many had no password. The login with another password is in that folder. Import again: nothing comes in twice.
+- [ ] Afterwards, with the browser closed, its own "Offer to save passwords" (Chrome, Edge) or "Ask to save passwords" (Firefox) is off, and what it saved is still there.
+- [ ] Mac: macOS asks before PassBundle reads Chrome's or Edge's passwords; Deny sends that browser to the guided import, with why. Safari is listed with its own Export. Firefox with a Primary Password asks for it; a wrong one says so and asks again.
+- [ ] Windows: a Chrome profile whose passwords only Chrome can read goes to the guided import, with why and a link to it.
+- [ ] (changes the seed) In an organization that keeps items out of Personal, the screen says so first, with what to do, and offers no Import. Turn the policy off afterwards.
+
 **Several accounts**
 - [ ] As Alex, then add Tom: the account menu (the email at the sidebar's foot) has "Add account" and "Sign out of <email>". Up to five; at five, add can't be chosen. Each keeps its own lock and settings; "Lock" locks only the one shown. "All accounts" lists every unlocked account's items with a colored label; Settings, "This account" names and colors each (more than one signed in). A new item asks "Save it in which account?". Re-adding the same email signs it in again in its place.
 - [ ] As Tom with Alex's account locked, a sign-in request for Alex shows once Alex is unlocked.
@@ -603,7 +611,7 @@ DESIGN or the apps say these aren't built; note it only if one appears:
 
 - The Solo and Family presets (their onboarding, invite links or QR codes, automatic approval), and a legacy contact suggested at onboarding or a printable sheet for the family.
 - In the desktop app's Import from browsers: importing into a shared folder (for an organization that keeps items out of Personal), saved cards and addresses, and KWallet on Linux. Importing the browsers' saved passwords is built there, and so is the guided import.
-- Touch ID on the Mac; biometrics on Linux; the Linux agent and Linux packages; signed and notarized apps, the signed MSI, and the CLI's signed manifest.
+- Touch ID in the extension on the Mac; biometrics on Linux; the Linux agent and Linux packages; signed and notarized apps, the signed MSI, and the CLI's signed manifest.
 - Security keys and YubiKey codes over NFC on iPhone, saving a new login and filling one-time codes through iPhone's AutoFill, and any iPhone release. (iPhone AutoFill and passkeys are built and wait on a signed build: section 4.)
 - Push to phones while PassBundle is closed; the apps starting "Sign in with a device" themselves; a confirmation in the web vault's and extension's approval dialog; SSO sessions approving.
 - Passkeys on computers (the desktop app only shows them); replacing an old passkey or choosing an existing login on phones.
