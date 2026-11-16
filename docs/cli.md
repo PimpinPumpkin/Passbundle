@@ -6,7 +6,7 @@ It runs on macOS (Apple silicon and Intel), Linux (x64 and arm64), and 64-bit Wi
 
 ## Install
 
-Get the newest release from https://github.com/PimpinPumpkin/Passbundle/releases?q=cli-v&expanded=true (tagged `cli-v0.1.N`). Each has one archive per platform:
+No release has been published yet. Until the first one, build it yourself ("Building it yourself" below). Releases will be at https://github.com/PimpinPumpkin/Passbundle/releases?q=cli-v&expanded=true (tagged `cli-v0.1.N`), each with one archive per platform:
 
 | File | For |
 |---|---|
@@ -36,7 +36,7 @@ Windows (PowerShell): extract the zip, put `passbundle.exe` in a folder of your 
 `SHA256SUMS` lists each file's SHA-256, and `manifest.json` names each archive with its size and SHA-256 and the passbundle-clients commit it was built from. When a release has `manifest.json.sig`, it's an Ed25519 signature with the CLI release key, over the line `PassBundle CLI release v1` and then the manifest's exact bytes. The CLI release key is its own key, not the desktop apps' update key. Its public key is:
 
 ```
-(not made yet: releases so far have no manifest.json.sig, so check them against SHA256SUMS)
+(not made yet: until it is, a release has no manifest.json.sig, so check it against SHA256SUMS)
 ```
 
 To check a signature with OpenSSL 3, with that public key's 64 hex digits:
@@ -232,7 +232,7 @@ It applies the brand with that version (`BRAND_CLI_VERSION`, for `brand/apply.mj
 
 ## Releases
 
-`.github/workflows/cli-release.yml`, started by hand from main with the passbundle-clients branch or commit to build (by default `keykeeper`; it refuses anything that isn't on `keykeeper`, whose tier 1 checks have passed): a plan job, a build per platform with no secrets (Node.js 24.21.0 pinned for the build), a sign job that alone may hold the CLI release key and runs nothing from any repository, and a publish job that alone can write. Releases are tagged `cli-v<major>.<minor>.<run number>`, never marked as this repository's latest, and carry the five archives, `manifest.json`, `SHA256SUMS`, and, once the CLI release key is made, `manifest.json.sig`.
+`.github/workflows/cli-release.yml`, started by hand from main with the passbundle-clients branch or commit to build (by default `keykeeper`; it refuses anything that isn't on `keykeeper`, whose tier 1 checks have passed): a plan job, a build per platform with no secrets (Node.js 24.21.0 pinned for the build), a sign job that alone may hold the CLI release key and runs nothing from any repository, and a publish job that alone can write. Releases are tagged `cli-v<major>.<minor>.<run number>`, never marked as this repository's latest, and carry the five archives, `manifest.json`, `SHA256SUMS`, and, once the CLI release key is made, `manifest.json.sig`. No release has been published yet: the first is a run the owner starts.
 
 ### The CLI release key
 

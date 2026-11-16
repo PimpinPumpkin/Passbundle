@@ -78,7 +78,7 @@ No page has to be edited for any of these. What the pages show follows the two l
 
 The places that follow `links.vault` alone: Download's testing note, the homepage's last section and its two "use our hosted service" lines, Help's "How do I start?", Switch's first step, and the hosted-service lines on Business and MSPs. The notes about paid plans don't follow it ("Paid plans and billing", below).
 
-While new accounts aren't open, the server has to refuse them too (`SIGNUPS_ALLOWED=false`, `deploy/README.md`): the apps and the extension have their own Create account, and the site isn't in front of it.
+While new accounts aren't open, the server has to refuse them too (`SIGNUPS_ALLOWED=false`, `deploy/README.md`): the web vault, the extension and the apps each have their own way to make an account, and the site isn't in front of any of them. Where Create account would be, the web vault and the extension then say new accounts aren't open yet (DESIGN.md, "New accounts on a closed server").
 
 ## Search engines
 

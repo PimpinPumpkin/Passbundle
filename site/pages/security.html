@@ -31,7 +31,7 @@ description: How PassBundle protects your vault: end-to-end encryption, a server
 <h2>Protecting your account</h2>
 <ul>
   <li><strong>Two-step login</strong> with an authenticator app, a security key such as a YubiKey, or email codes, in every plan, in the web vault, the browser extension, and the PassBundle apps for Windows, Mac, Linux, and Android.</li>
-  <li><strong>Password guessing is stopped per account.</strong> After 10 wrong tries, an account allows one attempt a minute, no matter where the guesses come from.</li>
+  <li><strong>Password guessing is stopped per account.</strong> After 10 tries from one network, an account allows that network one attempt a minute, and after 100 from anywhere, one every 36 seconds.</li>
   <li><strong>New devices are announced.</strong> When your account signs in on a new device, you get an email with when and from where.</li>
 </ul>
 
@@ -41,7 +41,7 @@ description: How PassBundle protects your vault: end-to-end encryption, a server
   <li><strong>Install commands are credentials.</strong> Each one is random and can be limited to your email domains or replaced at any time. Joins through it are recorded.</li>
   <li><strong>Everything an MSP does is logged</strong>, with who, when, from where, and in which client.</li>
   <li><strong>Directory tokens are scoped and shown once.</strong> An organization's Entra provisioning token reaches only that organization's people and groups, is stored hashed, and can be replaced or revoked at any time.</li>
-  <li><strong>No remote control.</strong> PassBundle's Windows app takes no commands from the server, so a compromised server can't run anything on your computers. It installs only updates signed with PassBundle's release key. While the apps are test builds, that's a test key; for launch, signing moves to a key kept offline.</li>
+  <li><strong>No remote control.</strong> PassBundle's Windows app takes no commands from the server, so a compromised server can't run anything on your computers. It installs only updates signed with PassBundle's release key. While the apps are test builds, that's a test key; for launch, signing moves to a key kept offline. A copy your RMM installed, and the desktop agent, don't update themselves: the app says when a new version is out, and your RMM installs it.</li>
 </ul>
 
 <h2>Reporting a vulnerability</h2>

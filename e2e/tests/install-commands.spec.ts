@@ -136,6 +136,10 @@ test("the install command comes for Windows, Mac, and Linux with the same token,
     expect(profile).toContain(`<string>${browser}.extensions.${brand.extension.chromiumId}</string>`);
   }
   expect(profile).not.toContain(`${brand.extension.chromiumId};`);
+  // The browsers' own password managers off: Chrome's, Edge's, and Firefox's,
+  // which also takes OfferToSaveLogins.
+  expect(profile.split("<key>PasswordManagerEnabled</key>\n\t\t\t<false/>")).toHaveLength(4);
+  expect(profile.split("<key>OfferToSaveLogins</key>\n\t\t\t<false/>")).toHaveLength(2);
 
   // Back to Windows: the same command as before.
   await choose("Windows");
