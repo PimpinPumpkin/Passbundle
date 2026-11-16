@@ -59,6 +59,7 @@ The settings are the server's environment variables, as in Vaultwarden. The ones
 | `NEW_DEVICE_CHECK` | On by default: an account without two-step login that signs in on a device it has never used waits until the person types the new device's number on one of their signed-in devices, or uses a code by email (DESIGN.md, "New-device check"). Turn it off only for a test server. |
 | `IP_LOCATION_DATABASE` | An IP-to-location database (MaxMind DB format) for showing roughly where a sign-in comes from; `/data/ip-location.mmdb` by default. It isn't in the image: put DB-IP's free IP to City Lite there with passbundle-server's `tools/update-ip-location.sh` (on the host, against the folder mounted as `/data`), monthly. Without it, no location is shown. The server never asks another service. `IP_LOCATION_ATTRIBUTION` and `IP_LOCATION_ATTRIBUTION_URL` credit it (DB-IP's credit by default, as its CC BY 4.0 license asks); set them if you use another database. |
 | `PLANS_ENFORCED` | Off by default, and a self-hosted server leaves it off: every account and organization gets everything, as before. On, what each gets follows the plan recorded for it, the apps are told in the sync, and Free can't attach or send files, or get the data breach report where the server has a key for it (see "Plans"). Set only in the environment. Its figures: `PLAN_GRACE_DAYS` (14), `PLAN_PREMIUM_STORAGE_GB` (5), `PLAN_FAMILIES_PEOPLE` (6), `PLAN_ORG_STORAGE_GB_PER_PERSON` (1), and `PLAN_ORG_STORAGE_MIN_GB` (5). |
+| `BILLING_PROVIDER` | Empty by default, and it does nothing unless `PLANS_ENFORCED` is on: plans are then set only by hand. Set, the server learns who has paid from that payment provider (see "Plans"). Set only in the environment, with its secrets. |
 | `SITE_FIXES_NEED_APPROVAL` | Whether a shared site fix fills for everyone only once you approve it on the admin page's Sites list, as well as once three people with verified email addresses shared it. |
 | `ATTACHMENTS_FOLDER`, `SENDS_FOLDER` | Where file attachments and Send files go. A folder in `/data` by default, or object storage: `s3://bucket/attachments?endpoint=https://...&region=auto&default_storage_class=STANDARD`, with `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. They're encrypted by the apps before upload, like everything else. |
 
@@ -88,6 +89,25 @@ Only the admin page sets a plan, so only someone with `ADMIN_TOKEN` can, and eac
 - `POST /admin/plans/<users|organizations|msps>/<id>/remove` removes it.
 
 The people a changed plan reaches are told to sync. People read their own plan, and the plan of an organization or MSP they manage, at `GET /api/keykeeper/plan`; nobody sets one there.
+
+### A payment provider
+
+`BILLING_PROVIDER` names the provider the server learns who has paid from. It's empty by default, and does nothing unless `PLANS_ENFORCED` is on. The only one there is yet is `standin`, the test stand-in in this repository's `e2e/billing-standin.mjs`; Stripe comes next. With both set:
+
+- People pay and manage on the provider's own pages. `POST /api/keykeeper/plan/pay` (JSON: `plan`, and `organization` or `msp`, or neither for a person's own Premium) and `POST /api/keykeeper/plan/manage` (`organization` or `msp`, or neither) answer `{"url": ...}`, a page on the provider's site that sends them back to the Plan page. `POST /api/keykeeper/plan/look` (the same) asks the provider now, at most once a minute for each plan. They answer only whoever may pay for the plan, which the sync's `canPay` says: a person for their own Premium, an organization's owners for its plan, and an MSP's admins for the pool. Everyone else, and a client of an MSP, gets 404.
+- The provider's webhooks go to `POST /api/keykeeper/billing/events/<provider>`. Before anything in one is believed: its body is at most 1 MiB, its signature is good with a signing secret in use, its timestamp is within five minutes of the server's clock (keep the clock right), its id hasn't come before (ids are kept 35 days), and it's for the provider's mode. A refusal is an empty 400, logged with why and the address it came from, never the body. Then it only makes the server ask the provider about that customer and write what the provider says: a webhook never sets a plan itself.
+- The server asks again on its own (`BILLING_LOOK_SCHEDULE`, hourly by default): each plan the provider set whose last answer is a day old, each whose paid-through date has passed since, and each a webhook asked about whose look got no answer. When the provider can't be reached, the plan stays as the provider last said. After a day without an answer the log gets an error on each run, saying how many plans; each plan's `checkedAt` (`GET /admin/plans/...`) says when the provider last answered.
+- A provider's answer that something is or was paid sets the plan (`setBy` `provider`). An answer that nothing is paid ends only a plan the provider set: a trial, or a plan you set by hand, stands.
+
+Its secrets are read from the environment only, never the admin page or `config.json`, and never appear in a log, an error, or the admin page's diagnostics:
+
+| Secret | What it is |
+|---|---|
+| `BILLING_API_KEY` | The key the server calls the provider's API with. For Stripe, a restricted key that can only do what the server asks. |
+| `BILLING_WEBHOOK_SECRET` | The secret the provider signs its webhooks with. For Stripe, the endpoint's signing secret. |
+| `BILLING_WEBHOOK_SECRET_OLD` | While you replace that secret: the old one, which the server also takes until you remove it. |
+
+Each can also be read from a file named by the same setting with `_FILE` on the end, as the server's other settings can. `BILLING_API_BASE` is for tests only: the address the provider's adapter calls instead of the provider's own. The stand-in needs one, and won't start unless it's a loopback address written as one (`http://127.0.0.1:8124`), or with a key that looks like a live one.
 
 ## What the server fetches
 

@@ -237,6 +237,8 @@ const noPlan = (plan: "free" | null, canManage: boolean) => ({
   people: null,
   coveredBy: null,
   canManage,
+  // These servers have no payment provider (tests/api/billing.spec.ts has).
+  canPay: false,
 });
 
 /**
@@ -733,6 +735,7 @@ test.describe("where plans are enforced", () => {
       people: null,
       coveredBy: null,
       canManage: true,
+      canPay: false,
     });
     expect(moment(profile.keykeeperPlan.freeUntil)).toBe(moment(date));
     expect((await api.call(person, "GET", "/api/keykeeper/plan")).body).toEqual(profile.keykeeperPlan);
@@ -883,6 +886,7 @@ test.describe("where plans are enforced", () => {
       people: null,
       coveredBy: null,
       canManage: true,
+      canPay: false,
     });
     expect(moment(org.keykeeperPlan.until)).toBe(moment(date));
     const asked = await api.call(owner, "GET", `/api/keykeeper/plan?organization=${orgId}`);
@@ -901,6 +905,7 @@ test.describe("where plans are enforced", () => {
       people: null,
       coveredBy: null,
       canManage: false,
+      canPay: false,
     };
     for (const who of [admin, member]) {
       const profile = await profileOf(api, who);
@@ -954,6 +959,7 @@ test.describe("where plans are enforced", () => {
         state: "ended",
         storageGb: 0,
         canManage: who === owner,
+        canPay: false,
       });
     }
 
@@ -1021,6 +1027,7 @@ test.describe("where plans are enforced", () => {
         people: 6,
         coveredBy: null,
         canManage: who === owner,
+        canPay: false,
       });
     }
 
@@ -1084,6 +1091,7 @@ test.describe("where plans are enforced", () => {
         people: null,
         coveredBy: null,
         canManage: true,
+        canPay: false,
       },
     });
 
@@ -1109,6 +1117,7 @@ test.describe("where plans are enforced", () => {
       people: null,
       coveredBy,
       canManage: false,
+      canPay: false,
     };
     for (const who of [clientOwner, clientMember]) {
       const profile = await profileOf(api, who);
@@ -1173,6 +1182,7 @@ test.describe("where plans are enforced", () => {
         storageGb: 0,
         coveredBy: null,
         canManage: who === clientOwner,
+        canPay: false,
       });
     }
     expect((await api.call(clientOwner, "GET", `/api/keykeeper/plan?organization=${clientId}`)).status).toBe(200);
