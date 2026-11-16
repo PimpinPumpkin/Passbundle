@@ -306,6 +306,8 @@ jobs:
         run: node meta/docs/vectors/check-core-vectors.mjs meta/docs/vectors/core-v1.json .
       - name: The desktop updater's test vectors, as their generator makes them
         run: node meta/docs/vectors/make-desktop-update-v1.mjs | cmp - meta/docs/vectors/desktop-update-v1.json
+      - name: The apps' attachment and Send test vectors, as their generator makes them
+        run: node meta/docs/vectors/make-attachments-send-v1.mjs | cmp - meta/docs/vectors/attachments-send-v1.json
       # Approving a sign-in from another device: the vectors as their
       # generator makes them (with the apps' copy of EFF's word list), checked
       # with upstream's own crypto; the clients' unit test (run below) checks
