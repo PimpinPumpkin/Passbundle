@@ -1,9 +1,10 @@
 // Send between our apps' core (passbundle-apps, DESIGN.md "Send in the
 // apps") and the web vault, with real keys on both sides: a text Send the
 // core makes opens on the web vault's access page, with and without a
-// password, as someone without an account opens it; and one the web vault
-// makes is listed and opened by the core. Tier 1 builds the core's interop
-// tool (KK_CORE_INTEROP); without it, this test is skipped.
+// password, as someone without an account opens it, and a file Send's file
+// downloads there byte for byte; and the Sends the web vault makes, of a
+// text and of a file, are listed and opened by the core. Tier 1 builds the
+// core's interop tool (KK_CORE_INTEROP); without it, these tests are skipped.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -81,4 +82,60 @@ test("a Send the core makes opens on the web vault's access page, with and witho
   expect(await openLink(browser, (locked.send as { link: string }).link, "open sesame")).toBe(
     "Opened with the password.",
   );
+});
+
+test("a file Send the core makes downloads on the web vault's access page byte for byte, and the core lists one the web vault makes", async ({
+  page,
+  browser,
+}, testInfo) => {
+  test.setTimeout(180_000);
+  const user = webUserFor("core-send-file", testInfo.repeatEachIndex);
+  await signUp(page, user);
+
+  // The web vault makes a file Send.
+  await page.goto("/#/sends");
+  await page.getByRole("button", { name: /Create$/ }).click();
+  await page.getByRole("menuitem", { name: "File" }).click();
+  await page.getByRole("textbox", { name: /Send name/ }).fill("File from the web vault");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "from-web.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Sent by the web vault.\n"),
+  });
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Send created successfully!")).toBeVisible();
+
+  // The core lists it, its name and its file's name opened with the key
+  // from its seed.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pb-interop-"));
+  const cert = await serverCertificate(dir);
+  const listed = core(dir, cert, user, { action: "sends" });
+  expect(listed.send).toEqual([
+    expect.objectContaining({
+      name: "File from the web vault",
+      kind: "file",
+      fileName: "from-web.txt",
+      opens: true,
+    }),
+  ]);
+
+  // The core makes one, and its link's page downloads the file and opens
+  // it, as someone without an account would.
+  const contents = Buffer.from(Array.from({ length: 70_000 }, (_, i) => (i * 7) % 251));
+  const file = path.join(dir, "floor plan.bin");
+  fs.writeFileSync(file, contents);
+  const made = core(dir, cert, user, { action: "makeFileSend", name: "File from the core", path: file });
+  const link = (made.send as { link: string }).link;
+  expect(link).toMatch(/\/#\/send\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]{22}$/);
+  const context = await browser.newContext({ ignoreHTTPSErrors: true, acceptDownloads: true });
+  const access = await context.newPage();
+  await access.goto(link);
+  await expect(access.getByText("floor plan.bin")).toBeVisible();
+  const [download] = await Promise.all([
+    access.waitForEvent("download"),
+    access.getByRole("button", { name: /Download/ }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe("floor plan.bin");
+  expect(fs.readFileSync(await download.path()).equals(contents)).toBe(true);
+  await context.close();
 });
