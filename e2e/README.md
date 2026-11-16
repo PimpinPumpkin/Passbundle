@@ -42,6 +42,8 @@ The new-device check's tests (`tests/api/new-device-check.spec.ts`, `tests/new-d
 
 The security key tests (`tests/connector-origins.spec.ts`) start a server of their own named `vault.connectors.test`, since WebAuthn won't take an IP address as a site's name, on `KK_CONNECTOR_SERVER_PORT` (default 8103).
 
+The tests of what the web vault and the extension show on each plan (`tests/plans-ui.spec.ts`, `tests/plans-ui-extension.spec.ts`) start two servers of their own with the admin page on, as the plans tests below do: one that enforces plans on `KK_PLANS_UI_SERVER_PORT` (default 8112), and one that doesn't on `KK_PLANS_UI_OFF_SERVER_PORT` (default 8113). They give and take away Premium the way the plans tests do.
+
 The test tenants tests (`tests/api/test-tenants.spec.ts`, `tests/test-tenants-web.spec.ts`) run `tools/test-tenants` as a person would, against a server of their own set up as the hosted test server is while the tool seeds it (`KK_LIKE_TEST_SERVER=1`: no email, the new-device check on, and sign-up only at the tool's domains, `KK_SIGNUPS_DOMAINS`), on `KK_TEST_TENANTS_SERVER_PORT` (default 8107).
 
 The closed sign-ups tests (`tests/mail/closed-sign-ups.spec.ts`, `tests/closed-sign-ups.spec.ts`) start a server of their own that isn't taking new accounts, or takes them only at some email domains (`KK_SIGNUPS=closed`, `KK_SIGNUPS_DOMAINS`), and start it again with other settings over the same data (`tests/support/closed-server.ts`): open first (`KK_SIGNUPS=open`), to make the accounts a closed server is then asked about, with and without email, and with the sign-up form's link sent by email (`KK_SIGNUPS_VERIFY=1`). It's on `KK_CLOSED_SERVER_PORT` (default 8108).
