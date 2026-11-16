@@ -71,6 +71,10 @@ export const singleOrgServerPort = process.env.KK_SINGLE_ORG_SERVER_PORT ?? "810
 // storage below what any plan gives, and a key for the data breach report
 // (server.mjs, KK_PLANS_CAPS), which the plans tests start themselves.
 export const plansCapsServerPort = process.env.KK_PLANS_CAPS_SERVER_PORT ?? "8111";
+// A plans server that sends email and runs the plans' clock every second
+// (server.mjs, KK_PLAN_REMINDERS_SCHEDULE), which the reminder emails' tests
+// start themselves (tests/mail/plans.spec.ts).
+export const plansMailServerPort = process.env.KK_PLANS_MAIL_SERVER_PORT ?? "8124";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??

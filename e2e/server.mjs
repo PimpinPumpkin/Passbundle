@@ -219,6 +219,14 @@ const child = spawn(paths.serverBin, [], {
     // (tests/api/plans.spec.ts makes up the token for the run). Every other
     // server keeps the defaults: plans not enforced, and no admin page.
     ...(keptData && process.env.KK_PLANS_ENFORCED === "1" ? { PLANS_ENFORCED: "true" } : {}),
+    // KK_PLAN_REMINDERS_SCHEDULE: when the plans' clock runs (trials for
+    // whatever has no plan, sync notices, and the reminder emails), for a side
+    // server whose test needs it to run now and again (tests/mail/plans.spec.ts),
+    // so the scheduler checks four times a second there. Every other server
+    // turns it off, so a run at 20 past the hour never moves a test's plans.
+    ...(keptData && process.env.KK_PLAN_REMINDERS_SCHEDULE
+      ? { PLAN_REMINDERS_SCHEDULE: process.env.KK_PLAN_REMINDERS_SCHEDULE, JOB_POLL_INTERVAL_MS: "250" }
+      : { PLAN_REMINDERS_SCHEDULE: "" }),
     ...(keptData && process.env.KK_ADMIN_TOKEN ? { ADMIN_TOKEN: process.env.KK_ADMIN_TOKEN } : {}),
     // KK_PLANS_CAPS=1, for the plans tests' third server: the operator's own
     // caps, below what any plan gives (2 MB of attachments for a person, 3 MB
