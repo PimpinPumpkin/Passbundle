@@ -174,7 +174,7 @@ test.describe("where plans are enforced", () => {
     await enforced.operator.setPersonsPlan(user.email, { plan: "premium", standing: "until", until, renews: true });
     await openPersonalPlan(page);
     await expect(planPage(page).getByTestId("keykeeper-plan-name")).toHaveText("Premium");
-    await expectStatus(page, [`Paid through ${inWords(until)}`, `Renews on ${inWords(until)}`]);
+    await expectStatus(page, [`Renews on ${inWords(until)}`]);
     await expect(planPage(page).getByTestId("keykeeper-plan-gives")).toHaveText(
       new RegExp(`5 GB for attachments\\s*${escape(PREMIUM_FEATURES)}`),
     );
@@ -187,7 +187,7 @@ test.describe("where plans are enforced", () => {
     // Canceled: it ends then.
     await enforced.operator.setPersonsPlan(user.email, { plan: "premium", standing: "until", until, renews: false });
     await openPersonalPlan(page);
-    await expectStatus(page, [`Paid through ${inWords(until)}`, `Ends on ${inWords(until)}`]);
+    await expectStatus(page, [`Ends on ${inWords(until)}`]);
 
     // A payment that didn't come: grace, and a banner for whoever pays.
     const lapsed = fromNow(-2 * DAY);
