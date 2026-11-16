@@ -443,6 +443,11 @@ Do each step on all three unless it names one.
 - [ ] As Alex, edit the same item on two devices within a few seconds: the second save is refused and it syncs.
 - [ ] As Alex, a login that asks for the master password shows only its name until it's given.
 
+**Send**
+- [ ] As Alex, the menu's "Send" opens a window: "New Send", then Name, "Text to share", "Deleted" (in 1 hour to 30 days), "Stops opening", "Most times it can be opened", a password, "Private note", "Hide my email from whoever opens it", and "Turn this Send off". Save: "Made the Send and copied its link. It clears in 30 seconds." The link opens it in another browser, asking for the password first if it has one.
+- [ ] As Alex, a Send made in the web vault (text or file) is in the list; tapping it edits it, the copy button copies its link, and the delete button asks "Delete <name>?" first.
+- [ ] As Alex in an organization with "Remove Send" on (Grace turns it on), the list says Sends can't be made or edited, and offers only the link and Delete; with "Send options" set to not hide the email, "Hide my email" isn't offered.
+
 **Import from browsers**
 - [ ] As Alex, on a computer whose browser has a few saved passwords (one the same as a login in Alex's vault, one with the same site and username but another password, one with no password): after unlocking, PassBundle offers to import them, once; "Not now" closes it and reads nothing. Later it's in the app's menu: Import from browsers.
 - [ ] The screen lists each browser profile, grouped by browser, with the account it's signed in to (or "Not signed in") and why it's chosen or not. Change the choice, then import: the summary says how many are new, how many go to "Check these: from <browser>" to compare, how many were there already, and how many had no password. The login with another password is in that folder. Import again: nothing comes in twice.
@@ -617,7 +622,7 @@ DESIGN or the apps say these aren't built; note it only if one appears:
 - Passkeys on computers (the desktop app only shows them); replacing an old passkey or choosing an existing login on phones.
 - Single sign-on in the desktop and phone apps; trusted-device unlock; other identity providers.
 - The nudge in the desktop and phone apps.
-- Send, archive, exports, imports (other than opening the web vault, and the desktop app's Import from browsers), making a template (New item does offer the custom templates made in the web vault or the extension), organization admin, and the MSP console in the desktop and phone apps.
+- Making a file Send in the desktop and phone apps (they make text Sends); archive, exports, imports (other than opening the web vault, and the desktop app's Import from browsers), making a template (New item does offer the custom templates made in the web vault or the extension), organization admin, and the MSP console in the desktop and phone apps.
 - Filling one-time codes, cards, and identities on Android; filling in desktop apps.
 - Typed template fields beyond text, hidden, and yes or no; a template date that sets Expires; a Templates view.
 - A system notification from the desktop agent, and phone reminders while the app is closed; email reminders.

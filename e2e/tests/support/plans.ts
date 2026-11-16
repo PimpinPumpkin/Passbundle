@@ -16,10 +16,25 @@ import { newItem } from "./web";
 
 const e2eDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
-const DAY = 86_400_000;
+export const DAY = 86_400_000;
 
 /** A moment this far from now, to the second, as the operator's route takes dates. */
-const fromNow = (ms: number) => new Date(Math.floor((Date.now() + ms) / 1000) * 1000).toISOString();
+export const fromNow = (ms: number) => new Date(Math.floor((Date.now() + ms) / 1000) * 1000).toISOString();
+
+/** A date as the apps say it: "December 15, 2026" (the tests run in UTC, in US English). */
+export const inWords = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { dateStyle: "long", timeZone: "UTC" });
+
+/** A plan as the operator writes it (deploy/README.md, "Plans"). */
+export type PlanData = {
+  plan: string;
+  freeUntil?: string;
+  freeWhy?: string;
+  standing: string;
+  until?: string;
+  renews: boolean;
+  billed?: string;
+};
 
 /** The operator, signed in to one server's admin page. */
 export class Operator {
@@ -43,6 +58,17 @@ export class Operator {
       data: { plan: "premium", standing: "until", until: fromNow(30 * DAY), renews: true },
     });
     expect(written.status(), await written.text()).toBe(200);
+  }
+
+  /** Writes a plan for a person, an organization, or an MSP's pool, by id. */
+  async setPlan(kind: "users" | "organizations" | "msps", id: string, data: PlanData) {
+    const written = await this.http.post(`/admin/plans/${kind}/${id}`, { data });
+    expect(written.status(), await written.text()).toBe(200);
+  }
+
+  /** Writes a person's plan, by their email address. */
+  async setPersonsPlan(email: string, data: PlanData) {
+    await this.setPlan("users", await this.userId(email), data);
   }
 
   /** Takes a person's plan away, which leaves them on Free. */
