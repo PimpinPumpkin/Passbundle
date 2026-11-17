@@ -116,6 +116,12 @@ export const invoicesServerPort = process.env.KK_INVOICES_SERVER_PORT ?? "8152";
 export const invoicesOffServerPort = process.env.KK_INVOICES_OFF_SERVER_PORT ?? "8153";
 export const invoicesNoProviderServerPort = process.env.KK_INVOICES_NO_PROVIDER_SERVER_PORT ?? "8154";
 export const invoicesRefusedServerPort = process.env.KK_INVOICES_REFUSED_SERVER_PORT ?? "8155";
+// The tests of event streaming across restarts and servers
+// (tests/api/event-streaming-servers.spec.ts): a server that may send to
+// receivers on 127.0.0.1, which they stop, kill, and start again on the same
+// data; and a second server on the main test server's database.
+export const streamingServerPort = process.env.KK_STREAMING_SERVER_PORT ?? "8160";
+export const streamingSecondServerPort = process.env.KK_STREAMING_SECOND_SERVER_PORT ?? "8161";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??
