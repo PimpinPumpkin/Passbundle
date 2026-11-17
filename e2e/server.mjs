@@ -228,6 +228,28 @@ const child = spawn(paths.serverBin, [], {
       ? { PLAN_REMINDERS_SCHEDULE: process.env.KK_PLAN_REMINDERS_SCHEDULE, JOB_POLL_INTERVAL_MS: "250" }
       : { PLAN_REMINDERS_SCHEDULE: "" }),
     ...(keptData && process.env.KK_ADMIN_TOKEN ? { ADMIN_TOKEN: process.env.KK_ADMIN_TOKEN } : {}),
+    // KK_BILLING_PROVIDER: the payment provider the server learns who has
+    // paid from (DESIGN.md, "Learning who has paid"), with its API address and
+    // the secrets a test makes up for the run (KK_BILLING_API_KEY,
+    // KK_BILLING_WEBHOOK_SECRET, and KK_BILLING_WEBHOOK_SECRET_OLD while one is
+    // replaced). KK_BILLING_LOOK_SCHEDULE runs the job that asks it again that
+    // often, so the scheduler checks four times a second. Only for a side
+    // server a test starts itself (tests/api/billing.spec.ts, against
+    // billing-standin.mjs); every other server has no provider.
+    ...(keptData && process.env.KK_BILLING_PROVIDER
+      ? {
+          BILLING_PROVIDER: process.env.KK_BILLING_PROVIDER,
+          BILLING_API_BASE: process.env.KK_BILLING_API_BASE ?? "",
+          BILLING_API_KEY: process.env.KK_BILLING_API_KEY ?? "",
+          BILLING_WEBHOOK_SECRET: process.env.KK_BILLING_WEBHOOK_SECRET ?? "",
+          ...(process.env.KK_BILLING_WEBHOOK_SECRET_OLD
+            ? { BILLING_WEBHOOK_SECRET_OLD: process.env.KK_BILLING_WEBHOOK_SECRET_OLD }
+            : {}),
+        }
+      : {}),
+    ...(keptData && process.env.KK_BILLING_LOOK_SCHEDULE
+      ? { BILLING_LOOK_SCHEDULE: process.env.KK_BILLING_LOOK_SCHEDULE, JOB_POLL_INTERVAL_MS: "250" }
+      : {}),
     // KK_PLANS_CAPS=1, for the plans tests' third server: the operator's own
     // caps, below what any plan gives (2 MB of attachments for a person, 3 MB
     // for an organization, and 1 MB of Send files), and a made-up key for the
