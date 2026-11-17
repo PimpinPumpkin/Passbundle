@@ -151,6 +151,9 @@ const child = spawn(paths.serverBin, [], {
       ? { DATABASE_URL: process.env.KK_DATABASE_URL }
       : {}),
     ...(withGroups ? { ORG_GROUPS_ENABLED: "true" } : {}),
+    // KK_EVENTS=1: the event log on, for a server a test starts itself
+    // (tests/api/plans-families.spec.ts). Every other server keeps it off.
+    ...(process.env.KK_EVENTS === "1" ? { ORG_EVENTS_ENABLED: "true" } : {}),
     // KK_SINGLE_ORG_FOR_RECOVERY=1: account recovery needs single organization
     // first, as Bitwarden always does (tests/api/msp-required-policies.spec.ts).
     ...(process.env.KK_SINGLE_ORG_FOR_RECOVERY === "1"
@@ -258,6 +261,24 @@ const child = spawn(paths.serverBin, [], {
     ...(keptData && process.env.KK_BILLING_LOOK_SCHEDULE
       ? { BILLING_LOOK_SCHEDULE: process.env.KK_BILLING_LOOK_SCHEDULE, JOB_POLL_INTERVAL_MS: "250" }
       : {}),
+    // KK_BILLING_INVOICE_SCHEDULE: when the job that bills MSPs' pools and
+    // Business by the day runs, with a seat's prices made up for the run
+    // (KK_BILLING_SEAT_PRICES_MSP, KK_BILLING_SEAT_PRICES_BUSINESS), for a side
+    // server a test starts itself (tests/api/invoices.spec.ts). Every other
+    // server turns billing by the day off, so Stripe's servers there need no
+    // seat prices and take no card for Business or a pool.
+    ...(keptData && process.env.KK_BILLING_INVOICE_SCHEDULE
+      ? {
+          BILLING_INVOICE_SCHEDULE: process.env.KK_BILLING_INVOICE_SCHEDULE,
+          JOB_POLL_INTERVAL_MS: "250",
+          ...(process.env.KK_BILLING_SEAT_PRICES_MSP !== undefined
+            ? { BILLING_SEAT_PRICES_MSP: process.env.KK_BILLING_SEAT_PRICES_MSP }
+            : {}),
+          ...(process.env.KK_BILLING_SEAT_PRICES_BUSINESS !== undefined
+            ? { BILLING_SEAT_PRICES_BUSINESS: process.env.KK_BILLING_SEAT_PRICES_BUSINESS }
+            : {}),
+        }
+      : { BILLING_INVOICE_SCHEDULE: "" }),
     // KK_PLANS_CAPS=1, for the plans tests' third server: the operator's own
     // caps, below what any plan gives (2 MB of attachments for a person, 3 MB
     // for an organization, and 1 MB of Send files), and a made-up key for the

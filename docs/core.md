@@ -548,6 +548,14 @@ DESIGN.md, "Send in the apps" (the rules, the format, and the tests), in the app
 - **Policies** (`send::SendPolicy`, from the kept sync, as the generator's policy is): "Disable Send" and "Send options", not binding owners and admins.
 - **The bridge:** `pb_sends`, `pb_send` (the editor's view, with the text and the note), `pb_save_send` (slow; the password comes as an argument of its own), `pb_send_file` (slow, one file at a time with attachments, with their `pb_upload_progress`, `pb_upload_go`, and `pb_upload_cancel`), `pb_send_file_limit`, `pb_remove_send_password`, `pb_delete_send`.
 
+## Organizations that remove cards
+
+DESIGN.md, "Organizations that remove cards" (the rule and the tests), in the apps (`core/src/restricted_types.rs`):
+
+- **Read as the vault opens** (`RestrictedTypes::read`, from the sync's `policies` and the person's organizations): an item the policy hides is never opened, and is in none of `Vault::items`, `Vault::damaged`, or anything built from them (lists, search, counts, reminders, filling, the export, "All accounts"). `Vault::hides` says which ids it left out, and `App::save` and `App::trash` answer for those as for an id that isn't there.
+- **New items** (`Vault::restricted`, `RestrictedTypes::refuses_new`): `App::save` refuses a new item of a removed kind, or an edit that would make one; `templates::groups` leaves out templates that would; `import::read` leaves those items out (`LeftOut::Restricted`); and `pb_restricted_kinds` tells New which kinds not to offer.
+- **Per account, and at each sync:** each account's vault reads its own sync, and every sync opens the vault again, so a change comes with the next sync.
+
 ## Speed
 
 The KDF is most of unlocking. On ARM (Apple silicon, phones) the core uses the chip's SHA-256 instructions, so PBKDF2 at 600,000 iterations takes about 46 ms on an M1 Pro instead of 288. x86 uses its own SHA extensions.
