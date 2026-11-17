@@ -336,10 +336,13 @@ async function database(server: InvoicesServer) {
         const insert = db.prepare(
           "INSERT OR REPLACE INTO msp_client_seats (msp_uuid, org_uuid, day, seats, org_name) VALUES (?, ?, ?, ?, ?)",
         );
+        // All at once, so the invoices job never reads half a month.
+        db.exec("BEGIN IMMEDIATE");
         for (let d = 1; d <= daysIn(month); d++) {
           const n = seats(d);
           if (n !== null) insert.run(mspId, orgId, day(month, d), n, name);
         }
+        db.exec("COMMIT");
       } finally {
         db.close();
       }
@@ -349,10 +352,12 @@ async function database(server: InvoicesServer) {
       const db = open(false);
       try {
         const insert = db.prepare("INSERT OR REPLACE INTO org_seats (org_uuid, day, seats) VALUES (?, ?, ?)");
+        db.exec("BEGIN IMMEDIATE");
         for (let d = 1; d <= daysIn(month); d++) {
           const n = seats(d);
           if (n !== null) insert.run(orgId, day(month, d), n);
         }
+        db.exec("COMMIT");
       } finally {
         db.close();
       }
