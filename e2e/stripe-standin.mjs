@@ -10,24 +10,45 @@
 // The adapter's calls, each with `Authorization: Bearer <KK_STRIPE_API_KEY>`
 // and `Stripe-Version: <KK_STRIPE_VERSION>`, POSTs form-encoded:
 //   POST   /v1/customers                -> a customer
+//   GET    /v1/customers/<id>           -> the customer, with its default card for invoices
+//   POST   /v1/customers/<id>           -> the customer, with a card of its made its default
 //   POST   /v1/checkout/sessions        -> a Checkout Session, with its page's url
+//                                         (subscription mode, or setup mode for a card)
+//   GET    /v1/checkout/sessions        -> a page of a customer's Checkout Sessions,
+//                                         each SetupIntent and its card expanded if asked
 //   POST   /v1/billing_portal/sessions  -> a portal session, with its page's url
 //   GET    /v1/subscriptions            -> a page of a customer's subscriptions
 //   DELETE /v1/subscriptions/<id>       -> the subscription, canceled at once
+//   GET    /v1/invoiceitems             -> a page of a customer's invoice items
+//   POST   /v1/invoiceitems             -> an invoice item, for the customer's next invoice
+//   GET    /v1/invoices                 -> a page of a customer's invoices
+//   POST   /v1/invoices                 -> a draft invoice, taking the pending items if asked
 // Anything else, a parameter Stripe wouldn't take, a wrong key, or another
-// version is answered with Stripe's error shape and status.
+// version is answered with Stripe's error shape and status. A POST with an
+// `Idempotency-Key` is answered as the first one with that key was, as long
+// as its parameters are the same, until a test says a day has passed.
 //
 // The pages it answers are on a port of their own, over HTTPS with a
 // throwaway certificate, since the apps open only https pages: a Checkout
 // page whose button pays for a year (the subscription goes active, and Stripe's
 // webhooks are sent: checkout.session.completed and
-// customer.subscription.created), and a portal whose button cancels at the
-// period's end (customer.subscription.updated). Each goes back where the
-// server asked.
+// customer.subscription.created), or in setup mode saves a card to the
+// customer (checkout.session.completed), and a
+// portal whose button cancels at the period's end
+// (customer.subscription.updated). Each goes back where the server asked.
 //
-// A test's controls (/control/...): reset, refuse every call, read the calls
-// made, the customers, and the subscriptions, change a subscription, make a
-// customer and a subscription directly, and send a webhook.
+// An invoice made with auto_advance waits for a test to say how Stripe's
+// collection goes (/control/collect): finalized, then paid or failed on the
+// card on file, with the webhook Stripe sends for it (invoice.paid or
+// invoice.payment_failed). It sends only the events the server's endpoint is
+// set to take (deploy/README.md, "Stripe").
+//
+// A test's controls (/control/...): reset, refuse every call, fail one kind
+// of call before or after it's done, forget the idempotency keys (as a day
+// passing does), read the calls made, the customers, the subscriptions, the
+// invoice items, and the invoices, change a subscription, make a customer and
+// a subscription directly, collect an invoice, take a card off a customer, and
+// send a webhook.
 import { execFileSync } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
 import fs from "node:fs";
@@ -96,6 +117,18 @@ export async function startStripeStandin({ port, pagesPort, apiKey, webhookSecre
   const portals = new Map();
   /** id -> subscription object */
   const subscriptions = new Map();
+  /** id -> SetupIntent object, made when a setup page's button is pressed */
+  const setupIntents = new Map();
+  /** id -> PaymentMethod object (a card) */
+  const paymentMethods = new Map();
+  /** id -> invoice item object */
+  const invoiceItems = new Map();
+  /** id -> invoice object */
+  const invoices = new Map();
+  /** Idempotency-Key -> { method, path, form, status, body }, the first answer for that key. */
+  const idempotent = new Map();
+  /** Calls to fail: { method, path, when: "before" | "after", times, forget }. */
+  let failures = [];
   /** Every API call: { method, path, query, form, version, bearer, contentType }. */
   const calls = [];
   /**
@@ -175,7 +208,15 @@ export async function startStripeStandin({ port, pagesPort, apiKey, webhookSecre
   }
 
   function makeCustomer(metadata = {}) {
-    const customer = { id: id("cus"), object: "customer", created: now(), email: null, livemode: false, metadata };
+    const customer = {
+      id: id("cus"),
+      object: "customer",
+      created: now(),
+      email: null,
+      invoice_settings: { custom_fields: null, default_payment_method: null, footer: null, rendering_options: null },
+      livemode: false,
+      metadata,
+    };
     customers.set(customer.id, customer);
     return customer;
   }
@@ -255,9 +296,66 @@ export async function startStripeStandin({ port, pagesPort, apiKey, webhookSecre
       sessions.clear();
       portals.clear();
       subscriptions.clear();
+      setupIntents.clear();
+      paymentMethods.clear();
+      invoiceItems.clear();
+      invoices.clear();
+      idempotent.clear();
+      failures = [];
       calls.length = 0;
       refuse = false;
       return json(res, 200, {});
+    }
+    if (path === "/control/fail" && req.method === "POST") {
+      // The next `times` calls of this method and path fail with a 500: before
+      // anything is done, or after it's done (as an answer lost on the way
+      // back). With `forget`, failing after also forgets the idempotency keys,
+      // as a day passing would, so only what the adapter looks up finds it.
+      const { method, path: failing, when, times, forget, clear } = await read();
+      if (clear) {
+        failures = [];
+      } else {
+        failures.push({ method, path: failing, when: when ?? "before", times: times ?? 1, forget: !!forget });
+      }
+      return json(res, 200, { failures });
+    }
+    if (path === "/control/forget-keys" && req.method === "POST") {
+      idempotent.clear();
+      return json(res, 200, {});
+    }
+    if (path === "/control/invoiceitems" && req.method === "GET") {
+      const customer = url.searchParams.get("customer");
+      return json(res, 200, [...invoiceItems.values()].filter((i) => customer === null || i.customer === customer));
+    }
+    if (path === "/control/invoices" && req.method === "GET") {
+      const customer = url.searchParams.get("customer");
+      return json(res, 200, [...invoices.values()].filter((i) => customer === null || i.customer === customer).map(invoiceLines));
+    }
+    if (path === "/control/collect" && req.method === "POST") {
+      // Stripe's automatic collection of an invoice: finalized (if it's a
+      // draft) and an attempt on the customer's default card, which pays it,
+      // or fails when `fail` is set or there's no card; with webhooks.
+      const { invoice: invoiceId, fail } = await read();
+      const invoice = invoices.get(invoiceId);
+      if (!invoice) {
+        return json(res, 404, { error: "no such invoice" });
+      }
+      return json(res, 200, await collect(invoice, !!fail));
+    }
+    if (path === "/control/detach" && req.method === "POST") {
+      // The card taken off its customer, as in the customer portal.
+      const { payment_method: pm } = await read();
+      const card = paymentMethods.get(pm);
+      if (!card || !card.customer) {
+        return json(res, 404, { error: "no such card on a customer" });
+      }
+      const customer = customers.get(card.customer);
+      card.customer = null;
+      if (customer.invoice_settings.default_payment_method === pm) {
+        customer.invoice_settings.default_payment_method = null;
+        await sendEvent("customer.updated", customer, customer.id);
+      }
+      return json(res, 200, card);
     }
     if (path === "/control/refuse" && req.method === "POST") {
       refuse = !!(await read()).refuse;
@@ -320,19 +418,110 @@ export async function startStripeStandin({ port, pagesPort, apiKey, webhookSecre
   /** The parameters a call takes, as Stripe's reference lists the ones the adapter uses. */
   const allowed = {
     customers: [/^metadata\[[a-z_]+\]$/, /^email$/, /^name$/],
+    customerUpdate: [/^metadata\[[a-z_]+\]$/, /^invoice_settings\[default_payment_method\]$/],
     sessions: [
       /^mode$/,
+      /^currency$/,
       /^customer$/,
       /^client_reference_id$/,
       /^line_items\[\d+\]\[(price|quantity)\]$/,
       /^subscription_data\[metadata\]\[[a-z_]+\]$/,
+      /^setup_intent_data\[metadata\]\[[a-z_]+\]$/,
       /^success_url$/,
       /^cancel_url$/,
       /^metadata\[[a-z_]+\]$/,
     ],
     portal: [/^customer$/, /^return_url$/],
     list: [/^customer$/, /^status$/, /^limit$/, /^starting_after$/, /^ending_before$/],
+    sessionList: [/^customer$/, /^status$/, /^limit$/, /^starting_after$/, /^expand\[\]$/],
+    itemList: [/^customer$/, /^pending$/, /^limit$/, /^starting_after$/],
+    invoiceList: [/^customer$/, /^status$/, /^limit$/, /^starting_after$/],
+    item: [
+      /^customer$/,
+      /^amount$/,
+      /^currency$/,
+      /^description$/,
+      /^period\[(start|end)\]$/,
+      /^metadata\[[a-z_]+\]$/,
+      /^invoice$/,
+    ],
+    invoice: [
+      /^customer$/,
+      /^collection_method$/,
+      /^auto_advance$/,
+      /^pending_invoice_items_behavior$/,
+      /^description$/,
+      /^metadata\[[a-z_]+\]$/,
+    ],
   };
+  /** The metadata a form sets, from its `metadata[...]` fields. */
+  const metadataOf = (form, prefix = "metadata") => {
+    const metadata = {};
+    for (const [name, value] of Object.entries(form)) {
+      const key = new RegExp(`^${prefix.replace(/[[\]]/g, "\\$&")}\\[([a-z_]+)\\]$`).exec(name)?.[1];
+      if (key) metadata[key] = value;
+    }
+    return metadata;
+  };
+  /** One page of `list` (newest first), after `starting_after`, as Stripe pages a list. */
+  const listPage = (res, list, query, url) => {
+    const limit = Number(query.limit ?? 10);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      return error(res, 400, "invalid_request_error", "Limit must be between 1 and 100.", { param: "limit" });
+    }
+    let rest = [...list].sort((a, b) => b.created - a.created || (a.id < b.id ? 1 : -1));
+    if (query.starting_after) {
+      const at = rest.findIndex((o) => o.id === query.starting_after);
+      if (at < 0) return missing(res, "object", query.starting_after);
+      rest = rest.slice(at + 1);
+    }
+    return json(res, 200, { object: "list", url, has_more: rest.length > limit, data: rest.slice(0, limit) });
+  };
+  /** An invoice as Stripe answers it, its lines the items it took. */
+  function invoiceLines(invoice) {
+    const lines = [...invoiceItems.values()].filter((item) => item.invoice === invoice.id);
+    invoice.lines = {
+      object: "list",
+      data: lines.map((item) => ({
+        id: `il_${item.id}`,
+        object: "line_item",
+        amount: item.amount,
+        currency: item.currency,
+        description: item.description,
+        metadata: item.metadata,
+        period: item.period,
+        parent: { type: "invoice_item_details", invoice_item_details: { invoice_item: item.id } },
+      })),
+      has_more: false,
+      total_count: lines.length,
+      url: `/v1/invoices/${invoice.id}/lines`,
+    };
+    const total = lines.reduce((sum, item) => sum + item.amount, 0);
+    Object.assign(invoice, { subtotal: total, total, amount_due: total - invoice.amount_paid, amount_remaining: total - invoice.amount_paid });
+    return invoice;
+  }
+  /** Stripe's automatic collection of `invoice`: finalized, then one attempt on the default card. */
+  async function collect(invoice, fail) {
+    if (invoice.status === "draft") {
+      Object.assign(invoice, { status: "open", number: `STANDIN-${(next += 1).toString().padStart(4, "0")}` });
+      invoice.status_transitions.finalized_at = now();
+    }
+    if (!["open", "uncollectible"].includes(invoice.status)) {
+      return invoice;
+    }
+    const card = customers.get(invoice.customer)?.invoice_settings.default_payment_method;
+    invoice.attempted = true;
+    invoice.attempt_count += 1;
+    if (fail || !card) {
+      invoice.next_payment_attempt = now() + 3 * DAY;
+      await sendEvent("invoice.payment_failed", invoiceLines(invoice), invoice.customer);
+    } else {
+      Object.assign(invoice, { status: "paid", amount_paid: invoice.total, next_payment_attempt: null });
+      invoice.status_transitions.paid_at = now();
+      await sendEvent("invoice.paid", invoiceLines(invoice), invoice.customer);
+    }
+    return invoiceLines(invoice);
+  }
   const unknownParameter = (res, params, rules) => {
     for (const name of Object.keys(params)) {
       if (!rules.some((rule) => rule.test(name))) {
@@ -372,6 +561,49 @@ export async function startStripeStandin({ port, pagesPort, apiKey, webhookSecre
     if (req.method === "POST" && contentType !== "application/x-www-form-urlencoded") {
       return error(res, 400, "invalid_request_error", "Requests are form-encoded.");
     }
+    const failing = failures.find((f) => f.times > 0 && f.method === req.method && f.path === path);
+    if (failing?.when === "before") {
+      failing.times -= 1;
+      return error(res, 500, "api_error", "The stand-in failed this call before doing it.");
+    }
+    // An idempotent request answered before is answered the same, while its key is kept.
+    const key = req.method === "POST" ? req.headers["idempotency-key"] : undefined;
+    if (key !== undefined && idempotent.has(key)) {
+      const first = idempotent.get(key);
+      if (first.method !== req.method || first.path !== path || JSON.stringify(first.form) !== JSON.stringify(form)) {
+        return error(res, 400, "idempotency_error", "Keys for idempotent requests can only be used with the same parameters they were first used with.");
+      }
+      res.writeHead(first.status, { "Content-Type": "application/json", "Idempotent-Replayed": "true" });
+      return res.end(first.body);
+    }
+    if (key !== undefined || failing?.when === "after") {
+      // Done, then kept for the key, and with a failure after it, lost on the way back.
+      const answer = { status: 200, body: "" };
+      const shadow = {
+        writeHead(status) {
+          answer.status = status;
+        },
+        end(body) {
+          answer.body = body ?? "";
+        },
+      };
+      await route(req, shadow, path, form, query);
+      if (key !== undefined && answer.status < 500) {
+        idempotent.set(key, { method: req.method, path, form, status: answer.status, body: answer.body });
+      }
+      if (failing?.when === "after") {
+        failing.times -= 1;
+        if (failing.forget) idempotent.clear();
+        return error(res, 500, "api_error", "The stand-in did this call and then failed to answer.");
+      }
+      res.writeHead(answer.status, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+      return res.end(answer.body);
+    }
+    return route(req, res, path, form, query);
+  }
+
+  /** The endpoints, once a call has passed the checks every call gets. */
+  async function route(req, res, path, form, query) {
 
     if (path === "/v1/customers" && req.method === "POST") {
       if (unknownParameter(res, form, allowed.customers)) return;
@@ -385,16 +617,99 @@ export async function startStripeStandin({ port, pagesPort, apiKey, webhookSecre
       return json(res, 200, customer);
     }
 
+    const customerPath = /^\/v1\/customers\/([A-Za-z0-9_]+)$/.exec(path);
+    if (customerPath && req.method === "GET") {
+      if (unknownParameter(res, query, [])) return;
+      const customer = customers.get(customerPath[1]);
+      return customer ? json(res, 200, customer) : missing(res, "customer", customerPath[1]);
+    }
+    if (customerPath && req.method === "POST") {
+      if (unknownParameter(res, form, allowed.customerUpdate)) return;
+      const customer = customers.get(customerPath[1]);
+      if (!customer) {
+        return missing(res, "customer", customerPath[1]);
+      }
+      const card = form["invoice_settings[default_payment_method]"];
+      if (card !== undefined) {
+        if (paymentMethods.get(card)?.customer !== customer.id) {
+          return error(res, 400, "invalid_request_error", `The payment method \`${card}\` doesn't belong to the Customer you're updating.`, {
+            param: "invoice_settings[default_payment_method]",
+          });
+        }
+        customer.invoice_settings.default_payment_method = card;
+      }
+      Object.assign(customer.metadata, metadataOf(form));
+      return json(res, 200, customer);
+    }
+
+    if (path === "/v1/checkout/sessions" && req.method === "GET") {
+      if (unknownParameter(res, query, allowed.sessionList)) return;
+      const expand = query["expand[]"];
+      if (expand !== undefined && !["data.setup_intent", "data.setup_intent.payment_method"].includes(expand)) {
+        return error(res, 400, "invalid_request_error", `This property cannot be expanded (${expand}).`, { param: "expand" });
+      }
+      const listed = [...sessions.values()]
+        .filter((s) => query.customer === undefined || s.customer === query.customer)
+        .filter((s) => query.status === undefined || s.status === query.status)
+        .map((session) => {
+          const shown = publicSession(session);
+          if (expand && shown.setup_intent) {
+            const intent = { ...setupIntents.get(shown.setup_intent) };
+            if (expand.endsWith(".payment_method") && intent.payment_method) {
+              intent.payment_method = { ...paymentMethods.get(intent.payment_method) };
+            }
+            shown.setup_intent = intent;
+          }
+          return shown;
+        });
+      return listPage(res, listed, query, "/v1/checkout/sessions");
+    }
+
     if (path === "/v1/checkout/sessions" && req.method === "POST") {
       if (unknownParameter(res, form, allowed.sessions)) return;
-      if (form.mode !== "subscription") {
-        return error(res, 400, "invalid_request_error", "The stand-in takes only mode=subscription.", { param: "mode" });
+      if (form.mode !== "subscription" && form.mode !== "setup") {
+        return error(res, 400, "invalid_request_error", "The stand-in takes mode=subscription or mode=setup.", { param: "mode" });
       }
       if (!form.success_url) {
         return error(res, 400, "invalid_request_error", "Missing required param: success_url.", { param: "success_url" });
       }
       if (!customers.has(form.customer)) {
         return missing(res, "customer", form.customer);
+      }
+      if (form.mode === "setup") {
+        // Setup mode saves a card and charges nothing: no line items, and the
+        // currency, which dynamic payment methods need.
+        if (Object.keys(form).some((name) => name.startsWith("line_items") || name.startsWith("subscription_data"))) {
+          return error(res, 400, "invalid_request_error", "line_items and subscription_data can't be used in setup mode.", { param: "line_items" });
+        }
+        if (form.currency !== "usd") {
+          return error(res, 400, "invalid_request_error", "Missing required param: currency.", { param: "currency" });
+        }
+        const sessionId = `cs_test_${randomBytes(24).toString("hex")}`;
+        const session = {
+          id: sessionId,
+          object: "checkout.session",
+          cancel_url: form.cancel_url ?? null,
+          client_reference_id: form.client_reference_id ?? null,
+          created: now(),
+          currency: "usd",
+          customer: form.customer,
+          expires_at: now() + DAY,
+          livemode: false,
+          metadata: metadataOf(form),
+          mode: "setup",
+          payment_status: "no_payment_required",
+          setup_intent: null,
+          status: "open",
+          subscription: null,
+          success_url: form.success_url,
+          ui_mode: "hosted_page",
+          url: `${pages}/c/pay/${sessionId}`,
+          _intentMetadata: metadataOf(form, "setup_intent_data[metadata]"),
+        };
+        sessions.set(sessionId, session);
+        hooks.set(form.customer, hookFor(form.success_url));
+        return json(res, 200, publicSession(session));
       }
       const price = form["line_items[0][price]"];
       if (!prices.includes(price)) {
@@ -488,6 +803,100 @@ export async function startStripeStandin({ port, pagesPort, apiKey, webhookSecre
       return json(res, 200, { object: "list", url: "/v1/subscriptions", has_more: list.length > limit, data: list.slice(0, limit) });
     }
 
+    if (path === "/v1/invoiceitems" && req.method === "GET") {
+      if (unknownParameter(res, query, allowed.itemList)) return;
+      const listed = [...invoiceItems.values()]
+        .filter((item) => query.customer === undefined || item.customer === query.customer)
+        .filter((item) => query.pending === undefined || (query.pending === "true") === (item.invoice === null));
+      return listPage(res, listed, query, "/v1/invoiceitems");
+    }
+    if (path === "/v1/invoiceitems" && req.method === "POST") {
+      if (unknownParameter(res, form, allowed.item)) return;
+      if (!customers.has(form.customer)) {
+        return missing(res, "customer", form.customer);
+      }
+      if (!/^-?\d+$/.test(form.amount ?? "") || form.currency !== "usd") {
+        return error(res, 400, "invalid_request_error", "An invoice item needs an amount in cents and its currency.", { param: "amount" });
+      }
+      const start = Number(form["period[start]"]);
+      const end = Number(form["period[end]"]);
+      if (!Number.isInteger(start) || !Number.isInteger(end) || end < start) {
+        return error(res, 400, "invalid_request_error", "The period's end must be at or after its start.", { param: "period" });
+      }
+      const item = {
+        id: id("ii"),
+        object: "invoiceitem",
+        amount: Number(form.amount),
+        currency: form.currency,
+        customer: form.customer,
+        created: now(),
+        date: now(),
+        description: form.description ?? null,
+        discountable: true,
+        invoice: null,
+        livemode: false,
+        metadata: metadataOf(form),
+        parent: null,
+        period: { start, end },
+        proration: false,
+        quantity: 1,
+      };
+      invoiceItems.set(item.id, item);
+      return json(res, 200, item);
+    }
+
+    if (path === "/v1/invoices" && req.method === "GET") {
+      if (unknownParameter(res, query, allowed.invoiceList)) return;
+      const listed = [...invoices.values()]
+        .filter((invoice) => query.customer === undefined || invoice.customer === query.customer)
+        .filter((invoice) => query.status === undefined || invoice.status === query.status)
+        .map(invoiceLines);
+      return listPage(res, listed, query, "/v1/invoices");
+    }
+    if (path === "/v1/invoices" && req.method === "POST") {
+      if (unknownParameter(res, form, allowed.invoice)) return;
+      const customer = customers.get(form.customer);
+      if (!customer) {
+        return missing(res, "customer", form.customer);
+      }
+      if (!["charge_automatically", "send_invoice", undefined].includes(form.collection_method)) {
+        return error(res, 400, "invalid_request_error", "Invalid collection_method.", { param: "collection_method" });
+      }
+      const invoice = {
+        id: id("in"),
+        object: "invoice",
+        amount_due: 0,
+        amount_paid: 0,
+        amount_remaining: 0,
+        attempt_count: 0,
+        attempted: false,
+        auto_advance: form.auto_advance === "true",
+        billing_reason: "manual",
+        collection_method: form.collection_method ?? "charge_automatically",
+        created: now(),
+        currency: "usd",
+        customer: customer.id,
+        default_payment_method: null,
+        description: form.description ?? null,
+        livemode: false,
+        metadata: metadataOf(form),
+        next_payment_attempt: null,
+        number: null,
+        status: "draft",
+        status_transitions: { finalized_at: null, marked_uncollectible_at: null, paid_at: null, voided_at: null },
+        subtotal: 0,
+        total: 0,
+      };
+      invoices.set(invoice.id, invoice);
+      // Pending items go on it only when asked: Stripe's default is to leave them.
+      if (form.pending_invoice_items_behavior === "include") {
+        for (const item of invoiceItems.values()) {
+          if (item.customer === customer.id && item.invoice === null) item.invoice = invoice.id;
+        }
+      }
+      return json(res, 200, invoiceLines(invoice));
+    }
+
     const cancel = /^\/v1\/subscriptions\/([A-Za-z0-9_]+)$/.exec(path);
     if (cancel && req.method === "DELETE") {
       const subscription = subscriptions.get(cancel[1]);
@@ -525,6 +934,44 @@ export async function startStripeStandin({ port, pagesPort, apiKey, webhookSecre
     const checkout = /^\/c\/pay\/(cs_test_[0-9a-f]+)(\/pay)?$/.exec(url.pathname);
     if (checkout && sessions.has(checkout[1])) {
       const session = sessions.get(checkout[1]);
+      if (session.mode === "setup") {
+        if (checkout[2] && req.method === "POST") {
+          if (session.status === "open") {
+            // A card saved to the customer, as Checkout's setup mode does.
+            const card = {
+              id: id("pm"),
+              object: "payment_method",
+              card: { brand: "visa", exp_month: 12, exp_year: 2030, last4: "4242" },
+              created: now(),
+              customer: session.customer,
+              livemode: false,
+              metadata: {},
+              type: "card",
+            };
+            paymentMethods.set(card.id, card);
+            const intent = {
+              id: id("seti"),
+              object: "setup_intent",
+              created: now(),
+              customer: session.customer,
+              livemode: false,
+              metadata: session._intentMetadata,
+              payment_method: card.id,
+              status: "succeeded",
+              usage: "off_session",
+            };
+            setupIntents.set(intent.id, intent);
+            Object.assign(session, { status: "complete", setup_intent: intent.id });
+            await sendEvent("checkout.session.completed", publicSession(session), session.customer);
+          }
+          return back(res, session.success_url);
+        }
+        return page(
+          res,
+          "Stand-in Stripe Checkout",
+          `<p>Save a card for ${escape(session.client_reference_id)}. Nothing is charged now.</p><form method="post" action="/c/pay/${escape(session.id)}/pay"><button type="submit">Save card</button></form>${session.cancel_url ? `<p><a href="${escape(session.cancel_url)}">Back</a></p>` : ""}`,
+        );
+      }
       if (checkout[2] && req.method === "POST") {
         if (session.status === "open") {
           const subscription = makeSubscription({ customer: session.customer, price: session._price, metadata: session._metadata });
