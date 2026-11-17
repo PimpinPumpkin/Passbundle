@@ -1071,7 +1071,7 @@ test.describe("a server set up with the stand-in for anything but tests", () => 
       ["no address", { apiBase: "" }],
       ["a key that looks live", { apiKey: "rk_live_madeup" }],
       ["no webhook secret", { secrets: [""] }],
-      ["a provider the server doesn't have", { provider: "stripe" }],
+      ["a provider the server doesn't have", { provider: "nonesuch" }],
     ] as [string, Partial<ServerSetup>][]) {
       const code = await exitOf(billingRefusedServerPort, { enforced: true, provider: "standin", ...setup });
       expect(code, what).not.toBeNull();

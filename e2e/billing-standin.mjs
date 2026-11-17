@@ -13,6 +13,8 @@
 //   POST /invoices {customer, month, lines, key} -> {id}, once for each key
 //   GET  /customers/<id>                     -> the customer's standing, or
 //        {plan: null} for nothing, or 404 for a customer it never made
+//   POST /cancel {customer}                  -> {canceled}, how many it ended,
+//        when whoever the customer pays for is deleted
 //
 // The pages it answers are on a port of their own, over HTTPS with a
 // throwaway certificate, since the apps open only https pages. The page to
@@ -191,6 +193,17 @@ export async function startStandin({ port, pagesPort, apiKey, webhookSecret }) {
         return json(res, 404, { error: "no such customer" });
       }
       return json(res, 200, { url: `${pages}/portal/${body.customer}?back=${encodeURIComponent(body.back)}` });
+    }
+    if (path === "/cancel" && req.method === "POST") {
+      const customer = customers.get(body.customer);
+      if (!customer) {
+        return json(res, 404, { error: "no such customer" });
+      }
+      const paid = customer.standing !== null && customer.standing.standing !== "none";
+      if (paid) {
+        customer.standing = { plan: customer.standing.plan, standing: "none", renews: false, billed: customer.standing.billed };
+      }
+      return json(res, 200, { canceled: paid ? 1 : 0 });
     }
     if (path === "/invoices" && req.method === "POST") {
       if (!customers.has(body.customer)) {
