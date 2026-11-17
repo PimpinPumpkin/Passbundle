@@ -8,7 +8,7 @@ import { execFileSync } from "node:child_process";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import fs from "node:fs";
 import https from "node:https";
-import type { AddressInfo } from "node:net";
+import net, { type AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import tls from "node:tls";
@@ -168,9 +168,18 @@ export function parseSyslog(text: string): SyslogMessage {
   };
 }
 
-/** A syslog collector over TLS that splits RFC 5425's octet-counted frames. */
-export async function syslogReceiver(cert: Cert) {
+/**
+ * A syslog collector over TLS that splits RFC 5425's octet-counted frames.
+ * With `handshakeDelayMs`, it waits that long before each connection's TLS
+ * handshake, so every send to it takes at least that long.
+ */
+export async function syslogReceiver(cert: Cert, { handshakeDelayMs = 0 } = {}) {
   const messages: string[] = [];
+  let open = 0;
+  const counted = (raw: net.Socket) => {
+    open++;
+    raw.once("close", () => open--);
+  };
   const server = tls.createServer({ cert: cert.cert, key: cert.key }, (socket) => {
     let buffer = Buffer.alloc(0);
     socket.on("data", (chunk) => {
@@ -190,11 +199,23 @@ export async function syslogReceiver(cert: Cert) {
     });
     socket.on("error", () => {});
   });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  let listening: net.Server = server;
+  if (handshakeDelayMs > 0) {
+    listening = net.createServer((raw) => {
+      counted(raw);
+      raw.on("error", () => {});
+      setTimeout(() => server.emit("connection", raw), handshakeDelayMs);
+    });
+  } else {
+    server.on("connection", counted);
+  }
+  await new Promise<void>((resolve) => listening.listen(0, "127.0.0.1", resolve));
   return {
     messages,
-    port: (server.address() as AddressInfo).port,
-    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+    port: (listening.address() as AddressInfo).port,
+    /** Connections taken and not yet closed. */
+    open: () => open,
+    close: () => new Promise<void>((resolve) => listening.close(() => resolve())),
   };
 }
 
