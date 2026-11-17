@@ -1,9 +1,10 @@
 #!/bin/sh
 # Tier 2 checks for install-passbundle.sh on Linux. Run with sudo on a
 # disposable machine (CI runner or VM), with the app's bundle in a
-# "passbundle" folder next to the install script and a display (DISPLAY) to
-# open the app on. It writes machine policies and installs into /opt and
-# /usr/share. It ends with the policies applied, for the browser check that follows.
+# "passbundle" folder next to the install script, a display (DISPLAY) to
+# open the app on, and xdg-utils and desktop-file-utils. It writes machine
+# policies and installs into /opt and /usr/share. It ends with the policies
+# applied, for the browser check that follows.
 
 set -u
 
@@ -11,6 +12,8 @@ here=$(cd "$(dirname "$0")" && pwd)
 script="$here/../install-passbundle.sh"
 app="/opt/passbundle"
 entry="/usr/share/applications/com.passbundle.app.desktop"
+# What update-desktop-database lists for each MIME type, links included.
+mime_cache="/usr/share/applications/mimeinfo.cache"
 icon="/usr/share/icons/hicolor/256x256/apps/com.passbundle.app.png"
 chrome="/etc/opt/chrome/policies/managed"
 edge="/etc/opt/edge/policies/managed"
@@ -18,6 +21,7 @@ firefox="/etc/firefox/policies/policies.json"
 firefox_added="/etc/passbundle/firefox-policies-added"
 foreign="$chrome/another-vendor.json"
 person="${SUDO_USER:-runner}"
+person_home=$(getent passwd "$person" | cut -d: -f6)
 server_url="https://vault.example.test"
 token="abcdefghijklmnopqrstuvwxyzABCDEFGHIJ0123456"
 join_secret="QEFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaW1xdXl8"
@@ -121,10 +125,17 @@ sh "$script" --disable-card-autofill --disable-address-autofill --server-url "$s
 check "the app is in /opt" test -x "$app/passbundle"
 check "with its core" test -f "$app/lib/libpassbundle_core.so"
 check "only root can change it" sh -c "[ \"\$(stat -c %U '$app')\" = root ] && [ -z \"\$(find '$app' -perm -o+w -print -quit)\" ]"
-check "it's in the applications menu" grep -qx "Exec=$app/passbundle" "$entry"
+# %u: a passbundle:// link is the app's first argument.
+check "it's in the applications menu" grep -qx "Exec=$app/passbundle %u" "$entry"
 check "under its name" grep -qx "Name=PassBundle" "$entry"
 check "the desktop entry is valid" desktop-file-validate "$entry"
 check "with its icon" cmp -s "$icon" "$app/data/com.passbundle.app.png"
+# passbundle:// links, Duo's way back at sign-in, open the installed app for
+# everyone here: its entry takes them, the system's cache lists it, and
+# xdg-mime gives it to the person.
+check "it takes passbundle:// links" grep -qx "MimeType=x-scheme-handler/passbundle;" "$entry"
+check "the system's cache lists it for passbundle:// links" grep -qx "x-scheme-handler/passbundle=com.passbundle.app.desktop;" "$mime_cache"
+check "passbundle:// links open it for the person" sh -c "[ \"\$(sudo -H -u '$person' xdg-mime query default x-scheme-handler/passbundle)\" = com.passbundle.app.desktop ]"
 ext='p["3rdparty"]["extensions"]'
 check "Chrome extension gets the server address, without a trailing slash" policy_is "$chrome/passbundle.json" \
   "${ext}[\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"][\"environment\"] == {\"base\": \"$server_url\"}"
@@ -237,6 +248,24 @@ sleep 5
 check "opens and stays open" pgrep -x passbundle
 pkill -x passbundle
 
+echo "A passbundle:// link"
+# Opened as a browser hands one on, the link reaches the installed app, which
+# leaves it in the person's data folder for the copy signing in and ends
+# (passbundle-apps, core/src/two_step.rs, hand_over). In the background, in
+# case it opens a window instead.
+link="passbundle://duo-callback?code=c0de&state=InstallerTest"
+handed="$person_home/.local/share/PassBundle/duo-callback.txt"
+rm -f "$handed"
+sudo -H -u "$person" env DISPLAY="${DISPLAY:-:99}" xdg-open "$link" > /dev/null 2>&1 &
+waited=0
+while [ ! -s "$handed" ] && [ "$waited" -lt 30 ]; do
+  sleep 1
+  waited=$((waited + 1))
+done
+check "a passbundle:// link reaches the installed app" sh -c "[ \"\$(cat '$handed')\" = '$link' ]"
+pkill -x passbundle
+rm -f "$handed"
+
 echo "A new version"
 source_app="$(dirname "$script")/passbundle"
 echo "a new build" > "$source_app/data/new-version.txt"
@@ -248,6 +277,8 @@ echo "Removing"
 sh "$script" --remove || failures=$((failures + 1))
 check "the app is gone" test ! -e "$app"
 check "the menu entry is gone" test ! -e "$entry"
+check "nothing in the system's cache takes passbundle:// links" sh -c "! grep -q '^x-scheme-handler/passbundle=' '$mime_cache'"
+check "nothing opens them for the person" sh -c "[ -z \"\$(sudo -H -u '$person' xdg-mime query default x-scheme-handler/passbundle)\" ]"
 check "the icon is gone" test ! -e "$icon"
 check "our Chrome policies are gone" test ! -e "$chrome/passbundle.json"
 check "our Edge policies are gone" test ! -e "$edge/passbundle.json"
