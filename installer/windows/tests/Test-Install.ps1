@@ -303,6 +303,16 @@ if ($haveApp) {
   if (Test-Path $handed) { Remove-Item -Path $handed -Force }
   try { Start-Process $link } catch { Write-Output "Windows didn't open the link: $_" }
   for ($try = 0; $try -lt 30 -and -not (Test-Path $handed); $try++) { Start-Sleep -Seconds 1 }
+  if (Test-Path $handed) {
+    Write-Output "The app was handed: $(Get-Content -Path $handed -Raw)"
+  } else {
+    # What started, and whether the app hands a link on when given it directly.
+    Get-CimInstance Win32_Process -Filter "Name = 'passbundle.exe'" | ForEach-Object { Write-Output "Running: $($_.CommandLine)" }
+    $direct = Start-Process -FilePath (Join-Path $installDir "passbundle.exe") -ArgumentList "`"$link`"" -PassThru
+    $direct.WaitForExit(30000) | Out-Null
+    Write-Output "Given the link directly, the app ended: $($direct.HasExited) (code $($direct.ExitCode)); handed: $(Test-Path $handed)"
+    if (Test-Path $handed) { Write-Output "The app was handed: $(Get-Content -Path $handed -Raw)"; Remove-Item -Path $handed -Force }
+  }
   Check "A passbundle:// link reaches the installed app" { (Test-Path $handed) -and (Get-Content -Path $handed -Raw) -eq $link }
   Get-Process -Name "passbundle", "passbundle-agent" -ErrorAction SilentlyContinue | Stop-Process -Force
   if (Test-Path $handed) { Remove-Item -Path $handed -Force }
