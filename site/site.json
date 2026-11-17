@@ -11,9 +11,6 @@
     "msp1": "$1.50",
     "msp2": "$1.25",
     "msp3": "$1.00",
-    "msp1Year": "$1.25",
-    "msp2Year": "$1.05",
-    "msp3Year": "$0.85",
     "mspTier2From": "500",
     "mspTier3From": "2,500",
     "trialDays": "30"
