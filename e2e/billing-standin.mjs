@@ -22,8 +22,10 @@
 // and the page to manage one that cancels at the period's end; each sends
 // the server a webhook and goes back where the server asked.
 //
-// A test's controls (/control/...): reset, refuse every call, read the
-// customers and the calls made, set a customer's standing, and send a webhook.
+// A test's controls (/control/...): reset, refuse every call, hold the
+// answers about one customer's standing for a while (each as it stood when
+// asked), read the customers and the calls made, set a customer's standing,
+// and send a webhook.
 import { execFileSync } from "node:child_process";
 import { createHmac, randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -93,6 +95,8 @@ export async function startStandin({ port, pagesPort, apiKey, webhookSecret }) {
   /** Every call the server made: { method, path, customer }. */
   const calls = [];
   let refuse = false;
+  /** customer -> how long an answer about their standing waits, in milliseconds */
+  const holds = new Map();
   let next = 0;
   const id = (prefix) => `${prefix}_${(next += 1)}${randomUUID().slice(0, 8)}`;
 
@@ -138,11 +142,19 @@ export async function startStandin({ port, pagesPort, apiKey, webhookSecret }) {
       invoices.clear();
       calls.length = 0;
       refuse = false;
+      holds.clear();
       return json(res, 200, {});
     }
     if (path === "/control/refuse" && req.method === "POST") {
       refuse = !!(await readJson(req)).refuse;
       return json(res, 200, { refuse });
+    }
+    if (path === "/control/hold" && req.method === "POST") {
+      const { customer, ms } = await readJson(req);
+      const hold = Math.max(0, Number(ms) || 0);
+      if (hold > 0) holds.set(customer, hold);
+      else holds.delete(customer);
+      return json(res, 200, { hold });
     }
     if (path === "/control/customers" && req.method === "GET") {
       return json(res, 200, [...customers].map(([id, customer]) => ({ id, ...customer })));
@@ -219,7 +231,14 @@ export async function startStandin({ port, pagesPort, apiKey, webhookSecret }) {
       if (!customer) {
         return json(res, 404, { error: "no such customer" });
       }
-      return json(res, 200, customer.standing ?? { plan: null });
+      // The answer as it stands now, sent once any hold is over: a change
+      // meanwhile isn't in it, as with a provider that's slow to answer.
+      const answer = customer.standing ?? { plan: null };
+      const wait = holds.get(customerInPath) ?? 0;
+      if (wait > 0) {
+        await new Promise((resolve) => setTimeout(resolve, wait));
+      }
+      return json(res, 200, answer);
     }
     return json(res, 404, { error: "no such call" });
   }

@@ -111,6 +111,11 @@ class Standin {
     await this.control("POST", "refuse", { refuse });
   }
 
+  /** Holds each answer about a customer's standing for `ms`, as it stood when asked. 0 ends it. */
+  async hold(customer: string, ms: number) {
+    await this.control("POST", "hold", { customer, ms });
+  }
+
   /** How many times the server asked about a customer's standing. */
   async looksAt(customer: string): Promise<number> {
     const calls: { method: string; path: string; customer: string | null }[] = await this.control("GET", "calls");
@@ -595,6 +600,31 @@ test.describe("where plans are enforced and the stand-in is the payment provider
     // A new event does cause one, which is the only other look there was.
     expect((await standin.send(billingServerPort, { customer })).status).toBe(200);
     await expect.poll(async () => (await planOf(api, person)).renews).toBe(false);
+    expect(await standin.looksAt(customer)).toBe(2);
+  });
+
+  test("webhooks that come while the provider is being asked get the look after, once between them", async ({
+    request,
+  }) => {
+    const api = new Api(request);
+    const { person, customer } = await payingPerson(api, standin, "billing-in-flight");
+    await standin.setStanding(customer, paidThrough("premium", fromNow(365 * DAY)));
+    // The provider is slow to answer the first webhook's look.
+    await standin.hold(customer, 2_000);
+    try {
+      expect((await standin.send(billingServerPort, { customer })).status).toBe(200);
+      await expect.poll(() => standin.looksAt(customer)).toBe(1);
+      // While it's being asked, the plan is canceled there, and two webhooks say so.
+      await standin.setStanding(customer, paidThrough("premium", fromNow(365 * DAY), false));
+      expect((await standin.send(billingServerPort, { customer })).status).toBe(200);
+      expect((await standin.send(billingServerPort, { customer })).status).toBe(200);
+    } finally {
+      await standin.hold(customer, 0);
+    }
+    // The first answer is from before the cancellation, so the webhooks
+    // after it are still owed a look, and the one look after it answers both.
+    await expect.poll(async () => (await planOf(api, person)).renews, { timeout: 15_000 }).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve, 3_000));
     expect(await standin.looksAt(customer)).toBe(2);
   });
 
