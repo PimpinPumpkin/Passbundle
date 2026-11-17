@@ -4,7 +4,9 @@
 // get the organization's key, as people who join with the install command get
 // it when they join. Can edit, beside whatever their invitation named. Never
 // an MSP's staff, nor anyone in an organization without Everyone, or that
-// deleted it.
+// deleted it. And the members list says whom provisioning manages
+// (`keykeeperProvisioned`), for the admin console's "From Microsoft Entra ID"
+// (DESIGN.md, "Provisioning from Entra ID").
 //
 // This server sends no email: an invited address joins when it signs up, and
 // an invited account at once, as upstream's invitations do without email. The
@@ -13,9 +15,11 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
 
-import { Api, type Account, encString, publicKey } from "./support";
+import { Api, type Account, encString, publicKey, withMasterPassword } from "./support";
 
-// Several accounts and organizations each, with two-step login for owners.
+// Several accounts and organizations each, with two-step login for owners,
+// and a provisioning token checks the master password the way a sign-in does
+// (slow in the server's debug build).
 test.describe.configure({ timeout: 120_000 });
 
 const INVITED = 0;
@@ -241,4 +245,83 @@ test("an organization without Everyone, or that deleted it, gives nothing, and c
   const joinerId = (await membership(api, owner, orgId, joiner.email)).id;
   await confirm(api, owner, orgId, joinerId, joiner.email);
   expect(await memberGrants(api, owner, orgId, joinerId)).toEqual([]);
+});
+
+test("the members list says whom provisioning manages: regular members it invited or matched, while there's a token", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const owner = await api.account("owner");
+  const name = unique("Contoso");
+  const orgId = await company(api, owner, name);
+  const everyone = await collectionNamed(api, owner, orgId, `everyone-${name}`);
+  const adminAccount = await api.account("admin");
+  await api.addMember(owner, orgId, adminAccount, "admin");
+  const matchedAccount = await api.account("matched");
+  await api.addMember(owner, orgId, matchedAccount, "user");
+  const ownAccount = await api.account("own");
+  await api.addMember(owner, orgId, ownAccount, "user");
+
+  const made = await api.call(owner, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`, withMasterPassword(owner));
+  expect(made.status, JSON.stringify(made.body)).toBe(200);
+  const scim = (method: string, path: string, body?: unknown) =>
+    request.fetch(`/scim/v2/${orgId}${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${made.body.newToken}`, "Content-Type": "application/scim+json" },
+      data: body === undefined ? undefined : JSON.stringify(body),
+    });
+  const user = (email: string) => ({
+    schemas: ["urn:ietf:params:scim:schemas:core:2.0:User"],
+    externalId: randomUUID(),
+    userName: email.replace("@api.example.test", "@contoso.onmicrosoft.com"),
+    active: true,
+    emails: [{ primary: true, type: "work", value: email }],
+  });
+
+  // Entra adds a new hire, and matches someone already in the organization.
+  const hireEmail = address("hire");
+  const added = await scim("POST", "/Users", user(hireEmail));
+  expect(added.status(), await added.text()).toBe(201);
+  const matched = await scim("POST", "/Users", user(matchedAccount.email));
+  expect(matched.status(), await matched.text()).toBe(201);
+  // And asks to turn off the admin, whom provisioning never changes: refused,
+  // only noted.
+  const adminId = (await membership(api, owner, orgId, adminAccount.email)).id;
+  const refused = await scim("PATCH", `/Users/${adminId}`, {
+    schemas: ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+    Operations: [{ op: "replace", path: "active", value: false }],
+  });
+  expect(refused.status(), await refused.text()).toBe(403);
+
+  const marked = async () => {
+    const listed = await api.call(owner, "GET", `/api/organizations/${orgId}/users`);
+    expect(listed.status, JSON.stringify(listed.body)).toBe(200);
+    const byEmail = new Map<string, { id: string; keykeeperProvisioned: unknown; externalId: unknown; claimedByOrganization: unknown }>(
+      listed.body.data.map((m: { email: string }) => [m.email, m]),
+    );
+    // Upstream's fields stay as they were.
+    for (const m of byEmail.values()) {
+      expect(m.externalId ?? null).toBeNull();
+      expect(m.claimedByOrganization).toBe(false);
+      // The member dialog reads the same.
+      const one = await api.call(owner, "GET", `/api/organizations/${orgId}/users/${m.id}`);
+      expect(one.body.keykeeperProvisioned).toBe(m.keykeeperProvisioned);
+    }
+    return [...byEmail.entries()].filter(([, m]) => m.keykeeperProvisioned === true).map(([email]) => email).sort();
+  };
+  expect(await marked()).toEqual([hireEmail, matchedAccount.email].sort());
+
+  // The hire signs up, and an owner lets them in: they get Everyone too.
+  await api.account("hire", hireEmail);
+  const hire = await membership(api, owner, orgId, hireEmail);
+  expect(hire.status).toBe(ACCEPTED);
+  await confirm(api, owner, orgId, hire.id, hireEmail);
+  expect((await grants(api, owner, orgId, everyone)).filter((g) => g.id === hire.id)).toEqual([
+    expect.objectContaining(canEdit),
+  ]);
+
+  // Revoked: provisioning is off, so nobody is the directory's.
+  const revoked = await api.call(owner, "DELETE", `/api/keykeeper/organizations/${orgId}/provisioning/token`);
+  expect(revoked.status, JSON.stringify(revoked.body)).toBe(200);
+  expect(await marked()).toEqual([]);
 });
