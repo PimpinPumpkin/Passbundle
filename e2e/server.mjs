@@ -151,6 +151,9 @@ const child = spawn(paths.serverBin, [], {
       ? { DATABASE_URL: process.env.KK_DATABASE_URL }
       : {}),
     ...(withGroups ? { ORG_GROUPS_ENABLED: "true" } : {}),
+    // KK_EVENTS=1: the event log on, for a server a test starts itself
+    // (tests/api/plans-families.spec.ts). Every other server keeps it off.
+    ...(process.env.KK_EVENTS === "1" ? { ORG_EVENTS_ENABLED: "true" } : {}),
     // KK_SINGLE_ORG_FOR_RECOVERY=1: account recovery needs single organization
     // first, as Bitwarden always does (tests/api/msp-required-policies.spec.ts).
     ...(process.env.KK_SINGLE_ORG_FOR_RECOVERY === "1"
