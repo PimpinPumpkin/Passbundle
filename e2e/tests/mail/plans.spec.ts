@@ -1,8 +1,9 @@
 // Plans' emails (DESIGN.md, "Plans and billing", "What happens when payment
 // stops"): the reminders an organization's owners get, once each, when its
 // trial is about to end, and when a plan set to renew is in grace and when
-// its grace has ended; and an emailed invitation, which can't be accepted
-// once the organization's plan has ended.
+// its grace has ended; what Premium's and Families' reminders say about
+// two-step codes (decision 2); and an emailed invitation, which can't be
+// accepted once the organization's plan has ended.
 //
 // The reminders come from the plans' clock, a scheduled job. These tests
 // start a server of their own that enforces plans, sends email, has the admin
@@ -19,12 +20,18 @@ import { type APIRequestContext, expect, test } from "@playwright/test";
 
 import { mailHttpPort, plansMailServerPort } from "../../paths.mjs";
 import { Api, encString } from "../api/support";
+import { Operator } from "../support/plans";
 
 import { inviteParams, joinByEmail, type Message, waitForMessage } from "./mailbox";
 
 const e2eDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
+/** Two-step codes need Premium (decision 2): what Premium's and Families' reminders say. */
+const CODES_YOURS =
+  "Without Premium, two-step login codes don't show on your items; their keys stay, and the codes come back with Premium.";
+const CODES_MEMBERS =
+  "Without Premium, members' two-step login codes don't show on their own items; the keys stay, and the codes come back with Premium.";
 const ORGANIZATION_ENDED =
   "This organization's plan has ended, so nothing new can be added. Everything in it can still be opened, changed, exported, and deleted.";
 
@@ -147,6 +154,8 @@ test("a trial's reminders reach its owners once each, 7 days and 1 day before it
   expect(text).toContain(
     "Nothing is deleted. Everyone in Plans Reminder Org can still sign in, and open, change, export, and delete everything in it.",
   );
+  // Business's shared logins keep their codes, so it says nothing of them.
+  expect(text).not.toContain("two-step");
   await waitForMessage(secondOwner.email, subject);
 
   // The clock runs again (the other organization's reminder comes from a
@@ -215,6 +224,44 @@ test("a plan set to renew whose payment is due: its owners hear 3 days before it
   await setPlan(otherId, { plan: "business", standing: "until", until: fromNow(-12 * DAY), renews: true });
   await waitForMessage(other.email, /unless it's paid$/);
   expect(await messagesTo(canceled.email, /PassBundle (plan|trial)|plan has ended|unless it.s paid/)).toEqual([]);
+});
+
+test("Premium's and Families' reminders say two-step codes don't show without Premium, and the keys stay", async ({
+  request,
+}) => {
+  test.setTimeout(120_000);
+  const api = new Api(request);
+
+  // A person's own Premium, free for a few more days.
+  const person = await api.account("plans-mail-premium");
+  const ends = fromNow(5 * DAY);
+  await new Operator(operator).setPersonsPlan(person.email, {
+    plan: "premium",
+    freeUntil: ends,
+    freeWhy: "offer",
+    standing: "none",
+    renews: false,
+  });
+  const mine = await waitForMessage(person.email, /^Your free months of PassBundle Premium end on /);
+  expect(flat(mine)).toContain(`Your free months of Premium end on ${inWords(ends)}.`);
+  expect(flat(mine)).toContain(
+    `After that, your own plan no longer gives you attaching files, sending files, or the data breach report. ${CODES_YOURS}`,
+  );
+
+  // A family's, the same, for its members' own items.
+  const owner = await api.account("plans-mail-family-owner");
+  const familyId = await api.organization(owner, "Plans Mail Family");
+  await setPlan(familyId, {
+    plan: "families",
+    freeUntil: fromNow(5 * DAY),
+    freeWhy: "offer",
+    standing: "none",
+    renews: false,
+  });
+  const family = await waitForMessage(owner.email, /^The free months of PassBundle for Plans Mail Family end on /);
+  expect(flat(family)).toContain(
+    `Premium features its members have through Plans Mail Family stop too. ${CODES_MEMBERS}`,
+  );
 });
 
 test("an emailed invitation can't be accepted once the organization's plan has ended", async ({ request }) => {

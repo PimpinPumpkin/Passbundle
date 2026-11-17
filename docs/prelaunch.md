@@ -30,7 +30,7 @@ The work queue between now and selling PassBundle to MSPs and their clients. Bac
 
 ## In progress
 
-- **Plans and billing**: pieces 1 to 5, 8, and 9 are built (DESIGN.md, "Plans and billing", "Status"). The server records a plan for a person, an organization, or an MSP, works out what each person gets from it, and, where `PLANS_ENFORCED` is on, tells the apps in the sync, keeps Premium's limits and what an ended organization refuses, runs the trials and their reminders, and, with `BILLING_PROVIDER=stripe`, takes payment for Premium and Families on Stripe's pages, tested against a stand-in (deploy/README.md, "Plans"). It's off by default and off on every server today. Still to come: two-step codes, Families' people limit, and billing Business and pools by the day.
+- **Plans and billing**: pieces 1 to 6, 8, and 9 are built (DESIGN.md, "Plans and billing", "Status"). The server records a plan for a person, an organization, or an MSP, works out what each person gets from it, and, where `PLANS_ENFORCED` is on, tells the apps in the sync, keeps Premium's limits and what an ended organization refuses, runs the trials and their reminders, and, with `BILLING_PROVIDER=stripe`, takes payment for Premium and Families on Stripe's pages, tested against a stand-in (deploy/README.md, "Plans"). The web vault, the extension, and the apps show two-step codes only with Premium or in an organization that gives them. It's off by default and off on every server today. Still to come: Families' people limit, and billing Business and pools by the day.
 
 ## Next
 
