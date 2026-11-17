@@ -622,7 +622,7 @@ DESIGN or the apps say these aren't built; note it only if one appears:
 - Passkeys on computers (the desktop app only shows them); replacing an old passkey or choosing an existing login on phones.
 - Single sign-on in the desktop and phone apps; trusted-device unlock; other identity providers.
 - The nudge in the desktop and phone apps.
-- Making a file Send in the desktop and phone apps (they make text Sends); archive, exports, imports (other than opening the web vault, and the desktop app's Import from browsers), making a template (New item does offer the custom templates made in the web vault or the extension), organization admin, and the MSP console in the desktop and phone apps.
+- Making a file Send in the desktop and phone apps (they make text Sends); archive, export, and import in the desktop and phone apps (DESIGN.md, "Archive, export, and import in the apps"): the save dialog and the phones' pickers, a password-protected file from the apps opening in the web vault and one from the web vault in the apps, and 1Password's and the browsers' real exports; making a template (New item does offer the custom templates made in the web vault or the extension), organization admin, and the MSP console in the desktop and phone apps.
 - Filling one-time codes, cards, and identities on Android; filling in desktop apps.
 - Typed template fields beyond text, hidden, and yes or no; a template date that sets Expires; a Templates view.
 - A system notification from the desktop agent, and phone reminders while the app is closed; email reminders.

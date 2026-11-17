@@ -88,6 +88,18 @@ export const billingRefusedServerPort = process.env.KK_BILLING_REFUSED_SERVER_PO
 export const billingStandinPort = process.env.KK_BILLING_STANDIN_PORT ?? "8127";
 // The stand-in's pages, over HTTPS, where people are sent to pay or manage.
 export const billingStandinPagesPort = process.env.KK_BILLING_STANDIN_PAGES_PORT ?? "8126";
+// The tests of the Stripe adapter (tests/api/stripe.spec.ts): the stand-in for
+// Stripe's API (stripe-standin.mjs) and its pages, over HTTPS; a server with
+// Stripe as its provider, which sends email; one while a signing secret is
+// rolled; one with Stripe set and plans not enforced; one that enforces plans
+// with no provider; and a port for servers that refuse to start.
+export const stripeStandinPort = process.env.KK_STRIPE_STANDIN_PORT ?? "8128";
+export const stripeStandinPagesPort = process.env.KK_STRIPE_STANDIN_PAGES_PORT ?? "8129";
+export const stripeServerPort = process.env.KK_STRIPE_SERVER_PORT ?? "8130";
+export const stripeReplaceServerPort = process.env.KK_STRIPE_REPLACE_SERVER_PORT ?? "8131";
+export const stripeOffServerPort = process.env.KK_STRIPE_OFF_SERVER_PORT ?? "8132";
+export const stripeNoProviderServerPort = process.env.KK_STRIPE_NO_PROVIDER_SERVER_PORT ?? "8133";
+export const stripeRefusedServerPort = process.env.KK_STRIPE_REFUSED_SERVER_PORT ?? "8134";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??
