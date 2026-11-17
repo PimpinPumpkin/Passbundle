@@ -28,6 +28,11 @@ function Dword([string] $Root, [string] $Name) {
   if (-not (Test-Path $Root)) { return $null }
   (Get-Item $Root).GetValue($Name)
 }
+# A registry value ("" names the key's default), or $null where it isn't there.
+function RegValue([string] $Path, [string] $Name) {
+  if (-not (Test-Path $Path)) { return $null }
+  (Get-Item $Path).GetValue($Name)
+}
 # The extensions a browser has managed settings for, by ID.
 function ManagedIds([string] $Root) {
   $path = "$Root\3rdparty\extensions"
@@ -49,7 +54,9 @@ $token = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJ0123456"
 $joinSecret = "QEFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaW1xdXl8"
 $orgKey = "gpfywOP9ms6QtlYF65DLr2GSIBBe-lYsna8wlVbDQYE"
 & $script -DisableCardAutofill -ServerUrl "$serverUrl/" -EnrollmentToken $token -JoinSecret $joinSecret -OrgKey $orgKey
-& $script -DisableCardAutofill -ServerUrl "$serverUrl/" -EnrollmentToken $token -JoinSecret $joinSecret -OrgKey $orgKey   # second run must change nothing
+# A second run must change nothing. What it says is checked with the app below.
+$again = @(& $script -DisableCardAutofill -ServerUrl "$serverUrl/" -EnrollmentToken $token -JoinSecret $joinSecret -OrgKey $orgKey)
+$again
 
 $chromeList = Forcelist $chromeRoot
 $edgeList = Forcelist $edgeRoot
@@ -259,12 +266,27 @@ if ($haveAgent) {
 # The app, when its files are next to the script (Tier 2 builds them into installer/windows/app).
 $haveApp = Test-Path (Join-Path $PSScriptRoot "..\app\passbundle.exe")
 $shortcut = Join-Path $env:ProgramData "Microsoft\Windows\Start Menu\Programs\PassBundle.lnk"
+# passbundle:// links, Duo's way back at sign-in: the machine's URL protocol,
+# with the command the app registers itself (passbundle-apps, core/src/two_step.rs).
+$linkKey = "HKLM:\SOFTWARE\Classes\passbundle"
+$linkCommand = "`"$(Join-Path $installDir 'passbundle.exe')`" `"%1`""
+$otherCommand = "`"C:\Other\passbundle.exe`" `"%1`""
 if ($haveApp) {
   Check "The app is installed next to the agent" { Test-Path (Join-Path $installDir "passbundle.exe") }
   Check "The app's core is installed with it" { Test-Path (Join-Path $installDir "passbundle_core.dll") }
   Check "The Start menu has PassBundle" {
     (Test-Path $shortcut) -and ((New-Object -ComObject WScript.Shell).CreateShortcut($shortcut).TargetPath -eq (Join-Path $installDir "passbundle.exe"))
   }
+  # passbundle:// links open the installed app for everyone here, and
+  # Windows finds it for this person (their own classes over the machine's).
+  Check "passbundle:// is a URL protocol on this machine" {
+    (RegValue $linkKey "") -eq "URL:PassBundle" -and $null -ne (RegValue $linkKey "URL Protocol")
+  }
+  Check "passbundle:// links open the installed app" { (RegValue "$linkKey\shell\open\command" "") -eq $linkCommand }
+  Check "Windows opens passbundle:// links with it for this person" {
+    (RegValue "Registry::HKEY_CLASSES_ROOT\passbundle\shell\open\command" "") -eq $linkCommand
+  }
+  Check "The second install left the links as they were" { $again -contains "passbundle:// links already open the PassBundle app" }
   # It opens, from a folder of its own, and stays open.
   $data = Join-Path $env:TEMP "pb-installer-app"
   $app = Start-Process -FilePath (Join-Path $installDir "passbundle.exe") -PassThru -Environment @{ PB_DATA_DIR = $data; PB_SECRETS = "memory" }
@@ -272,6 +294,23 @@ if ($haveApp) {
   Check "The installed app opens and stays open" { -not $app.HasExited }
   Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
   Get-Process -Name "passbundle-agent" -ErrorAction SilentlyContinue | Stop-Process -Force
+
+  # A passbundle:// link, opened as a browser hands one on, reaches the
+  # installed app, which leaves it in the person's data folder for the copy
+  # signing in and ends (passbundle-apps, core/src/two_step.rs, hand_over).
+  $link = "passbundle://duo-callback?code=c0de&state=InstallerTest"
+  $handed = Join-Path $env:LOCALAPPDATA "PassBundle\duo-callback.txt"
+  if (Test-Path $handed) { Remove-Item -Path $handed -Force }
+  try { Start-Process $link } catch { Write-Output "Windows didn't open the link: $_" }
+  for ($try = 0; $try -lt 30 -and -not (Test-Path $handed); $try++) { Start-Sleep -Seconds 1 }
+  Check "A passbundle:// link reaches the installed app" { (Test-Path $handed) -and (Get-Content -Path $handed -Raw) -eq $link }
+  Get-Process -Name "passbundle", "passbundle-agent" -ErrorAction SilentlyContinue | Stop-Process -Force
+  if (Test-Path $handed) { Remove-Item -Path $handed -Force }
+
+  # Links that open another program: installing takes them back.
+  Set-Item -Path "$linkKey\shell\open\command" -Value $otherCommand
+  & $script -DisableCardAutofill -ServerUrl "$serverUrl/" -EnrollmentToken $token | Out-Null
+  Check "Installing again makes passbundle:// links open the app again" { (RegValue "$linkKey\shell\open\command" "") -eq $linkCommand }
 } else {
   Write-Output "skip  no app build next to the script; app checks not run"
 }
@@ -302,6 +341,14 @@ if ($env:KK_SKIP_REMOVE -ne "1") {
   if ($haveApp) {
     Check "Remove uninstalls the app" { -not (Test-Path (Join-Path $installDir "passbundle.exe")) }
     Check "Remove drops the Start menu shortcut" { -not (Test-Path $shortcut) }
+    Check "Remove takes passbundle:// links away" { -not (Test-Path $linkKey) }
+    Check "Windows has nothing to open passbundle:// links with" { -not (Test-Path "Registry::HKEY_CLASSES_ROOT\passbundle") }
+    # Links that open another program aren't the script's: -Remove leaves them.
+    New-Item -Path "$linkKey\shell\open\command" -Force | Out-Null
+    Set-Item -Path "$linkKey\shell\open\command" -Value $otherCommand
+    & $script -Remove | Out-Null
+    Check "Remove leaves passbundle:// links that open another program" { (RegValue "$linkKey\shell\open\command" "") -eq $otherCommand }
+    Remove-Item -Path $linkKey -Recurse -Force
   }
   # Leave the policies applied for the browser check that follows.
   & $script -DisableCardAutofill | Out-Null
