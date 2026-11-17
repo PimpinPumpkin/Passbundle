@@ -121,7 +121,7 @@ async function expectStatus(page: Page, lines: (string | RegExp)[]) {
 /** No button: no provider is set on these servers, so the server never says `canPay`. */
 async function expectNoButton(page: Page) {
   await expect(page.getByTestId("keykeeper-plan-button")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /Set up payment|Manage payment/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Set up payment|Manage payment|Add a card/ })).toHaveCount(0);
 }
 
 /** Puts a banner away, and checks it stays away for the day, a reload included. */
