@@ -2829,7 +2829,7 @@ None exist yet. These are what the build has to arrive with.
 
 - **Buying inside the phone apps.** The apps show a plan and its state and never sell one. Apple and Google have rules about what an app may link to; they're checked before the apps are listed.
 - **A second provider, other currencies, coupons, and paying by invoice** beyond a plan the operator sets by hand.
-- **One-year commitments.** The site shows a lower price a seat for them; what a commitment holds an MSP to is undecided, so the first build bills monthly prices only.
+- **One-year commitments.** Off the site until after launch (decision 10): the first build bills monthly prices only.
 - **A line for each client on an MSP's invoice,** and syncing seats or invoices to a PSA.
 - **Stopping repeat trials.** Starting a new organization to get another trial means inviting everyone again and moving every shared item, which is its own deterrent. Watch for it before building against it.
 - **Clearing out families that were created and never paid for.** They hold nothing and cost nothing.
