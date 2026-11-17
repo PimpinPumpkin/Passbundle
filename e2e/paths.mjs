@@ -105,6 +105,17 @@ export const stripeRefusedServerPort = process.env.KK_STRIPE_REFUSED_SERVER_PORT
 // doesn't, each with the admin page on, which the tests start themselves.
 export const familiesServerPort = process.env.KK_FAMILIES_SERVER_PORT ?? "8140";
 export const familiesOffServerPort = process.env.KK_FAMILIES_OFF_SERVER_PORT ?? "8141";
+// The tests of billing by the day (tests/api/invoices.spec.ts): a stand-in
+// for Stripe's API (stripe-standin.mjs) and its pages of their own; a server
+// with Stripe and billing by the day on, whose seats job and month job run
+// every second; one with Stripe set and plans not enforced; one that enforces
+// plans with no provider; and a port for servers that refuse to start.
+export const invoicesStandinPort = process.env.KK_INVOICES_STANDIN_PORT ?? "8150";
+export const invoicesStandinPagesPort = process.env.KK_INVOICES_STANDIN_PAGES_PORT ?? "8151";
+export const invoicesServerPort = process.env.KK_INVOICES_SERVER_PORT ?? "8152";
+export const invoicesOffServerPort = process.env.KK_INVOICES_OFF_SERVER_PORT ?? "8153";
+export const invoicesNoProviderServerPort = process.env.KK_INVOICES_NO_PROVIDER_SERVER_PORT ?? "8154";
+export const invoicesRefusedServerPort = process.env.KK_INVOICES_REFUSED_SERVER_PORT ?? "8155";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??

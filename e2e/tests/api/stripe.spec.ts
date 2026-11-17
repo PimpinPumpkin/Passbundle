@@ -4,7 +4,9 @@
 // for the run. Nothing here talks to Stripe.
 //
 // - Paying for Premium and Families is a Checkout Session; managing is the
-//   customer portal; Business and an MSP's pool aren't paid for online yet.
+//   customer portal; Business and an MSP's pool aren't paid for online while
+//   billing by the day is off, as it is on these servers
+//   (tests/api/invoices.spec.ts has it on).
 // - Each request is form-encoded, with the restricted key as a bearer token
 //   and the pinned Stripe-Version, which the stand-in checks.
 // - The plan follows Stripe's subscriptions, read by the design's table, and
@@ -564,8 +566,9 @@ test.describe("where plans are enforced and Stripe is the payment provider", () 
     );
     expect(entry).toMatchObject({ usersGetPremium: true, seats: 6, productTierType: 1 });
 
-    // Business is billed by the day after each month (piece 10): not online yet,
-    // and Stripe is asked nothing.
+    // Business and a pool are billed by the day after each month, which is off
+    // on this server (BILLING_INVOICE_SCHEDULE blank): not online, and Stripe
+    // is asked nothing.
     const business = await api.organization(owner, "Stripe Business Org");
     const mspAdmin = await api.account("stripe-pool");
     const mspId = await api.msp(mspAdmin, "Stripe Pool MSP");
