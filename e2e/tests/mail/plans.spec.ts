@@ -2,7 +2,9 @@
 // stops"): the reminders an organization's owners get, once each, when its
 // trial is about to end, and when a plan set to renew is in grace and when
 // its grace has ended; and an emailed invitation, which can't be accepted
-// once the organization's plan has ended.
+// once the organization's plan has ended, or into a family that already has
+// more people than its plan covers (tests/api/plans-families.spec.ts has the
+// other ways in).
 //
 // The reminders come from the plans' clock, a scheduled job. These tests
 // start a server of their own that enforces plans, sends email, has the admin
@@ -241,4 +243,54 @@ test("an emailed invitation can't be accepted once the organization's plan has e
   expect(accepted.body.message).toBe(ORGANIZATION_ENDED);
   const member = (await api.members(owner, orgId)).find((m) => m.email === invitee.email);
   expect(member?.status).toBe(0);
+});
+
+test("an emailed invitation into a family is accepted while it has six people at most, invitations included, and not past that", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const owner = await api.account("plans-mail-family-owner");
+  const invitee = await api.account("plans-mail-family-invitee");
+  const late = await api.account("plans-mail-family-late");
+  const orgId = await api.organization(owner, "Plans Mail Family");
+  const invite = async (email: string) => {
+    const invited = await api.call(owner, "POST", `/api/organizations/${orgId}/users/invite`, {
+      emails: [email],
+      type: 2,
+      collections: [],
+      groups: [],
+      permissions: {},
+    });
+    expect(invited.status, JSON.stringify(invited.body)).toBe(200);
+  };
+  const accept = async (who: typeof invitee, orgName: RegExp) => {
+    const link = inviteParams(await waitForMessage(who.email, orgName));
+    return api.call(who, "POST", `/api/organizations/${orgId}/users/${link.get("organizationUserId")}/accept`, {
+      token: link.get("token"),
+      resetPasswordKey: encString(`recovery-key-${who.email}`),
+    });
+  };
+  const nobody = (n: number) => `plans-mail-family-${n}-${Math.random().toString(36).slice(2, 8)}@api.example.test`;
+  const statusOf = async (email: string) => (await api.members(owner, orgId)).find((m) => m.email === email)?.status;
+
+  // The owner, the invitee, and four more invitations: six.
+  await invite(invitee.email);
+  for (let n = 0; n < 4; n++) {
+    await invite(nobody(n));
+  }
+  await setPlan(orgId, { plan: "families", standing: "until", until: fromNow(365 * DAY), renews: true });
+  // Accepting takes no second place.
+  const accepted = await accept(invitee, /Join Plans Mail Family/);
+  expect(accepted.status, JSON.stringify(accepted.body)).toBe(200);
+  expect(await statusOf(invitee.email)).toBe(1);
+
+  // Two more while it was Business: eight, and an invitation can't be accepted until two go.
+  await setPlan(orgId, { plan: "business", standing: "until", until: fromNow(365 * DAY), renews: true });
+  await invite(nobody(4));
+  await invite(late.email);
+  await setPlan(orgId, { plan: "families", standing: "until", until: fromNow(365 * DAY), renews: true });
+  const refused = await accept(late, /Join Plans Mail Family/);
+  expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+  expect(refused.body.message).toBe("A Families plan covers 6 people, and this one has 8. Remove someone first.");
+  expect(await statusOf(late.email)).toBe(0);
 });

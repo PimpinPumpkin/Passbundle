@@ -100,6 +100,11 @@ export const stripeReplaceServerPort = process.env.KK_STRIPE_REPLACE_SERVER_PORT
 export const stripeOffServerPort = process.env.KK_STRIPE_OFF_SERVER_PORT ?? "8132";
 export const stripeNoProviderServerPort = process.env.KK_STRIPE_NO_PROVIDER_SERVER_PORT ?? "8133";
 export const stripeRefusedServerPort = process.env.KK_STRIPE_REFUSED_SERVER_PORT ?? "8134";
+// The tests of a family's limits (tests/api/plans-families.spec.ts): a server
+// that enforces plans, with groups and the event log on, and one that
+// doesn't, each with the admin page on, which the tests start themselves.
+export const familiesServerPort = process.env.KK_FAMILIES_SERVER_PORT ?? "8140";
+export const familiesOffServerPort = process.env.KK_FAMILIES_OFF_SERVER_PORT ?? "8141";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??
