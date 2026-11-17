@@ -93,7 +93,7 @@ Checked October 23, 2026; the PassBundle column, the gaps list, and the rows bel
 | Remove unlock with PIN | Yes | No equivalent found | **Built** | Inherited, and our apps honor it too: the setting shows off with why, and a PIN set before is removed at the next sync or unlock. | [bw-policies] |
 | Default website matching | Yes | No equivalent found | **Built** | Inherited. | [bw-policies] |
 | Fill on page load, fill assist | Yes (two policies) | Autofill and automatic sign-in policies | **Missing** | Site fixes have their own MSP control instead. | [bw-policies] [op-policies] |
-| Remove card item type | Yes | No equivalent found | **Built** | Inherited. | [bw-policies] |
+| Remove card item type | Yes | No equivalent found | **Built** | Inherited, and our apps hold to it too: no new card, and the cards it removes are out of the lists, autofill, export, and import (DESIGN.md, "Organizations that remove cards"). | [bw-policies] |
 | Automatic login with SSO | Yes | No equivalent found | **Missing** | | [bw-policies] |
 | Block sign-ups on a company's domains | Yes (claimed domains) | Account creation with verified domains | **Missing** | Organizations can prove their email domains by DNS for single sign-on now (DESIGN.md, "Email domains"), but nothing blocks sign-ups at them. | [bw-policies] [op-policies] |
 | Let people in without a manual confirm | "Automatic user confirmation" (ask Bitwarden to turn it on) | Provisioning confirms people | **Built** | Ours is on by default and checked against seals a hacked server can't forge (DESIGN.md, "Joining"). | [bw-policies] [op-prov] |
