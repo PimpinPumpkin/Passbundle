@@ -40,8 +40,19 @@ const signUps = process.env.KK_SIGNUPS;
 // stops, so a test can start the same server again (reload-key.spec.ts: the
 // server forgets reload keys when it restarts). Such a server is a side one.
 const keptData = process.env.KK_DATA_DIR;
+// KK_EVENT_STREAMING=1: a server that keeps its data, and still sends events
+// to receivers on 127.0.0.1 as the main one does, which the tests of event
+// streaming across restarts stop, kill, and start again
+// (tests/api/event-streaming-servers.spec.ts).
+const withStreaming = process.env.KK_EVENT_STREAMING === "1";
+// KK_SHARES_DATABASE_OF=<port>: a second server on the database of the
+// server on that port, as two servers behind one address would be (the same
+// tests): its PostgreSQL database (KK_DATABASE_URL) or its SQLite file, and
+// its RSA key, which signs logins and seals event streaming's secrets. This
+// server's own data folder holds the rest, its certificate among them.
+const sharesWith = process.env.KK_SHARES_DATABASE_OF;
 const side =
-  withMail || withLimits || withGroups || withNewDevice || likeTestServer || !!signUps || !!keptData;
+  withMail || withLimits || withGroups || withNewDevice || likeTestServer || !!signUps || !!keptData || !!sharesWith;
 
 for (const [name, p] of Object.entries({
   server: paths.serverBin,
@@ -63,6 +74,9 @@ const data = keptData
 // serverDatabase).
 const dataNote = path.join(os.tmpdir(), `keykeeper-e2e-data-${port}`);
 fs.writeFileSync(dataNote, data);
+const sharedData = sharesWith
+  ? fs.readFileSync(path.join(os.tmpdir(), `keykeeper-e2e-data-${sharesWith}`), "utf8")
+  : null;
 
 // The made-up places, for the server with the new-device check on.
 const locationDatabase = path.join(data, "ip-location.mmdb");
@@ -150,6 +164,13 @@ const child = spawn(paths.serverBin, [], {
     ...(process.env.KK_DATABASE_URL && !side
       ? { DATABASE_URL: process.env.KK_DATABASE_URL }
       : {}),
+    ...(sharedData
+      ? {
+          DATABASE_URL:
+            process.env.KK_DATABASE_URL ?? `sqlite://${path.join(sharedData, "db.sqlite3")}`,
+          RSA_KEY_FILENAME: path.join(sharedData, "rsa_key"),
+        }
+      : {}),
     ...(withGroups ? { ORG_GROUPS_ENABLED: "true" } : {}),
     // KK_EVENTS=1: the event log on, for a server a test starts itself
     // (tests/api/plans-families.spec.ts). Every other server keeps it off.
@@ -162,9 +183,10 @@ const child = spawn(paths.serverBin, [], {
     // Event streaming (tests/api/event-streaming.spec.ts): the main and
     // mail servers may send to receivers on 127.0.0.1 (and nothing else
     // private), and the main one sends Sentinel's sign-in and uploads to the
-    // stand-in there, trusting its certificate. The others keep the
-    // defaults, so the refusal of private addresses is tested too.
-    ...(!withLimits && !withGroups && !keptData
+    // stand-in there, trusting its certificate. So do the servers of the
+    // tests across restarts and servers. The others keep the defaults, so
+    // the refusal of private addresses is tested too.
+    ...((!withLimits && !withGroups && !keptData) || withStreaming
       ? { EVENT_STREAMING_ALLOWED_NETWORKS: "127.0.0.1" }
       : {}),
     ...(siemCert
@@ -345,6 +367,8 @@ const child = spawn(paths.serverBin, [], {
               ? "-sign-ups$1"
               : withMail
               ? "-mail$1"
+              : sharesWith
+              ? "-second$1"
               : withLimits
                 ? "-limits$1"
                 : withGroups
@@ -358,6 +382,11 @@ const child = spawn(paths.serverBin, [], {
       : {}),
   },
 });
+
+// The server's own process, by port, for a test that freezes or kills it
+// as a crash would (tests/api/event-streaming-servers.spec.ts).
+const pidNote = path.join(os.tmpdir(), `keykeeper-e2e-pid-${port}`);
+fs.writeFileSync(pidNote, String(child.pid));
 
 const stop = () => child.kill("SIGTERM");
 process.on("SIGINT", stop);
@@ -380,5 +409,6 @@ child.on("exit", (code) => {
     fs.rmSync(siemDir, { recursive: true, force: true });
   }
   fs.rmSync(dataNote, { force: true });
+  fs.rmSync(pidNote, { force: true });
   process.exit(code ?? 0);
 });
