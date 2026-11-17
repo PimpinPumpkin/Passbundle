@@ -98,12 +98,14 @@ The people a changed plan reaches are told to sync. People read their own plan, 
 
 ### A payment provider
 
-`BILLING_PROVIDER` names the provider the server learns who has paid from. It's empty by default, and does nothing unless `PLANS_ENFORCED` is on. The only one there is yet is `standin`, the test stand-in in this repository's `e2e/billing-standin.mjs`; Stripe comes next. With both set:
+`BILLING_PROVIDER` names the provider the server learns who has paid from. It's empty by default, and does nothing unless `PLANS_ENFORCED` is on. `stripe` is Stripe (below); `standin` is the test stand-in in this repository's `e2e/billing-standin.mjs`. With both set:
 
 - People pay and manage on the provider's own pages. `POST /api/keykeeper/plan/pay` (JSON: `plan`, and `organization` or `msp`, or neither for a person's own Premium) and `POST /api/keykeeper/plan/manage` (`organization` or `msp`, or neither) answer `{"url": ...}`, a page on the provider's site that sends them back to the Plan page. `POST /api/keykeeper/plan/look` (the same) asks the provider now, at most once a minute for each plan. They answer only whoever may pay for the plan, which the sync's `canPay` says: a person for their own Premium, an organization's owners for its plan, and an MSP's admins for the pool. Everyone else, and a client of an MSP, gets 404.
 - The provider's webhooks go to `POST /api/keykeeper/billing/events/<provider>`. Before anything in one is believed: its body is at most 1 MiB, its signature is good with a signing secret in use, its timestamp is within five minutes of the server's clock (keep the clock right), its id hasn't come before (ids are kept 35 days), and it's for the provider's mode. A refusal is an empty 400, logged with why and the address it came from, never the body. Then it only makes the server ask the provider about that customer and write what the provider says: a webhook never sets a plan itself.
 - The server asks again on its own (`BILLING_LOOK_SCHEDULE`, hourly by default): each plan the provider set whose last answer is a day old, each whose paid-through date has passed since, and each a webhook asked about whose look got no answer. When the provider can't be reached, the plan stays as the provider last said. After a day without an answer the log gets an error on each run, saying how many plans; each plan's `checkedAt` (`GET /admin/plans/...`) says when the provider last answered.
 - A provider's answer that something is or was paid sets the plan (`setBy` `provider`). An answer that nothing is paid ends only a plan the provider set: a trial, or a plan you set by hand, stands.
+- Someone the provider already bills for a plan that's in effect, in good standing or in grace, who asks to pay again gets the page to manage it instead of a second subscription. The server asks the provider first, so a payment whose webhook hasn't come yet counts.
+- Deleting an account or an organization (in the apps, by the emailed link, on the admin page, by its owner, or by its MSP) first asks the provider to cancel at once whatever it bills that customer for, with no refund. When the provider can't be reached, the deletion goes ahead and the log gets an error naming the provider's id for the customer: cancel it in the provider's dashboard.
 
 Its secrets are read from the environment only, never the admin page or `config.json`, and never appear in a log, an error, or the admin page's diagnostics:
 
@@ -114,6 +116,30 @@ Its secrets are read from the environment only, never the admin page or `config.
 | `BILLING_WEBHOOK_SECRET_OLD` | While you replace that secret: the old one, which the server also takes until you remove it. |
 
 Each can also be read from a file named by the same setting with `_FILE` on the end, as the server's other settings can. `BILLING_API_BASE` is for tests only: the address the provider's adapter calls instead of the provider's own. The stand-in needs one, and won't start unless it's a loopback address written as one (`http://127.0.0.1:8124`), or with a key that looks like a live one.
+
+### Stripe
+
+`BILLING_PROVIDER=stripe` sends people to Stripe's pages: Stripe Checkout to pay for Premium (a person's) or Families (an organization's, for its owners), and Stripe's customer portal to manage what they pay for. Business and an MSP's pool aren't paid for online yet; asking says "Business can't be paid for online yet." or "An MSP's plan can't be paid for online yet.", and you set those plans by hand. The server reads each customer's subscriptions to learn their standing: `active` and `trialing` are paid through the period's end, `past_due` is in grace from the start of the unpaid period, and `canceled`, `unpaid`, `incomplete_expired`, and `paused` are over. Every call is pinned to Stripe's API version `2026-10-28.endive`, whatever the account's default is.
+
+| Setting | Default | |
+|---|---|---|
+| `BILLING_PRICE_PREMIUM` | none | The id of the Stripe price people pay for Premium (`price_...`), a yearly price. Environment only. |
+| `BILLING_PRICE_FAMILIES` | none | The id of the Stripe price for Families (`price_...`), a yearly price, not the same as Premium's. Environment only. |
+| `BILLING_API_KEY` | none | A Stripe restricted key (`rk_live_...`, or `rk_test_...` in a sandbox). |
+| `BILLING_WEBHOOK_SECRET` | none | The webhook endpoint's signing secret (`whsec_...`). |
+| `BILLING_WEBHOOK_SECRET_OLD` | none | While you roll the signing secret in Stripe: the old one. Remove it when Stripe stops signing with it (at most 7 days). |
+| `BILLING_API_BASE` | empty | Leave it empty: Stripe's own address. Tests set a loopback address, and the server won't start with it set beside a live key. |
+
+The server won't start with Stripe set and a price missing, with the account's full secret key (`sk_live_` or `sk_test_`; give it a restricted key), with a key that isn't Stripe's restricted kind, or with a signing secret that doesn't start with `whsec_`.
+
+The restricted key needs these permissions in Stripe's dashboard, and nothing else: Customers, Checkout Sessions, Customer portal, and Subscriptions, each Write (canceling a subscription is a write; Write includes Read). Invoices and Invoice items follow with billing by the day.
+
+In Stripe's dashboard:
+
+- **Webhook endpoint:** `https://<your domain>/api/keykeeper/billing/events/stripe`, payload **Snapshot** (the dashboard offers Thin first; the server refuses thin events), API version `2026-10-28.endive`, and these events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.paused`, `customer.subscription.resumed`, `invoice.paid`, and `invoice.payment_failed`. Its signing secret is `BILLING_WEBHOOK_SECRET`.
+- **Customer portal:** on, with updating the payment method, invoice history, and canceling, which keeps the plan until the end of the period paid for. Switching plans, updating quantities, and pausing stay off. The server sends people back to the Plan page itself, so no default redirect link is needed.
+- **Retries:** Billing, Revenue recovery, Retries: a schedule that ends within `PLAN_GRACE_DAYS` (14 days by default), and when it ends, cancel the subscription. During it the plan is in grace, and once it's canceled the plan has ended.
+- **One subscription each:** Settings, Checkout and Payment Links: send customers who already have a subscription to the customer portal (this needs the portal's login link on). The server already does this for anyone it knows has paid; this covers two of Stripe's pages opened at once.
 
 ## What the server fetches
 

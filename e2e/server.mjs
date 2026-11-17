@@ -232,10 +232,12 @@ const child = spawn(paths.serverBin, [], {
     // paid from (DESIGN.md, "Learning who has paid"), with its API address and
     // the secrets a test makes up for the run (KK_BILLING_API_KEY,
     // KK_BILLING_WEBHOOK_SECRET, and KK_BILLING_WEBHOOK_SECRET_OLD while one is
-    // replaced). KK_BILLING_LOOK_SCHEDULE runs the job that asks it again that
-    // often, so the scheduler checks four times a second. Only for a side
-    // server a test starts itself (tests/api/billing.spec.ts, against
-    // billing-standin.mjs); every other server has no provider.
+    // replaced), and for Stripe its made-up prices (KK_BILLING_PRICE_PREMIUM,
+    // KK_BILLING_PRICE_FAMILIES). KK_BILLING_LOOK_SCHEDULE runs the job that
+    // asks it again that often, so the scheduler checks four times a second.
+    // Only for a side server a test starts itself (tests/api/billing.spec.ts,
+    // against billing-standin.mjs, and tests/api/stripe.spec.ts, against
+    // stripe-standin.mjs); every other server has no provider.
     ...(keptData && process.env.KK_BILLING_PROVIDER
       ? {
           BILLING_PROVIDER: process.env.KK_BILLING_PROVIDER,
@@ -244,6 +246,12 @@ const child = spawn(paths.serverBin, [], {
           BILLING_WEBHOOK_SECRET: process.env.KK_BILLING_WEBHOOK_SECRET ?? "",
           ...(process.env.KK_BILLING_WEBHOOK_SECRET_OLD
             ? { BILLING_WEBHOOK_SECRET_OLD: process.env.KK_BILLING_WEBHOOK_SECRET_OLD }
+            : {}),
+          ...(process.env.KK_BILLING_PRICE_PREMIUM !== undefined
+            ? { BILLING_PRICE_PREMIUM: process.env.KK_BILLING_PRICE_PREMIUM }
+            : {}),
+          ...(process.env.KK_BILLING_PRICE_FAMILIES !== undefined
+            ? { BILLING_PRICE_FAMILIES: process.env.KK_BILLING_PRICE_FAMILIES }
             : {}),
         }
       : {}),
