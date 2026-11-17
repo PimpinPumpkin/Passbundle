@@ -2,7 +2,11 @@
 // plan for a person, an organization, or an MSP, works out what each person
 // gets from it, and tells the apps in the sync; and the second, Premium's
 // limits, where plans are enforced: attaching files (by the plan of whoever
-// owns the item), sending files, and the data breach report.
+// owns the item), sending files, and the data breach report; and the fourth,
+// trials and endings: the 30 days a new organization, a new MSP's pool, and a
+// client that leaves its MSP get, and an ended organization, which adds
+// nothing new and keeps everything else working. The reminder emails are the
+// mail tests' (tests/mail/plans.spec.ts).
 //
 // - Where plans aren't enforced (every server but one here, and every
 //   self-hosted server unless it turns PLANS_ENFORCED on), a sync says what it
@@ -50,6 +54,12 @@ const DAY = 86_400_000;
 const HOUR = 3_600_000;
 /** PLAN_GRACE_DAYS as the server ships it. */
 const GRACE = 14 * DAY;
+/**
+ * The trial the site promises (`site/site.json`), which has to be
+ * PLAN_TRIAL_DAYS as the server ships it: the trial tests below check the
+ * server's trials are this long.
+ */
+const TRIAL = Number(JSON.parse(fs.readFileSync(path.join(e2eDir, "../site/site.json"), "utf8")).prices.trialDays) * DAY;
 
 /** A moment this far from now, to the second, as the operator's route takes dates. */
 const fromNow = (ms: number) => new Date(Math.floor((Date.now() + ms) / 1000) * 1000).toISOString();
@@ -233,10 +243,13 @@ const noPlan = (plan: "free" | null, canManage: boolean) => ({
   freeWhy: null,
   until: null,
   renews: null,
+  endsAt: null,
   storageGb: 0,
   people: null,
   coveredBy: null,
   canManage,
+  // These servers have no payment provider (tests/api/billing.spec.ts has).
+  canPay: false,
 });
 
 /**
@@ -517,6 +530,99 @@ class Files {
   }
 }
 
+/** A login as the apps make one, in someone's own vault or an organization. */
+const login = (owner: Account, organizationId: string | null, password: string) => ({
+  type: 1,
+  name: encString("shared-login"),
+  notes: null,
+  login: {
+    username: encString("someone"),
+    password: encString(password),
+    uris: [{ uri: encString("https://site.example.test"), match: null }],
+    totp: null,
+  },
+  organizationId,
+  encryptedFor: owner.userId,
+  favorite: false,
+  reprompt: 0,
+  fields: [],
+});
+
+/** A login in an organization's shared folder. Returns its id. */
+async function sharedLogin(api: Api, owner: Account, orgId: string, collectionId: string, password: string) {
+  const made = await api.call(owner, "POST", "/api/ciphers/create", {
+    cipher: login(owner, orgId, password),
+    collectionIds: [collectionId],
+  });
+  expect(made.status, JSON.stringify(made.body)).toBe(200);
+  return made.body.id as string;
+}
+
+/** A provisioning request (SCIM), with the organization's provisioning token. */
+async function scim(request: APIRequestContext, token: string, method: string, path: string, body?: unknown) {
+  return result(
+    await request.fetch(path, {
+      method,
+      headers: {
+        Accept: "application/scim+json",
+        Authorization: `Bearer ${token}`,
+        ...(body === undefined ? {} : { "Content-Type": "application/scim+json" }),
+      },
+      data: body === undefined ? undefined : JSON.stringify(body),
+    }),
+  );
+}
+
+/** Someone the directory sends, as Microsoft Entra ID's provisioning does. */
+const scimUser = (email: string) => ({
+  schemas: ["urn:ietf:params:scim:schemas:core:2.0:User"],
+  externalId: randomUUID(),
+  userName: email,
+  active: true,
+  emails: [{ primary: true, type: "work", value: email }],
+});
+
+/** The organization's API key's token, as Directory Connector signs in with it. */
+async function orgApiToken(request: APIRequestContext, api: Api, owner: Account, orgId: string) {
+  const key = await api.call(owner, "POST", `/api/organizations/${orgId}/api-key`, { masterPasswordHash: owner.password });
+  expect(key.status, JSON.stringify(key.body)).toBe(200);
+  const token = await request.post("/identity/connect/token", {
+    form: {
+      grant_type: "client_credentials",
+      scope: "api.organization",
+      client_id: `organization.${orgId}`,
+      client_secret: key.body.apiKey,
+      deviceType: "10",
+      deviceIdentifier: randomUUID(),
+      deviceName: "api-test",
+    },
+  });
+  expect(token.status(), await token.text()).toBe(200);
+  return (await token.json()).access_token as string;
+}
+
+/** Directory Connector's import, with the organization's API key's token. */
+async function directoryImport(request: APIRequestContext, token: string, members: unknown[]) {
+  return result(
+    await request.post("/api/public/organization/import", {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { groups: [], members, overwriteExisting: false },
+    }),
+  );
+}
+
+/** A bulk form's answer for one member: the error it carries, or "" when it went through. */
+function bulkError(answer: Result, id: string): string {
+  expect(answer.status, JSON.stringify(answer.body)).toBe(200);
+  const row = answer.body.data.find((r: { id: string }) => r.id === id);
+  expect(row, `${id} in ${JSON.stringify(answer.body)}`).toBeTruthy();
+  return row.error;
+}
+
+/** What an MSP's console reads once its pool has ended. */
+const POOL_ENDED =
+  "This MSP's plan has ended, so nothing new can be added to its clients. Everything in them can still be opened, changed, exported, and deleted.";
+
 /** Gives members of an organization its one shared folder: each `edit` or `view`. */
 async function share(api: Api, owner: Account, orgId: string, collectionId: string, grants: [string, "edit" | "view"][]) {
   const saved = await api.call(owner, "PUT", `/api/organizations/${orgId}/collections/${collectionId}`, {
@@ -622,6 +728,46 @@ test.describe("where plans aren't enforced, with an operator", () => {
     expect(await revisionOf(api, owner)).toBe(revision.owner);
   });
 
+  test("a new organization and a new MSP get no trial, and an ended plan refuses nothing: every add goes through", async ({
+    request,
+  }) => {
+    test.setTimeout(120_000);
+    const api = new Api(request);
+    const owner = await api.account("plans-off-trial-owner");
+    const newcomer = await api.account("plans-off-trial-newcomer");
+    const orgId = await api.organization(owner, "Plans Off Trial Org");
+    const admin = await api.account("plans-off-trial-admin");
+    const mspId = await api.msp(admin, "Plans Off Trial MSP");
+    const clientId = await api.client(admin, mspId, "Plans Off Trial Client");
+
+    // Nothing is written for any of them.
+    for (const [kind, id] of [
+      ["organizations", orgId],
+      ["msps", mspId],
+      ["organizations", clientId],
+    ] as const) {
+      expect((await operator.read(kind, id)).body.plan, `${kind} ${id}`).toBeNull();
+    }
+    expectAsAlways(await profileOf(api, owner), [orgId]);
+
+    // An ended plan, which would refuse all of this if it were enforced.
+    await operator.set("organizations", orgId, paidUntil("business", fromNow(-60 * DAY), false));
+    await operator.set("msps", mspId, paidUntil("msp", fromNow(-60 * DAY), false));
+    const collectionId = await api.collection(owner, orgId);
+    await sharedLogin(api, owner, orgId, collectionId, "still-adds");
+    await api.addMember(owner, orgId, newcomer, "user");
+    expect((await api.call(admin, "POST", `/api/keykeeper/msp/${mspId}/staff`, { email: newcomer.email, role: "technician" })).status).toBe(
+      200,
+    );
+    expectAsAlways(await profileOf(api, owner), [orgId]);
+
+    // A client that leaves its MSP gets nothing written either.
+    const clientOwner = await api.account("plans-off-trial-client-owner");
+    await api.addMember(admin, clientId, clientOwner, "owner");
+    expect((await api.call(clientOwner, "DELETE", `/api/keykeeper/organizations/${clientId}/msp`)).status).toBe(200);
+    expect((await operator.read("organizations", clientId)).body.plan).toBeNull();
+  });
+
   test("nothing a plan would refuse is refused: files, file Sends, and the breach report answer as they always have", async ({
     request,
   }) => {
@@ -662,7 +808,8 @@ test.describe("where plans are enforced", () => {
   let operator: Operator;
 
   test.beforeAll(async ({ playwright }) => {
-    server = await startServer(playwright, plansServerPort, true);
+    // Groups on, so a new group can be refused where a plan has ended.
+    server = await startServer(playwright, plansServerPort, true, { KK_GROUPS: "1" });
     operator = server.operator;
   });
 
@@ -733,8 +880,11 @@ test.describe("where plans are enforced", () => {
       people: null,
       coveredBy: null,
       canManage: true,
+      canPay: false,
     });
     expect(moment(profile.keykeeperPlan.freeUntil)).toBe(moment(date));
+    // When it stops being in effect: a trial, when its free time ends.
+    expect(moment(profile.keykeeperPlan.endsAt)).toBe(moment(date));
     expect((await api.call(person, "GET", "/api/keykeeper/plan")).body).toEqual(profile.keykeeperPlan);
 
     // The trial is over and nothing was paid: Free again, with the plan
@@ -758,6 +908,8 @@ test.describe("where plans are enforced", () => {
       storageGb: 5,
     });
     expect(moment(profile.keykeeperPlan.until)).toBe(moment(date));
+    // Set to renew: the grace days after the date it's paid through.
+    expect(moment(profile.keykeeperPlan.endsAt)).toBe(moment(date)! + GRACE);
 
     // A renewal that didn't go through: payment is due, and nothing is
     // taken away for the grace days.
@@ -773,8 +925,10 @@ test.describe("where plans are enforced", () => {
     expect(await premium()).toBe(false);
 
     // A plan the person canceled ends at its date, with no grace.
-    await operator.set("users", person.userId, paidUntil("premium", fromNow(DAY), false));
+    date = fromNow(DAY);
+    await operator.set("users", person.userId, paidUntil("premium", date, false));
     expect(await plan()).toMatchObject({ state: "active", renews: false });
+    expect(moment((await plan()).endsAt)).toBe(moment(date));
     expect(await premium()).toBe(true);
     await operator.set("users", person.userId, paidUntil("premium", fromNow(-HOUR), false));
     expect(await plan()).toMatchObject({ state: "ended", renews: false });
@@ -797,7 +951,7 @@ test.describe("where plans are enforced", () => {
 
     // With no end date at all.
     await operator.set("users", person.userId, { plan: "premium", standing: "open", renews: true });
-    expect(await plan()).toMatchObject({ state: "active", until: null, renews: true });
+    expect(await plan()).toMatchObject({ state: "active", until: null, renews: true, endsAt: null });
     expect(await premium()).toBe(true);
 
     // The row removed: Free, as someone who never had one.
@@ -808,32 +962,115 @@ test.describe("where plans are enforced", () => {
     expect((await operator.remove("users", person.userId)).status).toBe(404);
   });
 
-  test("an organization with no plan gives its members nothing, and stays open", async ({ request }) => {
+  test("a new organization gets 30 days of Business from the moment it's made, and one found with no plan gets them then", async ({
+    request,
+  }) => {
     const api = new Api(request);
-    const owner = await api.account("plans-bare-owner");
-    const member = await api.account("plans-bare-member");
-    const orgId = await api.organization(owner, "Plans Bare Org");
+    const owner = await api.account("plans-trial-owner");
+    const member = await api.account("plans-trial-member");
+    const before = Date.now();
+    const orgId = await api.organization(owner, "Plans Trial Org");
+    const after = Date.now();
     await api.addMember(owner, orgId, member, "user");
+
+    // The server wrote it, with nothing asked and nothing paid.
+    const written = (await operator.read("organizations", orgId)).body;
+    expect(written.state).toBe("trial");
+    expect(written.plan).toMatchObject({
+      plan: "business",
+      freeWhy: "trial",
+      standing: "none",
+      until: null,
+      renews: false,
+      setBy: "server",
+    });
+    const freeUntil = moment(written.plan.freeUntil)!;
+    // PLAN_TRIAL_DAYS as the server ships it: 30 days from the moment it's made.
+    expect(freeUntil).toBeGreaterThanOrEqual(Math.floor(before / 1000) * 1000 + TRIAL);
+    expect(freeUntil).toBeLessThanOrEqual(after + TRIAL);
 
     for (const who of [owner, member]) {
       const profile = await profileOf(api, who);
       expect(profile.premium).toBe(false);
-      expect(profile.premiumFromOrganization).toBe(false);
-      expect(profile.keykeeperPlan).toEqual(noPlan("free", true));
+      expect(profile.premiumFromOrganization).toBe(true);
       const org = profile.organizations.find((o: { id: string }) => o.id === orgId);
-      expect(org.usersGetPremium).toBe(false);
-      expect(org.maxStorageGb).toBe(0);
+      expect(org.usersGetPremium).toBe(true);
+      expect(org.maxStorageGb).toBe(5);
       expect(org.seats).toBeNull();
       expect(org.productTierType).toBe(3);
       expect(org.enabled).toBe(true);
-      // Its company features are as they've always been.
       expect(org.usePolicies).toBe(true);
       expect(org.useSso).toBe(true);
-      expect(org.useCustomPermissions).toBe(true);
-      expect(org.useApi).toBe(true);
-      // Its owner could manage a plan. A member couldn't.
-      expect(org.keykeeperPlan).toEqual(noPlan(null, who === owner));
+      expect(org.keykeeperPlan).toMatchObject({ plan: "business", state: "trial", storageGb: 5, canManage: who === owner });
     }
+    // Its owner is told the dates, and when it ends: when its free time does.
+    const plan = (await orgOf(api, owner, orgId)).keykeeperPlan;
+    expect(plan).toMatchObject({ freeWhy: "trial", until: null, renews: false });
+    expect(moment(plan.freeUntil)).toBe(freeUntil);
+    expect(moment(plan.endsAt)).toBe(freeUntil);
+    // A member is told only what they get.
+    expect((await orgOf(api, member, orgId)).keykeeperPlan).toMatchObject({ freeUntil: null, endsAt: null });
+
+    // An organization found with no plan (here, its row removed) gets one
+    // from that moment, so turning enforcement on never ends anything at once.
+    expect((await operator.remove("organizations", orgId)).status).toBe(200);
+    const found = Date.now();
+    const again = await orgOf(api, member, orgId);
+    expect(again.keykeeperPlan).toMatchObject({ plan: "business", state: "trial" });
+    expect(again.usersGetPremium).toBe(true);
+    const rewritten = (await operator.read("organizations", orgId)).body.plan;
+    expect(rewritten.setBy).toBe("server");
+    expect(moment(rewritten.freeUntil)).toBeGreaterThanOrEqual(Math.floor(found / 1000) * 1000 + TRIAL);
+
+    // Nobody gets a trial of Premium: Free is how a person tries PassBundle.
+    expect((await operator.read("users", owner.userId)).body.plan).toBeNull();
+    expect((await profileOf(api, owner)).keykeeperPlan).toEqual({ ...noPlan("free", true), storageGb: 5 });
+  });
+
+  test("a new MSP's pool gets 30 days too, which cover its clients, and a client that leaves gets 30 days of its own from then", async ({
+    request,
+  }) => {
+    test.setTimeout(120_000);
+    const api = new Api(request);
+    const admin = await api.account("plans-trial-msp-admin");
+    const before = Date.now();
+    const mspId = await api.msp(admin, "Plans Trial MSP");
+    const clientId = await api.client(admin, mspId, "Plans Trial Client");
+    const clientOwner = await api.account("plans-trial-client-owner");
+    await api.addMember(admin, clientId, clientOwner, "owner");
+
+    const pool = await api.call(admin, "GET", `/api/keykeeper/plan?msp=${mspId}`);
+    expect(pool.status).toBe(200);
+    expect(pool.body).toMatchObject({ plan: "msp", state: "trial", freeWhy: "trial", until: null, storageGb: null });
+    const freeUntil = moment(pool.body.freeUntil)!;
+    expect(freeUntil).toBeGreaterThanOrEqual(Math.floor(before / 1000) * 1000 + TRIAL);
+    expect(moment(pool.body.endsAt)).toBe(freeUntil);
+    expect((await profileOf(api, admin)).premiumFromOrganization).toBe(true);
+    // The client is the pool's, and has no row of its own.
+    expect((await operator.read("organizations", clientId)).body).toMatchObject({
+      plan: null,
+      state: "trial",
+      coveredBy: { id: mspId, name: "Plans Trial MSP" },
+    });
+    expect((await orgOf(api, clientOwner, clientId)).keykeeperPlan).toMatchObject({
+      plan: "msp",
+      state: "trial",
+      coveredBy: { id: mspId, name: "Plans Trial MSP" },
+      canManage: false,
+    });
+
+    // The pool ends; the client leaves its MSP, and from that moment has
+    // 30 days of its own to make its own arrangement.
+    await operator.set("msps", mspId, paidUntil("msp", fromNow(-60 * DAY), false));
+    expect((await orgOf(api, clientOwner, clientId)).keykeeperPlan.state).toBe("ended");
+    const left = Date.now();
+    const removed = await api.call(clientOwner, "DELETE", `/api/keykeeper/organizations/${clientId}/msp`);
+    expect(removed.status, JSON.stringify(removed.body)).toBe(200);
+    const org = await orgOf(api, clientOwner, clientId);
+    expect(org.usersGetPremium).toBe(true);
+    expect(org.keykeeperPlan).toMatchObject({ plan: "business", state: "trial", coveredBy: null, canManage: true });
+    expect(moment(org.keykeeperPlan.freeUntil)).toBeGreaterThanOrEqual(Math.floor(left / 1000) * 1000 + TRIAL);
+    expect((await operator.read("organizations", clientId)).body.plan).toMatchObject({ freeWhy: "trial", setBy: "server" });
   });
 
   test("Business covers every member while it's in effect, and tells only its owners the dates", async ({
@@ -883,8 +1120,10 @@ test.describe("where plans are enforced", () => {
       people: null,
       coveredBy: null,
       canManage: true,
+      canPay: false,
     });
     expect(moment(org.keykeeperPlan.until)).toBe(moment(date));
+    expect(moment(org.keykeeperPlan.endsAt)).toBe(moment(date)! + GRACE);
     const asked = await api.call(owner, "GET", `/api/keykeeper/plan?organization=${orgId}`);
     expect(asked).toEqual({ status: 200, body: org.keykeeperPlan });
 
@@ -897,10 +1136,12 @@ test.describe("where plans are enforced", () => {
       freeWhy: null,
       until: null,
       renews: null,
+      endsAt: null,
       storageGb: 5,
       people: null,
       coveredBy: null,
       canManage: false,
+      canPay: false,
     };
     for (const who of [admin, member]) {
       const profile = await profileOf(api, who);
@@ -954,6 +1195,7 @@ test.describe("where plans are enforced", () => {
         state: "ended",
         storageGb: 0,
         canManage: who === owner,
+        canPay: false,
       });
     }
 
@@ -1021,6 +1263,7 @@ test.describe("where plans are enforced", () => {
         people: 6,
         coveredBy: null,
         canManage: who === owner,
+        canPay: false,
       });
     }
 
@@ -1054,15 +1297,15 @@ test.describe("where plans are enforced", () => {
     await api.addMember(admin, clientId, clientMember, "user");
     const coveredBy = { id: mspId, name: "Plans MSP" };
 
-    // No pool yet: the client is the MSP's all the same, and has nothing.
+    // The pool's trial, from when the MSP was made: the client is the MSP's
+    // all the same.
     let org = await orgOf(api, clientOwner, clientId);
-    expect(org.usersGetPremium).toBe(false);
-    expect(org.maxStorageGb).toBe(0);
+    expect(org.usersGetPremium).toBe(true);
     expect(org.enabled).toBe(true);
-    expect(org.keykeeperPlan).toEqual({ ...noPlan(null, false), coveredBy });
-    expect((await profileOf(api, tech)).premiumFromOrganization).toBe(false);
+    expect(org.keykeeperPlan).toMatchObject({ plan: "msp", state: "trial", coveredBy, canManage: false });
+    expect((await profileOf(api, tech)).premiumFromOrganization).toBe(true);
     let pool = await api.call(admin, "GET", `/api/keykeeper/plan?msp=${mspId}`);
-    expect(pool).toEqual({ status: 200, body: { ...noPlan(null, true), storageGb: null } });
+    expect(pool.body).toMatchObject({ plan: "msp", state: "trial", freeWhy: "trial", storageGb: null, canManage: true });
 
     // The pool, paid for as it goes.
     const written = await operator.set("msps", mspId, open("msp"));
@@ -1079,11 +1322,13 @@ test.describe("where plans are enforced", () => {
         freeWhy: null,
         until: null,
         renews: true,
+        endsAt: null,
         // A pool has no storage of its own: each client has.
         storageGb: null,
         people: null,
         coveredBy: null,
         canManage: true,
+        canPay: false,
       },
     });
 
@@ -1105,10 +1350,12 @@ test.describe("where plans are enforced", () => {
       freeWhy: null,
       until: null,
       renews: null,
+      endsAt: null,
       storageGb: 5,
       people: null,
       coveredBy,
       canManage: false,
+      canPay: false,
     };
     for (const who of [clientOwner, clientMember]) {
       const profile = await profileOf(api, who);
@@ -1155,29 +1402,33 @@ test.describe("where plans are enforced", () => {
 
     // The pool is paid for again, and the client leaves: from that moment
     // the pool isn't the client's, and the plan it has of its own is, which
-    // its own owner manages.
+    // its own owner manages, with 30 days on it to make its own arrangement.
     await operator.set("msps", mspId, open("msp"));
     expect((await orgOf(api, clientMember, clientId)).usersGetPremium).toBe(true);
     const left = await api.call(clientOwner, "DELETE", `/api/keykeeper/organizations/${clientId}/msp`);
     expect(left.status, JSON.stringify(left.body)).toBe(200);
     for (const who of [clientOwner, clientMember]) {
       const profile = await profileOf(api, who);
-      expect(profile.premiumFromOrganization).toBe(false);
+      expect(profile.premiumFromOrganization).toBe(true);
       org = profile.organizations.find((o: { id: string }) => o.id === clientId);
-      expect(org.usersGetPremium).toBe(false);
-      expect(org.maxStorageGb).toBe(0);
+      expect(org.usersGetPremium).toBe(true);
+      expect(org.maxStorageGb).toBe(5);
       expect(org.enabled).toBe(true);
       expect(org.keykeeperPlan).toMatchObject({
         plan: "business",
-        state: "ended",
-        storageGb: 0,
+        state: "trial",
+        storageGb: 5,
         coveredBy: null,
         canManage: who === clientOwner,
+        canPay: false,
       });
     }
     expect((await api.call(clientOwner, "GET", `/api/keykeeper/plan?organization=${clientId}`)).status).toBe(200);
     expect((await api.call(admin, "GET", `/api/keykeeper/plan?organization=${clientId}`)).status).toBe(404);
-    expect((await operator.read("organizations", clientId)).body).toMatchObject({ state: "ended", coveredBy: null });
+    const ownNow = (await operator.read("organizations", clientId)).body;
+    expect(ownNow).toMatchObject({ state: "trial", coveredBy: null });
+    // Its own row, long ended, is the one it has: with the 30 days on it.
+    expect(ownNow.plan).toMatchObject({ plan: "business", standing: "until", freeWhy: "trial", setBy: "server" });
     // The MSP's staff are still the pool's.
     expect((await profileOf(api, tech)).premiumFromOrganization).toBe(true);
     expect((await profileOf(api, admin)).premiumFromOrganization).toBe(true);
@@ -1300,17 +1551,19 @@ test.describe("where plans are enforced", () => {
       }
     }
 
-    // Nothing was written.
+    // Nothing was written: the people have no plan, and the organization
+    // and the MSP have the trials the server gave them when they were made.
     for (const [kind, id] of plans) {
-      expect((await operator.read(kind, id)).body).toEqual({
-        enforced: true,
-        plan: null,
-        state: null,
-        coveredBy: null,
-      });
+      const read = (await operator.read(kind, id)).body;
+      if (kind === "users") {
+        expect(read).toEqual({ enforced: true, plan: null, state: null, coveredBy: null });
+      } else {
+        expect(read.state).toBe("trial");
+        expect(read.plan).toMatchObject({ freeWhy: "trial", standing: "none", setBy: "server" });
+      }
     }
     expect((await profileOf(api, person)).premium).toBe(false);
-    expect((await orgOf(api, owner, orgId)).usersGetPremium).toBe(false);
+    expect((await orgOf(api, owner, orgId)).keykeeperPlan.state).toBe("trial");
   });
 
   test("a plan is read only by whoever manages it, and anyone else is told it isn't there", async ({ request }) => {
@@ -1572,15 +1825,15 @@ test.describe("where plans are enforced", () => {
     const canAdd = [owner, admin, manager, editor];
     const cannot = [viewer, outsider];
     const data = bytesOf(1000, 4);
-    const noPlan = "Plans Shared Org has no plan, so files can't be attached to its items.";
     const theirs = (size: string) => full("Plans Shared Org's", size);
 
-    // No plan: refused for everyone who could add a file, even someone with
-    // Premium of their own, and the sentence names the organization.
+    // A plan that has ended: refused for everyone who could add a file, even
+    // someone with Premium of their own.
     await operator.set("users", editor.userId, paidUntil("premium", fromNow(30 * DAY)));
+    await operator.set("organizations", orgId, paidUntil("business", fromNow(-60 * DAY), false));
     for (const who of canAdd) {
-      expectRefused(await files.declare(who, itemId, data.length), noPlan);
-      expectRefused(await files.attachInOne(who, itemId, data, "attachment-admin"), noPlan);
+      expectRefused(await files.declare(who, itemId, data.length), ORGANIZATION_ENDED);
+      expectRefused(await files.attachInOne(who, itemId, data, "attachment-admin"), ORGANIZATION_ENDED);
     }
     // Anyone else hears what they always have, and nothing about a plan.
     for (const who of cannot) {
@@ -1653,6 +1906,298 @@ test.describe("where plans are enforced", () => {
     expect(await files.inSync(owner, itemId)).toEqual([]);
   });
 
+  test("an organization whose plan has ended adds nothing new by any route, and everything in it still opens, changes, exports, and deletes", async ({
+    request,
+  }) => {
+    test.setTimeout(300_000);
+    const api = new Api(request);
+    const files = new Files(request, api);
+    const owner = await api.account("plans-ended-owner");
+    await api.giveAuthenticator(owner);
+    const admin = await api.account("plans-ended-admin");
+    const editor = await api.account("plans-ended-editor");
+    const waiting = await api.account("plans-ended-waiting");
+    const toRevoke = await api.account("plans-ended-revoked");
+    const toRemove = await api.account("plans-ended-removed");
+    const leaver = await api.account("plans-ended-leaver");
+    const goner = await api.account("plans-ended-goner");
+    const newcomer = await api.account("plans-ended-newcomer");
+    const orgId = await api.organization(owner, "Plans Ended Org");
+    const collectionId = await api.collection(owner, orgId);
+    await api.addMember(owner, orgId, admin, "admin");
+    const editorId = await api.addMember(owner, orgId, editor, "user");
+    // Joined, waiting to be confirmed.
+    const waitingId = await api.addMember(owner, orgId, waiting, "user", { confirm: false });
+    const revokedId = await api.addMember(owner, orgId, toRevoke, "user");
+    const removedId = await api.addMember(owner, orgId, toRemove, "user");
+    await api.addMember(owner, orgId, leaver, "user");
+    await api.addMember(owner, orgId, goner, "user");
+    await share(api, owner, orgId, collectionId, [[editorId, "edit"]]);
+    // Invited by an address with no account yet: waiting to accept.
+    const unknown = `plans-ended-invited-${randomUUID().slice(0, 8)}@api.example.test`;
+    const invited = await api.call(owner, "POST", `/api/organizations/${orgId}/users/invite`, {
+      emails: [unknown],
+      type: 2,
+      collections: [],
+      groups: [],
+      permissions: {},
+    });
+    expect(invited.status, JSON.stringify(invited.body)).toBe(200);
+    const invitedId = (await api.members(owner, orgId)).find((m) => m.email === unknown)!.id;
+    // What it had while its trial ran: a shared login, a file on it, a person
+    // the directory sent, and the directory's API key.
+    const itemId = await sharedLogin(api, owner, orgId, collectionId, "first-password");
+    const data = bytesOf(1000, 9);
+    const fileId = await files.attach(owner, itemId, data);
+    const made = await api.call(owner, "POST", `/api/keykeeper/organizations/${orgId}/provisioning/token`, {
+      masterPasswordHash: owner.password,
+    });
+    expect(made.status, JSON.stringify(made.body)).toBe(200);
+    const scimToken = made.body.newToken as string;
+    const directed = await scim(request, scimToken, "POST", `/scim/v2/${orgId}/Users`, scimUser(`plans-ended-scim-${randomUUID().slice(0, 8)}@api.example.test`));
+    expect(directed.status, JSON.stringify(directed.body)).toBe(201);
+    const apiToken = await orgApiToken(request, api, owner, orgId);
+    const personalId = await api.personalItem(editor);
+
+    // The plan ends.
+    await operator.set("organizations", orgId, paidUntil("business", fromNow(-60 * DAY), false));
+    expect((await orgOf(api, owner, orgId)).keykeeperPlan.state).toBe("ended");
+
+    // New people, by every way in: invitations (one or many), resending one,
+    // confirming (one or many), restoring (one or many), provisioning, and
+    // the directory's import.
+    const invite = (emails: string[]) =>
+      api.call(owner, "POST", `/api/organizations/${orgId}/users/invite`, {
+        emails,
+        type: 2,
+        collections: [],
+        groups: [],
+        permissions: {},
+      });
+    expectRefused(await invite([newcomer.email]), ORGANIZATION_ENDED);
+    expectRefused(await invite([newcomer.email, `plans-ended-more-${randomUUID().slice(0, 8)}@api.example.test`]), ORGANIZATION_ENDED);
+    expectRefused(await api.call(owner, "POST", `/api/organizations/${orgId}/users/${invitedId}/reinvite`), ORGANIZATION_ENDED);
+    expect(bulkError(await api.call(owner, "POST", `/api/organizations/${orgId}/users/reinvite`, { ids: [invitedId] }), invitedId)).toBe(
+      ORGANIZATION_ENDED,
+    );
+    const key = encString(`org-key-for-${waiting.email}`);
+    expectRefused(await api.call(owner, "POST", `/api/organizations/${orgId}/users/${waitingId}/confirm`, { key }), ORGANIZATION_ENDED);
+    expect(
+      bulkError(await api.call(owner, "POST", `/api/organizations/${orgId}/users/confirm`, { keys: [{ id: waitingId, key }] }), waitingId),
+    ).toBe(ORGANIZATION_ENDED);
+    // Revoking works, and restoring doesn't.
+    const revoked = await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${revokedId}/revoke`);
+    expect(revoked.status, JSON.stringify(revoked.body)).toBe(200);
+    expectRefused(await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${revokedId}/restore`), ORGANIZATION_ENDED);
+    expect(bulkError(await api.call(owner, "PUT", `/api/organizations/${orgId}/users/restore`, { ids: [revokedId] }), revokedId)).toBe(
+      ORGANIZATION_ENDED,
+    );
+    const provisioned = await scim(request, scimToken, "POST", `/scim/v2/${orgId}/Users`, scimUser(`plans-ended-scim-new-${randomUUID().slice(0, 8)}@api.example.test`));
+    expect(provisioned.status, JSON.stringify(provisioned.body)).toBe(400);
+    expect(provisioned.body.detail).toBe(ORGANIZATION_ENDED);
+    const scimGroup = await scim(request, scimToken, "POST", `/scim/v2/${orgId}/Groups`, {
+      schemas: ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+      displayName: "Plans Ended Directory Group",
+    });
+    expect(scimGroup.status, JSON.stringify(scimGroup.body)).toBe(400);
+    expect(scimGroup.body.detail).toBe(ORGANIZATION_ENDED);
+    expectRefused(
+      await directoryImport(request, apiToken, [{ email: newcomer.email, externalId: "newcomer", deleted: false }]),
+      ORGANIZATION_ENDED,
+    );
+    // Nobody new got in, and nobody came back.
+    const members = await api.members(owner, orgId);
+    expect(members.map((m) => m.email)).not.toContain(newcomer.email);
+    expect(members.find((m) => m.id === waitingId)!.status).toBe(1);
+    expect(members.find((m) => m.id === revokedId)!.status).toBeLessThan(0);
+
+    // Nothing new in it: shared items, by making one, copying one in,
+    // moving one in, or importing; shared folders; groups; files; and
+    // places its events go.
+    expectRefused(
+      await api.call(editor, "POST", "/api/ciphers/create", { cipher: login(editor, orgId, "new"), collectionIds: [collectionId] }),
+      ORGANIZATION_ENDED,
+    );
+    expectRefused(
+      await api.call(owner, "POST", "/api/ciphers/admin", { cipher: login(owner, orgId, "copy"), collectionIds: [collectionId] }),
+      ORGANIZATION_ENDED,
+    );
+    expectRefused(
+      await api.call(editor, "PUT", `/api/ciphers/${personalId}/share`, {
+        cipher: { ...login(editor, orgId, "moved"), type: 2, login: null, secureNote: { type: 0 } },
+        collectionIds: [collectionId],
+      }),
+      ORGANIZATION_ENDED,
+    );
+    expectRefused(
+      await api.call(owner, "POST", `/api/ciphers/import-organization?organizationId=${orgId}`, {
+        ciphers: [login(owner, orgId, "imported")],
+        collections: [],
+        collectionRelationships: [],
+      }),
+      ORGANIZATION_ENDED,
+    );
+    expectRefused(
+      await api.call(owner, "POST", `/api/organizations/${orgId}/collections`, { name: encString("new-folder"), groups: [], users: [] }),
+      ORGANIZATION_ENDED,
+    );
+    expectRefused(
+      await api.call(owner, "POST", `/api/organizations/${orgId}/groups`, {
+        name: "New group",
+        accessAll: false,
+        externalId: null,
+        collections: [],
+        users: [],
+      }),
+      ORGANIZATION_ENDED,
+    );
+    expectRefused(await files.declare(editor, itemId, data.length), ORGANIZATION_ENDED);
+    expectRefused(
+      await api.call(owner, "POST", `/api/keykeeper/organizations/${orgId}/event-streaming`, {
+        name: "SIEM webhook",
+        kind: "webhook",
+        webhook: { url: "https://siem.example.test/events" },
+      }),
+      ORGANIZATION_ENDED,
+    );
+    // The item that stayed personal is still its owner's.
+    expect((await api.call(editor, "GET", `/api/ciphers/${personalId}`)).body.organizationId).toBeNull();
+
+    // Everything else goes on. Signing in, with two-step login.
+    const signedIn = { ...owner, token: await api.logIn(owner.email, owner.password) };
+    // The organization stays enabled, and its members' Premium from it has stopped.
+    for (const who of [signedIn, admin, editor]) {
+      const profile = await profileOf(api, who);
+      expect(profile.premiumFromOrganization).toBe(false);
+      const org = profile.organizations.find((o: { id: string }) => o.id === orgId);
+      expect(org.enabled).toBe(true);
+      expect(org.keykeeperPlan.state).toBe("ended");
+    }
+    // Reading the shared login, and changing its password (rotated after
+    // someone left, say).
+    const read = await api.call(editor, "GET", `/api/ciphers/${itemId}`);
+    expect(read.status, JSON.stringify(read.body)).toBe(200);
+    const changed = await api.call(editor, "PUT", `/api/ciphers/${itemId}`, {
+      ...login(editor, orgId, "rotated-password"),
+      lastKnownRevisionDate: read.body.revisionDate,
+    });
+    expect(changed.status, JSON.stringify(changed.body)).toBe(200);
+    expect(changed.body.login.password).toBe(encString("rotated-password"));
+    // The file downloads, the organization exports with everything in it,
+    // and the sync carries it.
+    expect(await files.download(editor, itemId, fileId)).toEqual(data);
+    const exported = await api.call(owner, "GET", `/api/organizations/${orgId}/export`);
+    expect(exported.status, JSON.stringify(exported.body)).toBe(200);
+    expect(exported.body.ciphers.map((c: { id: string }) => c.id)).toContain(itemId);
+    expect(await files.inSync(editor, itemId)).toEqual([fileId]);
+    expect((await files.remove(editor, itemId, fileId)).status).toBe(200);
+    // People go: removed, leaving, through the directory (by its import and
+    // by provisioning), and by deleting their account.
+    expect((await api.call(owner, "DELETE", `/api/organizations/${orgId}/users/${removedId}`)).status).toBe(200);
+    expect((await api.call(leaver, "POST", `/api/organizations/${orgId}/leave`)).status).toBe(200);
+    const gone = await directoryImport(request, apiToken, [{ email: admin.email, externalId: "admin", deleted: true }]);
+    expect(gone.status, JSON.stringify(gone.body)).toBe(200);
+    expect((await api.members(owner, orgId)).find((m) => m.email === admin.email)!.status).toBeLessThan(0);
+    const unprovisioned = await scim(request, scimToken, "DELETE", `/scim/v2/${orgId}/Users/${directed.body.id}`);
+    expect(unprovisioned.status, JSON.stringify(unprovisioned.body)).toBe(204);
+    const deleted = await api.call(goner, "DELETE", "/api/accounts", { masterPasswordHash: goner.password });
+    expect(deleted.status, JSON.stringify(deleted.body)).toBe(200);
+    const left = (await api.members(owner, orgId)).map((m) => m.email);
+    for (const who of [toRemove, leaver, goner]) {
+      expect(left).not.toContain(who.email);
+    }
+    // Deleting the item, and then the organization.
+    expect((await api.call(editor, "PUT", `/api/ciphers/${itemId}/delete`)).status).toBe(200);
+    const removedOrg = await api.call(signedIn, "DELETE", `/api/organizations/${orgId}`, { masterPasswordHash: owner.password });
+    expect(removedOrg.status, JSON.stringify(removedOrg.body)).toBe(200);
+    expect((await profileOf(api, editor)).organizations).toEqual([]);
+  });
+
+  test("an MSP whose pool has ended adds nothing to its clients, and its console and its staff's access to them keep working", async ({
+    request,
+  }) => {
+    test.setTimeout(180_000);
+    const api = new Api(request);
+    const admin = await api.account("plans-pool-ended-admin");
+    const mspId = await api.msp(admin, "Plans Pool Ended MSP");
+    const clientId = await api.client(admin, mspId, "Plans Pool Ended Client");
+    const tech = await api.account("plans-pool-ended-tech");
+    await api.addStaff(admin, mspId, tech, "technician");
+    await api.confirmPending(admin, mspId);
+    const clientOwner = await api.account("plans-pool-ended-client-owner");
+    await api.addMember(admin, clientId, clientOwner, "owner");
+    const collectionId = await api.collection(admin, clientId);
+    const itemId = await sharedLogin(api, admin, clientId, collectionId, "client-password");
+    const enrollment = await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}/clients/${clientId}/enrollment`);
+    expect(enrollment.status, JSON.stringify(enrollment.body)).toBe(200);
+    const newcomer = await api.account("plans-pool-ended-newcomer");
+    const another = await api.account("plans-pool-ended-staff");
+
+    await operator.set("msps", mspId, paidUntil("msp", fromNow(-60 * DAY), false));
+
+    // Every client it covers has ended: nobody new, by invitation or the install command.
+    for (const who of [clientOwner, admin]) {
+      const org = await orgOf(api, who, clientId);
+      expect(org.keykeeperPlan).toMatchObject({ state: "ended", coveredBy: { id: mspId } });
+      expect(org.enabled).toBe(true);
+    }
+    expectRefused(
+      await api.call(clientOwner, "POST", `/api/organizations/${clientId}/users/invite`, {
+        emails: [newcomer.email],
+        type: 2,
+        collections: [],
+        groups: [],
+        permissions: {},
+      }),
+      ORGANIZATION_ENDED,
+    );
+    expectRefused(await api.call(newcomer, "POST", "/api/keykeeper/enrollment/join", { token: enrollment.body.token }), ORGANIZATION_ENDED);
+    // And the console takes on nothing new: no client, no staff, no place its events go.
+    const client = await api.call(admin, "POST", `/api/keykeeper/msp/${mspId}/clients`, {
+      name: "Plans Pool Ended Second",
+      collectionName: encString("collection"),
+      key: encString(`org-key-for-${admin.email}`),
+      keys: { publicKey: "cHVibGlj", encryptedPrivateKey: encString("private") },
+    });
+    expectRefused(client, POOL_ENDED);
+    expectRefused(await api.call(admin, "POST", `/api/keykeeper/msp/${mspId}/staff`, { email: another.email, role: "technician" }), POOL_ENDED);
+    expectRefused(
+      await api.call(admin, "POST", `/api/keykeeper/msp/${mspId}/event-streaming`, {
+        name: "SIEM webhook",
+        kind: "webhook",
+        webhook: { url: "https://siem.example.test/events" },
+      }),
+      POOL_ENDED,
+    );
+
+    // The console opens, its staff reach the client's items and change them,
+    // and a technician can be removed.
+    const console_ = await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}`);
+    expect(console_.status, JSON.stringify(console_.body)).toBe(200);
+    const read = await api.call(tech, "GET", `/api/ciphers/${itemId}`);
+    expect(read.status, JSON.stringify(read.body)).toBe(200);
+    const changed = await api.call(tech, "PUT", `/api/ciphers/${itemId}`, {
+      ...login(tech, clientId, "rotated-by-the-msp"),
+      lastKnownRevisionDate: read.body.revisionDate,
+    });
+    expect(changed.status, JSON.stringify(changed.body)).toBe(200);
+    expect((await api.call(admin, "DELETE", `/api/keykeeper/msp/${mspId}/staff/${tech.userId}`)).status).toBe(200);
+    expect((await api.orgsOf(tech)).includes(clientId)).toBe(false);
+
+    // Handing the client back works too, and it has 30 days of its own then.
+    const handedBack = await api.call(clientOwner, "DELETE", `/api/keykeeper/organizations/${clientId}/msp`);
+    expect(handedBack.status, JSON.stringify(handedBack.body)).toBe(200);
+    expect((await orgOf(api, clientOwner, clientId)).keykeeperPlan).toMatchObject({ state: "trial", coveredBy: null });
+    const invitedNow = await api.call(clientOwner, "POST", `/api/organizations/${clientId}/users/invite`, {
+      emails: [newcomer.email],
+      type: 2,
+      collections: [],
+      groups: [],
+      permissions: {},
+    });
+    expect(invitedNow.status, JSON.stringify(invitedNow.body)).toBe(200);
+  });
+
   test("Free sends text and not files, Premium sends files by any of its three ways, and a file Send outlives Premium", async ({
     request,
   }) => {
@@ -1700,6 +2245,9 @@ test.describe("where plans are enforced", () => {
     const orgId = await api.organization(seat, "Plans Send Org");
     const staff = await api.account("plans-send-staff");
     const mspId = await api.msp(staff, "Plans Send MSP");
+    // Their trials over, with nothing paid: no file Sends.
+    await operator.set("organizations", orgId, paidUntil("business", fromNow(-60 * DAY), false));
+    await operator.set("msps", mspId, paidUntil("msp", fromNow(-60 * DAY), false));
     for (const who of [seat, staff]) {
       expectRefused(await files.declareSend(who, data.length), SENDING_FILES_IS_PREMIUM);
     }

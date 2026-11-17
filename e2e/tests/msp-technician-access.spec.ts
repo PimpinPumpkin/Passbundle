@@ -2,10 +2,17 @@
 // to one client with a custom role and no install commands, the technician
 // sees just that and works inside it, then the admin widens their access from
 // the Staff section and it reaches every client at once, then gives them a
-// different role in one client.
+// different role in one client. A client that requires two-step login warns
+// them, as an admin there, before they turn off their last method.
 import { expect, test, type Page } from "@playwright/test";
 
-import { reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
+import {
+  policyEditor,
+  reloadVault,
+  signUpWithAuthenticator,
+  switchOn,
+  webUserFor,
+} from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) =>
@@ -141,6 +148,25 @@ test("an MSP admin chooses a technician's clients, role, and install commands, a
   await tech.getByTestId("msp-client-Baker Law").getByRole("link", { name: "Admin console" }).click();
   await expect(tech.getByRole("button", { name: "Invite member" })).toBeVisible();
   await expect(tech.getByRole("link", { name: "Policies" })).toHaveCount(0);
+
+  // Acme Dental requires two-step login. It never lets MSP staff off it, an
+  // admin there included, and revokes one who turns their last method off,
+  // so the technician's two-step login settings warn them first (DESIGN.md,
+  // "MSP staff and two-step login").
+  await admin.goto("/#/msp");
+  await admin.getByTestId("msp-client-Acme Dental").getByRole("link", { name: "Admin console" }).click();
+  await expect(admin).toHaveURL(/#\/organizations\/[^/]+\/members/);
+  await admin.goto(admin.url().replace(/\/members.*$/, "/settings/policies"));
+  await admin.getByRole("button", { name: /^Require two-step login .* Off$/ }).click();
+  const twoStep = policyEditor(admin);
+  await switchOn(twoStep.getByRole("switch", { name: "Enable policy" }));
+  await twoStep.getByRole("button", { name: "Save" }).click();
+  await expect(admin.getByRole("button", { name: /^Require two-step login .* On$/ })).toBeVisible();
+  await reloadVault(tech);
+  await tech.goto("/#/settings/security/two-factor");
+  await expect(
+    tech.getByText(/requires two-step login to be setup on your user account/),
+  ).toBeVisible();
 
   await techContext.close();
   await adminContext.close();

@@ -71,6 +71,23 @@ export const singleOrgServerPort = process.env.KK_SINGLE_ORG_SERVER_PORT ?? "810
 // storage below what any plan gives, and a key for the data breach report
 // (server.mjs, KK_PLANS_CAPS), which the plans tests start themselves.
 export const plansCapsServerPort = process.env.KK_PLANS_CAPS_SERVER_PORT ?? "8111";
+// A plans server that sends email and runs the plans' clock every second
+// (server.mjs, KK_PLAN_REMINDERS_SCHEDULE), which the reminder emails' tests
+// start themselves (tests/mail/plans.spec.ts).
+export const plansMailServerPort = process.env.KK_PLANS_MAIL_SERVER_PORT ?? "8124";
+// The servers the tests of learning who has paid start themselves
+// (tests/api/billing.spec.ts): one with the payment provider's stand-in
+// (billing-standin.mjs, on its own port), one while a signing secret is
+// replaced, one that enforces plans with no provider, one with a provider and
+// plans not enforced, and a port for servers that refuse to start.
+export const billingServerPort = process.env.KK_BILLING_SERVER_PORT ?? "8120";
+export const billingReplaceServerPort = process.env.KK_BILLING_REPLACE_SERVER_PORT ?? "8121";
+export const billingNoProviderServerPort = process.env.KK_BILLING_NO_PROVIDER_SERVER_PORT ?? "8122";
+export const billingOffServerPort = process.env.KK_BILLING_OFF_SERVER_PORT ?? "8123";
+export const billingRefusedServerPort = process.env.KK_BILLING_REFUSED_SERVER_PORT ?? "8125";
+export const billingStandinPort = process.env.KK_BILLING_STANDIN_PORT ?? "8127";
+// The stand-in's pages, over HTTPS, where people are sent to pay or manage.
+export const billingStandinPagesPort = process.env.KK_BILLING_STANDIN_PAGES_PORT ?? "8126";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??
