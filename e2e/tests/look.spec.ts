@@ -98,6 +98,105 @@ test("the look follows the device for System, Light and Dark hold, and the type 
   await expect.poll(() => look(page)).toEqual(["pb-web", "theme_light"]);
 });
 
+/** Scrolls the menu's list (whichever part of it scrolls) to its top, its middle, or its end. */
+const scrollMenu = (page: Page, where: "top" | "middle" | "end") =>
+  menuCard(page).evaluate((card, where) => {
+    let scrolls = false;
+    for (const el of card.querySelectorAll<HTMLElement>("*")) {
+      const max = el.scrollHeight - el.clientHeight;
+      if (max > 0 && ["auto", "scroll"].includes(getComputedStyle(el).overflowY)) {
+        el.scrollTop = where === "top" ? 0 : where === "end" ? max : max / 2;
+        scrolls = true;
+      }
+    }
+    return scrolls;
+  }, where);
+
+/**
+ * The menu's entries that show under the logo or the product switcher's
+ * entries: where the parts of their boxes in view (less what a scrolling
+ * part of the menu cuts off) overlap. The card is see-through, so an entry
+ * that scrolls under either shows through it.
+ */
+const entriesUnderneath = (page: Page) =>
+  menuCard(page).evaluate((card) => {
+    const inView = (el: Element) => {
+      const box = el.getBoundingClientRect();
+      let top = box.top;
+      let bottom = box.bottom;
+      for (let p = el.parentElement; p; p = p.parentElement) {
+        if (getComputedStyle(p).overflowY !== "visible") {
+          const clip = p.getBoundingClientRect();
+          top = Math.max(top, clip.top);
+          bottom = Math.min(bottom, clip.bottom);
+        }
+      }
+      return { top, bottom, left: box.left, right: box.right };
+    };
+    type Box = ReturnType<typeof inView>;
+    const overlap = (a: Box, b: Box) =>
+      Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1 &&
+      Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1;
+    const name = (el: Element) => el.textContent!.trim().replace(/\s+/g, " ");
+    const switcher = card.querySelector("navigation-product-switcher")!;
+    const all = [...card.querySelectorAll("[data-testid='nav-item-container']")].filter(
+      (el) => inView(el).bottom - inView(el).top > 1,
+    );
+    const above = [card.querySelector("bit-nav-logo a")!, ...all.filter((el) => switcher.contains(el))];
+    return all
+      .filter((el) => !switcher.contains(el))
+      .flatMap((el) =>
+        above
+          .filter((top) => overlap(inView(el), inView(top)))
+          .map((top) => `${name(el)} under ${top.matches("a") ? "the logo" : name(top)}`),
+      );
+  });
+
+test("the menu's entries scroll clear of the logo and the product switcher, in the admin console and the vault", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(90_000);
+  await signUp(page, webUserFor("look-menu-scroll", testInfo.repeatEachIndex));
+  // An organization, so there's an admin console, and the product switcher
+  // in the menu to go between it and the vault.
+  await page.goto("/#/create-organization");
+  await page.getByRole("textbox", { name: /Organization name/ }).fill("Test Dental");
+  await page.getByRole("radio", { name: /A family or a group/ }).check();
+  await page.getByRole("button", { name: "Create organization" }).click();
+  await page.waitForURL(/#\/organizations\/[0-9a-f-]{36}\/members/);
+  const org = /#\/organizations\/([0-9a-f-]{36})/.exec(page.url())![1];
+
+  // The admin console with Settings open: a menu longer than a short window.
+  // Upstream keeps its logo at the top and, 600px tall or more, the switcher
+  // at the foot, and on our see-through card the entries showed through both.
+  await page.goto(`/#/organizations/${org}/settings/policies`);
+  const products = menu(page).locator("navigation-product-switcher");
+  await expect(products.getByRole("link", { name: "Admin Console" })).toBeAttached();
+  await expect(menu(page).getByRole("link", { name: "Policies", exact: true })).toBeVisible();
+  for (const height of [720, 560]) {
+    await page.setViewportSize({ width: 1280, height });
+    for (const scheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await expect.poll(() => look(page)).toEqual(["pb-web", `theme_${scheme}`]);
+      for (const where of ["top", "middle", "end"] as const) {
+        expect(await scrollMenu(page, where), `the menu scrolls at ${height}px`).toBe(true);
+        expect(await entriesUnderneath(page), `${height}px, ${scheme}, the list at its ${where}`).toEqual([]);
+      }
+    }
+  }
+
+  // The vault's menu, one list with the switcher at its end, the same.
+  await page.goto("/#/vault");
+  await expect(products.getByRole("link", { name: "Admin Console" })).toBeAttached();
+  for (const height of [720, 560]) {
+    await page.setViewportSize({ width: 1280, height });
+    for (const where of ["top", "middle", "end"] as const) {
+      await scrollMenu(page, where);
+      expect(await entriesUnderneath(page), `the vault, ${height}px, the list at its ${where}`).toEqual([]);
+    }
+  }
+});
+
 /** Saves a new item of a kind with a name; saving opens its view, which this closes. */
 async function save(page: Page, kind: string, name: string) {
   await newItem(page, kind);
