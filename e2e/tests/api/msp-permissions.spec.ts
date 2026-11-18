@@ -237,6 +237,17 @@ const rows: Row[] = [
     }),
   },
   {
+    // Only the client's own owners and admins: never the MSP's people there,
+    // whom the MSP's own Activity serves (DESIGN.md, "The client sees its
+    // MSP's actions"). The other callers are in msp-client-activity.spec.ts.
+    name: "see what a client's MSP did there",
+    allowed: ["clientOwner"],
+    request: async ({ orgId }) => ({
+      method: "GET",
+      path: `/api/keykeeper/organizations/${orgId}/msp/activity`,
+    }),
+  },
+  {
     name: "see a client's enrollment token for its install command",
     allowed: ["mspAdmin", "technician"],
     request: async ({ mspId, orgId }) => ({
