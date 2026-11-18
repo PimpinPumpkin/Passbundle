@@ -199,7 +199,7 @@ A release is a tag on this repository, `server-v<major>.<minor>.<patch>`. The fi
 3. The Release workflow builds the server and the web vault from those commits and the image from the tag's `deploy/`, and runs the smoke test. Only then does it push that same image (it checks the image's ID, so it's never a rebuild) as `0.1.0`, sign it, add the attestation, and tag it `latest` if it's the highest version tagged. It stops, publishing nothing, for a tag that isn't on main, a commit that isn't on its repository's `keykeeper`, an empty `deploy/release-commits.txt`, or a tag that isn't `server-v` and three numbers.
 4. The first push makes the package `passbundle` on GitHub, and a new package is private: anyone can pull it once it's made public in its settings (Package settings, Change visibility).
 
-Don't move or reuse a release tag: a run for it again pushes a new image under the same version.
+A tag whose run stopped before the push published nothing, so it can be deleted and made again. Once a release is published, don't move or reuse its tag: a run for it again pushes a new image under the same version.
 
 What's recorded is enough to build a release again: the tag holds the Dockerfile, the smoke test, the workflow, and `deploy/release-commits.txt`; the image's labels name the same two commits, and its attestation the tag's commit and the run that built it. To build it again, run the Release workflow by hand from the tag, with those two commits. That's the same code, not the same image byte for byte: the Debian packages in it are whatever Debian has that day (`apt-get install` in `deploy/Dockerfile`).
 
