@@ -244,7 +244,7 @@ jobs:
           labels=(
             --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}"
             --label "org.opencontainers.image.revision=$(git rev-parse HEAD)"
-            --label "org.opencontainers.image.licenses=AGPL-3.0-only"
+            --label "org.opencontainers.image.licenses=AGPL-3.0-only AND GPL-3.0-only"
             --label "com.passbundle.server-commit=${SERVER}"
             --label "com.passbundle.clients-commit=${CLIENTS}"
           )
@@ -259,9 +259,9 @@ jobs:
       - name: Save the image
         id: save
         run: |
-          # The image's ID, the digest of its config, which holds its labels
-          # and the digest of every layer's contents: the publish job pushes
-          # only the image with this ID.
+          # The image's ID: the digest of its config (which holds its labels
+          # and the digest of every layer's contents), or with the containerd
+          # image store its manifest's. The publish job pushes only this image.
           id=$(docker image inspect passbundle:release --format '{{.Id}}')
           echo "id=$id" >> "$GITHUB_OUTPUT"
           echo "Image ID: $id"
@@ -319,11 +319,15 @@ jobs:
             echo "No single digest for $IMAGE after the push: $digest" >&2
             exit 1
           fi
-          # The registry holds the tested image: the same config.
-          config=$(skopeo inspect --raw "docker://$IMAGE@$digest" | jq -r .config.digest)
-          if [ "$config" != "$TESTED" ]; then
-            echo "$IMAGE@$digest has the config $config, not the tested image's ($TESTED)." >&2
-            exit 1
+          # The registry holds the tested image. With Docker's classic image
+          # store an image's ID is its config's digest; with the containerd
+          # store it's the digest that was pushed. Either is the same image.
+          if [ "$digest" != "$TESTED" ]; then
+            config=$(skopeo inspect --raw "docker://$IMAGE@$digest" | jq -r '.config.digest // empty')
+            if [ "$config" != "$TESTED" ]; then
+              echo "$IMAGE@$digest (config ${config:-none}) isn't the tested image ($TESTED)." >&2
+              exit 1
+            fi
           fi
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
           echo "Pushed $IMAGE:$VERSION as $IMAGE@$digest."
