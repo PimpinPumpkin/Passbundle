@@ -6,8 +6,12 @@
 // lists them; going back to admins asks first. Someone
 // with no two-step login whom no rule covers gets a nudge on the vault page,
 // in the web vault and the extension's popup, and Not now hides it on every
-// device. The API test covers the rest.
-import { expect, type Page, type Response, test } from "@playwright/test";
+// device. On the server that sends email, someone whose only second step is
+// email codes gets the nudge to a stronger method instead. The API tests
+// cover the rest.
+import { expect, type Page, request as requests, type Response, test } from "@playwright/test";
+
+import { mailServerPort } from "../paths.mjs";
 
 import {
   createAccount,
@@ -16,7 +20,7 @@ import {
   openPopup,
   userFor,
 } from "./support/extension";
-import { giveAuthenticator } from "./support/two-step";
+import { giveAuthenticator, giveEmailCodes } from "./support/two-step";
 import {
   chooseRole,
   confirmWithPassword,
@@ -46,6 +50,23 @@ async function reloadAndAsk(page: Page): Promise<boolean> {
   await reloadVault(page);
   return (await (await answer).json()).show;
 }
+
+/** Reloads the vault, and says which nudge the server named, if any. */
+async function reloadAndAskWhich(page: Page): Promise<string | null> {
+  const answer = nudgeAnswer(page);
+  await reloadVault(page);
+  return (await (await answer).json()).nudge;
+}
+
+/** The server that sends email, where an account can turn on email codes. */
+const mailServer = `https://127.0.0.1:${mailServerPort}`;
+
+/** Requests to the server that sends email, for the test to dispose of. */
+const mailServerRequests = () =>
+  requests.newContext({ baseURL: mailServer, ignoreHTTPSErrors: true });
+
+const strongerText =
+  "Codes by email are only as safe as your email account. An authenticator app or a security key is safer.";
 
 test("Joining and security requires two-step login of everyone, and the vault nudges someone without it until Not now", async ({
   browser,
@@ -175,4 +196,67 @@ extensionTest("the extension's popup nudges too: Set it up opens the web vault's
   // either.
   expect(await reloadAndAsk(web)).toBe(false);
   await expect(web.getByTestId("two-step-nudge")).toHaveCount(0);
+});
+
+test("someone whose only second step is email codes gets the nudge to a stronger method, with Set it up and Not now", async ({
+  browser,
+}, testInfo) => {
+  test.setTimeout(150_000);
+  const context = await browser.newContext({ baseURL: mailServer, ignoreHTTPSErrors: true });
+  const page = await context.newPage();
+  const user = webUserFor("email-nudge", testInfo.repeatEachIndex);
+  await signUp(page, user);
+  const nudge = page.getByTestId("two-step-nudge");
+  await expect(nudge).toContainText("Your password is all that protects your account.");
+
+  // Email codes on: the second nudge, in place of the first.
+  const api = await mailServerRequests();
+  await giveEmailCodes(api, user);
+  expect(await reloadAndAskWhich(page)).toBe("stronger");
+  await expect(nudge).toContainText(strongerText);
+  await expect(nudge).not.toContainText("Your password is all that protects your account.");
+  await expect(nudge).toHaveAttribute("data-nudge", "stronger");
+  await expect(nudge.getByRole("link", { name: "Set it up" })).toHaveAttribute(
+    "href",
+    /#\/settings\/security\/two-factor$/,
+  );
+  await nudge.getByRole("button", { name: "Not now" }).click();
+  await expect(nudge).toHaveCount(0);
+  expect(await reloadAndAskWhich(page)).toBeNull();
+  await expect(nudge).toHaveCount(0);
+
+  await api.dispose();
+  await context.close();
+});
+
+extensionTest("the extension's popup nudges someone with email codes alone to a stronger method, and Not now there hides it in the web vault", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  test.setTimeout(150_000);
+  const user = userFor("ext-email-nudge", testInfo.repeatEachIndex);
+  const web = await createAccount(context, user, mailServer);
+  await expect(web.getByTestId("two-step-nudge")).toBeVisible();
+  // Signed in before email codes go on, so the popup needs no code.
+  const popup = await openPopup(context, extensionId);
+  await logInPopup(popup, user, mailServer);
+  const nudge = popup.getByTestId("two-step-nudge");
+  await expect(nudge).toContainText("Add two-step login");
+
+  const api = await mailServerRequests();
+  await giveEmailCodes(api, user);
+  await popup.reload();
+  await expect(nudge).toContainText("Add a stronger second step", { timeout: 30_000 });
+  await expect(nudge).toContainText(strongerText);
+  const settings = context.waitForEvent("page");
+  await nudge.getByRole("button", { name: "Set it up" }).click();
+  await expect(await settings).toHaveURL(/#\/settings\/security\/two-factor$/);
+  await nudge.getByRole("button", { name: "Not now" }).click();
+  await expect(nudge).toHaveCount(0);
+
+  // The server keeps Not now for the account, so the web vault doesn't nudge
+  // either.
+  expect(await reloadAndAskWhich(web)).toBeNull();
+  await expect(web.getByTestId("two-step-nudge")).toHaveCount(0);
+  await api.dispose();
 });

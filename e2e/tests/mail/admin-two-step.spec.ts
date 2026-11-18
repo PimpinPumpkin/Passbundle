@@ -2,7 +2,8 @@
 // needs a server that sends email: email codes don't count, for admins or for
 // everyone where an organization requires it of everyone ("Two-step login for
 // everyone"), and account recovery leaves a covered person to set it up at
-// their next sign-in.
+// their next sign-in. And the nudge from email codes to a stronger method,
+// for someone no rule covers ("A nudge for everyone else").
 import { randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
@@ -252,4 +253,69 @@ test("where an organization requires it of everyone, a member whose only second 
     twoFactorToken: totp(key, Date.now() + 30_000),
   });
   expect(signedIn.status, JSON.stringify(signedIn.body)).toBe(200);
+});
+
+/**
+ * Which nudge about two-step login the vault page shows, for this session:
+ * "setUp", "stronger", or null. `show` stays the first nudge only, as clients
+ * from before the second read it.
+ */
+async function nudgeOf(api: Api, as: { token: string }) {
+  const answer = await api.call(as, "GET", "/api/keykeeper/two-step-nudge");
+  expect(answer.status, JSON.stringify(answer.body)).toBe(200);
+  expect(answer.body.show, JSON.stringify(answer.body)).toBe(answer.body.nudge === "setUp");
+  return answer.body.nudge as "setUp" | "stronger" | null;
+}
+
+test("someone whose only second step is email codes is nudged to a stronger method until Not now or an authenticator app, and Not now to either nudge hides both", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  // No two-step login: the first nudge. With email codes: the second, which
+  // an older web vault or extension (reading only `show`) doesn't show.
+  const dee = await api.account("nudge-email");
+  expect(await nudgeOf(api, dee)).toBe("setUp");
+  await turnOnEmailCodes(api, dee);
+  expect(await nudgeOf(api, dee)).toBe("stronger");
+  // Another device, signed in with a code, has it too, and Not now there
+  // hides it on both.
+  const elsewhere = await signInWithEmailCode(api, dee);
+  expect(elsewhere.status, JSON.stringify(elsewhere.body)).toBe(200);
+  const other = { token: elsewhere.body.access_token as string };
+  expect(await nudgeOf(api, other)).toBe("stronger");
+  const dismissed = await api.call(other, "POST", "/api/keykeeper/two-step-nudge/dismiss");
+  expect(dismissed.status, JSON.stringify(dismissed.body)).toBe(200);
+  expect(dismissed.body).toEqual({ show: false, nudge: null });
+  expect(await nudgeOf(api, other)).toBeNull();
+  expect(await nudgeOf(api, dee)).toBeNull();
+
+  // An authenticator app beside the codes ends it.
+  const eli = await api.account("nudge-email-app");
+  await turnOnEmailCodes(api, eli);
+  expect(await nudgeOf(api, eli)).toBe("stronger");
+  await api.giveAuthenticator(eli);
+  expect(await nudgeOf(api, eli)).toBeNull();
+
+  // Not now to the first nudge, then email codes: the second waits out the
+  // same 90 days.
+  const fay = await api.account("nudge-first-dismissed");
+  expect(await nudgeOf(api, fay)).toBe("setUp");
+  expect((await api.call(fay, "POST", "/api/keykeeper/two-step-nudge/dismiss")).status).toBe(200);
+  await turnOnEmailCodes(api, fay);
+  expect(await nudgeOf(api, fay)).toBeNull();
+
+  // Someone a rule covers is never nudged: a member with email codes alone,
+  // whose organization requires it of everyone, is signed out as they join,
+  // and their next sign-in sets up a method that counts.
+  const owner = await api.account("nudge-email-owner");
+  await api.giveAuthenticator(owner);
+  const orgName = `Nudge All ${randomUUID().slice(0, 6)}`;
+  const orgId = await api.organization(owner, orgName);
+  await requireIt(api, owner, orgId, true);
+  const gus = await api.account("nudge-email-member");
+  await turnOnEmailCodes(api, gus);
+  expect(await nudgeOf(api, gus)).toBe("stronger");
+  await joinByEmail(api, owner, orgId, orgName, gus, { type: 2 });
+  expect((await api.call(gus, "GET", "/api/keykeeper/two-step-nudge")).status).toBe(401);
+  expectSetup(await signInWithEmailCode(api, gus));
 });
