@@ -2,17 +2,31 @@
 # production (the optimized server, for SQLite and PostgreSQL, and the branded
 # web vault), then started and checked like a fresh install by
 # deploy/smoke.sh. Runs for every push to main, for pull requests that change
-# the image, and by hand. A pull request whose branch name also exists in the
-# server or clients repo is built with that branch there, as Tier 1 does, so a
-# change to the image and the server it needs pass together. The image is kept
-# as a build artifact; pushing it to a registry comes with the hosted service.
-# See deploy/README.md.
+# the image, by hand, and for a release tag. A pull request whose branch name
+# also exists in the server or clients repo is built with that branch there,
+# as Tier 1 does, so a change to the image and the server it needs pass
+# together. The image is kept as a build artifact for 14 days.
+#
+# A release tag is server-v<major>.<minor>.<patch>, pushed to this repository
+# on a commit on main (the server repo's upstream tags, like 1.37.4, never
+# match). It builds the server and clients commits that
+# deploy/release-commits.txt names at that tag, each of which must be on its
+# repository's keykeeper branch. Once the smoke test passes, the publish job
+# pushes that same image, not a rebuild (its ID is checked), to
+# ghcr.io/pimpinpumpkin/passbundle as the version, signs it with cosign
+# keyless (Sigstore, with GitHub's OIDC token: no key, no secret), adds
+# GitHub's build provenance attestation, and tags it latest when it's the
+# highest version tagged. That job is the only one that can write, and it
+# runs only for a release tag. See deploy/README.md, "Getting the image" and
+# "Making a release".
 name: Release
 
 on:
   push:
     branches: [main]
+    # Path filters don't apply to tags.
     paths-ignore: ["**.md", "site/**"]
+    tags: ["server-v*"]
   pull_request:
     paths: ["deploy/**", ".github/workflows/release.yml"]
   workflow_dispatch:
@@ -31,7 +45,8 @@ permissions:
 
 concurrency:
   group: release-${{ github.ref }}
-  cancel-in-progress: true
+  # A release is never stopped halfway; a newer run for the same tag waits.
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 jobs:
   refs:
@@ -41,31 +56,99 @@ jobs:
     outputs:
       server: ${{ steps.pick.outputs.server }}
       clients: ${{ steps.pick.outputs.clients }}
+      version: ${{ steps.pick.outputs.version }}
+      latest: ${{ steps.pick.outputs.latest }}
     steps:
-      - name: Pick each repo's branch
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: deploy
+          persist-credentials: false
+      - name: Pick each repo's branch, or a release's commits
         id: pick
         env:
           BRANCH: ${{ github.head_ref }}
           SERVER_IN: ${{ inputs.server-ref }}
           CLIENTS_IN: ${{ inputs.clients-ref }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          # What was asked for by hand; else the pull request's branch name,
-          # where that repo has such a branch; else its keykeeper branch.
-          linked() {
-            if [ -n "$BRANCH" ] &&
-              git ls-remote --exit-code --heads "https://github.com/PimpinPumpkin/$1.git" "refs/heads/$BRANCH" > /dev/null; then
-              echo "$BRANCH"
-            else
-              echo keykeeper
+          # The commits a release tag builds: empty, or a full commit SHA.
+          pinned() {
+            local sha
+            sha=$(sed -n "s/^$1=//p" deploy/release-commits.txt)
+            if [ -n "$sha" ] && ! [[ $sha =~ ^[0-9a-f]{40}$ ]]; then
+              echo "deploy/release-commits.txt: $1 is \"$sha\", not a full commit SHA." >&2
+              return 1
             fi
+            echo "$sha"
           }
-          server=${SERVER_IN:-$(linked passbundle-server)}
-          clients=${CLIENTS_IN:-$(linked passbundle-clients)}
+          server_pin=$(pinned server)
+          clients_pin=$(pinned clients)
+          version=
+          latest=false
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF_TYPE" = tag ]; then
+            # A release: the version from the tag, and the pinned commits.
+            if ! [[ $GITHUB_REF_NAME =~ ^server-v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+              echo "$GITHUB_REF_NAME isn't a release tag: those are server-v<major>.<minor>.<patch>, like server-v0.1.0." >&2
+              exit 1
+            fi
+            version=${BASH_REMATCH[1]}
+            if [ -z "$server_pin" ] || [ -z "$clients_pin" ]; then
+              echo "deploy/release-commits.txt at $GITHUB_REF_NAME doesn't name both commits to release (deploy/README.md, \"Making a release\")." >&2
+              exit 1
+            fi
+            # Only what's merged: this repo's main, and each repo's keykeeper,
+            # whose tier 1 runs passed.
+            merged() {
+              local status
+              status=$(gh api "repos/$1/compare/$2...$3?per_page=1" --jq .status)
+              [ "$status" = identical ] || [ "$status" = ahead ]
+            }
+            if ! merged "$GITHUB_REPOSITORY" "$(git rev-parse HEAD)" main; then
+              echo "$GITHUB_REF_NAME isn't on main: tag a commit on main." >&2
+              exit 1
+            fi
+            if ! merged PimpinPumpkin/passbundle-server "$server_pin" keykeeper; then
+              echo "passbundle-server $server_pin isn't on keykeeper: releases build only what's merged there." >&2
+              exit 1
+            fi
+            if ! merged PimpinPumpkin/passbundle-clients "$clients_pin" keykeeper; then
+              echo "passbundle-clients $clients_pin isn't on keykeeper: releases build only what's merged there." >&2
+              exit 1
+            fi
+            server=$server_pin
+            clients=$clients_pin
+            # latest is the highest version tagged, so tagging a fix for an
+            # older version never moves it back.
+            newest=$(git ls-remote --tags --refs "https://github.com/$GITHUB_REPOSITORY.git" 'refs/tags/server-v*' |
+              sed -nE 's#.*refs/tags/server-v([0-9]+\.[0-9]+\.[0-9]+)$#\1#p' | sort -V | tail -1)
+            if [ "$newest" = "$version" ]; then
+              latest=true
+            fi
+          else
+            # What was asked for by hand; else the pull request's branch name,
+            # where that repo has such a branch; else its keykeeper branch.
+            linked() {
+              if [ -n "$BRANCH" ] &&
+                git ls-remote --exit-code --heads "https://github.com/PimpinPumpkin/$1.git" "refs/heads/$BRANCH" > /dev/null; then
+                echo "$BRANCH"
+              else
+                echo keykeeper
+              fi
+            }
+            server=${SERVER_IN:-$(linked passbundle-server)}
+            clients=${CLIENTS_IN:-$(linked passbundle-clients)}
+          fi
           {
             echo "server=$server"
             echo "clients=$clients"
+            echo "version=$version"
+            echo "latest=$latest"
           } >> "$GITHUB_OUTPUT"
-          echo "Server: $server. Clients: $clients."
+          if [ -n "$version" ]; then
+            echo "Release $version. Server: $server. Clients: $clients. Tagged latest: $latest." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Server: $server. Clients: $clients."
+          fi
 
   server:
     name: Optimized server
@@ -134,9 +217,11 @@ jobs:
 
   image:
     name: Image, built and smoke-tested
-    needs: [server, web]
+    needs: [refs, server, web]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    outputs:
+      id: ${{ steps.save.outputs.id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -153,21 +238,146 @@ jobs:
         env:
           SERVER: ${{ needs.server.outputs.commit }}
           CLIENTS: ${{ needs.web.outputs.commit }}
+          VERSION: ${{ needs.refs.outputs.version }}
         run: |
           mv deploy/context/vaultwarden deploy/context/passbundle-server
-          docker build -f deploy/Dockerfile -t passbundle:release \
-            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
-            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
-            --label "com.passbundle.server-commit=${SERVER}" \
-            --label "com.passbundle.clients-commit=${CLIENTS}" \
-            deploy/context
+          labels=(
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}"
+            --label "org.opencontainers.image.revision=$(git rev-parse HEAD)"
+            --label "org.opencontainers.image.licenses=AGPL-3.0-only"
+            --label "com.passbundle.server-commit=${SERVER}"
+            --label "com.passbundle.clients-commit=${CLIENTS}"
+          )
+          # Only a release has a version.
+          if [ -n "$VERSION" ]; then
+            labels+=(--label "org.opencontainers.image.version=${VERSION}")
+          fi
+          docker build -f deploy/Dockerfile -t passbundle:release "${labels[@]}" deploy/context
           docker image inspect passbundle:release --format 'Image size: {{.Size}} bytes'
       - name: Smoke test, on SQLite and PostgreSQL, and the client's address behind a tunnel
         run: deploy/smoke.sh passbundle:release
       - name: Save the image
-        run: docker save passbundle:release | gzip > passbundle-image.tar.gz
+        id: save
+        run: |
+          # The image's ID, the digest of its config, which holds its labels
+          # and the digest of every layer's contents: the publish job pushes
+          # only the image with this ID.
+          id=$(docker image inspect passbundle:release --format '{{.Id}}')
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          echo "Image ID: $id"
+          docker save passbundle:release | gzip > passbundle-image.tar.gz
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: image
           path: passbundle-image.tar.gz
           retention-days: 14
+
+  publish:
+    name: Published to GitHub's container registry, signed
+    needs: [refs, image]
+    # Only for a release tag pushed to this repository, and only once the
+    # image's smoke test has passed: never for a pull request, a push to
+    # main, or a run by hand, whatever ref it was started from.
+    if: >-
+      github.event_name == 'push' && github.ref_type == 'tag' &&
+      startsWith(github.ref, 'refs/tags/server-v') && needs.refs.outputs.version != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # The only job that can write. No checkout: what runs here is the
+    # runner's own docker, skopeo, and gh, cosign, and GitHub's attest action.
+    permissions:
+      packages: write # pushes the image
+      id-token: write # GitHub's OIDC token, for cosign's and the attestation's certificates
+      attestations: write # keeps the attestation
+    env:
+      IMAGE: ghcr.io/pimpinpumpkin/passbundle
+      VERSION: ${{ needs.refs.outputs.version }}
+      TESTED: ${{ needs.image.outputs.id }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: image
+      - name: Load it, and check it's the image the smoke test passed
+        run: |
+          gunzip -c passbundle-image.tar.gz | docker load
+          id=$(docker image inspect passbundle:release --format '{{.Id}}')
+          if [ "$id" != "$TESTED" ]; then
+            echo "The image artifact is $id, not the image the smoke test passed ($TESTED)." >&2
+            exit 1
+          fi
+      - name: Sign in to the registry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+      - name: Push it as ${{ needs.refs.outputs.version }}
+        id: push
+        run: |
+          docker tag passbundle:release "$IMAGE:$VERSION"
+          docker push "$IMAGE:$VERSION"
+          digest=$(docker image inspect "$IMAGE:$VERSION" --format '{{range .RepoDigests}}{{println .}}{{end}}' | sed -n "s#^$IMAGE@##p")
+          if ! [[ $digest =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "No single digest for $IMAGE after the push: $digest" >&2
+            exit 1
+          fi
+          # The registry holds the tested image: the same config.
+          config=$(skopeo inspect --raw "docker://$IMAGE@$digest" | jq -r .config.digest)
+          if [ "$config" != "$TESTED" ]; then
+            echo "$IMAGE@$digest has the config $config, not the tested image's ($TESTED)." >&2
+            exit 1
+          fi
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "Pushed $IMAGE:$VERSION as $IMAGE@$digest."
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3, cosign v3.1.4
+      - name: Sign it with cosign, keyless
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        # A certificate from Sigstore for this workflow on this tag, issued for
+        # GitHub's OIDC token, and the signature in Sigstore's public log.
+        run: cosign sign --yes "$IMAGE@$DIGEST"
+      - name: Add the build provenance attestation
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ghcr.io/pimpinpumpkin/passbundle
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+          # Storage records are for organizations' repositories only.
+          create-storage-record: false
+      - name: Tag it latest, as the highest version tagged
+        if: needs.refs.outputs.latest == 'true'
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: skopeo copy --preserve-digests "docker://$IMAGE@$DIGEST" "docker://$IMAGE:latest"
+      - name: Check the tags, the signature, and the attestation, as deploy/README.md does
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+          LATEST: ${{ needs.refs.outputs.latest }}
+          SERVER: ${{ needs.refs.outputs.server }}
+          CLIENTS: ${{ needs.refs.outputs.clients }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tags=("$VERSION")
+          if [ "$LATEST" = true ]; then
+            tags+=(latest)
+          fi
+          for tag in "${tags[@]}"; do
+            at=$(skopeo inspect --format '{{.Digest}}' "docker://$IMAGE:$tag")
+            if [ "$at" != "$DIGEST" ]; then
+              echo "$IMAGE:$tag is $at, not $DIGEST." >&2
+              exit 1
+            fi
+          done
+          cosign verify "$IMAGE:$VERSION" \
+            --certificate-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/release.yml@$GITHUB_REF" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com > /dev/null
+          gh attestation verify "oci://$IMAGE:$VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+            --source-ref "$GITHUB_REF"
+          {
+            echo "Published $IMAGE:$VERSION ($IMAGE@$DIGEST), tags: ${tags[*]}."
+            echo
+            echo "Server $SERVER, clients $CLIENTS."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Sign out of the registry
+        if: always()
+        run: docker logout ghcr.io

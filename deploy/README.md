@@ -3,18 +3,55 @@
 PassBundle's server and branded web vault in one container image, for the hosted service and for anyone who runs their own.
 
 - **What's in it:** the server built for production (`cargo build --release`, SQLite and PostgreSQL in one binary, and S3-compatible storage for files) and the branded web vault, on Debian 13 slim. It runs as an unprivileged user (uid 10001) on port 8080, keeps its data in `/data`, and has a health check on `/alive`.
-- **How it's made:** the Release workflow (`.github/workflows/release.yml`) builds both from the `keykeeper` branches, or from the branches, tags, or commits you give it when you run it by hand. A pull request whose branch name also exists in the server or clients repo uses that branch there. It builds the image from `deploy/Dockerfile` and runs `deploy/smoke.sh`, then keeps the image as the `image` artifact for 14 days. It runs for every push to main and for pull requests that change this folder. The smoke test starts the image on SQLite and on PostgreSQL, checks it serves PassBundle's web vault, makes an account, signs in, and signs in again after a restart. Then it checks the client's address as the hosted service sets it up (below): the server refuses to start on a public address without `IP_HEADER`, believes `CF-Connecting-IP` only from the tunnel's address, and ignores the same headers sent from anywhere else.
-- **Labels** record the commit of each repo it was built from (`com.passbundle.server-commit`, `com.passbundle.clients-commit`).
+- **How it's made:** the Release workflow (`.github/workflows/release.yml`) builds both from the `keykeeper` branches, or from the branches, tags, or commits you give it when you run it by hand. A pull request whose branch name also exists in the server or clients repo uses that branch there. It builds the image from `deploy/Dockerfile` and runs `deploy/smoke.sh`, then keeps the image as the `image` artifact for 14 days. It runs for every push to main, for pull requests that change this folder, and for a release tag, which also publishes the image ("Making a release"). The smoke test starts the image on SQLite and on PostgreSQL, checks it serves PassBundle's web vault, makes an account, signs in, and signs in again after a restart. Then it checks the client's address as the hosted service sets it up (below): the server refuses to start on a public address without `IP_HEADER`, believes `CF-Connecting-IP` only from the tunnel's address, and ignores the same headers sent from anywhere else.
+- **Labels** say where it came from: this repository and its commit (`org.opencontainers.image.source`, `org.opencontainers.image.revision`), the commit of the server and the clients it was built from (`com.passbundle.server-commit`, `com.passbundle.clients-commit`), the license (`org.opencontainers.image.licenses`, `AGPL-3.0-only`), and for a release its version (`org.opencontainers.image.version`).
+
+## Getting the image
+
+Each release is published to GitHub's container registry as `ghcr.io/pimpinpumpkin/passbundle`, tagged with its version (like `0.1.0`), and the newest also as `latest`. There's no release yet: the first is the owner's to tag ("Making a release"), and until then there's no image to pull. Run the Release workflow instead and load its `image` artifact, which is `passbundle:release`:
+
+```sh
+gunzip -c passbundle-image.tar.gz | docker load
+```
+
+Once there's a release:
+
+```sh
+docker pull ghcr.io/pimpinpumpkin/passbundle:0.1.0
+```
+
+### Checking where it came from
+
+A release's image is signed with cosign without a key: Sigstore gives the Release workflow a certificate for its identity on GitHub, good for a few minutes, and keeps the signature in its public log. Check it with cosign 3 or later. The identity is this repository's Release workflow running for the release's tag, and the issuer is GitHub's token service:
+
+```sh
+version=0.1.0
+cosign verify ghcr.io/pimpinpumpkin/passbundle:$version \
+  --certificate-identity "https://github.com/PimpinPumpkin/Passbundle/.github/workflows/release.yml@refs/tags/server-v$version" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+It also has GitHub's build provenance attestation, which says which workflow run built it, from which commit of this repository. Check it with the GitHub CLI, signed in to GitHub:
+
+```sh
+gh attestation verify oci://ghcr.io/pimpinpumpkin/passbundle:$version \
+  --repo PimpinPumpkin/Passbundle \
+  --signer-workflow PimpinPumpkin/Passbundle/.github/workflows/release.yml \
+  --source-ref refs/tags/server-v$version
+```
+
+Both check the image the tag points to when you run them. A tag can be moved and a digest can't, so to run exactly what you checked, use its digest: after `docker pull`, `docker image inspect --format '{{index .RepoDigests 0}}' ghcr.io/pimpinpumpkin/passbundle:$version` prints `ghcr.io/pimpinpumpkin/passbundle@sha256:...`, which both checks and `docker run` take in place of the tag. The image's labels (above) name the server and clients commits in it, the same ones `deploy/release-commits.txt` names at the release's tag.
 
 ## Running it
 
 ```sh
-gunzip -c passbundle-image.tar.gz | docker load
 docker network create --subnet 172.30.53.0/24 --ip-range 172.30.53.128/25 passbundle
 docker run -d --name passbundle --network passbundle -v passbundle-data:/data \
   -e DOMAIN=https://vault.example.com -e IP_HEADER=X-Real-IP -e IP_HEADER_TRUSTED_PROXIES=172.30.53.2 \
   passbundle:release
 ```
+
+With a release, use `ghcr.io/pimpinpumpkin/passbundle:<version>` in place of `passbundle:release`.
 
 The apps refuse a server that isn't HTTPS, so put it behind something that serves HTTPS: a reverse proxy, or a Cloudflare tunnel, as the hosted service does. This example is for a reverse proxy that sets `X-Real-IP`, running as a container on the same network at the fixed address 172.30.53.2 (`--ip 172.30.53.2`), outside the range Docker hands out, and reaching the server at `http://passbundle:8080`. Requests that come in through a published port arrive from an address Docker chooses, so a proxy outside Docker is best trusted only if nothing else can reach the server. The hosted service runs its tunnel the same way, in its Compose stack (the private ops repo's `hosting/`).
 
@@ -153,7 +190,19 @@ In Stripe's dashboard:
 
 The server fetches websites' icons and change-password pages, and sends events to the destinations organizations choose. It never reaches cloud metadata services (169.254.169.254, Azure's 168.63.129.16, and the like), link-local addresses, or IPv4 written as IPv6 (NAT64, 6to4, Teredo), whatever the settings say, and by default no private address either (`HTTP_REQUEST_BLOCK_NON_GLOBAL_IPS`). It checks each address a name resolves to before connecting. With `HTTP_PROXY`, `HTTPS_PROXY`, or `ALL_PROXY` set, the proxy looks up names instead, so those checks see only addresses written in URLs: the proxy has to refuse the rest. Event streaming never uses a proxy.
 
+## Making a release
+
+A release is a tag on this repository, `server-v<major>.<minor>.<patch>`. The first is the owner's to tag.
+
+1. In a pull request, put the commits to release in `deploy/release-commits.txt`: `server=` and `clients=`, each a full commit SHA on that repository's `keykeeper` branch (`git ls-remote https://github.com/PimpinPumpkin/passbundle-server.git refs/heads/keykeeper` prints the newest, and the same for `passbundle-clients`). Merge it.
+2. On an up-to-date main, tag that merge and push the tag: `git tag server-v0.1.0 && git push origin server-v0.1.0`.
+3. The Release workflow builds the server and the web vault from those commits and the image from the tag's `deploy/`, and runs the smoke test. Only then does it push that same image (it checks the image's ID, so it's never a rebuild) as `0.1.0`, sign it, add the attestation, and tag it `latest` if it's the highest version tagged. It stops, publishing nothing, for a tag that isn't on main, a commit that isn't on its repository's `keykeeper`, an empty `deploy/release-commits.txt`, or a tag that isn't `server-v` and three numbers.
+4. The first push makes the package `passbundle` on GitHub, and a new package is private: anyone can pull it once it's made public in its settings (Package settings, Change visibility).
+
+Don't move or reuse a release tag: a run for it again pushes a new image under the same version.
+
+What's recorded is enough to build a release again: the tag holds the Dockerfile, the smoke test, the workflow, and `deploy/release-commits.txt`; the image's labels name the same two commits, and its attestation the tag's commit and the run that built it. To build it again, run the Release workflow by hand from the tag, with those two commits. That's the same code, not the same image byte for byte: the Debian packages in it are whatever Debian has that day (`apt-get install` in `deploy/Dockerfile`).
+
 ## Not yet
 
-- Pushing the image to a registry (GitHub's container registry) and signing it, which comes with the hosted service.
 - Push notifications for the mobile apps, which come with the apps.
