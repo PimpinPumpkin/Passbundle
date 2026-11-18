@@ -105,8 +105,8 @@ async function guidedImport(page: Page, browser: string, file: ReturnType<typeof
   await page.waitForURL(/#\/vault/);
 }
 
-/** The whole vault (or an organization's, from its export page), decrypted by the web vault's own .json export. */
-async function readVault(page: Page, user: WebUser, exportPage = "/#/tools/export") {
+/** The web vault's own unencrypted .json export, of the vault or (from its export page) an organization. */
+async function exportJson(page: Page, user: WebUser, exportPage = "/#/tools/export") {
   await page.goto(exportPage);
   await page.getByRole("combobox", { name: /File format/ }).selectOption({ label: ".json" });
   await page.getByRole("button", { name: "Export", exact: true }).click();
@@ -118,7 +118,22 @@ async function readVault(page: Page, user: WebUser, exportPage = "/#/tools/expor
   ]);
   const exported = JSON.parse(fs.readFileSync((await download.path())!, "utf8"));
   expect(exported.encrypted).toBe(false);
-  return fromExport(exported);
+  return exported;
+}
+
+/** The whole vault (or an organization's, from its export page), decrypted by the web vault's own .json export. */
+async function readVault(page: Page, user: WebUser, exportPage = "/#/tools/export") {
+  return fromExport(await exportJson(page, user, exportPage));
+}
+
+/** Makes an organization with no policies, and gives its id. */
+async function createOrganization(page: Page, name: string) {
+  await page.goto("/#/create-organization");
+  await page.getByRole("textbox", { name: /Organization name/ }).fill(name);
+  await page.getByRole("radio", { name: /A family or a group/ }).check();
+  await page.getByRole("button", { name: "Create organization" }).click();
+  await page.waitForURL(/#\/organizations\/[0-9a-f-]{36}\/members/);
+  return /#\/organizations\/([0-9a-f-]{36})/.exec(page.url())![1];
 }
 
 /** The vault holds exactly what the expected file says: every item, field, and folder. */
@@ -415,12 +430,7 @@ test("a KeePass .kdbx imported in an organization's admin console can't plant ou
   test.setTimeout(120_000);
   const user = webUserFor("formats-planted-org", testInfo.repeatEachIndex);
   await signUp(page, user);
-  await page.goto("/#/create-organization");
-  await page.getByRole("textbox", { name: /Organization name/ }).fill("Planted Org");
-  await page.getByRole("radio", { name: /A family or a group/ }).check();
-  await page.getByRole("button", { name: "Create organization" }).click();
-  await page.waitForURL(/#\/organizations\/[0-9a-f-]{36}\/members/);
-  const org = /#\/organizations\/([0-9a-f-]{36})/.exec(page.url())![1];
+  const org = await createOrganization(page, "Planted Org");
   const rule = JSON.stringify({ v: 1, host: "bank.example.test", field: { id: "q" }, fill: { from: "password" } });
   const copy = JSON.stringify({ id: "planted-template", base: "note", v: 1, from: "Your MSP" });
 
@@ -429,6 +439,101 @@ test("a KeePass .kdbx imported in an organization's admin console can't plant ou
   const vault = await readVault(page, user, `/#/organizations/${org}/settings/tools/export`);
   const item = vault.items.find((i: Record<string, unknown>) => i.name === "Planted kdbx login");
   expectPlantedKdbxFields((item?.fields ?? []) as { name: string; value: string }[], rule, copy);
+});
+
+// An MSP moving from Passportal (DESIGN.md, "Importing from other password
+// managers"): its export holds every client, each client is its own
+// organization here, so importing into one asks whose passwords go in, and
+// the client and its Passportal folders become shared folders. Made up by
+// hand from Passportal's import template columns; no real clients.
+test("a Passportal export with two clients asks which goes into an organization, as shared folders", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const user = webUserFor("formats-passportal", testInfo.repeatEachIndex);
+  await signUp(page, user);
+  const org = await createOrganization(page, "Test Dental");
+  const passportal = [
+    "Passportal ID,Client Name,Credential Type,Username,Password,Description,Expires (Yes/No),Notes,URL,Folder,TOTP Secret",
+    '1001,Test Dental Group,Router,admin,Fake-Passportal-1,Front office router,No,"Rack 2, top shelf",192.0.2.1,Network//Firewall,',
+    "1002,Test Dental Group,Website,office,Fake-Passportal-2,Supplier portal,Yes,,supplies.example.test,,JBSWY3DPEHPK3PXP",
+    "1003,Example Plumbing Co,Website,owner,Fake-Passportal-3,Bank,No,,bank.example.test,,",
+  ].join("\r\n");
+
+  await page.goto(`/#/organizations/${org}/settings/tools/import`);
+  await chooseFormat(page, "Passportal (csv)");
+  await expect(page.getByText("check Include headers")).toBeVisible();
+  await chooseFile(page, { name: "passwords.csv", mimeType: "text/csv", buffer: Buffer.from(passportal) });
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await page.getByRole("dialog", { name: "Warning" }).getByRole("button", { name: "Yes" }).click();
+  const question = page.getByRole("dialog", { name: "Which client goes into Test Dental?" });
+  await expect(question.getByRole("radio")).toHaveCount(3);
+  await expect(question.getByRole("radio", { name: "Example Plumbing Co, 1 password" })).toBeVisible();
+  await expect(question.getByRole("radio", { name: "All of them, 3 passwords" })).toBeVisible();
+  await question.getByRole("radio", { name: "Test Dental Group, 2 passwords" }).check();
+  await question.getByRole("button", { name: "Import", exact: true }).click();
+  const result = page.getByRole("dialog", { name: "Data successfully imported" });
+  await expect(result.getByText("A total of 2 items were imported.")).toBeVisible({ timeout: 30_000 });
+  await expect(result.getByTestId("import-left-out")).toHaveText(["Left out 1 password for other clients."]);
+  await result.getByRole("button", { name: "Ok" }).click();
+
+  // The client is a shared folder, with Passportal's folders under it, next
+  // to the shared folder the organization started with; the other client
+  // has none.
+  const exported = await exportJson(page, user, `/#/organizations/${org}/settings/tools/export`);
+  const collections = new Map<string, string>(
+    exported.collections.map((c: { id: string; name: string }) => [c.id, c.name]),
+  );
+  const names = [...collections.values()];
+  expect(names).toHaveLength(4);
+  expect(names).toEqual(
+    expect.arrayContaining(["Test Dental Group", "Test Dental Group/Network", "Test Dental Group/Network/Firewall"]),
+  );
+  expect(names.filter((n) => n.startsWith("Example Plumbing"))).toEqual([]);
+  const placed = Object.fromEntries(
+    exported.items.map((i: { name: string; collectionIds: string[] }) => [
+      i.name,
+      i.collectionIds.map((id) => collections.get(id)),
+    ]),
+  );
+  expect(placed).toEqual({
+    "Front office router": ["Test Dental Group/Network/Firewall"],
+    "Supplier portal": ["Test Dental Group"],
+  });
+  const plain = (name: string, value: string) => ({ name, value, type: "text" });
+  expect(fromExport(exported).items).toEqual([
+    {
+      type: "login",
+      name: "Front office router",
+      folder: null,
+      favorite: false,
+      reprompt: false,
+      notes: "Rack 2, top shelf",
+      fields: [plain("Passportal ID", "1001"), plain("Credential Type", "Router"), plain("Expires (Yes/No)", "No")],
+      login: { username: "admin", password: "Fake-Passportal-1", uris: ["http://192.0.2.1"], totp: null },
+      passwordHistory: [],
+      card: null,
+      identity: null,
+    },
+    {
+      type: "login",
+      name: "Supplier portal",
+      folder: null,
+      favorite: false,
+      reprompt: false,
+      notes: null,
+      fields: [plain("Passportal ID", "1002"), plain("Credential Type", "Website"), plain("Expires (Yes/No)", "Yes")],
+      login: {
+        username: "office",
+        password: "Fake-Passportal-2",
+        uris: ["http://supplies.example.test"],
+        totp: "JBSWY3DPEHPK3PXP",
+      },
+      passwordHistory: [],
+      card: null,
+      identity: null,
+    },
+  ]);
 });
 
 test("an import keeps nested folders, favorites, TOTP, and awkward characters, as the vault shows them", async ({
