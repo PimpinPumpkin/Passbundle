@@ -413,6 +413,8 @@ Do each step on all three unless it names one.
 - [ ] As Alex, "Create account" on this invite-only server fails with the server's reason in plain words.
 - [ ] As Grace Liu, "Two-step login" opens on the strongest method she has; "Use another way" lists the rest and always a recovery code; "Don't ask again on this device for 30 days" works; "Start over" goes back.
 - [ ] As Tom Alvarez on a computer he hasn't used: "This device is new to your account." with a number; approve it from his web vault. Quit the app while it waits and sign in again: a new number.
+- [ ] As Tom, on a computer where his app signed in before, sign out, type his email, and choose "Sign in with a device" (under Sign in): the five-word phrase shows first and largest. The Pixel (with PassBundle open) shows "Approve sign-in?" with the same phrase, and so does his web vault's Settings, Security, Devices; approve it, and the app signs in and opens his vault. Lock: the master password unlocks it. Try "Resend" once (a new phrase), "Deny" once ("Sign-in denied"), and "Use master password instead" once. On a computer the app never signed in on as Tom, it says sign in with a device works on a device that has signed in to the account before.
+- [ ] As Tom, signed in that way, Settings, "Sign-in requests" says this device can't approve "Sign in with a device" requests, and a request from his browser doesn't prompt here. A new device's number still works here.
 
 **Unlock and locking**
 - [ ] As Alex, unlock with the master password. Settings, Locking: "Lock after" (1, 5, 15, 30 minutes, 1 or 4 hours, "When the app closes"; 15 by default) and "Lock when the computer sleeps" (on). Lock after the time you set while using other apps: it counts the whole computer's idle time (on Linux, only under GNOME).
@@ -485,6 +487,7 @@ Do each step on all three unless it names one.
 - [ ] As Alex, screenshots and the app switcher show nothing of the vault, and there's no switch to allow it.
 - [ ] As Alex, the Generator tab; Folders cards (with shared folder icons, as Grace Liu); Version history; templates; "Expiring soon"; the per-item health line ("Password strong · changed ..."); no Health list on phones.
 - [ ] As Tom, with PassBundle open and unlocked, a "Sign in with a device" request or a new-device check shows within about 10 seconds. Approving a sign-in asks for the fingerprint ("Approve sign-in") or the master password; a new-device check needs only the number. Closed, nothing shows (there's no push).
+- [ ] As Tom, sign out on the Pixel (it signed in before), and choose "Sign in with a device": the phrase fits the screen, and approving it from his computer's app signs the Pixel in. Switch from Wi-Fi to mobile data before approving once: "This approval can't be used here", and "Send a new request" works.
 - [ ] As Alex, Settings, "Web vault": Import, Export, and Open the web vault open the browser. Attachments save to Downloads.
 - [ ] As Alex, "Attach a file" on an item opens Android's file picker; a photo or a file from Drive attaches, with the bar and Cancel, and opens in the web vault. One over 100 MB: "That file is larger than 100 MB, the most PassBundle attaches on a phone. Attach it from a computer."
 - [ ] As Alex, Settings, Updates: Android's installer asks before installing the new version.
@@ -622,7 +625,7 @@ DESIGN or the apps say these aren't built; note it only if one appears:
 - In the desktop app's Import from browsers: importing into a shared folder (for an organization that keeps items out of Personal), saved cards and addresses, and KWallet on Linux. Importing the browsers' saved passwords is built there, and so is the guided import.
 - Touch ID in the extension on the Mac; biometrics on Linux; the Linux agent and Linux packages; signed and notarized apps, the signed MSI, and the CLI's signed manifest.
 - Security keys and YubiKey codes over NFC on iPhone, saving a new login and filling one-time codes through iPhone's AutoFill, and any iPhone release. (iPhone AutoFill and passkeys are built and wait on a signed build: section 4.)
-- Push to phones while PassBundle is closed; the apps starting "Sign in with a device" themselves; a confirmation in the web vault's and extension's approval dialog; SSO sessions approving.
+- Push to phones while PassBundle is closed; a confirmation in the web vault's and extension's approval dialog; SSO sessions approving.
 - Passkeys on computers (the desktop app only shows them); replacing an old passkey or choosing an existing login on phones.
 - Single sign-on in the desktop and phone apps; trusted-device unlock; other identity providers.
 - The nudge in the desktop and phone apps.

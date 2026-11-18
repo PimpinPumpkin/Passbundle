@@ -131,6 +131,7 @@ An MSP's feed also gets its activity log:
 | Code | Name |
 |---|---|
 | 9100, 9101, 9102 | Created the MSP; added a client; a client stopped being managed by the MSP (high) |
+| 9103 to 9107 | An existing organization joining: a code made, a code revoked, a code used, an organization joined as a client, and a client moved to another MSP (high) |
 | 9110 to 9116 | Staff: invited, joined, invitation cancelled, role changed (high), technician's access changed (high), removed, added |
 | 9120 to 9126 | Joining: a member confirmed in a client, joined with an install command, install command replaced, its email domains changed, joining defaults and clients' own settings |
 | 9130 to 9133 | Default policies changed; a client put back on a default; a policy required for every client (high); no longer required |
