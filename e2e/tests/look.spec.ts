@@ -4,7 +4,8 @@
 // mode; jewel tiles in the menu and the list; the open item in a side panel
 // beside the list; and Google Sans Flex and our artwork everywhere. The admin
 // console's menu opens on a phone as the vault's does, and closed, its icons
-// line up; its Two-step login page says it in our words.
+// line up; its Two-step login page says it in our words, with no Duo of its
+// own.
 import { expect, test, type Page } from "@playwright/test";
 
 import { brand } from "../paths.mjs";
@@ -272,28 +273,45 @@ test("with the menu closed, its icons share one left edge, in the admin console 
   }
 });
 
-test("the admin console's Two-step login page says it in our words, and names the policy as Policies does", async ({
+test("the admin console's Two-step login page says it in our words, names the policy as Policies does, and offers no Duo", async ({
   page,
 }, testInfo) => {
   test.setTimeout(90_000);
   const org = await adminConsole(page, "look-admin-two-step", testInfo.repeatEachIndex);
+  // The server has no two-step login of an organization's own (upstream's
+  // organization Duo), and no API for it: the page asked anyway, got a 404,
+  // and its Providers spinner never stopped.
+  const asked: string[] = [];
+  const missing: string[] = [];
+  page.on("request", (request) => {
+    if (/\/api\/organizations\/[^/]+\/two-factor/.test(request.url())) asked.push(request.url());
+  });
+  page.on("response", (response) => {
+    if (response.status() === 404 && response.url().includes("/api/")) missing.push(response.url());
+  });
   await page.goto(`/#/organizations/${org}/settings/two-factor`);
   const words = page.locator("bit-container");
   await expect(words).toContainText(
     "To require members to set up two-step login, turn on the Require two-step login policy.",
   );
-  await expect(words).toContainText("To require two-step login through Duo, set up Duo below.");
   await expect(words).toContainText(
     "If your organization uses single sign-on, your identity provider may already require two-step login.",
   );
-  // Not upstream's capitals, "enforce", or "SSO".
-  await expect(words).not.toContainText(/Two-step Login|enforce|SSO|Identity Provider/);
+  // Not upstream's capitals, "enforce", or "SSO", and nothing about Duo.
+  await expect(words).not.toContainText(/Two-step Login|enforce|SSO|Identity Provider|Duo/);
+  // No Providers heading, spinner, or Duo (Organization) card.
+  await expect(page.getByRole("heading", { name: "Providers" })).toHaveCount(0);
+  await expect(page.getByText("Duo (Organization)")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Manage" })).toHaveCount(0);
 
   await page.getByRole("link", { name: "Require two-step login policy." }).click();
   await expect(page).toHaveURL(/\/settings\/policies$/);
   await expect(
     page.getByRole("button", { name: /^Require two-step login Require members/ }),
   ).toBeVisible();
+  // By now the old page had long asked for its providers.
+  expect(asked).toEqual([]);
+  expect(missing).toEqual([]);
 });
 
 /** Saves a new item of a kind with a name; saving opens its view, which this closes. */
