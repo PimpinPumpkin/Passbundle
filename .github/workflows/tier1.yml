@@ -314,6 +314,13 @@ jobs:
         run: node meta/docs/vectors/check-core-vectors.mjs meta/docs/vectors/core-v1.json .
       - name: The desktop updater's test vectors, as their generator makes them
         run: node meta/docs/vectors/make-desktop-update-v1.mjs | cmp - meta/docs/vectors/desktop-update-v1.json
+      # The command-line tool's updater (DESIGN.md, "Command-line tool",
+      # "Updating itself"): the vectors as their generator makes them, and the
+      # copy the clients' jest test (self-update.spec.ts) reads.
+      - name: The command-line tool's update test vectors, as their generator makes them, and the clients' copy
+        run: |
+          node meta/docs/vectors/make-cli-update-v1.mjs | cmp - meta/docs/vectors/cli-update-v1.json
+          cmp meta/docs/vectors/cli-update-v1.json apps/cli/src/keykeeper/cli-update-v1.vectors.json
       - name: The apps' attachment and Send test vectors, as their generator makes them
         run: node meta/docs/vectors/make-attachments-send-v1.mjs | cmp - meta/docs/vectors/attachments-send-v1.json
       # The password-protected export (DESIGN.md, "Archive, export, and import

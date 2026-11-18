@@ -33,9 +33,11 @@
 # (CLI_RELEASE_PUBLIC_KEY); the owner makes both (docs/cli.md, "The CLI
 # release key"). Until the secret is there, releases carry the manifest and
 # SHA256SUMS without manifest.json.sig, and say so. A secret with no pinned
-# public key, or another key, stops the release. The tool doesn't update
-# itself, so nothing reads the signature yet but people checking a download
-# (docs/cli.md, "Checking a download").
+# public key, or another key, stops the release. `passbundle update` checks
+# the signature with the same public key, compiled into the tool from
+# passbundle-clients' brand.json (cli.releaseKeys; tier 1 checks the two
+# agree), and installs nothing unsigned; people checking a download use it
+# too (docs/cli.md, "Checking a download").
 name: CLI release
 
 on:
@@ -61,7 +63,9 @@ env:
   # The CLI release key's public half (the PASSBUNDLE_CLI_RELEASE_KEY
   # secret's), as 64 hex digits: a manifest is signed only with the key it
   # names. Empty until the owner makes the key (docs/cli.md, "The CLI release
-  # key"); docs/cli.md lists the same value for checking downloads.
+  # key"); docs/cli.md lists the same value for checking downloads, and
+  # passbundle-clients' brand.json (cli.releaseKeys) compiles it into the
+  # tool for `passbundle update` (tier 1's tests/cli checks they agree).
   CLI_RELEASE_PUBLIC_KEY: ""
   # The Node.js that builds and packs the tool. The program carries its own
   # (pkg's, tools/cli/package-lock.json).
@@ -183,7 +187,7 @@ jobs:
             echo
             echo "Files: passbundle-$VERSION-macos-arm64.tar.gz is for Macs with Apple silicon and passbundle-$VERSION-macos-x64.tar.gz for Intel Macs; passbundle-$VERSION-linux-x64.tar.gz and passbundle-$VERSION-linux-arm64.tar.gz for 64-bit Linux; passbundle-$VERSION-windows-x64.zip for 64-bit Windows. Each holds the passbundle program, its license, and where its source is. manifest.json names them with their sizes and SHA-256, and SHA256SUMS lists every file's SHA-256."
             echo
-            echo "How to install it, sign in, and use it in scripts: https://github.com/PimpinPumpkin/Passbundle/blob/main/docs/cli.md. It doesn't update itself: \`passbundle update\` says where to get the newest version."
+            echo "How to install it, sign in, and use it in scripts: https://github.com/PimpinPumpkin/Passbundle/blob/main/docs/cli.md. To update a copy you installed for yourself, run \`passbundle update\` (once releases are signed with the CLI release key; until then, install the new release the same way)."
           )
           echo "$notes"
           end="NOTES_$(od -An -N12 -tx1 /dev/urandom | tr -d ' \n')"
