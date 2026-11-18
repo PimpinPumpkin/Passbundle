@@ -166,11 +166,16 @@ test("a template added for every client applies to all of them, a new client inc
   await admin.keyboard.press("Escape");
 
   // A client's copy isn't in the vault's lists, only in the client's Templates
-  // collection, and says where it comes from there.
+  // collection, and says where it comes from there. The MSP's own template
+  // is under Item templates, as templates are, and the copies aren't there
+  // either.
   await admin.goto("/#/vault");
   const firewalls = admin.getByRole("row").filter({ hasText: "Firewall" });
+  await expect(firewalls).toHaveCount(0);
+  await pick(admin, "Item templates");
   await expect(firewalls.first()).toBeVisible();
   await expect(firewalls.filter({ hasText: "Acme Dental" })).toHaveCount(0);
+  await admin.goto("/#/vault");
   // In the left menu: Acme Dental, then its Templates collection under it,
   // the only one once Acme Dental is picked.
   await pick(admin, "Acme Dental");
