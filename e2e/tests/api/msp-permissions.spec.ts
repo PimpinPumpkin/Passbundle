@@ -503,6 +503,43 @@ const rows: Row[] = [
       };
     },
   },
+  // Codes for an organization that already uses PassBundle to join (DESIGN.md,
+  // "An organization that already uses PassBundle"): the MSP's admins only.
+  // Using one is in msp-link.spec.ts.
+  {
+    name: "list the MSP's codes for an organization to join",
+    allowed: ["mspAdmin"],
+    request: async ({ mspId }) => ({ method: "GET", path: `/api/keykeeper/msp/${mspId}/link-codes` }),
+  },
+  {
+    name: "make a code for an organization to join",
+    allowed: ["mspAdmin"],
+    request: async ({ mspId }) => ({
+      method: "POST",
+      path: `/api/keykeeper/msp/${mspId}/link-codes`,
+      data: { label: "Matrix" },
+    }),
+  },
+  {
+    name: "revoke a code for an organization to join",
+    allowed: ["mspAdmin"],
+    request: async (ctx) => {
+      const made = await ctx.api.call(ctx.admin, "POST", `/api/keykeeper/msp/${ctx.mspId}/link-codes`, {});
+      expect(made.status, JSON.stringify(made.body)).toBe(200);
+      return {
+        method: "DELETE",
+        path: `/api/keykeeper/msp/${ctx.mspId}/link-codes/${made.body.id}`,
+        check: async (allowed) => {
+          const open = await ctx.api.call(ctx.admin, "GET", `/api/keykeeper/msp/${ctx.mspId}/link-codes`);
+          const ids = open.body.data.map((c: { id: string }) => c.id);
+          expect(ids.includes(made.body.id)).toBe(!allowed);
+          if (!allowed) {
+            await ctx.api.call(ctx.admin, "DELETE", `/api/keykeeper/msp/${ctx.mspId}/link-codes/${made.body.id}`);
+          }
+        },
+      };
+    },
+  },
 ];
 
 test.describe("MSP permissions", () => {
