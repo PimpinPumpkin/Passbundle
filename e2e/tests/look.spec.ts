@@ -2,7 +2,9 @@
 // language in every theme, light or dark like the device for System, never
 // Glass; a calm ground with the menu as a card on it, graphite glass in dark
 // mode; jewel tiles in the menu and the list; the open item in a side panel
-// beside the list; and Google Sans Flex and our artwork everywhere.
+// beside the list; and Google Sans Flex and our artwork everywhere. The admin
+// console's menu opens on a phone as the vault's does, and closed, its icons
+// line up; its Two-step login page says it in our words.
 import { expect, test, type Page } from "@playwright/test";
 
 import { brand } from "../paths.mjs";
@@ -152,19 +154,26 @@ const entriesUnderneath = (page: Page) =>
       );
   });
 
-test("the menu's entries scroll clear of the logo and the product switcher, in the admin console and the vault", async ({
-  page,
-}, testInfo) => {
-  test.setTimeout(90_000);
-  await signUp(page, webUserFor("look-menu-scroll", testInfo.repeatEachIndex));
-  // An organization, so there's an admin console, and the product switcher
-  // in the menu to go between it and the vault.
+/**
+ * Signs up and makes an organization (a family, which needs no two-step
+ * login), so there's an admin console, and the product switcher in the menu
+ * to go between it and the vault. Lands on its Members page; gives its ID.
+ */
+async function adminConsole(page: Page, name: string, repeatIndex: number) {
+  await signUp(page, webUserFor(name, repeatIndex));
   await page.goto("/#/create-organization");
   await page.getByRole("textbox", { name: /Organization name/ }).fill("Test Dental");
   await page.getByRole("radio", { name: /A family or a group/ }).check();
   await page.getByRole("button", { name: "Create organization" }).click();
   await page.waitForURL(/#\/organizations\/[0-9a-f-]{36}\/members/);
-  const org = /#\/organizations\/([0-9a-f-]{36})/.exec(page.url())![1];
+  return /#\/organizations\/([0-9a-f-]{36})/.exec(page.url())![1];
+}
+
+test("the menu's entries scroll clear of the logo and the product switcher, in the admin console and the vault", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(90_000);
+  const org = await adminConsole(page, "look-menu-scroll", testInfo.repeatEachIndex);
 
   // The admin console with Settings open: a menu longer than a short window.
   // Upstream keeps its logo at the top and, 600px tall or more, the switcher
@@ -195,6 +204,96 @@ test("the menu's entries scroll clear of the logo and the product switcher, in t
       expect(await entriesUnderneath(page), `the vault, ${height}px, the list at its ${where}`).toEqual([]);
     }
   }
+});
+
+test("on a phone, the admin console's Menu button opens its menu, and a pick closes it", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  // Its pages are only in its menu, which has no room beside them here.
+  const org = await adminConsole(page, "look-admin-phone", testInfo.repeatEachIndex);
+  await page.goto(`/#/organizations/${org}/members`);
+  const menuButton = page.getByRole("button", { name: "Menu", exact: true });
+  const members = menu(page).getByRole("link", { name: "Members", exact: true });
+  await expect(menuButton).toHaveAttribute("aria-expanded", "false");
+  await expect(members).toBeHidden();
+
+  await menuButton.click();
+  await expect(menuButton).toHaveAttribute("aria-expanded", "true");
+  await expect(members).toBeVisible();
+  await expect(members).toBeInViewport({ ratio: 1 });
+
+  await menu(page).getByRole("link", { name: "Groups", exact: true }).click();
+  await expect(page).toHaveURL(/\/organizations\/[0-9a-f-]{36}\/groups$/);
+  await expect(menuButton).toHaveAttribute("aria-expanded", "false");
+  await expect(members).toBeHidden();
+});
+
+/** The closed menu's (the icon rail's) entries, with where each one's icon starts. */
+const railIcons = (page: Page) =>
+  menuCard(page).evaluate((card) =>
+    [...card.querySelectorAll("[data-testid='nav-item-interactive']")].flatMap((entry) => {
+      const icon = entry.querySelector("bit-icon")?.getBoundingClientRect();
+      return icon && icon.width > 0
+        ? [{ name: entry.getAttribute("aria-label")!, left: Math.round(icon.left) }]
+        : [];
+    }),
+  );
+
+test("with the menu closed, its icons share one left edge, in the admin console and the vault", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const org = await adminConsole(page, "look-rail", testInfo.repeatEachIndex);
+  await page.goto(`/#/organizations/${org}/members`);
+  const toggle = page.getByRole("button", { name: "Toggle side navigation" });
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+  // Groups (the organization, Reporting, Settings, and the vault's Import
+  // and export) kept room for an arrow the rail doesn't have, and their icons
+  // sat left of the others.
+  for (const where of [`/#/organizations/${org}/members`, "/#/vault"]) {
+    await page.goto(where);
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    const icons = await railIcons(page);
+    expect(icons.map((icon) => icon.name)).toContain("Settings");
+    expect(icons.length, where).toBeGreaterThan(5);
+    // The edge most of them share, so the ones off it are the ones named.
+    const sharing = (left: number) => icons.filter((icon) => icon.left === left).length;
+    const edge = icons.map((icon) => icon.left).sort((a, b) => sharing(b) - sharing(a))[0];
+    expect(
+      icons.map((icon) => `${icon.name} at ${icon.left}px`),
+      where,
+    ).toEqual(icons.map((icon) => `${icon.name} at ${edge}px`));
+  }
+});
+
+test("the admin console's Two-step login page says it in our words, and names the policy as Policies does", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(90_000);
+  const org = await adminConsole(page, "look-admin-two-step", testInfo.repeatEachIndex);
+  await page.goto(`/#/organizations/${org}/settings/two-factor`);
+  const words = page.locator("bit-container");
+  await expect(words).toContainText(
+    "To require members to set up two-step login, turn on the Require two-step login policy.",
+  );
+  await expect(words).toContainText("To require two-step login through Duo, set up Duo below.");
+  await expect(words).toContainText(
+    "If your organization uses single sign-on, your identity provider may already require two-step login.",
+  );
+  // Not upstream's capitals, "enforce", or "SSO".
+  await expect(words).not.toContainText(/Two-step Login|enforce|SSO|Identity Provider/);
+
+  await page.getByRole("link", { name: "Require two-step login policy." }).click();
+  await expect(page).toHaveURL(/\/settings\/policies$/);
+  await expect(
+    page.getByRole("button", { name: /^Require two-step login Require members/ }),
+  ).toBeVisible();
 });
 
 /** Saves a new item of a kind with a name; saving opens its view, which this closes. */
