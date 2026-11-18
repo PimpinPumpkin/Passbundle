@@ -252,7 +252,8 @@ test("revoking or removing several people at once says what each can open, then 
   await signUpWithAuthenticator(page, owner);
   const { org, admins, alex, invite } = await harborDental(page, request);
 
-  // Sam can edit Admins directly, passwords and all.
+  // Sam can edit Admins directly, passwords and all, and Everyone too, which
+  // confirming a member gives (DESIGN.md, "Defaults (Business preset)").
   const sam = await new Api(request).account(
     "Sam Lee",
     `sam.lee-${Date.now()}@api.example.test`,
@@ -286,15 +287,15 @@ test("revoking or removing several people at once says what each can open, then 
     "Alex Rivera can open 2 shared folders with 3 items.",
   );
   await expect(reach(revoking, sam.email)).toHaveText(
-    "Sam Lee can open 1 shared folder with 1 item.",
+    "Sam Lee can open 2 shared folders with 3 items.",
   );
   await revoking.getByRole("button", { name: "Revoke members" }).click();
   await expect(revoking.getByText("Revoked organization access successfully")).toHaveCount(2);
   await revoking.locator("footer").getByRole("button", { name: "Close" }).click();
 
   // Then one list: the logins whose passwords either could see, and who could
-  // see each. Front desk PC (Everyone) was Alex's; Payroll portal (Admins)
-  // was Sam's, since the group hid its passwords from Alex.
+  // see each. Front desk PC (Everyone) was both of theirs; Payroll portal
+  // (Admins) was only Sam's, since the group hid its passwords from Alex.
   const seen = page.getByRole("dialog", { name: "Passwords these 2 people could see" });
   await expect(seen.getByTestId("seen-passwords-intro")).toHaveText(
     "Alex Rivera and Sam Lee could see these logins' passwords in the shared folders they could open. They may still know them, so change them.",
@@ -302,7 +303,10 @@ test("revoking or removing several people at once says what each can open, then 
   const logins = seen.getByTestId("seen-password");
   await expect(logins).toHaveCount(2);
   const login = (name: string) => seen.locator(`[data-testid="seen-password"][data-name="${name}"]`);
-  await expect(login("Front desk PC").getByTestId("seen-password-who")).toHaveText("Alex Rivera");
+  await expect(login("Front desk PC").getByTestId("seen-password-who")).toHaveText(
+    "Alex Rivera and Sam Lee",
+  );
+  await expect(login("Front desk PC").getByTestId("seen-password-folders")).toHaveText("Everyone");
   await expect(login("Payroll portal").getByTestId("seen-password-who")).toHaveText("Sam Lee");
   await expect(login("Payroll portal").getByTestId("seen-password-folders")).toHaveText("Admins");
   await expect(seen).not.toContainText("Door codes");
@@ -311,7 +315,7 @@ test("revoking or removing several people at once says what each can open, then 
   await seen.getByRole("button", { name: "Copy list" }).click();
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toBe(
-    "Name\tShared folders\tWho could see it\nFront desk PC\tEveryone\tAlex Rivera\nPayroll portal\tAdmins\tSam Lee\n",
+    "Name\tShared folders\tWho could see it\nFront desk PC\tEveryone\tAlex Rivera, Sam Lee\nPayroll portal\tAdmins\tSam Lee\n",
   );
   await seen.getByRole("button", { name: "Done" }).click();
   await expect(seen).toBeHidden();
@@ -323,7 +327,7 @@ test("revoking or removing several people at once says what each can open, then 
   await bulk("Remove");
   const removing = page.getByRole("dialog").filter({ hasText: "Remove members" });
   await expect(reach(removing, sam.email)).toHaveText(
-    "Before they were revoked, Sam Lee could open 1 shared folder with 1 item.",
+    "Before they were revoked, Sam Lee could open 2 shared folders with 3 items.",
   );
   await removing.getByRole("button", { name: "Remove members" }).click();
   await expect(removing.getByText("Removed successfully")).toHaveCount(2);

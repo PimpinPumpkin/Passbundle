@@ -96,6 +96,18 @@ async function grant(
   await expect(access).toBeHidden();
 }
 
+/** Takes someone out of the shared folder showing, from its Access. */
+async function takeOut(owner: Page, email: string) {
+  await owner.getByRole("button", { name: "Edit shared folder" }).click();
+  await owner.getByRole("menuitem", { name: "Access" }).click();
+  const access = owner.getByRole("dialog", { name: /Edit shared folder/ });
+  const personRow = access.getByRole("row").filter({ hasText: email });
+  await personRow.getByRole("button", { name: /^Remove / }).click();
+  await expect(personRow).toHaveCount(0);
+  await access.getByRole("button", { name: "Save" }).click();
+  await expect(access).toBeHidden();
+}
+
 /** The owner's organization, with Dana in it and the items above. */
 async function setUpOrganization(
   browser: Browser,
@@ -161,6 +173,8 @@ async function setUpOrganization(
   await identity.getByRole("button", { name: "Save" }).click();
   await expect(identity).toBeHidden();
   await closeView(owner);
+  // Confirming Dana gave her Can edit here: take her out, so she's added fresh.
+  await takeOut(owner, danaEmail);
   await grant(owner, danaEmail, "Can view but not see passwords");
 
   // Admins: a login, changed once.
