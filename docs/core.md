@@ -112,6 +112,8 @@ An account or item that needs them gets "made by a newer app" or "damaged", neve
 
 **The device token.** A device that gets in gets a token of its own in the answer's `TwoFactorToken`. The core keeps it per account, beside the refresh token, by server and email (so the sign-in screen finds it before the account is on the device), and sends it on every password sign-in as two-step login's remembered token (provider 5, `twoFactorRemember=0`). It's dropped when the server answers with two-step login instead, and kept at sign-out. So the check never asks a device it knows again, and two-step login's "Don't ask again on this device" works in the apps too.
 
+**Or with another device's approval** instead of the master password, on a device that has signed in to the account before: "Signing in with a device", below.
+
 **Unlocking later** is steps 1 and 3 without the network: the KDF settings are kept with the email, and the encrypted user key is in the cached sync.
 
 **The session.** The access token is refreshed with the refresh token a minute before it expires. When the server refuses the refresh token, the app is signed out and asks for the master password.
@@ -212,6 +214,7 @@ The apps make an account the way upstream's apps do, so it opens in the web vaul
 | How the app looks (website icons on or off) | the app's data folder |
 | Whether approving a sign-in asks for biometrics or the master password first | the app's data folder |
 | Sign-in requests waiting for an answer, as listed | memory only, while unlocked |
+| A request this device made to sign in with a device: its private key, access code, and id ("Signing in with a device") | memory only, until the request ends |
 | Which expiration reminders were already said: each item's id, date, and step, never its name (below) | the account's folder, `reminders.json`, forgotten at sign-out |
 
 - **Several accounts** (DESIGN.md, "Several accounts in the apps"): each account's own rows above (its server, email, KDF settings, kept sync, lock choices, approvals, and generator choices) are in a folder of its own, `accounts/<id>` in the app's folder, and `accounts.json` lists the accounts, the one shown, this install's device identifier, and the server and email last signed in to or out of. How the app looks and whether screenshots are allowed are the device's, in the app's folder. Each account's refresh token is its own secret store entry, named by its server and email as before.
@@ -378,6 +381,18 @@ Design, October 26, 2026. Someone signing in on the web vault or the browser ext
 **New-device checks** (DESIGN.md, "New-device check") are listed beside the requests above, in the same 10-second asking, without holding the app (`GET /api/keykeeper/new-device-checks`; `pb_sign_in_requests` answers `checks` and `locationSource` too), and only while unlocked:
 - The prompt: "Approve this sign-in?", the device, where it comes from (or "Unknown location") with its address, when, how long is left, and the location's credit when a location is shown. A field for the number shown on the new device, and Approve (off until two digits are typed), Deny, and Not now (it comes back after 2 minutes).
 - The core sends only exactly two digits (`App::answer_new_device_check`, `pb_answer_new_device_check`); a wrong number denies the sign-in at once, and the server tells the account. No key goes, so it asks for no confirmation: the number, shown only on the new device, is the proof.
+
+## Signing in with a device
+
+Design, November 18, 2026: DESIGN.md, "Approving a sign-in from another device", "Our apps asking", which has what's kept and when it's dropped, the server's answers, and the threat model. The asking side of the protocol above: the user key comes to this device, so the vectors (`docs/vectors/device-signin-v1.json`, copied into `core/tests/vectors`) come first (`core/src/device_signin.rs`).
+
+- **Asking** (`App::sign_in_with_device`, `pb_sign_in_with_device`, with the server and email): prelogin and its KDF checks, as for a password; then `GET /api/devices/knowndevice` (the email in base64url, this install's identifier), and on a device the account doesn't know, "Sign in with a device works on a device that has signed in to this account before.", with no key made. Otherwise an RSA-2048 key pair and a 25-character access code (`device_signin::ACCESS_CODE_ALPHABET`), and `POST /api/auth-requests` (type 0, `Device-Type`). The answer is `step: "deviceSignIn"` with `request`: `{email, fingerprint, status, secondsLeft}`. Asked again ("Resend"), it sends a new request, which replaces the last on the server and in the core.
+- **The phrase** is `device_approval::fingerprint_phrase` of the key just made and the email in lower case, so both devices show the same.
+- **Waiting** (`App::device_sign_in_status`, `pb_device_sign_in_status`): the screen asks every 5 seconds; the core asks the server (`GET /api/auth-requests/<id>/response?code=`) at most every 5 seconds for 2 minutes, then every 10, and not at all after the 15 minutes. A 429 or a moment offline is waiting; a failure says whether the request still waits (`asking`).
+- **Approved:** the type 4 key opens with the private key to 64 bytes; the password grant with the access code as the password, `authRequest=<id>`, and the device token as for a password sign-in (`PendingSignIn` holds an approval instead of the login hash and stretched key); the user key must open the answer's `PrivateKey` before anything is kept; then the session, the sync, and the vault, as after a password. Two-step login follows with the same calls as for a password (`twoFactor`), its tries sent with the access code and the request's id, and an emailed code asked for with `authRequestId` and `authRequestAccessCode`.
+- **Ended** (`status`): `denied` (gone before the 15 minutes, or answered no), `expired`, `badKey` (no type 4 key, one that doesn't open, the wrong length, or not this account's), or `unusable` (the server won't sign in with it). Anything else the server refuses the sign-in with ("Require single sign-on", two-step login for admins) is an error, said under the master password. Whatever ends it drops the private key and the code; so do `pb_cancel_sign_in` ("Use master password instead"), another sign-in starting, and locking.
+- **A session that began from an approval** (its access token's `keykeeper_signin` is "authrequest", `Session::from_approval`) lists no "Sign in with a device" requests (`pb_sign_in_requests` answers `approves: false`), refuses approving one before anything is sent, and still lists new-device checks.
+- **Tests:** the vectors and the asking side's unit tests (`core/src/device_signin.rs`, with a stand-in server for the wire, signing in and unlocking with the master password afterwards, and every way a request ends); against a real server (`core/tests/server.rs`); and the app's (`app/test/device_sign_in_test.dart`, `app/test/sign_in_requests_test.dart`).
 
 ## Servers
 
