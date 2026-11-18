@@ -4,8 +4,8 @@
 // mode; jewel tiles in the menu and the list; the open item in a side panel
 // beside the list; and Google Sans Flex and our artwork everywhere. The admin
 // console's menu opens on a phone as the vault's does, and closed, its icons
-// line up; its Two-step login page says it in our words, with no Duo of its
-// own.
+// line up; on a phone a page's title shows beside its buttons or over them;
+// and its Two-step login page says it in our words, with no Duo of its own.
 import { expect, test, type Page } from "@playwright/test";
 
 import { brand } from "../paths.mjs";
@@ -207,6 +207,13 @@ test("the menu's entries scroll clear of the logo and the product switcher, in t
   }
 });
 
+/** Whether all of a page's title shows: it has width, and isn't cut short. */
+const wholeTitle = (page: Page, name: string) =>
+  page.getByRole("heading", { level: 1, name }).evaluate((h1) => {
+    const text = h1.querySelector(".tw-truncate") ?? h1;
+    return text.clientWidth > 0 && text.scrollWidth <= text.clientWidth;
+  });
+
 test("on a phone, the admin console's Menu button opens its menu, and a pick closes it", async ({
   page,
 }, testInfo) => {
@@ -215,6 +222,10 @@ test("on a phone, the admin console's Menu button opens its menu, and a pick clo
   // Its pages are only in its menu, which has no room beside them here.
   const org = await adminConsole(page, "look-admin-phone", testInfo.repeatEachIndex);
   await page.goto(`/#/organizations/${org}/members`);
+  // Members' search and Invite member squeezed its title to nothing; they go
+  // under it, all of them on the screen.
+  expect(await wholeTitle(page, "Members")).toBe(true);
+  await expect(page.getByRole("button", { name: "Invite member" })).toBeInViewport({ ratio: 1 });
   const menuButton = page.getByRole("button", { name: "Menu", exact: true });
   const members = menu(page).getByRole("link", { name: "Members", exact: true });
   await expect(menuButton).toHaveAttribute("aria-expanded", "false");
@@ -229,6 +240,8 @@ test("on a phone, the admin console's Menu button opens its menu, and a pick clo
   await expect(page).toHaveURL(/\/organizations\/[0-9a-f-]{36}\/groups$/);
   await expect(menuButton).toHaveAttribute("aria-expanded", "false");
   await expect(members).toBeHidden();
+  // Groups' title shows too.
+  expect(await wholeTitle(page, "Groups")).toBe(true);
 });
 
 /** The closed menu's (the icon rail's) entries, with where each one's icon starts. */
