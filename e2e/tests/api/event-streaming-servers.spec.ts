@@ -4,6 +4,9 @@
 // holds a lease on a destination while it sends, so:
 // - events that wait while a receiver is down are all sent, once each, after
 //   the server is stopped and started again;
+// - a server stopped normally in the middle of sending gives back its lease,
+//   so once it's started again it sends again at once what it hadn't marked
+//   sent, rather than after the lease would have run out;
 // - a server killed in the middle of sending sends again, after a restart,
 //   what it hadn't marked sent, once its lease runs out: what the receiver
 //   never answered, and what it answered just before the kill, which then
@@ -300,6 +303,66 @@ test.describe("Event streaming across a restart", () => {
       await http.dispose();
       await receiver?.close();
       await server.remove();
+    }
+  });
+
+  test("a server stopped normally mid-send gives back its lease, so once started again it sends again at once", async () => {
+    test.setTimeout(180_000);
+    const server = new OwnServer(streamingServerPort, { KK_EVENT_STREAMING: "1" }, true);
+    await server.start();
+    const receiver = await holdingReceiver();
+    let http = await server.request();
+    try {
+      let api = new Api(http);
+      const owner = await api.account("stop-owner");
+      const orgId = await api.organization(owner, "Fabrikam");
+      const d = await create(api, owner, orgId, webhook(receiver.url("/events")));
+      await waitFor(receiver.requests, () => receiver.ofType(1690).filter((x) => x.answered === 200), "the 'added' event");
+
+      // A rename, and the destination's turn starts: its request waits at
+      // the receiver, and the server holds the destination's lease.
+      receiver.hold();
+      await touch(api, owner, orgId, "Fabrikam 2");
+      const [first] = await waitFor(receiver.requests, () => receiver.ofType(1600), "the rename, held");
+
+      // Stopped as an operator would (SIGTERM), while that request waits:
+      // the send is cut off, so the rename isn't marked sent.
+      await server.stop();
+      receiver.answerAtOnce();
+      await server.start();
+      await http.dispose();
+      http = await server.request();
+      api = new Api(http);
+
+      // It comes again soon after the restart, not once a two-minute lease
+      // would have run out, as after a crash.
+      const again = await waitFor(
+        receiver.requests,
+        () => receiver.ofType(1600).filter((r) => r.answered === 200),
+        "the rename, again",
+        60_000,
+      );
+      expect(again).toHaveLength(1);
+      expect(first.answered).toBeUndefined();
+      expect(again[0].at - first.at).toBeLessThan(60_000);
+      // The same event, with the same id, so a receiver that drops repeats
+      // keeps one.
+      expect(again[0].headers["webhook-id"]).toBe(first.headers["webhook-id"]);
+      const resent = verifyWebhook(again[0], d.signingSecret!);
+      expect(resent).toEqual(verifyWebhook(first, d.signingSecret!));
+      expect(resent).toMatchObject({ type: 1600, organization: { name: "Fabrikam 2" } });
+      await expect
+        .poll(async () => {
+          const now = await state(api, owner, orgId, d.id);
+          return [now.status, now.queued, now.failures];
+        })
+        .toEqual(["on", 0, 0]);
+      expect(receiver.ofType(1600)).toHaveLength(2);
+      expect(receiver.ofType(1690)).toHaveLength(1);
+    } finally {
+      await http.dispose();
+      await server.remove();
+      await receiver.close();
     }
   });
 
