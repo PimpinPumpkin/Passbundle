@@ -1,7 +1,8 @@
 # Checks the script access PowerShell module (PassBundle.psm1, served by the
 # server) against script-access-v1.json and RFC 6238's one-time codes. Tier 1
-# runs it on Windows under Windows PowerShell 5.1 and PowerShell 7, and the
-# end-to-end suite runs it on Linux. Prints each check; exits 1 if any fail.
+# runs it on Windows under Windows PowerShell 5.1 and PowerShell 7, and under
+# PowerShell 7 on Linux and on a Mac; the end-to-end suite runs it on Linux
+# too. Prints each check; exits 1 if any fail.
 #
 #   pwsh -File docs/vectors/check-script-module.ps1 -Module PassBundle.psm1 -Vectors docs/vectors/script-access-v1.json
 param(
