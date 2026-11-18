@@ -472,6 +472,16 @@ test("a Passportal export with two clients asks which goes into an organization,
   await expect(question.getByRole("radio", { name: "All of them, 3 passwords" })).toBeVisible();
   await question.getByRole("radio", { name: "Test Dental Group, 2 passwords" }).check();
   await question.getByRole("button", { name: "Import", exact: true }).click();
+  // Then where each folder goes, each subfolder under its parent with a
+  // place of its own; each is a new shared folder unless someone says otherwise.
+  const places = page.getByRole("dialog", { name: "Where should each folder go in Test Dental?" });
+  const where = places.getByRole("combobox");
+  await expect(where).toHaveCount(3);
+  await expect(where.nth(0)).toHaveAccessibleName("Where Test Dental Group goes");
+  await expect(where.nth(1)).toHaveAccessibleName("Where Test Dental Group/Network goes");
+  await expect(where.nth(2)).toHaveAccessibleName("Where Test Dental Group/Network/Firewall goes");
+  await expect(places.getByTestId("folder-places-total")).toHaveText("Imports 2 items.");
+  await places.getByRole("button", { name: "Import", exact: true }).click();
   const result = page.getByRole("dialog", { name: "Data successfully imported" });
   await expect(result.getByText("A total of 2 items were imported.")).toBeVisible({ timeout: 30_000 });
   await expect(result.getByTestId("import-left-out")).toHaveText(["Left out 1 password for other clients."]);
@@ -534,6 +544,80 @@ test("a Passportal export with two clients asks which goes into an organization,
       identity: null,
     },
   ]);
+});
+
+// An organization's import says where each of the file's folders goes
+// before anything is saved (DESIGN.md, "Importing from other password
+// managers"): here one becomes a new shared folder, one goes into the shared
+// folder the organization started with, and one is left out. The
+// organization's own export then says which shared folder each item is in.
+// Made up by hand in our own CSV format for organizations; no real data.
+test("an organization import puts each of the file's folders where the admin says: new, already there, or left out", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const user = webUserFor("formats-org-folders", testInfo.repeatEachIndex);
+  await signUp(page, user);
+  const org = await createOrganization(page, "Test Clinic");
+  const csv = [
+    "collections,type,name,notes,fields,reprompt,login_uri,login_username,login_password,login_totp",
+    "Network,login,Front office router,,,0,https://192.0.2.1,admin,Fake-Org-Folders-1,",
+    "Front desk,login,Reception PC,,,0,https://reception.example.test,desk,Fake-Org-Folders-2,",
+    "Old,login,Retired fax,,,0,https://fax.example.test,fax,Fake-Org-Folders-3,",
+    ",login,Loose login,,,0,https://loose.example.test,loose,Fake-Org-Folders-4,",
+  ].join("\r\n");
+
+  await page.goto(`/#/organizations/${org}/settings/tools/import`);
+  await chooseFormat(page, "PassBundle or Bitwarden (csv)");
+  await chooseFile(page, { name: "clinic.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await page.getByRole("dialog", { name: "Warning" }).getByRole("button", { name: "Yes" }).click();
+
+  const places = page.getByRole("dialog", { name: "Where should each folder go in Test Clinic?" });
+  await expect(places.getByTestId("folder-places-intro")).toHaveText(
+    "This file has 4 items in 3 folders. Each becomes a new shared folder unless you choose one " +
+      "that's already here, or leave it out. The 1 item with no folder won't be in a shared folder.",
+  );
+  await expect(places.getByTestId("folder-place")).toHaveCount(3);
+  // Network stays a new shared folder; Front desk goes into the shared folder
+  // the organization started with; Old is left out.
+  const choose = async (folder: string, place: string) => {
+    await places.getByRole("combobox", { name: `Where ${folder} goes` }).click();
+    await page.getByRole("option", { name: place, exact: true }).click();
+  };
+  await choose("Front desk", "Default shared folder");
+  await choose("Old", "Leave out");
+  await expect(places.getByTestId("folder-places-total")).toHaveText("Imports 3 items and leaves out 1.");
+  await places.getByRole("button", { name: "Import", exact: true }).click();
+
+  const result = page.getByRole("dialog", { name: "Data successfully imported" });
+  await expect(result.getByText("A total of 3 items were imported.")).toBeVisible({ timeout: 30_000 });
+  await expect(result.getByTestId("import-placed")).toHaveText([
+    "Put 1 item in Network, a new shared folder.",
+    "Put 1 item in Default shared folder.",
+    "1 item with no folder isn't in a shared folder.",
+  ]);
+  await expect(result.getByTestId("import-left-out")).toHaveText(["Left out 1 item in Old."]);
+  await result.getByRole("button", { name: "Ok" }).click();
+
+  // Read back: Network is new, next to the one shared folder it had, and
+  // neither Front desk nor Old was made.
+  const exported = await exportJson(page, user, `/#/organizations/${org}/settings/tools/export`);
+  const collections = new Map<string, string>(
+    exported.collections.map((c: { id: string; name: string }) => [c.id, c.name]),
+  );
+  expect([...collections.values()].sort()).toEqual(["Default shared folder", "Network"]);
+  const placed = Object.fromEntries(
+    exported.items.map((i: { name: string; collectionIds: string[] }) => [
+      i.name,
+      i.collectionIds.map((id) => collections.get(id)),
+    ]),
+  );
+  expect(placed).toEqual({
+    "Front office router": ["Network"],
+    "Reception PC": ["Default shared folder"],
+    "Loose login": [],
+  });
 });
 
 test("an import keeps nested folders, favorites, TOTP, and awkward characters, as the vault shows them", async ({
