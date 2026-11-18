@@ -1,6 +1,6 @@
 # Script access
 
-Design, October 2026, with the decisions at the end made on October 20, and version 3 seals in November. It changes how keys are handled, so per the rule in DESIGN.md, this note and its test vectors (`docs/vectors/script-access-v1.json`, `script-grants-v3.json`) come before the code.
+Design, October 2026, with the decisions at the end made on October 20, and version 3 seals, the command-line tool, and technicians' script access in November. It changes how keys are handled, so per the rule in DESIGN.md, this note and its test vectors (`docs/vectors/script-access-v1.json`, `script-grants-v3.json`) come before the code.
 
 Designed from public descriptions of how such tools work in general. Never from Bitwarden's Secrets Manager code or SDK, which we don't read (CLEAN_ROOM.md).
 
@@ -12,7 +12,7 @@ Script access lets a script fetch exactly the credential it needs, at run time, 
 
 ## What people do
 
-1. **An admin makes a token.** In the MSP console, on a client (or in an organization's Settings, Joining and security, for a company's own IT): Script access, New token. They name it ("Join domain"), choose the items it may read, choose what it gets from each (username, password, one-time code, named custom fields), and set when it expires. Optionally they limit it to networks (IP ranges), such as the client's office.
+1. **An admin makes a token.** In the MSP console, on a client (or in an organization's Settings, Joining and security, for a company's own IT): Script access, New token. Owners and admins make them, the MSP's admins in its clients, and the MSP's technicians whose MSP admins gave them script access, in the clients where they're admins ("Technicians with script access" below). They name it ("Join domain"), choose the items it may read, choose what it gets from each (username, password, one-time code, named custom fields), and set when it expires. Optionally they limit it to networks (IP ranges), such as the client's office.
 2. **The console shows the token once**, as a single string, `pbs1_…`. The admin pastes it into the RMM as a masked script variable (every RMM has one).
 3. **The script asks for what it needs:**
 
@@ -21,7 +21,11 @@ Script access lets a script fetch exactly the credential it needs, at run time, 
    $cred = Get-PassBundleCredential -Item "Domain admin"
    ```
 
-   The module reads the token from an environment variable, fetches the item's copy, decrypts it on the machine, and returns a `PSCredential` (or a single field with `-Field`).
+   The module reads the token from an environment variable, fetches the item's copy, decrypts it on the machine, and returns a `PSCredential` (or a single field with `-Field`). On a Mac or Linux, the module runs under PowerShell 7, or the command-line tool does the same with nothing else installed:
+
+   ```sh
+   password="$(passbundle script get 'Domain admin')"
+   ```
 4. **The console shows every read**: which token, which item, when, and from which address, and a token's last use. Admins revoke a token at once; it stops working on the next request.
 
 ## What a token can and can't do
@@ -107,10 +111,19 @@ The test vectors are `docs/vectors/script-grants-v3.json` (made by `make-script-
 - It learns which items are granted to which tokens, and when scripts read them. That's inherent in a server that logs reads.
 - Someone who steals the token string from the RMM can read its grants until it expires or is revoked, from its allowed networks. That's the cost of any credential in an RMM; the limits are the scope, the networks, the expiry, and the read log.
 
+## Technicians with script access (November 2026)
+
+Decision 3 below left technicians out, to be given it later as a permission. MSP admins now give it to a technician in the Staff section (their access: "Script access"), off unless chosen.
+
+- **Where:** each client the technician reaches where they're an admin (their role there, the default one or that client's own). A technician with a custom role in a client, a helpdesk role say, doesn't get it there, and a client's own custom roles never do.
+- **What:** what owners and admins do with script tokens: make them (with their master password or a one-time code, as anyone does), see every token in the client with its reads, add and remove grants, and revoke any of them. Nothing else that owners and admins have.
+- **"Manages", for a technician:** a token works only while its maker still manages the organization (DESIGN.md, "Offboarding"). For a technician that means, checked on every request and every read: still a technician on the client's MSP's staff, still with script access, with a confirmed admin's place in the client that came from that MSP, in a client they reach. So taking away their script access, giving them a custom role there, taking the client off their list, the client revoking or removing them, the MSP removing them from its staff, or the client removing its MSP stops what they made, and apps aren't asked to refresh its copies. Like an owner or admin demoted and made one again, their tokens work again while it holds again. A client removing its MSP also revokes them for good, with every token the MSP's people made.
+- **No new crypto:** the technician holds the client's organization key already, as an admin there; making a token is the same as an admin making one.
+
 ## Server
 
-- Tables: `script_tokens` (id, organization, name, created by, created, expires, revoked, auth hash, networks, sealed token key, last used), `script_grants` (token, item, copy, revision, sealed spec), `script_reads` (token, item, time, address, result).
-- Admin endpoints, for an organization's owners and admins and its MSP's admins: create, list, revoke, add and remove grants, and the read log. Refreshing a copy: anyone who can edit the item, with the item's current revision.
+- Tables: `script_tokens` (id, organization, name, created by, created, expires, revoked, auth hash, networks, sealed token key, last used), `script_grants` (token, item, copy, revision, sealed spec), `script_reads` (token, item, time, address, result). A technician's script access is `msp_staff.script_access`.
+- Admin endpoints, for an organization's owners and admins, its MSP's admins, and its MSP's technicians with script access who are admins there: create, list, revoke, add and remove grants, and the read log. Refreshing a copy: anyone who can edit the item, with the item's current revision.
 - Script endpoints, authenticated by `Authorization: PassBundleScript <token id>.<auth secret>` and nothing else: list the token's grants, read one copy. Checked every time: the token exists, isn't revoked or expired, the secret matches (constant time), the address is in its networks, and the organization is enabled. At most 60 reads a minute per token, in any minute: counted over the last 60 seconds, so 60 at once means none more until the first of them is a minute old (not one more each second, as a token bucket would allow). Past that, 429.
 - Every read, allowed or refused, goes in `script_reads`. The MSP console shows reads and a token's first use from a new address in the MSP's activity log.
 
@@ -119,20 +132,49 @@ The test vectors are `docs/vectors/script-grants-v3.json` (made by `make-script-
 - One file, `PassBundle.psm1`, plain PowerShell with .NET's AES and HMAC (and HKDF written out with HMAC, since Windows PowerShell 5.1's .NET has none), so it runs on Windows PowerShell 5.1 and PowerShell 7 with nothing to install. The server serves it, and the console shows the line to fetch it.
 - `Get-PassBundleCredential -Item <name or id>` returns a `PSCredential`; `Get-PassBundleSecret -Item <name or id> -Field password|username|totp|<custom field>` returns one value (a one-time code is computed on the machine from the copied secret). The token comes from `$env:PASSBUNDLE_TOKEN` or `-Token`.
 - It isn't signed until code signing exists; RMMs run scripts with an execution policy that allows that, and the console says so.
-- Later: the same in the command-line client for macOS and Linux scripts.
+
+### On a Mac or Linux
+
+The module runs unchanged under PowerShell 7 there (checked November 2026): it uses no Windows paths or registry, only .NET's own AES, HMAC, and HTTPS, and its file is plain ASCII with LF line endings, which every PowerShell reads. Tier 1 checks it against the vectors under PowerShell 7 on Linux and on a Mac, and runs it against the test server on Linux.
+
+1. Install PowerShell 7: on a Mac, `brew install --cask powershell`; on Linux, Microsoft's packages for your distribution (learn.microsoft.com, "Install PowerShell on Linux"), or `sudo snap install powershell --classic` on Ubuntu.
+2. In a script (`pwsh -File script.ps1`, or with `#!/usr/bin/env pwsh` as its first line), the settings page's lines work as they are, with the token in `PASSBUNDLE_TOKEN`:
+
+   ```powershell
+   Invoke-WebRequest 'https://vault.example.com/api/keykeeper/script/PassBundle.psm1' -OutFile PassBundle.psm1
+   Import-Module ./PassBundle.psm1
+   $credential = Get-PassBundleCredential -Item 'Domain admin'
+   ```
+
+   PowerShell there takes `.\PassBundle.psm1` as well. There's no execution policy to set.
+3. A server whose certificate comes from a private certificate authority: on Linux, add the authority to the system's trust store (or name its certificate in `SSL_CERT_FILE`); on a Mac, add it to the System keychain and trust it.
+
+A script that shouldn't need PowerShell uses the command-line tool instead (next).
+
+## The command-line tool (November 2026)
+
+`passbundle script get <item> [--field username|password|totp|<custom field>]` prints one value a token was granted, as `Get-PassBundleSecret` returns it (`password` when `--field` is left out), for Mac and Linux scripts (docs/cli.md, "Script access").
+
+- **The token** comes from `PASSBUNDLE_SCRIPT_TOKEN` or the first line on stdin. `--token` works too, with a warning on stderr, as the tool warns for `--session`: other programs on the computer can read a command line.
+- **The server** is `--server`, `PASSBUNDLE_SERVER`, or the brand's own service, over https only.
+- **No account:** it runs before the tool loads its accounts, so it signs nothing in, needs no session, and neither reads nor writes the tool's data folder.
+- **The same reads and checks as the module,** with Node's own crypto (`apps/cli/src/keykeeper/script-access.ts` in passbundle-clients): the token's id, auth secret, and token key from its seed (HKDF-SHA256, no salt, the two labels above); `GET items/<id>` for an id, or `GET items` and the one copy with that name (case aside); the copy's HMAC checked in constant time before AES-256-CBC opens it; the copy refused unless it names this token and the item asked for; and a one-time code made on the machine from the copied secret (RFC 6238, or an `otpauth://` address's own digits, period, and SHA-1, SHA-256, or SHA-512; Steam's refused). The 401, 404, and 429 answers say what the module's do.
+- **No change** to tokens, grants, seals, or copies.
 
 ## Tests
 
 - The vectors: the token string, the auth secret and its hash, the token key, a sealed token key and spec, a copy, and copies the script must refuse (tampered, sealed with the wrong key, another item's, another token's). `node docs/vectors/make-script-access-v1.mjs` makes them with plain Node; upstream's own crypto opens them (the clients' tests check that, as for the native-messaging vectors).
 - Clients: unit tests for making a token, copies, specs, and refreshing, against both sets of vectors: each check in `script-grants-v3.json` (refreshing before the token's end, and each pair refused), and each item a hacked server could list (the person's own, another organization's, in the trash, not editable, passwords hidden, another item under a grant's seals) is left alone (`script-refresh.spec.ts`). The lines the settings page shows for a script name the item by its id, single-quoted, with its name only in a comment of letters, digits, and plain punctuation, tested with hostile names (`script-usage.spec.ts`).
 - Server: unit tests for the checks; API tests for every endpoint against every role, a token reading only its grants, expiry, revocation, networks, the rate limit, and refresh permissions.
-- The module: tier 1 runs it under PowerShell 7 on Linux against the test server, decrypting real copies and refusing bad ones and a revoked token. `docs/vectors/check-script-module.ps1` checks it against the vectors and RFC 6238's codes, on Windows under Windows PowerShell 5.1 and PowerShell 7.
+- The module: tier 1 runs it under PowerShell 7 on Linux against the test server, decrypting real copies and refusing bad ones and a revoked token. `docs/vectors/check-script-module.ps1` checks it against the vectors and RFC 6238's codes, on Windows under Windows PowerShell 5.1 and PowerShell 7, and under PowerShell 7 on Linux and on a Mac, where tier 1 also imports it with the settings page's `.\PassBundle.psm1`.
+- The command-line tool: jest checks `script get` against the vectors through the tool's own code (`apps/cli/src/keykeeper/script-access.spec.ts`, with a copy of `script-access-v1.json` that tier 1 compares to this one): the token, the auth secret, the header, the token key, each refused and mismatched copy, each field, RFC 6238's codes, the token from the variable or stdin and never from the command line without a warning, and the messages for a revoked or expired token, an item it can't read, and the read limit. Tier 1 runs the packed tool against the test server (`e2e/tests/cli/script-access.spec.ts`) with a token made through the API: each field, by name and id, from the variable, stdin, and `--token`; nothing written in an empty home folder; another item's copy, a forged one, and a field it wasn't granted refused; and refused once the token is revoked.
+- Technicians: unit tests on a real database for who manages a client's tokens (with and without script access, an admin or a custom role there, a client they don't reach, a waiting, revoked, or another MSP's place, their account off, off the staff), and API tests: a technician without it gets "not found"; one with it makes, sees, and revokes tokens where they're an admin and not where they have a custom role, and reaches no other owners' and admins' setting; and their token stops when they lose script access, get a custom role there, are revoked by the client, or leave the MSP's staff.
 - End to end: an owner makes a token in the web vault with real keys, a script reads just the granted fields, an edit in the web vault reaches the script, the reads show, and revoking stops it. The API tests cover MSP admins and everyone else.
 
 ## Decisions (October 20, 2026)
 
 1. **Copies, as above, instead of turning on per-item keys for every vault.** They change nothing about how items are encrypted and expose only the fields chosen. The cost: an edit made outside PassBundle's apps reaches scripts only after an admin's app next runs.
 2. **Expiry required, at most a year, 90 days by default.**
-3. **Who makes tokens: an organization's owners and admins, and its MSP's admins.** Technicians could later get it as a permission.
+3. **Who makes tokens: an organization's owners and admins, and its MSP's admins.** Technicians could later get it as a permission. (November 2026: they can, as script access, "Technicians with script access" above.)
 4. **Networks now, machine binding later.** IP ranges in version 1; binding a token to a machine needs a key kept on the machine, which is the desktop agent's job and waits on code signing.
-5. **PowerShell first.** Most RMM scripts on Windows are PowerShell, and the module needs no install.
+5. **PowerShell first.** Most RMM scripts on Windows are PowerShell, and the module needs no install. (November 2026: the command-line tool's `script get` followed, for Mac and Linux scripts, and the module runs there too under PowerShell 7.)
