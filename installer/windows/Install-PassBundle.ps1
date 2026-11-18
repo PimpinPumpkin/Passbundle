@@ -22,7 +22,8 @@
   With the agent's files in an "agent" folder next to this script, it also
   installs the desktop agent to Program Files: it starts at every sign-in,
   the browsers can reach it for Windows Hello unlock (our extensions only), and
-  a SYSTEM task installs its signed updates. Without them, policies only.
+  a SYSTEM task installs signed updates of the agent, its browser helper, and
+  the app, all three together. Without them, policies only.
   With the app's files in an "app" folder next to this script, it installs the
   PassBundle app next to the agent, with a Start menu shortcut: the agent's
   tray opens it, and it starts the agent if it isn't running. passbundle://
@@ -36,7 +37,7 @@
   .\Install-PassBundle.ps1 -ServerUrl https://vault.example.com -EnrollmentToken <token> -JoinSecret <secret> -OrgKey <fingerprint>
   (the MSP console's install command has all three)
 .EXAMPLE
-  .\Install-PassBundle.ps1 -DisableAgentUpdates   # the RMM updates the agent instead
+  .\Install-PassBundle.ps1 -DisableAgentUpdates   # the RMM updates PassBundle instead
 .EXAMPLE
   .\Install-PassBundle.ps1 -Remove
 #>
@@ -61,7 +62,8 @@ param(
   # checks before it escrows anything for account recovery.
   [ValidatePattern('^[A-Za-z0-9_-]{43}$')]
   [string] $OrgKey,
-  # The agent doesn't update itself; the RMM pushes new versions instead.
+  # PassBundle (the agent, its browser helper, and the app) doesn't update
+  # itself; the RMM pushes new versions instead.
   [switch] $DisableAgentUpdates,
   [switch] $Remove
 )
@@ -113,6 +115,9 @@ $RunKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
 $RunName = "PassBundle"
 $AgentPolicy = "HKLM:\SOFTWARE\Policies\PassBundle\Agent"
 $UpdateTask = "PassBundle agent update"
+# Where the update task puts an update together and keeps one that waits for
+# nothing to run from $InstallDir (passbundle-apps, agent/src/swap.rs).
+$UpdateWork = Join-Path $env:ProgramFiles ".PassBundle-agent-update"
 
 # Our app (passbundle-apps), next to the agent: the tray's "Open PassBundle"
 # finds it there, and it finds the agent. See DESIGN.md, "Clients".
@@ -285,10 +290,15 @@ function Install-Agent {
     if (Get-ScheduledTask -TaskName $UpdateTask -ErrorAction SilentlyContinue) {
       Unregister-ScheduledTask -TaskName $UpdateTask -Confirm:$false
     }
+    # And no update waiting to go in.
+    if (Test-Path $UpdateWork) { Remove-Item -Path $UpdateWork -Recurse -Force }
   } else {
     if ((Get-Item $AgentPolicy).GetValueNames() -contains "Updates") { Remove-ItemProperty -Path $AgentPolicy -Name "Updates" }
-    # Signed updates, daily and at startup, with the rights to replace the agent.
-    # The agent checks each release's signature itself (see agent/README.md in passbundle-apps).
+    # Signed updates, daily and at startup, with the rights to replace the
+    # agent, its host, and the app, which go in together when nothing runs
+    # from $InstallDir. The task runs the agent by its full path; the agent
+    # checks each release's signature itself, and changes only folders only
+    # administrators can change (see agent/README.md in passbundle-apps).
     $action = New-ScheduledTaskAction -Execute (Join-Path $InstallDir "passbundle-agent.exe") -Argument "--update"
     $triggers = @((New-ScheduledTaskTrigger -Daily -At "3:17am"), (New-ScheduledTaskTrigger -AtStartup))
     $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
@@ -373,6 +383,7 @@ function Remove-Agent {
   $policyRoot = Split-Path $AgentPolicy -Parent
   if (Test-Path $policyRoot) { Remove-Item -Path $policyRoot -Recurse -Force }
   if (Test-Path $InstallDir) { Remove-Item -Path $InstallDir -Recurse -Force }
+  if (Test-Path $UpdateWork) { Remove-Item -Path $UpdateWork -Recurse -Force }
   Write-Output "Removed the PassBundle desktop agent and app"
 }
 

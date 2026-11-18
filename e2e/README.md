@@ -73,4 +73,4 @@ The tests of event streaming across restarts and servers (`tests/api/event-strea
 
 ## Windows (tier 2)
 
-`installer/windows/tests/Test-Install.ps1` applies the policies on a disposable Windows machine, then `npx playwright test -c playwright.windows.config.ts` checks that real Chrome and Edge report them. CI runs both nightly on `windows-latest`.
+`installer/windows/tests/Test-Install.ps1` applies the policies on a disposable Windows machine, then `npx playwright test -c playwright.windows.config.ts` checks that real Chrome and Edge report them. Between the two, `installer/windows/tests/Test-AgentUpdate.ps1` installs a test release of the agent, its host, and the app, and has the SYSTEM update task take it to the next one from a stand-in for the update site, signed with a throwaway key. CI runs them nightly on `windows-latest`.
