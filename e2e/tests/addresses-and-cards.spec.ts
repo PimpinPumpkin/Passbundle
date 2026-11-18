@@ -2,13 +2,29 @@
 // only: a one-page checkout fills the address from an identity and the card
 // from a card, with the name on the card only in its own field and the month
 // and year lists on the right options; a checkout in two steps on one page
-// fills the card in the payment fields that appear after Continue; and an
-// organization that turns the browser's own card and address autofill off
+// fills the card in the payment fields that appear after Continue; an address
+// known only by labels gets the menu inside its fields, its street's text area
+// and its state list too, never a search box or a comments field, and a state
+// list of full names gets the right one from a code; a German address fills
+// its Bundesland and Land lists of names from codes; a card fills a payment
+// service's frame and never another site's, unless the fill starts there; and
+// an organization that turns the browser's own card and address autofill off
 // has the extension turn them off in a work profile, and let go of them again.
-import type { APIRequestContext, BrowserContext, Page } from "@playwright/test";
+import fs from "node:fs";
 
-import { chooseFirstInlineMenuItem } from "./support/autofill";
-import { expect, logInPopup, openPopup, serverUrl, test } from "./support/extension";
+import type { APIRequestContext, BrowserContext, Frame, Locator, Page } from "@playwright/test";
+
+import { fixturePort, hostResolverRules } from "../paths.mjs";
+import { chooseFirstInlineMenuItem, waitForInlineMenuItem } from "./support/autofill";
+import {
+  expect,
+  extensionIdOf,
+  launchWithExtension,
+  logInPopup,
+  openPopup,
+  serverUrl,
+  test,
+} from "./support/extension";
 import {
   encrypt,
   realAccount,
@@ -75,11 +91,48 @@ const home = {
   },
 };
 
-/** A new account with a card and an identity, signed in to the extension. */
-async function shopper(context: BrowserContext, extensionId: string, request: APIRequestContext, prefix: string) {
+/** An identity that keeps its state and country as codes. */
+const shipping = {
+  type: 4 as const,
+  name: "Shipping address",
+  values: {
+    firstName: "Alice",
+    lastName: "Example",
+    address1: "1 Main Street",
+    city: "Springfield",
+    state: "CA",
+    postalCode: "12345",
+    country: "US",
+  },
+};
+
+/** A German address, its state and country as codes. */
+const munich = {
+  type: 4 as const,
+  name: "Lieferadresse",
+  values: {
+    firstName: "Anna",
+    lastName: "Beispiel",
+    address1: "Hauptstraße 1",
+    postalCode: "80331",
+    city: "München",
+    state: "BY",
+    country: "DE",
+  },
+};
+
+/** A new account with a card and an identity (or these items), signed in to the extension. */
+async function shopper(
+  context: BrowserContext,
+  extensionId: string,
+  request: APIRequestContext,
+  prefix: string,
+  items = [card, home],
+) {
   const account = await realAccount(request, prefix);
-  await personalItem(request, account, card);
-  await personalItem(request, account, home);
+  for (const item of items) {
+    await personalItem(request, account, item);
+  }
   const popup = await openPopup(context, extensionId);
   await logInPopup(popup, { email: account.email, password: account.password, name: prefix });
   await popup.close();
@@ -102,8 +155,11 @@ async function waitForFields(context: BrowserContext, page: Page, fieldId: strin
             const tab = (await chrome.tabs.query({})).find((t) => t.url === url);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const main = (self as any).bitwardenMain;
-            const details = tab?.id ? main?.overlayBackground.pageDetailsForTab[tab.id]?.get(0)?.details : null;
-            return Boolean(details?.fields?.some((f: { htmlID?: string }) => f.htmlID === fieldId));
+            // Any frame's: a card's fields may be in a frame of their own.
+            const frames = tab?.id ? main?.overlayBackground.pageDetailsForTab[tab.id] : null;
+            return [...(frames?.values() ?? [])].some((frame) =>
+              frame?.details?.fields?.some((f: { htmlID?: string }) => f.htmlID === fieldId),
+            );
           },
           { url, fieldId },
         ),
@@ -129,16 +185,23 @@ async function fillFrom(
   if (!added) {
     await waitForFields(context, page, fieldId);
   }
-  const field = page.locator(`#${fieldId}`);
-  const menuOpen = () => page.frames().some((f) => f.url().endsWith("menu-list.html"));
+  await openMenuIn(page, page.locator(`#${fieldId}`));
+  await chooseFirstInlineMenuItem(context, page, itemName);
+}
+
+const menuOpen = (page: Page) => page.frames().some((f) => f.url().endsWith("menu-list.html"));
+
+/** Clicks into a field until the menu inside it opens. */
+async function openMenuIn(page: Page, field: Locator) {
+  const focused = () => field.evaluate((el) => el.ownerDocument.activeElement === el);
   await expect(async () => {
-    if (!menuOpen()) {
+    // The menu may still be open for the field before.
+    if (!menuOpen(page) || !(await focused())) {
       await page.locator("body").click({ position: { x: 1, y: 1 } });
       await field.click();
     }
-    await expect.poll(menuOpen, { timeout: 2_000 }).toBe(true);
+    await expect.poll(() => menuOpen(page), { timeout: 2_000 }).toBe(true);
   }).toPass({ timeout: 20_000 });
-  await chooseFirstInlineMenuItem(context, page, itemName);
 }
 
 async function expectCardFilled(page: Page) {
@@ -188,6 +251,152 @@ test("a checkout in two steps on one page fills the card in the payment fields t
   await fillFrom(context, page, "ccnumber", "Test Visa", { added: true });
   await expectCardFilled(page);
   await expect(page.locator("#name")).toHaveValue("Alice Example");
+});
+
+/**
+ * Picks the first item in the menu inside a field, with the keyboard, for a
+ * field in a frame or a text area too: ArrowDown moves focus from the field
+ * into the menu, and Enter waits until it has.
+ */
+async function chooseFromMenu(context: BrowserContext, page: Page, field: Locator, itemName: string) {
+  await waitForInlineMenuItem(context, page, itemName);
+  const stillInField = () =>
+    field.evaluate((el) => el.ownerDocument.hasFocus() && el.ownerDocument.activeElement === el);
+  await expect(async () => {
+    if (await stillInField()) {
+      await page.keyboard.press("ArrowDown");
+    }
+    await expect.poll(stillInField, { timeout: 1000 }).toBe(false);
+  }).toPass({ timeout: 10_000 });
+  await page.keyboard.press("Enter");
+}
+
+/**
+ * The fields of the focused field's frame that have the menu inside them, by
+ * id: the focused field sends them all to the extension's background with its
+ * own position.
+ */
+async function fieldsWithMenu(context: BrowserContext): Promise<string[]> {
+  return context.serviceWorkers()[0].evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fields = (self as any).bitwardenMain.overlayBackground.allFieldData ?? [];
+    return fields.map((f: { htmlID?: string }) => f.htmlID ?? "").sort();
+  });
+}
+
+test("an address known only by labels gets the menu in its fields, lists and text areas too, and its state list of full names gets the right one", async ({
+  context,
+  extensionId,
+  request,
+}) => {
+  await shopper(context, extensionId, request, "address-labels", [shipping]);
+  const page = await context.newPage();
+  await page.goto(`${shop}/address-labels.html`);
+  await waitForFields(context, page, "street");
+
+  // The state list opens the identities' menu when it gets focus.
+  await expect(async () => {
+    if (!menuOpen(page)) {
+      await page.locator("body").click({ position: { x: 1, y: 1 } });
+      await page.locator("#state").focus();
+    }
+    await expect.poll(() => menuOpen(page), { timeout: 2_000 }).toBe(true);
+  }).toPass({ timeout: 20_000 });
+  await waitForInlineMenuItem(context, page, "Shipping address");
+
+  // Every field of the address has it, and the search box and the comments
+  // field don't.
+  expect(await fieldsWithMenu(context)).toEqual(["city", "fullname", "state", "street", "zip"]);
+
+  // From the street's text area.
+  const street = page.locator("#street");
+  await openMenuIn(page, street);
+  await chooseFromMenu(context, page, street, "Shipping address");
+  await expect(page.locator("#street")).toHaveValue("1 Main Street");
+  await expect(page.locator("#fullname")).toHaveValue("Alice Example");
+  await expect(page.locator("#city")).toHaveValue("Springfield");
+  // The identity says CA; the list's values are full names.
+  await expect(page.locator("#state")).toHaveValue("California");
+  await expect(page.locator("#zip")).toHaveValue("12345");
+  await expect(page.locator("#site-search")).toHaveValue("");
+  await expect(page.locator("#comments")).toHaveValue("");
+});
+
+test("a German address fills its Bundesland and Land lists of full names from an identity's codes", async ({
+  context,
+  extensionId,
+  request,
+}) => {
+  await shopper(context, extensionId, request, "address-germany", [munich]);
+  const page = await context.newPage();
+  await page.goto(`${shop}/address-germany.html`);
+  await waitForFields(context, page, "strasse");
+
+  const street = page.locator("#strasse");
+  await openMenuIn(page, street);
+  await chooseFromMenu(context, page, street, "Lieferadresse");
+  await expect(page.locator("#vorname")).toHaveValue("Anna");
+  await expect(page.locator("#nachname")).toHaveValue("Beispiel");
+  await expect(street).toHaveValue("Hauptstraße 1");
+  await expect(page.locator("#plz")).toHaveValue("80331");
+  await expect(page.locator("#ort")).toHaveValue("München");
+  // BY and DE, as the list writes them.
+  await expect(page.locator("#bundesland")).toHaveValue("Bayern");
+  await expect(page.locator("#land")).toHaveValue("Deutschland");
+  expect(await fieldsWithMenu(context)).toEqual(
+    ["bundesland", "land", "nachname", "ort", "plz", "strasse", "vorname"].sort(),
+  );
+});
+
+// The test browser's rules, plus a payment service's host on the extension's
+// list, sent to the local fixture server: its stand-in for the service's
+// hosted card fields. Nothing reaches the real service.
+const paymentServiceRules = hostResolverRules.replace(
+  "MAP * ~NOTFOUND",
+  `MAP js.stripe.com 127.0.0.1:${fixturePort}, MAP * ~NOTFOUND`,
+);
+
+test("a card fills a payment service's frame and never another site's, unless the fill starts in it", async ({
+  request,
+}) => {
+  const { context, profile } = await launchWithExtension(paymentServiceRules);
+  try {
+    const extensionId = await extensionIdOf(context);
+    await shopper(context, extensionId, request, "card-frames", [card]);
+    const page = await context.newPage();
+    await page.goto(`${shop}/card-frames.html`);
+    await waitForFields(context, page, "ccnumber");
+    const frameOf = (host: string) =>
+      page.frames().find((f) => new URL(f.url()).host === host) as Frame;
+    await expect.poll(() => Boolean(frameOf("js.stripe.com") && frameOf("pay.elsewhere.test"))).toBe(true);
+    const payment = frameOf("js.stripe.com");
+    const elsewhere = frameOf("pay.elsewhere.test");
+
+    // Started on the shop's own page: the name there, and the payment
+    // service's frame, whose fields are in no form. Never the other site's
+    // frame: refused before anything left the extension.
+    await fillFrom(context, page, "ccname", "Test Visa");
+    await expect(page.locator("#ccname")).toHaveValue("Alice B Example");
+    await expect(elsewhere.locator("#ccnumber")).toHaveValue("");
+    await expect(payment.locator("#ccnumber")).toHaveValue(card.values.number);
+    await expect(payment.locator("#ccexp")).toHaveValue("03/27");
+    await expect(payment.locator("#cvc")).toHaveValue("123");
+    // Still nothing there once the fill is done.
+    await expect(elsewhere.locator("#ccnumber")).toHaveValue("");
+    await expect(elsewhere.locator("#ccexp")).toHaveValue("");
+    await expect(elsewhere.locator("#cvc")).toHaveValue("");
+
+    // Started in the other site's frame, where the person chose to fill it.
+    const number = elsewhere.locator("#ccnumber");
+    await openMenuIn(page, number);
+    await chooseFromMenu(context, page, number, "Test Visa");
+    await expect(number).toHaveValue(card.values.number);
+    await expect(elsewhere.locator("#ccexp")).toHaveValue("03/27");
+    await expect(elsewhere.locator("#cvc")).toHaveValue("123");
+  } finally {
+    await context.close();
+    fs.rmSync(profile, { recursive: true, force: true });
+  }
 });
 
 type Switch = { levelOfControl: string; value: boolean };
