@@ -5,7 +5,9 @@
 // machinery: a setup session at sign-in, sessions ending at once, roles not
 // yet accepted, and the MSP's default policies. And for everyone no rule
 // covers who has no two-step login at all, a nudge to set it up, which Not
-// now hides for 90 days on every device.
+// now hides for 90 days on every device. (The nudge to a stronger method,
+// for email codes alone, needs a server that sends email:
+// tests/mail/admin-two-step.spec.ts.)
 import { randomUUID } from "node:crypto";
 
 import { type APIRequestContext, expect, test } from "@playwright/test";
@@ -78,10 +80,19 @@ async function signInWithCode(api: Api, who: Account) {
   return api.signIn(who.email, who.password, { twoFactorProvider: "0", twoFactorToken: await nextTotp(who.email) });
 }
 
-/** Whether the vault page shows the nudge to set up two-step login, for this session. */
+/**
+ * Whether the vault page shows the nudge to set up two-step login, for this
+ * session. Nobody here has email codes (this server sends no email), so the
+ * answer names that nudge exactly when `show`, as older clients read it, is
+ * true.
+ */
 async function nudged(api: Api, as: { token: string }) {
   const answer = await api.call(as, "GET", "/api/keykeeper/two-step-nudge");
   expect(answer.status, JSON.stringify(answer.body)).toBe(200);
+  expect(answer.body, JSON.stringify(answer.body)).toEqual({
+    show: answer.body.show,
+    nudge: answer.body.show ? "setUp" : null,
+  });
   return answer.body.show as boolean;
 }
 
@@ -505,7 +516,7 @@ test("the nudge is for someone with no two-step login whom no rule covers, and N
   // sign-in, as on another device, doesn't show it either.
   const dismissed = await api.call(solo, "POST", "/api/keykeeper/two-step-nudge/dismiss");
   expect(dismissed.status, JSON.stringify(dismissed.body)).toBe(200);
-  expect(dismissed.body).toEqual({ show: false });
+  expect(dismissed.body).toEqual({ show: false, nudge: null });
   expect(await nudged(api, solo)).toBe(false);
   expect(await nudged(api, { token: await api.logIn(solo.email, solo.password) })).toBe(false);
 

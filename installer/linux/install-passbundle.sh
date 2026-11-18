@@ -4,7 +4,8 @@
 # Run as root, typically from an RMM, with the app's bundle in a "passbundle"
 # folder next to this script (the RMM package). It installs the app to
 # /opt/passbundle with a desktop entry and icon, so it's in the applications
-# menu, replacing an older one. For each browser (Chrome and Edge) it:
+# menu and opens passbundle:// links (Duo's way back at sign-in) for everyone
+# on the computer, replacing an older one. For each browser (Chrome and Edge) it:
 #   - force-installs the PassBundle extension (IDs are fixed in this script, never passed in),
 #   - turns off the browser's own password saving and filling,
 #   - optionally turns off card and address autofill,
@@ -40,7 +41,15 @@ set -eu
 APP_SOURCE="$(cd "$(dirname "$0")" && pwd)/passbundle"
 APP="/opt/passbundle"
 APP_ID="com.passbundle.app"
+# The app's desktop entry, named for its application ID as the app expects
+# (passbundle-apps, app/linux/CMakeLists.txt). It also takes passbundle://
+# links, which Duo's way back at sign-in opens (DESIGN.md, "Two-step login in
+# the apps"): the system's applications folder registers them for everyone
+# here, through update-desktop-database's cache, and the app leaves them alone
+# when Duo starts, since they open it already. xdg-mime default only sets one
+# person's choice (root's, here), so this script doesn't run it.
 DESKTOP_ENTRY="/usr/share/applications/$APP_ID.desktop"
+LINKS="x-scheme-handler/passbundle"
 ICON="/usr/share/icons/hicolor/256x256/apps/$APP_ID.png"
 POLICY_FILE="passbundle.json"
 # The app's own policy: the server it signs in to (docs/core.md, "Servers").
@@ -185,6 +194,9 @@ put_file() {
   CHANGED=yes
 }
 
+# The menus' icons, and the cache of what each desktop entry opens
+# (mimeinfo.cache), which lists the app for passbundle:// links. Desktops
+# without update-desktop-database read the entries themselves.
 refresh_menus() {
   if command -v gtk-update-icon-cache > /dev/null 2>&1; then
     gtk-update-icon-cache -q -t /usr/share/icons/hicolor || true
@@ -214,17 +226,21 @@ install_app() {
     CHANGED=yes
   fi
   put_file "$ICON" < "$APP/data/$APP_ID.png"
+  # %u hands the app a passbundle:// link as its first argument, which it
+  # passes to the copy signing in (passbundle-apps, app/lib/main.dart); from
+  # the menu, it's nothing.
   put_file "$DESKTOP_ENTRY" << EOF
 [Desktop Entry]
 Type=Application
 Name=PassBundle
 GenericName=Password Manager
 Comment=Your passwords, on this computer and your others
-Exec=$APP/passbundle
+Exec=$APP/passbundle %u
 Icon=$APP_ID
 Terminal=false
 Categories=Utility;Security;
 StartupWMClass=$APP_ID
+MimeType=$LINKS;
 EOF
   refresh_menus
 }
@@ -577,7 +593,7 @@ install_policies
 if [ -z "$CHANGED" ]; then
   echo "PassBundle is already set up; nothing changed."
 elif [ -d "$APP_SOURCE" ]; then
-  echo "Installed PassBundle to $APP and set the browser policies."
+  echo "Installed PassBundle to $APP, where passbundle:// links open it, and set the browser policies."
 else
   echo "Set the browser policies (no passbundle folder next to this script, so no app)."
 fi

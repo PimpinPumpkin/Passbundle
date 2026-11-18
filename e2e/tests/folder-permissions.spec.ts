@@ -74,12 +74,15 @@ test("an owner gives someone a Custom grid in a shared folder, and the web vault
   await owner.getByRole("button", { name: "Edit shared folder" }).click();
   await owner.getByRole("menuitem", { name: "Access" }).click();
   const access = owner.getByRole("dialog", { name: /Edit shared folder/ });
+  const danaRow = access.getByRole("row").filter({ hasText: danaUser.email });
+  // Confirming her gave her Can edit here: take her out, so she's added fresh.
+  await danaRow.getByRole("button", { name: /^Remove / }).click();
+  await expect(danaRow).toHaveCount(0);
   await access.getByRole("combobox", { name: /Select groups and members/ }).click();
   await owner.keyboard.type("grid-dana");
   await owner.getByRole("option", { name: new RegExp(danaUser.email) }).click();
   // Closing the list adds who was picked.
   await access.getByText(/Grant groups or members access/).click();
-  const danaRow = access.getByRole("row").filter({ hasText: danaUser.email });
   await expect(danaRow).toBeVisible();
   // The presets, and Custom, which opens the grid under her row.
   await danaRow.getByRole("combobox").click();

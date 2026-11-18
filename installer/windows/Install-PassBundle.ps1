@@ -25,7 +25,9 @@
   a SYSTEM task installs its signed updates. Without them, policies only.
   With the app's files in an "app" folder next to this script, it installs the
   PassBundle app next to the agent, with a Start menu shortcut: the agent's
-  tray opens it, and it starts the agent if it isn't running.
+  tray opens it, and it starts the agent if it isn't running. passbundle://
+  links, which Duo's way back at sign-in opens, open it for everyone on the
+  machine.
   Existing policies from other vendors are left alone. Running it again changes nothing.
 
 .EXAMPLE
@@ -116,6 +118,12 @@ $UpdateTask = "PassBundle agent update"
 # finds it there, and it finds the agent. See DESIGN.md, "Clients".
 $AppSource = Join-Path $PSScriptRoot "app"
 $AppShortcut = Join-Path $env:ProgramData "Microsoft\Windows\Start Menu\Programs\PassBundle.lnk"
+# passbundle:// links, which Duo's way back at sign-in opens (DESIGN.md,
+# "Two-step login in the apps"), as the machine's own URL protocol, so they
+# open the app installed here for everyone. When Duo starts, the app writes
+# the same key for the person (HKEY_CURRENT_USER, which Windows reads first)
+# only where links don't open it already.
+$LinkKey = "HKLM:\SOFTWARE\Classes\passbundle"
 
 function Set-Dword([string] $Path, [string] $Name, [int] $Value) {
   if (-not (Test-Path $Path)) { New-Item -Path $Path -Force | Out-Null }
@@ -294,6 +302,46 @@ function Test-AppSource {
   Test-Path (Join-Path $AppSource "passbundle.exe")
 }
 
+# The command Windows runs for a passbundle:// link: the app, then the link,
+# as the app registers it itself (passbundle-apps, core/src/two_step.rs).
+function Get-LinkCommand {
+  "`"$(Join-Path $InstallDir 'passbundle.exe')`" `"%1`""
+}
+
+# True when passbundle:// links already open the app installed here.
+function Test-LinkHandler {
+  $command = Join-Path $LinkKey "shell\open\command"
+  if (-not (Test-Path $command)) { return $false }
+  $key = Get-Item $LinkKey
+  $opens = (Get-Item $command).GetValue("") -eq (Get-LinkCommand)
+  $protocol = $key.GetValue("") -eq "URL:PassBundle" -and $key.GetValueNames() -contains "URL Protocol"
+  $opens -and $protocol
+}
+
+# passbundle:// links open the app installed here, for everyone on this
+# machine, wherever they opened before. With the same app, nothing changes.
+function Set-LinkHandler {
+  if (Test-LinkHandler) {
+    Write-Output "passbundle:// links already open the PassBundle app"
+    return
+  }
+  $command = Join-Path $LinkKey "shell\open\command"
+  if (-not (Test-Path $command)) { New-Item -Path $command -Force | Out-Null }
+  Set-Item -Path $LinkKey -Value "URL:PassBundle"
+  New-ItemProperty -Path $LinkKey -Name "URL Protocol" -Value "" -PropertyType String -Force | Out-Null
+  Set-Item -Path $command -Value (Get-LinkCommand)
+  Write-Output "passbundle:// links open the PassBundle app, for everyone on this machine"
+}
+
+# Takes passbundle:// links away from the app installed here. A handler that
+# opens another program isn't this script's, and stays.
+function Remove-LinkHandler {
+  $command = Join-Path $LinkKey "shell\open\command"
+  if ((Test-Path $command) -and (Get-Item $command).GetValue("") -eq (Get-LinkCommand)) {
+    Remove-Item -Path $LinkKey -Recurse -Force
+  }
+}
+
 function Install-App {
   if (-not (Test-Path $InstallDir)) { New-Item -Path $InstallDir -ItemType Directory | Out-Null }
   # The app's files can't be replaced while it runs. It's a window: whoever
@@ -307,11 +355,13 @@ function Install-App {
   $link.Description = "PassBundle"
   $link.Save()
   Write-Output "Installed the PassBundle app to $InstallDir, with a Start menu shortcut"
+  Set-LinkHandler
 }
 
 function Remove-Agent {
   Get-Process -Name "passbundle", "passbundle-agent", "passbundle-agent-host" -ErrorAction SilentlyContinue | Stop-Process -Force
   if (Test-Path $AppShortcut) { Remove-Item -Path $AppShortcut -Force }
+  Remove-LinkHandler
   if (Get-ScheduledTask -TaskName $UpdateTask -ErrorAction SilentlyContinue) {
     Unregister-ScheduledTask -TaskName $UpdateTask -Confirm:$false
   }
