@@ -1,10 +1,11 @@
-// The MSP console's trust pieces, in the web vault (DESIGN.md, "Key
-// fingerprints", "The client sees its MSP's actions"): a client's own owner
-// sees, under the MSP on their Members page, that the MSP added someone to
-// their organization; and the console's Staff list shows each person's
-// fingerprint phrase, the same one their own account settings show. All
-// accounts are real, made through the UI, since the phrases come from real
-// keys.
+// The MSP console's trust pieces and its choice of MSP, in the web vault
+// (DESIGN.md, "Key fingerprints", "The client sees its MSP's actions",
+// "Several MSPs"): a client's own owner sees, under the MSP on their Members
+// page, that the MSP added someone to their organization; the console's Staff
+// list shows each person's fingerprint phrase, the same one their own account
+// settings show; and someone on two MSPs' staff picks which one the console
+// shows, which the browser remembers. All accounts are real, made through
+// the UI, since the phrases come from real keys.
 import { expect, test, type Page } from "@playwright/test";
 
 import { acceptRole, chooseRole, reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
@@ -126,4 +127,48 @@ test("a client's owner sees that the MSP added someone to their organization, an
   await ownerContext.close();
   await techContext.close();
   await adminContext.close();
+});
+
+test("someone on two MSPs' staff picks which one the console shows, and the browser remembers it", async ({
+  browser,
+}, testInfo) => {
+  test.setTimeout(180_000);
+  const danaContext = await browser.newContext();
+  const dana = await danaContext.newPage();
+  await signUpWithAuthenticator(dana, webUserFor("two-msps-dana", testInfo.repeatEachIndex));
+  const otherContext = await browser.newContext();
+  const other = await otherContext.newPage();
+  await signUpWithAuthenticator(other, webUserFor("two-msps-other", testInfo.repeatEachIndex));
+  const danaEmail = webUserFor("two-msps-dana", testInfo.repeatEachIndex).email;
+
+  // Dana runs Northwind IT. With one MSP there's nothing to choose.
+  await createMsp(dana, "Northwind IT");
+  await expect(dana.getByTestId("msp-choice")).toHaveCount(0);
+
+  // Contoso IT makes her a technician; the console shows the MSP she joined.
+  await createMsp(other, "Contoso IT");
+  await addStaff(other, dana, danaEmail, "Contoso IT");
+  const name = dana.getByTestId("msp-name");
+  await expect(name).toContainText("Contoso IT");
+  await expect(name).toContainText("Technician");
+  const choice = dana.getByRole("combobox", { name: "MSP", exact: true });
+  await expect(choice.locator("option")).toHaveText(["Northwind IT (Admin)", "Contoso IT (Technician)"]);
+
+  // She picks Northwind IT: everything on the page is its own.
+  await choice.selectOption({ label: "Northwind IT (Admin)" });
+  await expect(name).toContainText("Northwind IT");
+  await expect(name).toContainText("Admin");
+  await expect(dana.getByRole("button", { name: "Add client" })).toBeVisible();
+
+  // The browser remembers it, and the other choice too.
+  await reloadVault(dana);
+  await expect(name).toContainText("Northwind IT");
+  await choice.selectOption({ label: "Contoso IT (Technician)" });
+  await expect(name).toContainText("Contoso IT");
+  await expect(dana.getByRole("button", { name: "Add client" })).toHaveCount(0);
+  await reloadVault(dana);
+  await expect(name).toContainText("Contoso IT");
+
+  await danaContext.close();
+  await otherContext.close();
 });
