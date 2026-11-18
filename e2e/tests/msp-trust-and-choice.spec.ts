@@ -113,7 +113,7 @@ test("a client's owner sees that the MSP added someone to their organization, an
   const techRow = admin.getByTestId(`msp-staff-${techUser.email}`);
   await expect(techRow.getByTestId("msp-staff-phrase")).toHaveText(await ownPhrase(tech));
   await expect(techRow.getByTestId("msp-staff-compare")).toHaveText(
-    `Ask ${techUser.name} to read the phrase in Settings, My account. If it's different, remove them and tell us.`,
+    `Ask ${techUser.name} to read the phrase in Settings, My account. If it's different, remove them from your staff: the key this server gave out for them isn't theirs.`,
   );
   // And the admin's own, on their own row.
   const adminPhrase = await ownPhrase(admin);
@@ -121,7 +121,7 @@ test("a client's owner sees that the MSP added someone to their organization, an
   const adminRow = admin.getByTestId(`msp-staff-${adminUser.email}`);
   await expect(adminRow.getByTestId("msp-staff-phrase")).toHaveText(adminPhrase);
   await expect(adminRow.getByTestId("msp-staff-compare")).toHaveText(
-    "Yours. Your Settings, My account shows the same phrase. If it's different, tell us.",
+    "Yours. Your Settings, My account shows the same phrase. If it's different, the key this server gives out for you isn't yours: tell your MSP's other admins.",
   );
 
   await ownerContext.close();
