@@ -34,9 +34,8 @@ async function addStaff(admin: Page, person: Page, email: string, mspName: strin
   await admin.getByRole("button", { name: "Add staff" }).click();
   await expect(toast(admin, `Invited ${email}`)).toBeVisible();
   const link = await admin.getByTestId("msp-invite-link").locator("pre").textContent();
-  // From elsewhere in the web vault, as a link from the email opens it: the
-  // console already open doesn't read a new invitation from its address.
-  await person.goto("/#/vault");
+  // Opened where the person already is, which for someone on another MSP's
+  // staff is the console: it shows the invitation without a reload.
   await person.goto(link!.slice(link!.indexOf("/#/")));
   await person.getByTestId("msp-invitation").getByRole("button", { name: `Join ${mspName}` }).click();
   await expect(toast(person, `You joined ${mspName}`)).toBeVisible();
