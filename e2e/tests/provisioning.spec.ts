@@ -3,7 +3,9 @@
 // someone; the owner lets them in from the page, and their own web vault then
 // confirms them in the background with the organization's real key. The SCIM
 // requests stand in for Entra's, in the shapes Microsoft documents. Making or
-// replacing the token asks for the owner's master password first.
+// replacing the token asks for the owner's master password first. The
+// Members page and the member dialog mark the person "From Microsoft Entra
+// ID", and the dialog says what Entra ID manages.
 import { expect, test, type Page } from "@playwright/test";
 
 import { confirmWithPassword, signUp, verificationPrompt, webUserFor } from "./support/web";
@@ -111,6 +113,21 @@ test("an owner connects Entra, and lets in the person it adds", async ({ browser
   await hire.goto("/#/vault");
   await expect(hire.getByRole("button", { name: "Lakeside Clinic" }).first()).toBeVisible({ timeout: 30_000 });
 
+  // The Members page marks them as Entra's, the owner not; so does the dialog,
+  // which says what to change in Entra ID.
+  const hireRow = owner.getByRole("row").filter({ hasText: newHire.email });
+  await expect(hireRow.getByTestId("member-from-entra")).toHaveText("From Microsoft Entra ID");
+  await expect(owner.getByRole("row").filter({ hasText: ownerUser.email }).getByTestId("member-from-entra")).toHaveCount(0);
+  await hireRow.getByRole("button", { name: newHire.name }).click();
+  const dialog = owner.getByRole("dialog", { name: /Edit member/ });
+  await expect(dialog.getByTestId("member-from-entra")).toHaveText("From Microsoft Entra ID");
+  await expect(dialog.getByTestId("member-from-entra-note")).toContainText(
+    "Microsoft Entra ID turns this member off and removes them when they leave",
+  );
+  await expect(dialog.getByTestId("member-from-entra-note")).toContainText("Their role and shared folders are set here.");
+  await dialog.getByRole("button", { name: "Close" }).click();
+  await expect(dialog).toBeHidden();
+
   // Replacing the token stops the old one; revoking stops provisioning.
   await openPage();
   await page.getByRole("button", { name: "Replace token" }).click();
@@ -127,4 +144,10 @@ test("an owner connects Entra, and lets in the person it adds", async ({ browser
   await expect(page.getByRole("button", { name: "Create token" })).toBeVisible();
   const gone = await request.fetch(`/scim/v2/${orgId}/Users`, { headers: { Authorization: `Bearer ${replaced}` } });
   expect(gone.status()).toBe(401);
+
+  // With provisioning off, nobody is Entra's.
+  await owner.goto("/#/vault");
+  await owner.goto(`/#/organizations/${orgId}/members`);
+  await expect(owner.getByRole("row").filter({ hasText: newHire.email })).toBeVisible();
+  await expect(owner.getByTestId("member-from-entra")).toHaveCount(0);
 });

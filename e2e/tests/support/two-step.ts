@@ -10,6 +10,7 @@ import { pbkdf2Sync, randomUUID } from "node:crypto";
 import { type APIRequestContext, expect, type Page } from "@playwright/test";
 
 import { totp } from "../api/support";
+import { waitForMessage } from "../mail/mailbox";
 
 /** Each account's authenticator key, and the last 30-second step it used. */
 const authenticators = new Map<string, { key: string; lastStep: number }>();
@@ -75,6 +76,54 @@ export async function giveAuthenticator(
   expect(on.status(), await on.text()).toBe(200);
   authenticators.set(user.email.toLowerCase(), { key, lastStep: stepOf(now) });
   return key;
+}
+
+/**
+ * Turns on email codes for an account made in the web vault, on the server
+ * that sends email (`request`'s), as upstream's two-step login settings do
+ * it: the code comes from the mail catcher. Its web vault sessions go on.
+ * For the nudge to a stronger method (DESIGN.md, "A nudge for everyone
+ * else").
+ */
+export async function giveEmailCodes(
+  request: APIRequestContext,
+  user: { email: string; password: string },
+): Promise<void> {
+  const hash = await masterPasswordHash(request, user);
+  const signIn = await request.post("/identity/connect/token", {
+    form: {
+      grant_type: "password",
+      username: user.email,
+      password: hash,
+      scope: "api offline_access",
+      client_id: "web",
+      deviceType: "10",
+      deviceIdentifier: randomUUID(),
+      deviceName: "e2e-email-codes",
+    },
+  });
+  const body = await signIn.json();
+  expect(body.access_token, JSON.stringify(body)).toBeTruthy();
+  const headers = { Authorization: `Bearer ${body.access_token}` };
+  const started = await request.post("/api/two-factor/get-email", {
+    headers,
+    data: { masterPasswordHash: hash },
+  });
+  expect(started.status(), await started.text()).toBe(200);
+  const userVerificationToken = (await started.json()).userVerificationToken;
+  const sent = await request.post("/api/two-factor/send-email", {
+    headers,
+    data: { email: user.email, userVerificationToken },
+  });
+  expect(sent.status(), await sent.text()).toBe(200);
+  const message = await waitForMessage(user.email, /Login Verification Code/);
+  const code = /code is: (\d+)/.exec(message.text)?.[1];
+  expect(code, `a code in: ${message.text}`).toBeTruthy();
+  const on = await request.put("/api/two-factor/email", {
+    headers,
+    data: { email: user.email, token: code, userVerificationToken },
+  });
+  expect(on.status(), await on.text()).toBe(200);
 }
 
 /**

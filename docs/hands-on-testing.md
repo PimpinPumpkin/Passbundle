@@ -443,6 +443,7 @@ Do each step on all three unless it names one.
 - [ ] As Alex, edit the same item on two devices within a few seconds: the second save is refused and it syncs.
 - [ ] As Alex, a login that asks for the master password shows only its name until it's given.
 - [ ] (changes the seed) As Grace, turn on "Remove individual vault" for Northwind Dental. As Tom: New item starts in a shared folder he can add to, the Folder picker has no Personal and says "Northwind Dental keeps items out of Personal.", and his own items have no Edit and say why. As Grace, her own items still edit (it doesn't bind owners and admins). Turn the policy off afterwards.
+- [ ] As Tom (no two-step login), before he says "Not now" anywhere: above the list, under its search, the nudge in the web vault's words ("Your password is all that protects your account. ...") with "Not now" and "Set it up". "Set it up" opens the web vault's Settings, Two-step login in the browser, and coming back to the app it syncs. "Not now" hides it in the web vault and the extension too. With Alex's account added, Alex's vault shows only Alex's own answer, and "All accounts" shows none.
 
 **Send**
 - [ ] As Alex, the menu's "Send" opens a window: "New Send", then Name, "Text to share", "Deleted" (in 1 hour to 30 days), "Stops opening", "Most times it can be opened", a password, "Private note", "Hide my email from whoever opens it", and "Turn this Send off". Save: "Made the Send and copied its link. It clears in 30 seconds." The link opens it in another browser, asking for the password first if it has one.
@@ -488,6 +489,7 @@ Do each step on all three unless it names one.
 - [ ] As Alex, "Attach a file" on an item opens Android's file picker; a photo or a file from Drive attaches, with the bar and Cancel, and opens in the web vault. One over 100 MB: "That file is larger than 100 MB, the most PassBundle attaches on a phone. Attach it from a computer."
 - [ ] As Alex, Settings, Updates: Android's installer asks before installing the new version.
 - [ ] As Alex, the Back button goes back one step (two-step login to sign in, adding an account to the account shown) before it leaves the app.
+- [ ] As Tom, the nudge about two-step login shows above the list on the Items tab (not on Generator, Send, or Settings), and "Set it up" opens the web vault in the browser.
 
 ### iPhone
 
@@ -603,6 +605,7 @@ The test server sends no email. These wait for a sending provider (docs/prelaunc
 - [ ] **Invitations by email:** the invitation mail saying how long it works; "<email> joined <org>" to the inviter; upstream's "accepted your invitation, confirm them"; invitations that let people in with no click (invitation seals vouch only where email proves the address).
 - [ ] **Install command joins:** email domains on the command ("Only these email domains can join"), joins at those domains let in with no click, the owners' emails about joins ("joined Northwind Dental with your IT provider's install command", "is waiting to join"), and the extension's "verify first" notice.
 - [ ] **Email codes:** two-step login by email (set up, sign in, and the setup session after an email code for someone a rule covers); the new-device check's "Email me a code", "Email me a code in 24 hours" after "Can't use your other devices?", and the denial email ("A sign-in on a new device was denied").
+- [ ] **The nudge to a stronger method:** as someone no rule covers with only email codes, the web vault, the extension, and the apps say "Codes by email are only as safe as your email account. An authenticator app or a security key is safer." with "Set it up" and "Not now"; adding an authenticator app ends it, and "Not now" to either nudge hides both for 90 days.
 - [ ] **Staff invitations by email**, and the limits on them (20 an hour, 3 a day to one address).
 - [ ] **Site fixes applying by count:** a fix applies to everyone once three people with verified email addresses share it. With no email nobody is verified, so here only "Use for every client" applies one.
 - [ ] **Single sign-on's link email** ("If you didn't do this, tell its administrator").
