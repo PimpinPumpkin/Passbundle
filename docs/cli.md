@@ -119,7 +119,7 @@ Neither page goes on by itself, whatever the link that opened it says (an organi
 | `PASSBUNDLE_NOINTERACTION` | `true`: never wait for someone to type (or `--nointeraction`); set it in every script |
 | `PASSBUNDLE_RAW`, `PASSBUNDLE_RESPONSE`, `PASSBUNDLE_PRETTY`, `PASSBUNDLE_QUIET`, `PASSBUNDLE_CLEANEXIT` | `true`: as `--raw`, `--response`, `--pretty`, `--quiet`, `--cleanexit` |
 | `PASSBUNDLE_APPDATA_DIR` | Where the tool keeps its data (below) |
-| `PASSBUNDLE_SCRIPT_TOKEN` | A script token, for `script get` ("Script access" below) |
+| `PASSBUNDLE_TOKEN` | A script token, for `script get` ("Script access" below); the PowerShell module reads the same one |
 | `PASSBUNDLE_SERVER` | The server `script get` asks, unless `--server` says another |
 | `PASSBUNDLE_DEBUG` | `true`: log more |
 
@@ -190,7 +190,7 @@ A script that needs a credential but shouldn't hold a person's account uses a sc
 
 ```sh
 # Your RMM's secret variable, and your MSP's server (unless it's vault.passbundle.com).
-export PASSBUNDLE_SCRIPT_TOKEN='pbs1_...'
+export PASSBUNDLE_TOKEN='pbs1_...'
 export PASSBUNDLE_SERVER='https://vault.example.com'
 
 admin_password="$(passbundle script get 'Domain admin')"
@@ -201,7 +201,7 @@ api_key="$(passbundle script get 0d1e2f3a-4b5c-4d6e-8f70-819a2b3c4d5e --field 'A
 
 - **The item:** its id, or its name among the token's items (case doesn't matter; if two have the name, ask by id). The settings page shows the first item's id when it shows the token.
 - **`--field`:** `username`, `password` (when `--field` is left out), `totp` (a current one-time code, made on this computer from the copied secret), or a custom field's name. Anything the token wasn't granted is refused: "This token wasn't granted 'PIN' of Domain admin."
-- **The token:** from `PASSBUNDLE_SCRIPT_TOKEN`, or else the first line on stdin (`printf '%s\n' "$token" | passbundle script get 'Domain admin'`). `--token <token>` works too, with a warning on stderr: other programs on the computer can read a command line, and your shell may keep it. The settings page names the PowerShell module's variable, `PASSBUNDLE_TOKEN`; for the tool, name it `PASSBUNDLE_SCRIPT_TOKEN`.
+- **The token:** from `PASSBUNDLE_TOKEN`, or else the first line on stdin (`printf '%s\n' "$token" | passbundle script get 'Domain admin'`). It's the variable the settings page names and the PowerShell module reads, so an RMM sets one secret variable for Windows, Mac, and Linux scripts alike. Upstream's code reads no variable of that name, and the tool doesn't copy it to one. `--token <token>` works too, with a warning on stderr: other programs on the computer can read a command line, and your shell may keep it.
 - **The server:** `--server`, else `PASSBUNDLE_SERVER`, else PassBundle's own service; https only. A private certificate authority's certificate goes in `NODE_EXTRA_CA_CERTS`, as for the rest of the tool.
 - **What it prints:** the value alone (with no newline when it goes to another program, so `$(...)` gets it exactly), or `{"success": true, "data": {"object": "string", "data": ...}}` with `--response`. A refusal goes to stderr and exits with 1, unless `--cleanexit`: a revoked or expired token, one whose maker no longer manages the organization, or one used from a network it isn't allowed on ("The server refused the token: ..."), an item it can't read, a field it wasn't granted, or more than 60 reads in a minute.
 - **What it checks:** the copy is decrypted on this computer with a key from the token, which the server never has; one that doesn't open with it, or that was made for another token or item, is refused, so a server can't hand the script something else.

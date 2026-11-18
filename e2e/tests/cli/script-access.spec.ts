@@ -2,7 +2,8 @@
 // docs/script-access.md): the built program (KK_CLI), as a Mac or Linux
 // script runs it, reads a granted field with a token made through the API and
 // nothing else: no account, no session, and no data folder. The token comes
-// from PASSBUNDLE_SCRIPT_TOKEN or stdin, and from --token only with a warning.
+// from PASSBUNDLE_TOKEN (the PowerShell module's variable, so an RMM sets one
+// for every platform) or stdin, and from --token only with a warning.
 // It refuses a copy made for another item, a field the token wasn't granted,
 // and a revoked token. Copies here are made with plain Node, as the vectors
 // are; the tool's unit tests check it against the vectors.
@@ -131,7 +132,7 @@ test("a script reads a granted field with a script token alone, writes nothing, 
     });
     return { status: result.status, stdout: result.stdout, stderr: result.stderr };
   };
-  const withToken = { [`${prefix}SCRIPT_TOKEN`]: good.tokenString };
+  const withToken = { [`${prefix}TOKEN`]: good.tokenString };
 
   // Each field, by name or by id; only the value on stdout, nothing on stderr.
   const before = Date.now();
@@ -167,12 +168,12 @@ test("a script reads a granted field with a script token alone, writes nothing, 
   expect(argued.status).toBe(0);
   expect(argued.stdout).toBe("not-a-real-password-1");
   expect(argued.stderr).toContain("the script token is on the command line");
-  expect(argued.stderr).toContain(`Set ${prefix}SCRIPT_TOKEN instead`);
+  expect(argued.stderr).toContain(`Set ${prefix}TOKEN instead`);
 
   // No token at all: it says where to put one.
   const none = run(["script", "get", "Domain admin"], {}, "");
   expect(none.status).toBe(1);
-  expect(none.stderr).toContain(`No script token: set ${prefix}SCRIPT_TOKEN, or give it on stdin.`);
+  expect(none.stderr).toContain(`No script token: set ${prefix}TOKEN, or give it on stdin.`);
 
   // Nothing written: no data folder, nor anything else in the home folder.
   expect(fs.readdirSync(home)).toEqual([]);
@@ -189,13 +190,13 @@ test("a script reads a granted field with a script token alone, writes nothing, 
   const swapped = await makeToken(api, owner, orgId, item, (id, key) =>
     encrypt(key, JSON.stringify({ v: 1, token: id, item: randomUUID(), name: "Domain admin", fields: {} })),
   );
-  const swappedRead = run(["script", "get", item], { [`${prefix}SCRIPT_TOKEN`]: swapped.tokenString });
+  const swappedRead = run(["script", "get", item], { [`${prefix}TOKEN`]: swapped.tokenString });
   expect(swappedRead.status).toBe(1);
   expect(swappedRead.stderr).toContain("The server sent a copy made for another token or item.");
   const forged = await makeToken(api, owner, orgId, item, () =>
     encrypt(randomBytes(64), JSON.stringify({ v: 1, name: "Domain admin", fields: {} })),
   );
-  const forgedRead = run(["script", "get", item], { [`${prefix}SCRIPT_TOKEN`]: forged.tokenString });
+  const forgedRead = run(["script", "get", item], { [`${prefix}TOKEN`]: forged.tokenString });
   expect(forgedRead.stderr).toContain("integrity check");
 
   // Revoked: refused, and it says why it may have been.
@@ -210,7 +211,7 @@ test("a script reads a granted field with a script token alone, writes nothing, 
 
   // Its help names the brand's variable and command.
   const help = run(["script", "get", "--help"]);
-  expect(help.stdout).toContain(`${prefix}SCRIPT_TOKEN`);
+  expect(help.stdout).toContain(`${prefix}TOKEN`);
   expect(help.stdout).toContain(`${command} script get`);
   expect(fs.readdirSync(home)).toEqual([]);
 });
