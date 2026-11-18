@@ -442,6 +442,7 @@ Do each step on all three unless it names one.
 - [ ] As Alex, turn Wi-Fi off: "Can't reach your server. You're seeing the copy on this device...", with Try again; saving says it needs the server and keeps what you typed.
 - [ ] As Alex, edit the same item on two devices within a few seconds: the second save is refused and it syncs.
 - [ ] As Alex, a login that asks for the master password shows only its name until it's given.
+- [ ] (changes the seed) As Grace, turn on "Remove individual vault" for Northwind Dental. As Tom: New item starts in a shared folder he can add to, the Folder picker has no Personal and says "Northwind Dental keeps items out of Personal.", and his own items have no Edit and say why. As Grace, her own items still edit (it doesn't bind owners and admins). Turn the policy off afterwards.
 - [ ] As Tom (no two-step login), before he says "Not now" anywhere: above the list, under its search, the nudge in the web vault's words ("Your password is all that protects your account. ...") with "Not now" and "Set it up". "Set it up" opens the web vault's Settings, Two-step login in the browser, and coming back to the app it syncs. "Not now" hides it in the web vault and the extension too. With Alex's account added, Alex's vault shows only Alex's own answer, and "All accounts" shows none.
 
 **Send**
@@ -475,7 +476,7 @@ Do each step on all three unless it names one.
 - [ ] As Alex, add a fingerprint in Android's settings: biometric unlock turns itself off and asks for the master password once.
 - [ ] As Alex, in Chrome on the phone, a sign-in page's suggestions list his logins by name and username; the password fills only after he picks one. Locked: "Unlock PassBundle" unlocks with the fingerprint without leaving Chrome. Signed out: "Sign in to PassBundle".
 - [ ] As Alex, in an app, logins fill only through the item's own `androidapp://` link, or a site the app is linked to (Digital Asset Links). An app that opens web pages gets "Logins for <domain>" and "Trust <app> as a browser?" (Trust waits a second); Settings, "Browsers you trust for autofill" lists it with "Stop trusting".
-- [ ] As Alex, sign in somewhere new: Android offers to save to PassBundle, which opens the editor filled in; nothing saves until Save. A new password for a login he has opens that login.
+- [ ] As Alex, sign in somewhere new: Android offers to save to PassBundle, which opens the editor filled in; nothing saves until Save. A new password for a login he has opens that login. (Changes the seed) As Tom, with Northwind Dental keeping items out of Personal, a new sign-in opens the editor in a shared folder, and a new password for one of his own logins opens a new login there.
 - [ ] As Alex with "Immediately": the vault locks once a fill is handed back.
 - [ ] As Alex on Android 14 or later, register a passkey at webauthn.io: "Save a passkey in PassBundle?" names the site; sign in with it (fingerprint). A second passkey for the same account: "PassBundle already has a passkey for this account on this site."
 - [ ] As Alex and Tom both signed in: autofill and passkeys offer both accounts' logins, labeled; each fills only from its own account. "Save the passkey in which account?" asks first.
