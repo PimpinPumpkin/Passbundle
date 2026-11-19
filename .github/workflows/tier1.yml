@@ -355,6 +355,12 @@ jobs:
           node meta/docs/vectors/make-device-signin-v1.mjs passbundle-apps/core/src/words/eff-large.txt | cmp - meta/docs/vectors/device-signin-v1.json
           node meta/docs/vectors/check-device-signin-vectors.mjs meta/docs/vectors/device-signin-v1.json .
           cmp meta/docs/vectors/device-signin-v1.json passbundle-apps/core/tests/vectors/device-signin-v1.json
+      # Sending a security key its PIN (DESIGN.md, "A security key's PIN"):
+      # the vectors as their generator makes them, and the apps' copy.
+      - name: The security key PIN test vectors, as their generator makes them, and the apps' copy
+        run: |
+          node meta/docs/vectors/make-security-key-pin-v1.mjs | cmp - meta/docs/vectors/security-key-pin-v1.json
+          cmp meta/docs/vectors/security-key-pin-v1.json passbundle-apps/core/tests/vectors/security-key-pin-v1.json
       - name: The web vault's reload key test vectors, checked with upstream's own crypto
         run: node meta/docs/vectors/check-reload-key-vectors.mjs meta/docs/vectors/reload-key-v1.json .
       - name: The reload key test vectors, as their generator makes them, and the web vault's copy
