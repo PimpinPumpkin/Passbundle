@@ -4,7 +4,7 @@
 import { expect, test } from "@playwright/test";
 
 import { addLogin } from "./support/autofill";
-import { newTemplate, signUp, templatePicker, webUserFor } from "./support/web";
+import { newTemplate, pick, signUp, templatePicker, webUserFor } from "./support/web";
 
 test("a new item from the API key template starts with its fields and shows its template", async ({
   page,
@@ -94,9 +94,13 @@ test("a custom template is made in the ordinary editor, and new items start with
   );
   await expect(templateView.getByText("keykeeper.template-definition")).toHaveCount(0);
   await templateView.getByRole("button", { name: "Close" }).first().click();
+  // Templates are under Item templates, not in All items.
+  await expect(page.getByRole("row").filter({ hasText: "Client laptop" })).toHaveCount(0);
+  await pick(page, "Item templates");
   await expect(
     page.getByRole("row").filter({ hasText: "Client laptop" }).getByTestId("keykeeper-template-badge"),
   ).toHaveText("Template");
+  await pick(page, "All items");
 
   // The picker lists it under the person's own templates.
   await (await templatePicker(page))
