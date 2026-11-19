@@ -318,11 +318,15 @@ export async function realLogin(
   return (await created.json()).id;
 }
 
-/** A login in the account's own Personal items, encrypted with its own key. */
+/**
+ * A login in the account's own Personal items, encrypted with its own key;
+ * `reprompt` 1 marks it "Master password re-prompt".
+ */
 export async function realPersonalLogin(
   request: APIRequestContext,
   account: RealAccount,
   values: LoginValues,
+  { reprompt = 0 }: { reprompt?: 0 | 1 } = {},
 ): Promise<string> {
   const key = account.userKey;
   const created = await request.post("/api/ciphers", {
@@ -334,7 +338,7 @@ export async function realPersonalLogin(
       name: encrypt(key, values.name),
       notes: null,
       favorite: false,
-      reprompt: 0,
+      reprompt,
       fields: [],
       login: {
         username: encrypt(key, values.username),

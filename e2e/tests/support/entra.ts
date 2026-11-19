@@ -83,10 +83,16 @@ export function pkce() {
   return { verifier, challenge: b64url(createHash("sha256").update(verifier).digest()) };
 }
 
+/** The native apps, whose sign-in the server's own page asks about first. */
+export const nativeApps = ["cli", "desktop", "mobile"];
+
+/** PassBundle's phone apps' redirect: their private-use scheme. */
+export const phoneRedirect = "com.passbundle.app:/sso";
+
 export type SignIn = {
   /** Each step's status, for tests that stop early. */
   authorize: number;
-  /** For the command-line tool: the status of its page's Continue (303 to Microsoft). */
+  /** For the native apps: the status of the server's page's Continue (303 to Microsoft). */
   confirm?: number;
   callback?: number;
   callbackBody?: unknown;
@@ -105,7 +111,8 @@ export type SignIn = {
  * authorize, the stand-in's answer, this server's callback, then the token
  * request with the PKCE verifier. `origin` is the test server's own address.
  * `listener` is where the app wants the answer instead of the web vault's
- * connector page (the command-line tool's `http://localhost:<port>`);
+ * connector page (the command-line tool's `http://localhost:<port>`, the
+ * desktop app's `http://127.0.0.1:<port>/sso`, the phones' scheme);
  * `redirectUri` and `redeemClientId` change only the token request.
  */
 export async function ssoSignIn(
@@ -132,9 +139,9 @@ export async function ssoSignIn(
   const authorize = await request.get(authorizeUrl, { maxRedirects: 0 });
   const result: SignIn = { authorize: authorize.status(), verifier };
   let toEntra: string;
-  if (options.clientId === "cli" && authorize.status() === 200) {
-    // The command-line tool's sign-in asks first, on a page of the server's
-    // own; its Continue posts the page's token back, from the same origin.
+  if (nativeApps.includes(options.clientId ?? "") && authorize.status() === 200) {
+    // A native app's sign-in asks first, on a page of the server's own; its
+    // Continue posts the page's token back, from the same origin.
     const asked = await confirmCli(request, origin, await authorize.text());
     result.confirm = asked.status();
     if (asked.status() !== 303) {
@@ -158,7 +165,8 @@ export async function ssoSignIn(
   }
   const returned = new URL(callback.headers()["location"]);
   result.returned = returned;
-  // As a URL: "http://localhost:8065" comes back as "http://localhost:8065/".
+  // As a URL: "http://localhost:8065" comes back as "http://localhost:8065/";
+  // the phones' scheme has no origin ("null") and the path "/sso".
   const expected = new URL(connector);
   expect(returned.origin + returned.pathname).toBe(expected.origin + expected.pathname);
   expect(returned.searchParams.get("state")).toBe(state);
@@ -256,14 +264,14 @@ export async function linkFromSession(
   };
 }
 
-/** The one-time token on the command-line tool's sign-in page. */
+/** The one-time token on a native app's sign-in page. */
 export function cliConfirmToken(page: string): string {
   const token = /name="token" value="([^"]+)"/.exec(page)?.[1];
   expect(token, page).toBeTruthy();
   return token!;
 }
 
-/** The command-line tool's sign-in page's Continue, as the browser posts it from the page. */
+/** A native app's sign-in page's Continue, as the browser posts it from the page. */
 export async function confirmCli(
   request: APIRequestContext,
   origin: string,
