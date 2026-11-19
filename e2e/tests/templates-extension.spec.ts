@@ -48,6 +48,9 @@ test("the popup starts items from built-in and custom templates, and makes templ
   );
 
   await popup.goto(vaultUrl);
+  // Templates are under the Item templates chip, not in the rest of the list.
+  await expect(popup.getByRole("button", { name: /Office Wi-Fi/ })).toHaveCount(0);
+  await popup.getByTestId("category-chip").filter({ hasText: "Item templates" }).click();
   await expect(
     popup.getByRole("button", { name: /Office Wi-Fi/ }).getByTestId("keykeeper-template-badge"),
   ).toHaveText("Template");
