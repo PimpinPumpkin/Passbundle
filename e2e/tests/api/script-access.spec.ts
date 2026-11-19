@@ -1,5 +1,6 @@
 // Script access on the server (docs/script-access.md): tokens an
-// organization's owners and admins (and its MSP's admins) make, which read
+// organization's owners and admins (and its MSP's admins, and its MSP's
+// technicians with script access who are admins there) make, which read
 // only their own grants with nothing but the token's auth secret; refusals
 // logged; networks; refreshing copies; and who may do what. The copies here
 // are stand-ins: the server only stores them, and the vectors and the
@@ -270,7 +271,7 @@ test("anyone who can edit a granted item refreshes its copy for the item's curre
   expect((await request.get(`/api/keykeeper/script/items/${item}`, { headers: { Authorization: token.authorization } })).status()).toBe(404);
 });
 
-test("an MSP's admins make tokens for its clients; its technicians don't, even as the client's admins", async ({
+test("an MSP's admins make tokens for its clients; its technicians only with script access", async ({
   request,
 }) => {
   const api = new Api(request);
@@ -284,8 +285,12 @@ test("an MSP's admins make tokens for its clients; its technicians don't, even a
 
   const made = await createToken(api, admin, clientId, [item]);
   expect(made.created.status, JSON.stringify(made.created.body)).toBe(200);
+  // A technician, even as the client's admin, without script access: as if there were no tokens.
   expect((await api.call(tech, "GET", `/api/keykeeper/organizations/${clientId}/script-tokens`)).status).toBe(404);
   expect((await createToken(api, tech, clientId, [item])).created.status).toBe(404);
+  expect(
+    (await api.call(tech, "DELETE", `/api/keykeeper/organizations/${clientId}/script-tokens/${made.id}`)).status,
+  ).toBe(404);
 
   // The MSP's activity log has it, and a token's first use from an address.
   await request.get(`/api/keykeeper/script/items/${item}`, { headers: { Authorization: made.authorization } });
@@ -294,6 +299,142 @@ test("an MSP's admins make tokens for its clients; its technicians don't, even a
   );
   expect(events).toContain("script_token_created");
   expect(events).toContain("script_token_new_address");
+});
+
+/** A technician's access, every client as admin, with or without script access and a role elsewhere. */
+function techAccess(scriptAccess: boolean, more: Record<string, unknown> = {}) {
+  return { allClients: true, clients: [], custom: null, installCommands: true, scriptAccess, ...more };
+}
+
+test("a technician with script access makes, sees, and revokes a client's tokens where they're an admin, and their tokens stop when that ends", async ({
+  request,
+}) => {
+  test.setTimeout(240_000);
+  const api = new Api(request);
+  const admin = await api.account("script-tech-admin");
+  const mspId = await api.msp(admin, "Fabrikam IT");
+  const acme = await api.client(admin, mspId, "Acme Dental");
+  const baker = await api.client(admin, mspId, "Baker Law");
+  const item = await api.orgItem(admin, acme, await api.collection(admin, acme));
+  const bakerItem = await api.orgItem(admin, baker, await api.collection(admin, baker));
+  const tech = await api.account("script-tech-with");
+  await api.addStaff(admin, mspId, tech, "technician");
+  await api.confirmPending(admin, mspId);
+  const setAccess = async (access: unknown) => {
+    const set = await api.call(admin, "PUT", `/api/keykeeper/msp/${mspId}/staff/${tech.userId}/access`, access);
+    expect(set.status, JSON.stringify(set.body)).toBe(200);
+    await api.confirmPending(admin, mspId);
+    return set.body;
+  };
+  const tokens = (who: Account, orgId: string) =>
+    api.call(who, "GET", `/api/keykeeper/organizations/${orgId}/script-tokens`);
+  const read = async (authorization: string, itemId = item) =>
+    (await request.get(`/api/keykeeper/script/items/${itemId}`, { headers: { Authorization: authorization } })).status();
+
+  // Script access, and a custom role (helpdesk) at Baker Law.
+  const helpdesk = { permissions: { manageUsers: true }, vaultItems: true };
+  const given = await setAccess(techAccess(true, { clientRoles: [{ client: baker, custom: helpdesk }] }));
+  expect(given.scriptAccess).toBe(true);
+  const changed = (await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}/events`)).body.data.find(
+    (e: { event: string }) => e.event === "staff_access_changed",
+  );
+  expect(changed.detail).toContain("every client, as admin, install commands, script access");
+  // The MSP console shows it to MSP admins, and the client's owners see it on their Members page.
+  const staff = (await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}`)).body.staff;
+  expect(staff.find((s: { email: string }) => s.email === tech.email).access.scriptAccess).toBe(true);
+  const seenBy = async (orgId: string) =>
+    (await api.call(admin, "GET", `/api/keykeeper/organizations/${orgId}/msp`)).body.staff.find(
+      (s: { email: string }) => s.email === tech.email,
+    ).scriptAccess;
+  expect(await seenBy(acme)).toBe(true);
+  expect(await seenBy(baker)).toBe(false);
+
+  // At Acme Dental, where they're an admin: they make a token, see the
+  // admin's, and revoke it.
+  const theirs = await createToken(api, tech, acme, [item]);
+  expect(theirs.created.status, JSON.stringify(theirs.created.body)).toBe(200);
+  expect(theirs.created.body.createdBy).toBe(tech.email);
+  expect(await read(theirs.authorization)).toBe(200);
+  const admins = await createToken(api, admin, acme, [item]);
+  const listed = await tokens(tech, acme);
+  expect(listed.status).toBe(200);
+  expect(listed.body.data.map((t: { id: string }) => t.id).sort()).toEqual([theirs.id, admins.id].sort());
+  const revoked = await api.call(tech, "DELETE", `/api/keykeeper/organizations/${acme}/script-tokens/${admins.id}`);
+  expect(revoked.status).toBe(200);
+  expect(revoked.body.revokedAt).toBeTruthy();
+  expect(await read(admins.authorization)).toBe(401);
+  expect(
+    (await api.call(tech, "GET", `/api/keykeeper/organizations/${acme}/script-tokens/${theirs.id}/reads`)).status,
+  ).toBe(200);
+
+  // At Baker Law, a custom role there: none of it.
+  expect((await tokens(tech, baker)).status).toBe(404);
+  expect((await createToken(api, tech, baker, [bakerItem])).created.status).toBe(404);
+
+  // Script access is for script tokens only: Acme's other settings stay its admins'.
+  expect((await api.call(tech, "GET", `/api/keykeeper/organizations/${acme}/password-change`)).status).toBe(404);
+  expect((await api.call(tech, "GET", `/api/keykeeper/organizations/${acme}/provisioning`)).status).toBe(404);
+
+  // Script access taken away: their token stops at once, and the admin sees why.
+  await setAccess(techAccess(false));
+  expect(await read(theirs.authorization)).toBe(401);
+  expect((await tokens(tech, acme)).status).toBe(404);
+  const stopped = (await tokens(admin, acme)).body.data.find((t: { id: string }) => t.id === theirs.id);
+  expect(stopped.creatorLostAccess).toBe(true);
+  const reads = await api.call(admin, "GET", `/api/keykeeper/organizations/${acme}/script-tokens/${theirs.id}/reads`);
+  expect(reads.body.data[0]).toMatchObject({ allowed: false, reason: "its maker no longer manages the organization" });
+  // Apps aren't asked to refresh its copy, which would hand them the new password.
+  await api.call(admin, "PUT", `/api/ciphers/${item}`, {
+    ...(await api.call(admin, "GET", `/api/ciphers/${item}`)).body,
+    encryptedFor: admin.userId,
+    notes: encString(`edited-${randomUUID()}`),
+  });
+  const stale = (await api.call(admin, "GET", "/api/keykeeper/script-grants/stale")).body.data;
+  expect(stale.map((g: { tokenId: string }) => g.tokenId)).not.toContain(theirs.id);
+
+  // Back, and then a custom role at Acme Dental too: stopped again.
+  await setAccess(techAccess(true));
+  expect(await read(theirs.authorization)).toBe(200);
+  await setAccess(techAccess(true, { custom: helpdesk }));
+  expect(await read(theirs.authorization)).toBe(401);
+  expect((await tokens(tech, acme)).status).toBe(404);
+
+  // Back, and then off the MSP's staff: stopped, for good.
+  await setAccess(techAccess(true));
+  expect(await read(theirs.authorization)).toBe(200);
+  expect((await api.call(admin, "DELETE", `/api/keykeeper/msp/${mspId}/staff/${tech.userId}`)).status).toBe(200);
+  expect(await read(theirs.authorization)).toBe(401);
+  expect((await tokens(tech, acme)).status).toBe(404);
+});
+
+test("a technician's script access stops at a client that revokes them", async ({ request }) => {
+  test.setTimeout(180_000);
+  const api = new Api(request);
+  const admin = await api.account("script-revoke-admin");
+  const mspId = await api.msp(admin, "Litware IT");
+  const clientId = await api.client(admin, mspId, "Contoso Clinic");
+  const owner = await api.account("script-revoke-owner");
+  await api.addMember(admin, clientId, owner, "owner");
+  const item = await api.orgItem(admin, clientId, await api.collection(admin, clientId));
+  const tech = await api.account("script-revoke-tech");
+  await api.addStaff(admin, mspId, tech, "technician", techAccess(true));
+  await api.confirmPending(admin, mspId);
+  // An invitation carries script access until they join.
+  const staff = (await api.call(admin, "GET", `/api/keykeeper/msp/${mspId}`)).body.staff;
+  expect(staff.find((s: { email: string }) => s.email === tech.email).access.scriptAccess).toBe(true);
+
+  const theirs = await createToken(api, tech, clientId, [item]);
+  expect(theirs.created.status, JSON.stringify(theirs.created.body)).toBe(200);
+  const read = async () =>
+    (await request.get(`/api/keykeeper/script/items/${item}`, { headers: { Authorization: theirs.authorization } })).status();
+  expect(await read()).toBe(200);
+
+  // The client's own owner revokes them there.
+  const member = (await api.members(owner, clientId)).find((m) => m.email === tech.email)!;
+  const revoked = await api.call(owner, "PUT", `/api/organizations/${clientId}/users/${member.id}/revoke`);
+  expect(revoked.status, JSON.stringify(revoked.body)).toBe(200);
+  expect(await read()).toBe(401);
+  expect((await api.call(tech, "GET", `/api/keykeeper/organizations/${clientId}/script-tokens`)).status).toBe(404);
 });
 
 test("a token reads at most 60 times a minute", async ({ request }) => {
