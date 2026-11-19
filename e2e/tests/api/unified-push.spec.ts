@@ -319,6 +319,8 @@ test("the test's own decryption opens RFC 8291's example", () => {
 });
 
 test("a phone hears of a sign-in on a new device and of a sign-in request, each once, as the kind alone", async () => {
+  // Several sign-ins, each hashed by the server's debug build: 20 seconds on a quiet machine.
+  test.setTimeout(90_000);
   const { who, session: phoneSession, keys, api, vapid } = await phoneFor("ana", "/ana-phone");
 
   // A sign-in on a new device: the check holds it, and the phone hears.
@@ -366,6 +368,8 @@ test("a phone hears of a sign-in on a new device and of a sign-in request, each 
 });
 
 test("a push service that never answers doesn't slow a sign-in request, and a 410 removes the endpoint", async () => {
+  // Several sign-ins, each hashed by the server's debug build: 20 seconds on a quiet machine.
+  test.setTimeout(90_000);
   const { who, session: phoneSession, keys, api } = await phoneFor("ben", "/ben-phone");
   const { laptop } = await laptopApprovedBy(api, who, phoneSession);
   await exactly("/ben-phone", 1);
@@ -400,6 +404,8 @@ test("a push service that never answers doesn't slow a sign-in request, and a 41
 test("the server refuses endpoints it can't use, and a device registers and removes only its own", async ({
   request,
 }) => {
+  // Several sign-ins, each hashed by the server's debug build: 20 seconds on a quiet machine.
+  test.setTimeout(90_000);
   // The main test server keeps the defaults: no private or loopback address.
   const api = new Api(request);
   const [ana, ben] = await Promise.all([api.account("ana"), api.account("ben")]);
