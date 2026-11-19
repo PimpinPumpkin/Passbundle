@@ -8,14 +8,26 @@
 // that manages shared folders makes one on the Collections page and gives a
 // member access, and one that only manages members, opening the Collections
 // page by its address, is told "You can't do that here." and stays signed in
-// (DESIGN.md, "Roles and permissions", B30).
+// (DESIGN.md, "Roles and permissions", B30). On the Collections page, a custom
+// role that manages shared folders sees the items in the folders it reaches,
+// and no others.
 import { expect, test, type Page } from "@playwright/test";
 
 import { Api } from "./api/support";
 import {
+  encryptTo,
+  realAccount,
+  realCollection,
+  realLogin,
+  realOrganization,
+  type LoginValues,
+  type RealAccount,
+} from "./support/vault-crypto";
+import {
   acceptRole,
   chooseRole,
   confirmMember,
+  menu,
   reloadVault,
   roleOption,
   signUp,
@@ -268,6 +280,90 @@ test("a custom role that manages shared folders makes one on the Collections pag
   expect(refused).toEqual([]);
 
   await Promise.all([owner.context().close(), poc.context().close(), member.context().close()]);
+});
+
+test("a custom role that manages shared folders sees the items in the folders it reaches on the Collections page, and no others", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(180_000);
+  const api = new Api(request);
+  // An organization with real keys, so the web vault opens its items: a
+  // folder the role reaches and one it doesn't, a login in each, one in both,
+  // and one the owner took out of every folder.
+  const owner = await realAccount(request, "oda-owner");
+  const org = await realOrganization(request, owner, "Lakeside Clinic");
+  const twoStep = await api.call(owner, "GET", `/api/keykeeper/organizations/${org.id}/admin-two-step`);
+  expect(twoStep.body.required, "this organization doesn't require two-step login for admins").toBe(false);
+  const frontDesk = await realCollection(request, owner, org, "oda-front-desk");
+  const billing = await realCollection(request, owner, org, "oda-billing");
+  const login = (name: string): LoginValues => ({
+    name,
+    username: `${name.toLowerCase().replace(/\s+/g, "-")}@lakeside.test`,
+    password: `fixture-${name.toLowerCase().replace(/\s+/g, "-")}-2026`,
+    uri: "https://lakeside.test/login",
+  });
+  const folders = async (id: string, collectionIds: string[]) => {
+    const moved = await api.call(owner, "PUT", `/api/ciphers/${id}/collections-admin`, { collectionIds });
+    expect(moved.status, JSON.stringify(moved.body)).toBe(200);
+  };
+  const visits = await realLogin(request, owner, org, frontDesk, login("Visit scheduler"));
+  const fax = await realLogin(request, owner, org, frontDesk, login("Shared fax"));
+  await folders(fax, [frontDesk, billing]);
+  await realLogin(request, owner, org, billing, login("Billing portal"));
+  const loose = await realLogin(request, owner, org, frontDesk, login("Loose login"));
+  await folders(loose, []);
+
+  // The point of contact: Custom, Manage shared folders, Can edit in the
+  // front desk folder, confirmed with the organization's key.
+  const poc: RealAccount = await realAccount(request, "oda-poc");
+  const invited = await api.call(owner, "POST", `/api/organizations/${org.id}/users/invite`, {
+    emails: [poc.email],
+    type: 4,
+    permissions: { keykeeperManageCollections: true },
+    collections: [{ id: frontDesk, readOnly: false, hidePasswords: false, manage: false }],
+    groups: [],
+  });
+  expect(invited.status, JSON.stringify(invited.body)).toBe(200);
+  await api.acceptRole(poc, org.id);
+  const pocId = (await api.members(owner, org.id)).find((m) => m.email === poc.email)!.id;
+  const confirmed = await api.call(owner, "POST", `/api/organizations/${org.id}/users/${pocId}/confirm`, {
+    key: encryptTo(poc.publicKey, org.key),
+  });
+  expect(confirmed.status, JSON.stringify(confirmed.body)).toBe(200);
+
+  await page.goto("/#/login");
+  await page.getByLabel(/Email address/).fill(poc.email);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("textbox", { name: /Master password/ }).fill(poc.password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(menu(page)).toBeVisible({ timeout: 30_000 });
+
+  // The Collections page asks for its items, and the server answers with
+  // the ones in the folder it reaches.
+  const refused = refusedCalls(page);
+  const assigned = page.waitForResponse(
+    (r) => r.url().includes("/api/ciphers/organization-details/assigned") && r.request().method() === "GET",
+  );
+  await page.goto(`/#/organizations/${org.id}/vault`);
+  const answer = await assigned;
+  expect(answer.status()).toBe(200);
+  const items: { id: string; collectionIds: string[] }[] = (await answer.json()).data;
+  expect(items.map((c) => c.id).sort()).toEqual([visits, fax].sort());
+  expect(items.find((c) => c.id === fax)!.collectionIds).toEqual([frontDesk]);
+
+  // The page shows them in the folder, and nothing of the other folder.
+  await expect(page.getByRole("button", { name: "oda-billing", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "oda-front-desk", exact: true }).first().click();
+  await expect(page).toHaveURL(new RegExp(`organizations/${org.id}/vault\\?.*collectionId=${frontDesk}`));
+  const rows = page.getByRole("row");
+  await expect(rows.filter({ hasText: "Visit scheduler" })).toBeVisible();
+  await expect(rows.filter({ hasText: "Shared fax" })).toBeVisible();
+  await expect(page.getByText("Billing portal")).toHaveCount(0);
+  await expect(page.getByText("Loose login")).toHaveCount(0);
+
+  // Nothing they opened was refused, so they were never signed out.
+  expect(refused).toEqual([]);
 });
 
 test("a custom role that only manages members opens the Collections and Groups pages by their address, is told it can't do that here, and stays signed in", async ({
