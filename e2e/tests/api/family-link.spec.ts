@@ -57,6 +57,12 @@ function expectNotFound(answer: Result, message = NOT_FOUND) {
   expect(answer.body.message).toBe(message);
 }
 
+/** What an owner or admin of an organization that isn't a family is told. */
+function expectNoFamily(answer: Result) {
+  expect(answer.status, JSON.stringify(answer.body)).toBe(200);
+  expect(answer.body).toBeNull();
+}
+
 function expectRefused(answer: Result, sentence: string) {
   expect(answer.status, JSON.stringify(answer.body)).toBe(400);
   expect(answer.body.message).toBe(sentence);
@@ -129,8 +135,9 @@ test("only a family's owners and admins see or change its link; everyone else ge
   await api.addMember(owner, orgId, member, "user");
   await api.addMember(owner, orgId, manager, "manager");
 
-  // Before it's a family (a Business trial), nobody has a link, its owner included.
-  expectNotFound(await api.call(owner, "GET", linkPath(orgId)));
+  // Before it's a family (a Business trial), nobody has a link, its owner
+  // included: the owner is told it isn't a family (null), not "not found".
+  expectNoFamily(await api.call(owner, "GET", linkPath(orgId)));
   expectNotFound(
     await api.call(owner, "PUT", linkPath(orgId), { token: newToken(), sealed: encString("s"), automatic: false, days: 7 }),
   );
@@ -166,7 +173,7 @@ test("a Business organization and an MSP's client have no link, whoever asks", a
   const owner = await api.account("link-business");
   const business = await api.organization(owner, "Acme Dental");
   await server!.operator.setPlan("organizations", business, paid("business"));
-  expectNotFound(await api.call(owner, "GET", linkPath(business)));
+  expectNoFamily(await api.call(owner, "GET", linkPath(business)));
   expectNotFound(
     await api.call(owner, "PUT", linkPath(business), { token: newToken(), sealed: encString("s"), automatic: false, days: 7 }),
   );
@@ -181,7 +188,7 @@ test("a Business organization and an MSP's client have no link, whoever asks", a
   await api.confirmPending(mspAdmin, mspId);
   await server!.operator.setPlan("organizations", client, paid("families"));
   for (const who of [mspAdmin, technician]) {
-    expectNotFound(await api.call(who, "GET", linkPath(client)));
+    expectNoFamily(await api.call(who, "GET", linkPath(client)));
     expectNotFound(
       await api.call(who, "PUT", linkPath(client), { token: newToken(), sealed: encString("s"), automatic: true, days: 7 }),
     );
