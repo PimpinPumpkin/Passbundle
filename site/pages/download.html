@@ -33,7 +33,7 @@ layout: wide
           <li><img src="/browsers/firefox.svg" width="32" height="32" alt="">Firefox <span class="chip soon">Coming</span></li>
         </ul>
         <p class="fine">It's a zip you <a href="#extension">install by hand</a> until it's in the stores.</p>
-        <p class="fine">Firefox only installs extensions Mozilla has signed, and ours isn't signed yet.</p>
+        <p class="fine">Mozilla hasn't signed our Firefox version yet. Until it does, there's an unsigned zip for the places Firefox allows one: see <a href="#firefox">In Firefox</a>.</p>
       </div>
     </div>
     <div class="card get-card" id="phone">
@@ -87,6 +87,13 @@ layout: wide
         <li>Pin PassBundle to the toolbar from the extensions menu, and sign in.</li>
       </ol>
       <p class="fine">It doesn't update itself. For a new version, put the new zip's files in the same folder, and choose Reload on PassBundle in the extensions page. Each release lists the zip's SHA-256.</p>
+      <h3 id="firefox">In Firefox</h3>
+      <p>Release Firefox runs only extensions Mozilla has signed, and ours isn't signed yet. The <a href="{{links.extensionFirefoxZip|links.extension}}">unsigned Firefox zip</a> works in two places:</p>
+      <ul class="get-list">
+        <li><strong>Any Firefox, until it quits:</strong> open <code>about:debugging</code>, choose This Firefox, then Load Temporary Add-on, and pick the zip. Firefox removes it when it quits.</li>
+        <li><strong>Firefox Developer Edition, Nightly, or ESR:</strong> in <code>about:config</code>, set <code>xpinstall.signatures.required</code> to false. Then in <code>about:addons</code>, choose Install Add-on From File from the gear menu, and pick the zip.</li>
+      </ul>
+      <p class="fine">It doesn't update itself, and in Firefox it doesn't unlock with Windows Hello. Each release lists its SHA-256 too.</p>
     </div>
     <div class="card" id="test-builds">
       <h2><x-tile icon="shield" tone="onyx"></x-tile>Opening a test build</h2>

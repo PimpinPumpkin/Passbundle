@@ -1613,6 +1613,12 @@ main.wide .downloads .card h2 {
   margin-top: 14px;
 }
 
+/* A second part of a card, such as Firefox under installing the extension. */
+.downloads .card > h3 {
+  margin-top: 28px;
+  font-size: 17px;
+}
+
 .get-list {
   display: grid;
   gap: 6px;
