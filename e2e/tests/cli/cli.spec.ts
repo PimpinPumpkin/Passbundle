@@ -218,11 +218,8 @@ test("a technician's script signs in with an API key, lists items, and gets only
     NODE_EXTRA_CA_CERTS: certificate,
   });
 
-  // The product's own version, and where to get the newest; it doesn't update itself.
+  // The product's own version. (`update` is cli-device.spec.ts's.)
   expect(run(["--version"]).stdout.trim()).toMatch(/^\d+\.\d+\.\d+/);
-  const update = run(["update"]);
-  expect(update.status).toBe(0);
-  expect(update.stdout).toContain(brand.cli.releases);
 
   // Self-hosted: her MSP's server.
   expect(run(["config", "server", server]).status).toBe(0);

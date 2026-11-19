@@ -245,7 +245,7 @@ test("a technician with a custom role acts only within it, sees vault items only
   expect(
     (await api.call(tech, "GET", `/api/organizations/${dental}/policies`))
       .status,
-  ).toBe(403);
+  ).toBe(404);
   expect(
     (
       await api.call(
@@ -375,7 +375,7 @@ test("a technician can have a different role in some clients, which applies ther
   expect(
     (await api.call(tech, "GET", `/api/organizations/${dental}/policies`))
       .status,
-  ).toBe(403);
+  ).toBe(404);
   expect(
     (await setAccess(api, admin, mspId, tech, { ...access, clientRoles: [] }))
       .status,
@@ -385,7 +385,7 @@ test("a technician can have a different role in some clients, which applies ther
   });
   expect(
     (await api.call(tech, "GET", `/api/organizations/${law}/policies`)).status,
-  ).toBe(403);
+  ).toBe(404);
 
   // The audit log says where the role differs.
   expect(
