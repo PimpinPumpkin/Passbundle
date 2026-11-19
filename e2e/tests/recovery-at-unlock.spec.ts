@@ -6,12 +6,16 @@
 // the web vault sends nothing for their place there, which came from the
 // MSP, and where another organization gave them a place of its own, the
 // server refuses once and the web vault doesn't try again. The browser
-// extension enrolls a member the same way. Runs on the server that sends
-// email, which only offers account recovery with email.
-import { constants, createPrivateKey, privateDecrypt, randomBytes } from "node:crypto";
+// extension enrolls only to the organization key the install command names
+// (its orgKeyFingerprint): with none it sends nothing, with another key's it
+// refuses and says so in its log, and with the organization's own it
+// enrolls. Runs on the server that sends email, which only offers account
+// recovery with email.
+import { constants, createHash, createPrivateKey, privateDecrypt, randomBytes } from "node:crypto";
 
 import {
   type APIRequestContext,
+  type BrowserContext,
   expect,
   type Page,
   request as requests,
@@ -76,8 +80,14 @@ async function realOrg(api: Api, owner: RealAccount, name: string) {
     planType: 0,
   });
   expect(created.status, JSON.stringify(created.body)).toBe(200);
-  return { org: { id: created.body.id as string, key } satisfies RealOrganization, privateKey };
+  return { org: { id: created.body.id as string, key } satisfies RealOrganization, publicKey, privateKey };
 }
+
+/**
+ * The install command's fingerprint of an organization's public key, as an
+ * owner's browser makes it: SHA-256 of the SPKI, base64url without padding.
+ */
+const fingerprintOf = (publicKey: Buffer) => createHash("sha256").update(publicKey).digest("base64url");
 
 /** The user key in a recovery key, opened with the organization's private key as Recover account does. */
 function openRecoveryKey(sealed: string, privateKey: Buffer): Buffer {
@@ -275,26 +285,115 @@ test("a member is enrolled at their next unlock when their organization turns on
   await request.dispose();
 });
 
-extensionTest("the browser extension enrolls a member at unlock too", async ({ context, extensionId }) => {
+/** The extension's background, where enrolling at unlock runs. */
+const background = (context: BrowserContext) => context.serviceWorkers()[0];
+
+/**
+ * Hands the extension an install command's organization key fingerprint, or
+ * none, as browser policy does. As the install command tests do, the test
+ * hands it to the extension's managed settings directly.
+ */
+async function setManagedPin(context: BrowserContext, orgKey: string | null) {
+  await background(context).evaluate((pin) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const enrollment = (self as any).bitwardenMain.keykeeperEnrollment;
+    enrollment.platform = {
+      ...enrollment.platform,
+      managedJoinParts: async () => ({ secret: null, orgKey: pin }),
+    };
+  }, orgKey);
+}
+
+/**
+ * Waits until this unlock's enrolling is done: asked while it runs, it waits
+ * for that run; asked after, it finds this unlock had its try. Either way
+ * nothing more is sent until the next unlock.
+ */
+async function unlockWorkDone(context: BrowserContext, userId: string) {
+  await background(context).evaluate(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (id) => (self as any).bitwardenMain.keykeeperRecoveryAtUnlock.run(id),
+    userId,
+  );
+}
+
+/**
+ * Locks the extension, then unlocks it with the master password on its lock
+ * screen. Upstream reloads the whole extension on a lock, and an extension
+ * loaded from the command line doesn't come back from that, so the test
+ * turns the reload off first (as biometric-unlock.spec.ts does).
+ */
+async function lockAndUnlock(context: BrowserContext, extensionId: string, account: RealAccount) {
+  await background(context).evaluate(async (id) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const main = (self as any).bitwardenMain;
+    main.processReloadService.reloadProcess = async () => {};
+    await main.lockService.lock(id, "manual");
+  }, account.userId);
+  const popup = await openPopup(context, extensionId);
+  await expect(popup.getByRole("heading", { name: "Your vault is locked" })).toBeVisible({ timeout: 15_000 });
+  await popup.getByRole("textbox", { name: /Master password/ }).fill(account.password);
+  await popup.getByRole("button", { name: "Unlock", exact: true }).click();
+  await expect(popup.getByRole("heading", { name: /Items/ }).first()).toBeVisible({ timeout: 30_000 });
+  await popup.close();
+}
+
+extensionTest("the browser extension enrolls at unlock only to the organization key the install command names", async ({
+  context,
+  extensionId,
+}) => {
   extensionTest.setTimeout(180_000);
   const request = await mailServerRequests();
   const api = new Api(request);
   const owner = await realAccount(request, "rau-ext-owner");
   const orgName = `Unlock Extension ${Date.now()}`;
-  const { org, privateKey } = await realOrg(api, owner, orgName);
+  const { org, publicKey, privateKey } = await realOrg(api, owner, orgName);
   const member = await realAccount(request, "rau-ext-member");
   const memberId = await joinByEmail(api, owner, org, orgName, member);
   await turnOnRecovery(api, owner, org.id);
+  // What the extension's background says, and what it sends for the key and the enrollment.
+  const said: string[] = [];
+  background(context).on("console", (m) => said.push(m.text()));
+  const sent: string[] = [];
+  context.on("request", (r) => {
+    if (r.url().includes(`/api/organizations/${org.id}/keys`)) {
+      sent.push("key");
+    } else if (r.url().includes("/reset-password-enrollment") && r.method() === "PUT") {
+      sent.push("enrollment");
+    }
+  });
 
-  // The member signs in to the extension; its background enrolls them.
+  // Signed in on a computer the install command didn't set up: no
+  // fingerprint, so nothing is sent, not even a request for the key.
   const popup = await openPopup(context, extensionId);
   await logInPopup(popup, { email: member.email, password: member.password, name: "rau-ext-member" }, mailServer);
-  await expect
-    .poll(() => recoveryKey(api, owner, org.id, memberId), { timeout: 30_000 })
-    .toMatch(/^4\./);
+  await popup.close();
+  await unlockWorkDone(context, member.userId);
+  expect(sent).toEqual([]);
+  expect(said.some((line) => line.includes("names no organization key"))).toBe(true);
+  expect(await enrolled(api, owner, org.id, member.email)).toBe(false);
+
+  // A fingerprint of some other key (as when a hacked server swaps in its
+  // own): refused at the next unlock, said in the log, and nothing enrolled.
+  await setManagedPin(context, fingerprintOf(rsaKeyPair().publicKey));
+  await lockAndUnlock(context, extensionId, member);
+  await unlockWorkDone(context, member.userId);
+  expect(sent).toEqual(["key"]);
+  expect(
+    said.some((line) => line.includes(`${orgName}`) && line.includes("isn't the one this browser's install command names")),
+  ).toBe(true);
+  expect(await enrolled(api, owner, org.id, member.email)).toBe(false);
+  expect(await recoveryKey(api, owner, org.id, memberId)).toBeNull();
+
+  // The organization's own: enrolled at the next unlock, with their real
+  // user key, which the organization's private key opens.
+  await setManagedPin(context, fingerprintOf(publicKey));
+  await lockAndUnlock(context, extensionId, member);
+  await unlockWorkDone(context, member.userId);
+  expect(sent).toEqual(["key", "key", "enrollment"]);
+  expect(await enrolled(api, owner, org.id, member.email)).toBe(true);
   const sealed = (await recoveryKey(api, owner, org.id, memberId))!;
   expect(openRecoveryKey(sealed, privateKey).equals(member.userKey)).toBe(true);
-  expect(await enrolled(api, owner, org.id, member.email)).toBe(true);
 
   await request.dispose();
 });
