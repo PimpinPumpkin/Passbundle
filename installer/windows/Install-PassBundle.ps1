@@ -438,6 +438,27 @@ function Remove-LinkHandler {
   }
 }
 
+# Copies the app's own files (not the agent's) over the installed ones. Windows
+# can hold a file for a moment after the app has ended (a data file it mapped
+# into memory, or a virus scan reading it), so a file in use is tried again
+# for up to 15 seconds before the script stops and says what to do.
+function Copy-AppFiles {
+  $items = @(Get-ChildItem -LiteralPath $AppSource -Force | Where-Object { $AgentFiles -notcontains $_.Name })
+  $deadline = (Get-Date).AddSeconds(15)
+  while ($true) {
+    try {
+      $items | Copy-Item -Destination $InstallDir -Recurse -Force -ErrorAction Stop
+      return
+    } catch {
+      if ($_.Exception -isnot [System.IO.IOException]) { throw }
+      if ((Get-Date) -ge $deadline) {
+        throw "PassBundle's app couldn't be put in place: $($_.Exception.Message) Close PassBundle for everyone signed in to this computer, or restart it, then run this script again."
+      }
+      Start-Sleep -Milliseconds 500
+    }
+  }
+}
+
 function Install-App {
   if (-not (Test-Path $InstallDir)) { New-Item -Path $InstallDir -ItemType Directory | Out-Null }
   # The app's files can't be replaced while it runs. It's a window: whoever
@@ -446,8 +467,7 @@ function Install-App {
   # A release's folder holds the agent's programs too. They may be running,
   # so they go in as the agent's own do, never copied over.
   Install-AgentFiles $AppSource
-  Get-ChildItem -LiteralPath $AppSource -Force | Where-Object { $AgentFiles -notcontains $_.Name } |
-    Copy-Item -Destination $InstallDir -Recurse -Force
+  Copy-AppFiles
   $shell = New-Object -ComObject WScript.Shell
   $link = $shell.CreateShortcut($AppShortcut)
   $link.TargetPath = Join-Path $InstallDir "passbundle.exe"
