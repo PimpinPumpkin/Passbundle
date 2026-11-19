@@ -16,6 +16,7 @@ import {
   message,
   newDomain,
   newIdentifier,
+  phoneRedirect,
   pkce,
   redeem,
   settings,
@@ -734,8 +735,8 @@ test("a sign-in's state and code work once, only with the app's PKCE verifier, r
   const otherClient = await ssoSignIn(request, origin, identifier);
   expect((await redeem(request, otherClient.code!, otherClient.verifier, `${origin}/sso-connector.html`, "browser")).status).toBe(400);
 
-  // The web vault's clients get only its connector page, and other apps
-  // nothing (the command-line tool has a test of its own below).
+  // The web vault's clients get only its connector page, and the native
+  // apps nothing there (they have tests of their own below).
   expect((await request.get(`/identity/connect/authorize?client_id=web&redirect_uri=${encodeURIComponent("https://evil.example.test/cb")}&response_type=code&state=s_identifier=${identifier}&code_challenge=${"a".repeat(43)}&code_challenge_method=S256&domain_hint=${identifier}`, { maxRedirects: 0 })).status()).toBe(400);
   expect((await request.get(`/identity/connect/authorize?client_id=web&redirect_uri=${encodeURIComponent(`${origin}/sso-connector.html`)}&response_type=code&state=s_identifier=${identifier}&code_challenge=${"a".repeat(43)}&code_challenge_method=plain&domain_hint=${identifier}`, { maxRedirects: 0 })).status()).toBe(400);
   expect((await ssoSignIn(request, origin, identifier, { clientId: "desktop" })).authorize).toBe(400);
@@ -793,15 +794,11 @@ test("the command-line tool signs in with single sign-on at its own listener on 
   expect(page).toContain("Sign in to the PassBundle command-line tool?");
   expect(page).toContain("http://localhost:8065");
   expect(page).not.toContain(`127.0.0.1:${entraPort}`);
-  expect(asked.headers()["set-cookie"]).toMatch(/PB_SSO_CLI_CONFIRM=.*SameSite=Strict/);
+  expect(asked.headers()["set-cookie"]).toMatch(/PB_SSO_APP_CONFIRM=.*SameSite=Strict/);
   expect(asked.headers()["set-cookie"]).toMatch(/HttpOnly/);
-  // Its Continue may go on to the tenant's sign-in and back to the tool's
-  // listeners, and nowhere else.
-  expect(asked.headers()["content-security-policy"]).toContain(
-    `form-action 'self' http://127.0.0.1:${entraPort} ${[8065, 8066, 8067, 8068, 8069, 8070]
-      .map((p) => `http://localhost:${p}`)
-      .join(" ")};`,
-  );
+  // Its Continue may go on to the tenant's sign-in and back to the native
+  // apps' listeners and scheme, and nowhere else.
+  expect(asked.headers()["content-security-policy"]).toContain(appsFormAction);
 
   // Its Continue only from the page itself: never from another site, never
   // without the browser's cookie, and once.
@@ -845,6 +842,142 @@ test("the command-line tool signs in with single sign-on at its own listener on 
     ["cli", "https://evil.example.test"],
     ["web", "http://localhost:8065"],
     ["browser", "http://localhost:8065"],
+  ]) {
+    const refused = await ssoSignIn(request, origin, identifier, { clientId, listener });
+    expect(refused.authorize, `${clientId} ${listener}`).toBe(400);
+  }
+});
+
+/** Where the native apps' page may send its form on: the tenant's sign-in,
+ * the tool's listeners, the desktop app's on any port, and the phones' scheme. */
+const appsFormAction = `form-action 'self' http://127.0.0.1:${entraPort} ${[8065, 8066, 8067, 8068, 8069, 8070]
+  .map((p) => `http://localhost:${p}`)
+  .join(" ")} http://127.0.0.1:* com.passbundle.app:;`;
+
+test("PassBundle's desktop and phone apps sign in with single sign-on at their own listener or scheme, after the server's page asks, and only there", async ({
+  request,
+  playwright,
+}) => {
+  const api = new Api(request);
+  const sso = await ssoOrg(api, "apps");
+  const { tenant, identifier } = sso;
+  const { account, person: dee } = await linkedMember(api, request, sso, "dee");
+
+  // The desktop app: its own listener on 127.0.0.1, on whatever port the OS
+  // gave it (RFC 8252, 7.3), from 1024 to 65535.
+  for (const listenerPort of [1024, 51004, 65535]) {
+    await tenant.next(dee);
+    const listener = `http://127.0.0.1:${listenerPort}/sso`;
+    const signedIn = await ssoSignIn(request, origin, identifier, { clientId: "desktop", listener });
+    expect(signedIn.confirm, listener).toBe(303);
+    expect(signedIn.returned?.origin).toBe(`http://127.0.0.1:${listenerPort}`);
+    expect(signedIn.returned?.pathname).toBe("/sso");
+    expect(signedIn.token?.status, JSON.stringify(signedIn.token?.body)).toBe(200);
+    expect(await whoIs(api, signedIn.token!.body.access_token)).toBe(account.email);
+    // Single sign-on signs in; the master password unlocks.
+    expect(signedIn.token!.body.UserDecryptionOptions.HasMasterPassword).toBe(true);
+    expect(signedIn.token!.body.UserDecryptionOptions.MasterPasswordUnlock.Salt).toBe(account.email);
+    expect(signedIn.token!.body.Key).toBeTruthy();
+  }
+
+  // The phones: their private-use scheme, exactly.
+  await tenant.next(dee);
+  const onPhone = await ssoSignIn(request, origin, identifier, { clientId: "mobile", listener: phoneRedirect });
+  expect(onPhone.confirm).toBe(303);
+  expect(onPhone.returned?.protocol).toBe("com.passbundle.app:");
+  expect(onPhone.returned?.pathname).toBe("/sso");
+  expect(onPhone.token?.status, JSON.stringify(onPhone.token?.body)).toBe(200);
+  expect(await whoIs(api, onPhone.token!.body.access_token)).toBe(account.email);
+
+  // A link alone never reaches Microsoft: authorize answers each app with
+  // the server's own page, which says which app it signs in.
+  const authorizeUrl = (clientId: string, redirect: string) =>
+    `${origin}/identity/connect/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirect)}` +
+    `&response_type=code&scope=api%20offline_access&state=s_identifier=${identifier}` +
+    `&code_challenge=${pkce().challenge}&code_challenge_method=S256&response_mode=query&domain_hint=${identifier}`;
+  for (const [clientId, redirect, words] of [
+    ["desktop", "http://127.0.0.1:51004/sso", "on the computer this browser runs on"],
+    ["mobile", phoneRedirect, "on this phone or tablet"],
+  ]) {
+    const asked = await request.get(authorizeUrl(clientId, redirect), { maxRedirects: 0 });
+    expect(asked.status(), clientId).toBe(200);
+    expect(asked.headers()["location"]).toBeUndefined();
+    const page = await asked.text();
+    expect(page).toContain("Sign in to the PassBundle app?");
+    expect(page).toContain(words);
+    expect(page).toContain("Use single sign-on in the PassBundle app yourself");
+    expect(page).not.toContain(`127.0.0.1:${entraPort}`);
+    if (clientId === "desktop") expect(page).toContain(`<code>${redirect}</code>`);
+    expect(asked.headers()["set-cookie"]).toMatch(/PB_SSO_APP_CONFIRM=.*SameSite=Strict/);
+    expect(asked.headers()["content-security-policy"]).toContain(appsFormAction);
+    // Its Continue only from the page itself, with the browser's cookie, once.
+    expect((await confirmCli(request, origin, page, { Origin: "https://evil.example.test" })).status()).toBe(400);
+    expect((await confirmCli(request, origin, page)).status()).toBe(400);
+    const otherBrowser = await playwright.request.newContext({ ignoreHTTPSErrors: true });
+    const elsewhere = await (await request.get(authorizeUrl(clientId, redirect), { maxRedirects: 0 })).text();
+    expect((await confirmCli(otherBrowser, origin, elsewhere)).status()).toBe(400);
+    await otherBrowser.dispose();
+  }
+
+  // Each app's code is its own, for its own address only.
+  await tenant.next(dee);
+  const asPhone = await ssoSignIn(request, origin, identifier, {
+    clientId: "desktop",
+    listener: "http://127.0.0.1:51004/sso",
+    redeemClientId: "mobile",
+  });
+  expect(asPhone.token?.status).toBe(400);
+  await tenant.next(dee);
+  const otherPort = await ssoSignIn(request, origin, identifier, {
+    clientId: "desktop",
+    listener: "http://127.0.0.1:51004/sso",
+    redirectUri: "http://127.0.0.1:51005/sso",
+  });
+  expect(otherPort.token?.status).toBe(400);
+  await tenant.next(dee);
+  const asDesktop = await ssoSignIn(request, origin, identifier, {
+    clientId: "mobile",
+    listener: phoneRedirect,
+    redeemClientId: "desktop",
+  });
+  expect(asDesktop.token?.status).toBe(400);
+
+  // Nowhere else: every near miss of each app's address, and each app's
+  // address for another app.
+  for (const [clientId, listener] of [
+    ["desktop", "http://localhost:51004/sso"],
+    ["desktop", "http://[::1]:51004/sso"],
+    ["desktop", "http://127.0.0.2:51004/sso"],
+    ["desktop", "http://127.0.0.1:1023/sso"],
+    ["desktop", "http://127.0.0.1:65536/sso"],
+    ["desktop", "http://127.0.0.1:051004/sso"],
+    ["desktop", "http://127.0.0.1/sso"],
+    ["desktop", "http://127.0.0.1:51004"],
+    ["desktop", "http://127.0.0.1:51004/"],
+    ["desktop", "http://127.0.0.1:51004/sso/"],
+    ["desktop", "http://127.0.0.1:51004/callback"],
+    ["desktop", "http://127.0.0.1:51004/sso?x=1"],
+    ["desktop", "http://127.0.0.1:51004/sso#x"],
+    ["desktop", "http://user@127.0.0.1:51004/sso"],
+    ["desktop", "https://127.0.0.1:51004/sso"],
+    ["desktop", "http://localhost:8065"],
+    ["desktop", phoneRedirect],
+    ["desktop", `${origin}/sso-connector.html`],
+    ["mobile", "com.passbundle.app:/sso/"],
+    ["mobile", "com.passbundle.app://sso"],
+    ["mobile", "com.passbundle.app:/sso?x=1"],
+    ["mobile", "com.passbundle.app:/callback"],
+    ["mobile", "com.passbundle.app.evil:/sso"],
+    ["mobile", "passbundle://duo-callback"],
+    ["mobile", "bitwarden://sso-callback"],
+    ["mobile", "http://127.0.0.1:51004/sso"],
+    ["mobile", `${origin}/sso-connector.html`],
+    ["cli", "http://127.0.0.1:51004/sso"],
+    ["cli", phoneRedirect],
+    ["web", "http://127.0.0.1:51004/sso"],
+    ["web", phoneRedirect],
+    ["browser", "http://127.0.0.1:51004/sso"],
+    ["browser", phoneRedirect],
   ]) {
     const refused = await ssoSignIn(request, origin, identifier, { clientId, listener });
     expect(refused.authorize, `${clientId} ${listener}`).toBe(400);
