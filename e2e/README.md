@@ -48,7 +48,7 @@ The test tenants tests (`tests/api/test-tenants.spec.ts`, `tests/test-tenants-we
 
 The closed sign-ups tests (`tests/mail/closed-sign-ups.spec.ts`, `tests/closed-sign-ups.spec.ts`) start a server of their own that isn't taking new accounts, or takes them only at some email domains (`KK_SIGNUPS=closed`, `KK_SIGNUPS_DOMAINS`), and start it again with other settings over the same data (`tests/support/closed-server.ts`): open first (`KK_SIGNUPS=open`), to make the accounts a closed server is then asked about, with and without email, and with the sign-up form's link sent by email (`KK_SIGNUPS_VERIFY=1`). It's on `KK_CLOSED_SERVER_PORT` (default 8108).
 
-The tests of MSPs signing up by themselves (`tests/api/msp-signup.spec.ts`, `tests/msp-signup.spec.ts`) start a server of their own that doesn't let anyone set up an MSP (`KK_MSP_SIGNUPS=off`: `MSP_SIGNUPS_ALLOWED` off, as a server someone runs for themselves has it; every other test server allows it, as the hosted service does), on `KK_MSP_SIGNUPS_OFF_SERVER_PORT` (default 8114).
+The tests of MSPs signing up by themselves (`tests/api/msp-signup.spec.ts`, `tests/msp-signup.spec.ts`) start a server of their own that doesn't let anyone set up an MSP (`KK_MSP_SIGNUPS=off`: `MSP_SIGNUPS_ALLOWED` off, as a server someone runs for themselves has it; every other test server allows it, as the hosted service does), on `KK_MSP_SIGNUPS_OFF_SERVER_PORT` (default 8115).
 
 The required policy tests (`tests/api/msp-required-policies.spec.ts`) start a server of their own that sends email and needs single organization before account recovery (`KK_SINGLE_ORG_FOR_RECOVERY=1`, upstream's `ENFORCE_SINGLE_ORG_WITH_RESET_PW_POLICY`), on `KK_SINGLE_ORG_SERVER_PORT` (default 8104).
 
