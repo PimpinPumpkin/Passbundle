@@ -105,7 +105,8 @@ test("the web vault approves the tool's sign-in, and the tool signs in and lists
   expect(asking.out.stdout).toBe("");
 
   // The web vault, signed in with her master password, shows the tool's
-  // request on Settings, Security, Devices, with the same phrase, and approves it.
+  // request on Settings, Security, Devices, with the same phrase, and approves
+  // it once she types her master password again.
   await logIn(page, ana);
   await page.goto("/#/settings/security/device-management");
   const pending = page.getByRole("row").filter({ hasText: "Request pending" });
@@ -116,6 +117,10 @@ test("the web vault approves the tool's sign-in, and the tool signs in and lists
   await expect(dialog.getByText("Sign-in request")).toBeVisible();
   await expect(dialog.getByText(phrase, { exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: "Confirm access" }).click();
+  // The web vault asks for her master password before it sends the key.
+  const confirm = page.getByTestId("keykeeper-confirm-approval");
+  await confirm.getByRole("textbox", { name: /Master password/ }).fill(ana.password);
+  await confirm.getByRole("button", { name: "Approve" }).click();
 
   // The tool signs in, unlocked with the user key the approval wrapped to its
   // request, and prints its session key.

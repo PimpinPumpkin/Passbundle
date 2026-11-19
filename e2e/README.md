@@ -40,6 +40,8 @@ The seats tests (`tests/api/msp-seats.spec.ts`) start a server of their own whos
 
 The new-device check's tests (`tests/api/new-device-check.spec.ts`, `tests/new-device-check.spec.ts`, `tests/cli/new-device-check.spec.ts`) start a server of their own with the check on (`KK_NEW_DEVICE=1`), email, and a tiny location database of made-up places (`fixtures/location/make.mjs`), on `KK_NEW_DEVICE_SERVER_PORT` (default 8106). Every other test server turns the check off, since its tests sign in from fresh browsers and API calls.
 
+The tests of where a "Sign in with a device" request comes from (`tests/api/device-approval.spec.ts`) start a server of their own with the same location database and the check off (`KK_LOCATION=1`), on `KK_LOCATION_SERVER_PORT` (default 8114). The main test server has no location database, which is how the same tests see that nothing is shown without one.
+
 The security key tests (`tests/connector-origins.spec.ts`) start a server of their own named `vault.connectors.test`, since WebAuthn won't take an IP address as a site's name, on `KK_CONNECTOR_SERVER_PORT` (default 8103).
 
 The tests of what the web vault and the extension show on each plan (`tests/plans-ui.spec.ts`, `tests/plans-ui-extension.spec.ts`, and the Plan page and the plan banners in `tests/plans-page.spec.ts`) start two servers of their own with the admin page on, as the plans tests below do: one that enforces plans on `KK_PLANS_UI_SERVER_PORT` (default 8112), and one that doesn't on `KK_PLANS_UI_OFF_SERVER_PORT` (default 8113). They give and take away Premium the way the plans tests do.

@@ -9,16 +9,21 @@
 // one that's gone (expired, denied, replaced, or purged) answers 404 whenever
 // the purge runs; a
 // device asks five times an hour at most; an organization's "Require single
-// sign-on" holds for it too; and a session an approval began can't use
+// sign-on" holds for it too; a session an approval began can't use
 // emergency access on either side, while a password's or single sign-on's
-// can.
+// can; and where a request comes from, from the server's own location
+// database (on a server of its own with the tiny one in fixtures/location),
+// and nothing without one.
 // The server stores keys as it gets them, so the public key is a real one
 // (from Node) and the wrapped key a stand-in of the right shape.
+import { type ChildProcess, spawn } from "node:child_process";
 import { constants, generateKeyPairSync, publicEncrypt, randomBytes, randomUUID } from "node:crypto";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-import { type APIRequestContext, expect, test } from "@playwright/test";
+import { type APIRequestContext, expect, request as apiRequest, test } from "@playwright/test";
 
-import { port } from "../../paths.mjs";
+import { locationServerPort, port } from "../../paths.mjs";
 import { linkFromSession, ssoOrg, ssoSignIn } from "../support/entra";
 
 import { type Account, Api, ageSignInRequests, encString } from "./support";
@@ -35,8 +40,10 @@ async function signIn(
   device: string,
   authRequest?: { id: string; code: string },
   deviceType = WEB,
+  ip?: string,
 ) {
   const response = await request.post("/identity/connect/token", {
+    headers: ip ? { "X-Real-IP": ip } : {},
     form: {
       grant_type: "password",
       username: who.email,
@@ -73,19 +80,19 @@ const accessCode = () => randomBytes(32).toString("base64").replace(/[^A-Za-z0-9
 
 type Asked = { id: string; code: string; key: Buffer };
 
-async function ask(request: APIRequestContext, who: Account, device: string) {
+async function ask(request: APIRequestContext, who: Account, device: string, ip?: string) {
   const key = publicKey();
   const code = accessCode();
   const response = await request.post("/api/auth-requests", {
-    headers: { "Device-Type": WEB },
+    headers: { "Device-Type": WEB, ...(ip ? { "X-Real-IP": ip } : {}) },
     data: { email: who.email, deviceIdentifier: device, publicKey: key.toString("base64"), accessCode: code, type: 0 },
   });
   const body = await response.json().catch(() => null);
   return { status: response.status(), body, asked: { id: body?.id, code, key } as Asked };
 }
 
-async function asked(request: APIRequestContext, who: Account, device: string): Promise<Asked> {
-  const made = await ask(request, who, device);
+async function asked(request: APIRequestContext, who: Account, device: string, ip?: string): Promise<Asked> {
+  const made = await ask(request, who, device, ip);
   expect(made.status, JSON.stringify(made.body)).toBe(200);
   return made.asked;
 }
@@ -109,9 +116,9 @@ const pending = async (api: Api, as: { token: string }) => {
 };
 
 /** The requesting device reading its answer, with its access code. */
-async function poll(request: APIRequestContext, a: Asked, code = a.code) {
+async function poll(request: APIRequestContext, a: Asked, code = a.code, ip?: string) {
   const response = await request.get(`/api/auth-requests/${a.id}/response?code=${code}`, {
-    headers: { "Device-Type": WEB },
+    headers: { "Device-Type": WEB, ...(ip ? { "X-Real-IP": ip } : {}) },
   });
   return { status: response.status(), body: await response.json().catch(() => null) };
 }
@@ -136,6 +143,9 @@ test("a known device asks, only the account's other devices see it, and an appro
       requestDeviceType: "Chrome",
       requestIpAddress: "127.0.0.1",
       requestApproved: null,
+      // This server has no location database: nothing says where it is.
+      location: null,
+      locationSource: null,
     }),
   ]);
   expect(await pending(api, asking)).toEqual([]);
@@ -144,7 +154,9 @@ test("a known device asks, only the account's other devices see it, and an appro
   // Another account's request is as good as gone to them.
   expect((await api.call(ben, "GET", `/api/auth-requests/${a.id}`)).status).toBe(404);
   expect((await api.call(null, "GET", `/api/auth-requests/${a.id}`)).status).toBe(401);
-  expect((await api.call(laptop, "GET", `/api/auth-requests/${a.id}`)).status).toBe(200);
+  const one = await api.call(laptop, "GET", `/api/auth-requests/${a.id}`);
+  expect(one.status).toBe(200);
+  expect(one.body).toMatchObject({ requestIpAddress: "127.0.0.1", location: null, locationSource: null });
 
   // Nobody else answers it, the device asking can't answer its own, and an
   // approval carries a key.
@@ -512,4 +524,111 @@ test("a grantee's session from an approval can't start a takeover, take over, or
   const newPassword = { newMasterPasswordHash: Buffer.from("new-hash").toString("base64"), key: encString("ana-new-key") };
   expect((await api.call(benPhone, "POST", `/api/emergency-access/${grant.id}/password`, newPassword)).status).toBe(400);
   expect((await api.call(benLaptop, "POST", `/api/emergency-access/${grant.id}/password`, newPassword)).status).toBe(200);
+});
+
+// Where a request comes from (DESIGN.md, "Approving a sign-in from another
+// device", "Our apps" and "The web vault and the extension"): the
+// new-device check's fields and words, from the server's location database
+// alone, on a server of its own with the tiny database of made-up places
+// (fixtures/location/make.mjs) and the new-device check off. The places are
+// on documentation addresses no real database has, so seeing them means the
+// server read that file. The main server, with no database, says nothing
+// (the first test above).
+test.describe("where a request comes from", () => {
+  const e2eDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  // Where the made-up places are.
+  const BERLIN = "203.0.113.7";
+  const CANADA = "198.51.100.4";
+  const HOME_NETWORK = "10.1.2.3";
+  const DB_IP = { name: "IP Geolocation by DB-IP", url: "https://db-ip.com" };
+
+  let server: ChildProcess;
+  let http: APIRequestContext;
+
+  test.beforeAll(async () => {
+    server = spawn(process.execPath, ["server.mjs"], {
+      cwd: e2eDir,
+      env: { ...process.env, KK_PORT: locationServerPort, KK_LOCATION: "1" },
+      stdio: "ignore",
+    });
+    http = await apiRequest.newContext({
+      baseURL: `https://127.0.0.1:${locationServerPort}`,
+      ignoreHTTPSErrors: true,
+    });
+    await expect
+      .poll(async () => (await http.get("/alive").catch(() => null))?.status() ?? 0, { timeout: 60_000 })
+      .toBe(200);
+  });
+
+  test.afterAll(async () => {
+    await http?.dispose();
+    const exited = new Promise((resolve) => server.once("exit", resolve));
+    server.kill("SIGTERM");
+    await exited;
+  });
+
+  test("a request says where it comes from, with the database's credit, to the account's other devices", async () => {
+    const api = new Api(http);
+    const ana = await api.account("ana");
+    const laptop = await session(http, ana);
+    const berlin = await session(http, ana);
+    const home = await session(http, ana);
+    const fromBerlin = await asked(http, ana, berlin.device, BERLIN);
+    const fromHome = await asked(http, ana, home.device, HOME_NETWORK);
+
+    const listed = await api.call(laptop, "GET", "/api/auth-requests/pending");
+    expect(listed.status, JSON.stringify(listed.body)).toBe(200);
+    const byId = new Map((listed.body.data as { id: string }[]).map((r) => [r.id, r]));
+    expect(byId.get(fromBerlin.id)).toMatchObject({
+      requestIpAddress: BERLIN,
+      location: "Fixture City, Germany",
+      locationSource: DB_IP,
+    });
+    // An address the database can't place (a private one): no location,
+    // and the credit still says whose database it is.
+    expect(byId.get(fromHome.id)).toMatchObject({
+      requestIpAddress: HOME_NETWORK,
+      location: null,
+      locationSource: DB_IP,
+    });
+
+    // The request on its own, as the web vault's and the extension's dialog
+    // reads it, says the same; upstream's fields are as they were, and
+    // upstream's own country field stays unset (its dialog would show it
+    // with no credit).
+    const one = await api.call(laptop, "GET", `/api/auth-requests/${fromBerlin.id}`);
+    expect(one.status).toBe(200);
+    expect(one.body).toMatchObject({
+      id: fromBerlin.id,
+      publicKey: fromBerlin.key.toString("base64"),
+      requestDeviceType: "Chrome",
+      requestDeviceIdentifier: berlin.device,
+      requestIpAddress: BERLIN,
+      requestApproved: null,
+      object: "auth-request",
+      location: "Fixture City, Germany",
+      locationSource: DB_IP,
+    });
+    expect(one.body.requestCountryName).toBeUndefined();
+
+    // Another account still sees nothing of it.
+    const ben = await api.account("ben");
+    expect((await api.call(ben, "GET", `/api/auth-requests/${fromBerlin.id}`)).status).toBe(404);
+    expect(await pending(api, ben)).toEqual([]);
+  });
+
+  test("a location is a hint, never a check: a request from another country is approved and signs in as any other", async () => {
+    const api = new Api(http);
+    const ana = await api.account("ana");
+    const laptop = await session(http, ana);
+    const travelling = await session(http, ana);
+    const a = await asked(http, ana, travelling.device, CANADA);
+    const one = await api.call(laptop, "GET", `/api/auth-requests/${a.id}`);
+    expect(one.body).toMatchObject({ location: "Canada", locationSource: DB_IP });
+
+    expect((await answer(api, laptop, laptop.device, a, true)).status).toBe(200);
+    expect((await poll(http, a, a.code, CANADA)).body).toMatchObject({ requestApproved: true });
+    const signedIn = await signIn(http, ana, travelling.device, a, WEB, CANADA);
+    expect(signedIn.status, JSON.stringify(signedIn.body)).toBe(200);
+  });
 });
