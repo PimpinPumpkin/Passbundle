@@ -160,7 +160,7 @@ test("a family's owner shares the link: one person gets in with one tap, the nex
   await expect(sheet.getByTestId("family-sheet-vault")).toHaveText(server.url);
   await expect(sheet.getByTestId("family-sheet-download")).toHaveText(`${brand.urls.website}/download/`);
   await expect(sheet.getByTestId("family-sheet-qr")).toHaveAttribute("src", /^data:image\/png;base64,/);
-  await expect(sheet.getByTestId("family-sheet-ends")).toContainText("Anyone who scans it can ask to join until");
+  await expect(sheet.getByTestId("family-sheet-ends")).toContainText("Anyone who scans it gets in until");
   const [, token, secret] = /t=([A-Za-z0-9_-]{43})&s=([A-Za-z0-9_-]{43})/.exec(link)!;
   const text = await sheet.innerText();
   const markup = (await sheet.innerHTML()).replace(/src="data:[^"]*"/g, "");
