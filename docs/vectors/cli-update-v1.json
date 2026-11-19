@@ -1,0 +1,265 @@
+{
+  "version": 1,
+  "prefix": "PassBundle CLI release v1\n",
+  "key": {
+    "seed": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+    "public": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7"
+  },
+  "otherKey": {
+    "seed": "707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f",
+    "public": "1ce56a48c82ff99162a14bc544612674e5d61fb9317e65d4055780fdbcb4dc35"
+  },
+  "cases": [
+    {
+      "name": "macOS on Apple silicon, as signed",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"6ec8d90d3d2b60a89dcffbbf3b189a021c52c767bc231fafb248c29f0b8bbc43\"},{\"name\":\"passbundle-0.1.5-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"a160b803e07754f6da4c7b9104b6132d90786f3c4945be974662fd14ec8559b1\"},{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"},{\"name\":\"passbundle-0.1.5-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"98ac482055f96918fbe73371483bd80b1f7eb2216381d018f26a9591a72d1cca\"},{\"name\":\"passbundle-0.1.5-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"41cf3b62d8b4664fe4ebab9b3401b0a2e70e758351646102568b733c75068696\"}]}",
+      "signature": "/CCLU6yq4oxmn67zWaVICHiDgiGloTmWwYBKePF0EUIN/yorHSfv7rbwHaPODKpekmbtf3/Kh+OF9deonASMCg==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "macos-arm64",
+        "running": "0.1.4"
+      },
+      "file": {
+        "name": "passbundle-0.1.5-macos-arm64.tar.gz",
+        "platform": "macos-arm64",
+        "size": 31457280,
+        "sha256": "6ec8d90d3d2b60a89dcffbbf3b189a021c52c767bc231fafb248c29f0b8bbc43"
+      }
+    },
+    {
+      "name": "Windows, as signed",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"6ec8d90d3d2b60a89dcffbbf3b189a021c52c767bc231fafb248c29f0b8bbc43\"},{\"name\":\"passbundle-0.1.5-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"a160b803e07754f6da4c7b9104b6132d90786f3c4945be974662fd14ec8559b1\"},{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"},{\"name\":\"passbundle-0.1.5-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"98ac482055f96918fbe73371483bd80b1f7eb2216381d018f26a9591a72d1cca\"},{\"name\":\"passbundle-0.1.5-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"41cf3b62d8b4664fe4ebab9b3401b0a2e70e758351646102568b733c75068696\"}]}",
+      "signature": "/CCLU6yq4oxmn67zWaVICHiDgiGloTmWwYBKePF0EUIN/yorHSfv7rbwHaPODKpekmbtf3/Kh+OF9deonASMCg==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "windows-x64",
+        "running": "0.1.4"
+      },
+      "file": {
+        "name": "passbundle-0.1.5-windows-x64.zip",
+        "platform": "windows-x64",
+        "size": 30408704,
+        "sha256": "41cf3b62d8b4664fe4ebab9b3401b0a2e70e758351646102568b733c75068696"
+      }
+    },
+    {
+      "name": "Linux on arm64, as signed, by a copy two builds behind",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"6ec8d90d3d2b60a89dcffbbf3b189a021c52c767bc231fafb248c29f0b8bbc43\"},{\"name\":\"passbundle-0.1.5-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"a160b803e07754f6da4c7b9104b6132d90786f3c4945be974662fd14ec8559b1\"},{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"},{\"name\":\"passbundle-0.1.5-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"98ac482055f96918fbe73371483bd80b1f7eb2216381d018f26a9591a72d1cca\"},{\"name\":\"passbundle-0.1.5-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"41cf3b62d8b4664fe4ebab9b3401b0a2e70e758351646102568b733c75068696\"}]}",
+      "signature": "/CCLU6yq4oxmn67zWaVICHiDgiGloTmWwYBKePF0EUIN/yorHSfv7rbwHaPODKpekmbtf3/Kh+OF9deonASMCg==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "linux-arm64",
+        "running": "0.1.3"
+      },
+      "file": {
+        "name": "passbundle-0.1.5-linux-arm64.tar.gz",
+        "platform": "linux-arm64",
+        "size": 32505856,
+        "sha256": "98ac482055f96918fbe73371483bd80b1f7eb2216381d018f26a9591a72d1cca"
+      }
+    },
+    {
+      "name": "a newer minor version with a lower build number than the running copy's",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"6ec8d90d3d2b60a89dcffbbf3b189a021c52c767bc231fafb248c29f0b8bbc43\"},{\"name\":\"passbundle-0.1.5-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"a160b803e07754f6da4c7b9104b6132d90786f3c4945be974662fd14ec8559b1\"},{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"},{\"name\":\"passbundle-0.1.5-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"98ac482055f96918fbe73371483bd80b1f7eb2216381d018f26a9591a72d1cca\"},{\"name\":\"passbundle-0.1.5-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"41cf3b62d8b4664fe4ebab9b3401b0a2e70e758351646102568b733c75068696\"}]}",
+      "signature": "/CCLU6yq4oxmn67zWaVICHiDgiGloTmWwYBKePF0EUIN/yorHSfv7rbwHaPODKpekmbtf3/Kh+OF9deonASMCg==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "linux-x64",
+        "running": "0.0.99"
+      },
+      "file": {
+        "name": "passbundle-0.1.5-linux-x64.tar.gz",
+        "platform": "linux-x64",
+        "size": 33554432,
+        "sha256": "b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a"
+      }
+    },
+    {
+      "name": "signed with another key",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"6ec8d90d3d2b60a89dcffbbf3b189a021c52c767bc231fafb248c29f0b8bbc43\"},{\"name\":\"passbundle-0.1.5-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"a160b803e07754f6da4c7b9104b6132d90786f3c4945be974662fd14ec8559b1\"},{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"},{\"name\":\"passbundle-0.1.5-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"98ac482055f96918fbe73371483bd80b1f7eb2216381d018f26a9591a72d1cca\"},{\"name\":\"passbundle-0.1.5-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"41cf3b62d8b4664fe4ebab9b3401b0a2e70e758351646102568b733c75068696\"}]}",
+      "signature": "SUfQywaQuUa5nPlFW59gY3WckAQ0Fmi4poAL71/Z0iRLIoW2qzw6ot2j6lZuOtyUK8BFFARhXt8loBNXzEhDDA==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "macos-arm64",
+        "running": "0.1.4"
+      },
+      "refused": "signature"
+    },
+    {
+      "name": "its size changed after signing",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457281,\"sha256\":\"6ec8d90d3d2b60a89dcffbbf3b189a021c52c767bc231fafb248c29f0b8bbc43\"},{\"name\":\"passbundle-0.1.5-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"a160b803e07754f6da4c7b9104b6132d90786f3c4945be974662fd14ec8559b1\"},{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"},{\"name\":\"passbundle-0.1.5-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"98ac482055f96918fbe73371483bd80b1f7eb2216381d018f26a9591a72d1cca\"},{\"name\":\"passbundle-0.1.5-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"41cf3b62d8b4664fe4ebab9b3401b0a2e70e758351646102568b733c75068696\"}]}",
+      "signature": "/CCLU6yq4oxmn67zWaVICHiDgiGloTmWwYBKePF0EUIN/yorHSfv7rbwHaPODKpekmbtf3/Kh+OF9deonASMCg==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "macos-arm64",
+        "running": "0.1.4"
+      },
+      "refused": "signature"
+    },
+    {
+      "name": "its SHA-256 changed after signing",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"f41f3fa625ff120ddca7ef456bf66371ecea23c129f4e4c32367101edb516cf8\"},{\"name\":\"passbundle-0.1.5-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"a160b803e07754f6da4c7b9104b6132d90786f3c4945be974662fd14ec8559b1\"},{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"},{\"name\":\"passbundle-0.1.5-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"98ac482055f96918fbe73371483bd80b1f7eb2216381d018f26a9591a72d1cca\"},{\"name\":\"passbundle-0.1.5-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"41cf3b62d8b4664fe4ebab9b3401b0a2e70e758351646102568b733c75068696\"}]}",
+      "signature": "/CCLU6yq4oxmn67zWaVICHiDgiGloTmWwYBKePF0EUIN/yorHSfv7rbwHaPODKpekmbtf3/Kh+OF9deonASMCg==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "macos-arm64",
+        "running": "0.1.4"
+      },
+      "refused": "signature"
+    },
+    {
+      "name": "signed without the prefix",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"6ec8d90d3d2b60a89dcffbbf3b189a021c52c767bc231fafb248c29f0b8bbc43\"},{\"name\":\"passbundle-0.1.5-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"a160b803e07754f6da4c7b9104b6132d90786f3c4945be974662fd14ec8559b1\"},{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"},{\"name\":\"passbundle-0.1.5-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"98ac482055f96918fbe73371483bd80b1f7eb2216381d018f26a9591a72d1cca\"},{\"name\":\"passbundle-0.1.5-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"41cf3b62d8b4664fe4ebab9b3401b0a2e70e758351646102568b733c75068696\"}]}",
+      "signature": "tO9946AtMav/8SHSILJg2K105iTR1RNpk1+xjjIaNvjyVImV5zLV3fuH5jrTrPOQAhwPZ6ybcB4fiuKNJ0lgDA==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "macos-arm64",
+        "running": "0.1.4"
+      },
+      "refused": "signature"
+    },
+    {
+      "name": "signed with the desktop apps' prefix",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"6ec8d90d3d2b60a89dcffbbf3b189a021c52c767bc231fafb248c29f0b8bbc43\"},{\"name\":\"passbundle-0.1.5-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"a160b803e07754f6da4c7b9104b6132d90786f3c4945be974662fd14ec8559b1\"},{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"},{\"name\":\"passbundle-0.1.5-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"98ac482055f96918fbe73371483bd80b1f7eb2216381d018f26a9591a72d1cca\"},{\"name\":\"passbundle-0.1.5-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"41cf3b62d8b4664fe4ebab9b3401b0a2e70e758351646102568b733c75068696\"}]}",
+      "signature": "9YZGI+oslTsTN918sQyQIU5tULQaaK/iP8kxwsE5xZ3aSuZNbOwW10oef7jJT6rhpDQ+hCd3+iaGZN+voW0cCw==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "macos-arm64",
+        "running": "0.1.4"
+      },
+      "refused": "signature"
+    },
+    {
+      "name": "signed, but in a format the tool doesn't read",
+      "manifest": "{\"format\":2,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"6ec8d90d3d2b60a89dcffbbf3b189a021c52c767bc231fafb248c29f0b8bbc43\"},{\"name\":\"passbundle-0.1.5-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"a160b803e07754f6da4c7b9104b6132d90786f3c4945be974662fd14ec8559b1\"},{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"},{\"name\":\"passbundle-0.1.5-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"98ac482055f96918fbe73371483bd80b1f7eb2216381d018f26a9591a72d1cca\"},{\"name\":\"passbundle-0.1.5-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"41cf3b62d8b4664fe4ebab9b3401b0a2e70e758351646102568b733c75068696\"}]}",
+      "signature": "7j167vaNVMGpvD9PhjJud0Ihrnc0wO8/vLGKI73wL7nHpW+gfkjiRhJUr8NTKrhcLQyAN/aVKzGM3ySVbDb/BA==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "macos-arm64",
+        "running": "0.1.4"
+      },
+      "refused": "malformed"
+    },
+    {
+      "name": "signed, but for the desktop app",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.app\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"6ec8d90d3d2b60a89dcffbbf3b189a021c52c767bc231fafb248c29f0b8bbc43\"},{\"name\":\"passbundle-0.1.5-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"a160b803e07754f6da4c7b9104b6132d90786f3c4945be974662fd14ec8559b1\"},{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"},{\"name\":\"passbundle-0.1.5-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"98ac482055f96918fbe73371483bd80b1f7eb2216381d018f26a9591a72d1cca\"},{\"name\":\"passbundle-0.1.5-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"41cf3b62d8b4664fe4ebab9b3401b0a2e70e758351646102568b733c75068696\"}]}",
+      "signature": "ZQeKV2ujyrIOMPJILD79+csio/ZXKBVqEn4nu4XMK/VzsUL4ybImZA9sxCCRVfdwUzYucC8DKN8ex0HMr73QCA==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "macos-arm64",
+        "running": "0.1.4"
+      },
+      "refused": "app"
+    },
+    {
+      "name": "signed, but another release's manifest on this tag",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.6\",\"version\":\"0.1.6\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.6-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"5fbd29fc1de0c404a2a63daf404462dfb9d1aad667fd9707dc1c800e95a1530e\"},{\"name\":\"passbundle-0.1.6-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"5955d57ff07ac8f8c08c597be49389e15675f84186cadd7047d31f30858ca9dc\"},{\"name\":\"passbundle-0.1.6-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"35f46a16c32094f92ac7e857369cbe2b17b77d2d0acd6ddd359b61ea1abac551\"},{\"name\":\"passbundle-0.1.6-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"33fa54806e2d54b7df9a98025a7ad62d5238c034c11442ff636e0808be4fa796\"},{\"name\":\"passbundle-0.1.6-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"66b3bff976934df88d66c7fbe4b3d75777621cfe468dbbd86ff6795f73df1000\"}]}",
+      "signature": "XY5cWZML9dNfcY/vRL410REukoKe7z9vOgpH8Dh2wy7WjCPxbRp8WOlIymS/eczAdHiAVWzgQ6ahwdNbGOkiDQ==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "macos-arm64",
+        "running": "0.1.4"
+      },
+      "refused": "tag"
+    },
+    {
+      "name": "signed, but its version isn't its tag's",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.6\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.6-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"5fbd29fc1de0c404a2a63daf404462dfb9d1aad667fd9707dc1c800e95a1530e\"},{\"name\":\"passbundle-0.1.6-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"5955d57ff07ac8f8c08c597be49389e15675f84186cadd7047d31f30858ca9dc\"},{\"name\":\"passbundle-0.1.6-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"35f46a16c32094f92ac7e857369cbe2b17b77d2d0acd6ddd359b61ea1abac551\"},{\"name\":\"passbundle-0.1.6-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"33fa54806e2d54b7df9a98025a7ad62d5238c034c11442ff636e0808be4fa796\"},{\"name\":\"passbundle-0.1.6-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"66b3bff976934df88d66c7fbe4b3d75777621cfe468dbbd86ff6795f73df1000\"}]}",
+      "signature": "NHSdebtlLYI2+3IF3zSmEseX65g4Sk0zwax2N4Zt588Kb0rspp9LcEDTFHTyF7WBTIm7ycg5RTlRvDq+ezS7Cg==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "macos-arm64",
+        "running": "0.1.4"
+      },
+      "refused": "version"
+    },
+    {
+      "name": "signed, but its version is written with a leading zero (0.1.05 for 0.1.5)",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.05\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.05-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"895ca8d37a4b890f327f3a1635b33e4c5b1d546e89ea409694a39a7297087eb5\"},{\"name\":\"passbundle-0.1.05-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"62c008b4cf7ca679c65972848f6e09bad014a149f4f30816378f2d42ae32b44e\"},{\"name\":\"passbundle-0.1.05-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"1c287c36e962b6a354dfdca2cb98a533ca9a430810e0cfe16552e6b2887daad3\"},{\"name\":\"passbundle-0.1.05-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"bce0451dda2c589974001f19896794419b0466c20148df09f23d93b8f518c863\"},{\"name\":\"passbundle-0.1.05-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"398a10b33c2077d73db05ffa95869b743fbee5fb250fda0be1ce3dac5b300732\"}]}",
+      "signature": "454W03/QXlQ1+GNp6GT4MyV2HYkwXr3zqX7SkpJOOU0qv9EBE9OEcTDRsPx7OyAdv2mRjcox2jVPWiwSOObCAQ==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "macos-arm64",
+        "running": "0.1.4"
+      },
+      "refused": "version"
+    },
+    {
+      "name": "signed, but the same version as the running copy",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"6ec8d90d3d2b60a89dcffbbf3b189a021c52c767bc231fafb248c29f0b8bbc43\"},{\"name\":\"passbundle-0.1.5-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"a160b803e07754f6da4c7b9104b6132d90786f3c4945be974662fd14ec8559b1\"},{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"},{\"name\":\"passbundle-0.1.5-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"98ac482055f96918fbe73371483bd80b1f7eb2216381d018f26a9591a72d1cca\"},{\"name\":\"passbundle-0.1.5-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"41cf3b62d8b4664fe4ebab9b3401b0a2e70e758351646102568b733c75068696\"}]}",
+      "signature": "/CCLU6yq4oxmn67zWaVICHiDgiGloTmWwYBKePF0EUIN/yorHSfv7rbwHaPODKpekmbtf3/Kh+OF9deonASMCg==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "macos-arm64",
+        "running": "0.1.5"
+      },
+      "refused": "notNewer"
+    },
+    {
+      "name": "signed, but older than the running copy (a downgrade)",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"6ec8d90d3d2b60a89dcffbbf3b189a021c52c767bc231fafb248c29f0b8bbc43\"},{\"name\":\"passbundle-0.1.5-macos-x64.tar.gz\",\"platform\":\"macos-x64\",\"size\":32505856,\"sha256\":\"a160b803e07754f6da4c7b9104b6132d90786f3c4945be974662fd14ec8559b1\"},{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"},{\"name\":\"passbundle-0.1.5-linux-arm64.tar.gz\",\"platform\":\"linux-arm64\",\"size\":32505856,\"sha256\":\"98ac482055f96918fbe73371483bd80b1f7eb2216381d018f26a9591a72d1cca\"},{\"name\":\"passbundle-0.1.5-windows-x64.zip\",\"platform\":\"windows-x64\",\"size\":30408704,\"sha256\":\"41cf3b62d8b4664fe4ebab9b3401b0a2e70e758351646102568b733c75068696\"}]}",
+      "signature": "/CCLU6yq4oxmn67zWaVICHiDgiGloTmWwYBKePF0EUIN/yorHSfv7rbwHaPODKpekmbtf3/Kh+OF9deonASMCg==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "macos-arm64",
+        "running": "0.2.1"
+      },
+      "refused": "notNewer"
+    },
+    {
+      "name": "a manifest with only the Linux x64 file, read by an arm64 copy",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"}]}",
+      "signature": "kk+M8L4HSHOsSx3XYK0Qfk3gw1028p1RibEYq6+CtHvuCZ2qkPh0uevIIlkqmVsfKPcDFDJPIJ8NPlxBQ9txDw==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "linux-arm64",
+        "running": "0.1.4"
+      },
+      "refused": "noFile"
+    },
+    {
+      "name": "two files for the same platform",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"},{\"name\":\"passbundle-0.1.5-linux-x64.tar.gz\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"ae448ac86c4e8e4dec645729708ef41873ae79c6dff84eff73360989487f08e5\"}]}",
+      "signature": "p/WjbjxiEu11Kq5o25rtGYSsIRvQxdRZqGeTMfGZi2QYDTeNI17ROVpcVkdVQnKdnR+ejlqgGD6agUReJhtdCQ==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "linux-x64",
+        "running": "0.1.4"
+      },
+      "refused": "noFile"
+    },
+    {
+      "name": "signed, but naming another release's file",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.4-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":31457280,\"sha256\":\"6ec8d90d3d2b60a89dcffbbf3b189a021c52c767bc231fafb248c29f0b8bbc43\"}]}",
+      "signature": "Wx2VJZEe1OK6tqj1r8cuOP2uxLBkoT0WDJW/1UB5RIRCzRyidICUkabtnAOwZ6SE3291SXZ6hJ4e0byd3svBDg==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "macos-arm64",
+        "running": "0.1.4"
+      },
+      "refused": "name"
+    },
+    {
+      "name": "a .zip for Linux",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-linux-x64.zip\",\"platform\":\"linux-x64\",\"size\":33554432,\"sha256\":\"b7f7fe8fc854d99ff3b51a2a770666f23999d02576bb7812f02360626f79234a\"}]}",
+      "signature": "X5jeFIvw+KiDKb5YWHNJDOR8zl8AEDsGcFdfQgQHkjEImQNIBnN4z6yLdd15BwNQh2zR+YAxUWUxxmWCGlYoAg==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "linux-x64",
+        "running": "0.1.4"
+      },
+      "refused": "name"
+    },
+    {
+      "name": "signed, but its file is larger than any release of the tool (200 MB)",
+      "manifest": "{\"format\":1,\"app\":\"com.passbundle.cli\",\"tag\":\"cli-v0.1.5\",\"version\":\"0.1.5\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"notes\":\"What's new since 0.1.4:\\n\\n- `passbundle update` updates the tool\\n- Signing in with a device's approval\",\"files\":[{\"name\":\"passbundle-0.1.5-macos-arm64.tar.gz\",\"platform\":\"macos-arm64\",\"size\":209715201,\"sha256\":\"6ec8d90d3d2b60a89dcffbbf3b189a021c52c767bc231fafb248c29f0b8bbc43\"}]}",
+      "signature": "AdKtyV3jKQE9AXGJkfWURzSgZF2P44MFs1Y5J8K5QADp0pOmYNZD95xwdXwiQWY3dI4cECMrLHjru9nDkRVYAw==",
+      "expect": {
+        "tag": "cli-v0.1.5",
+        "platform": "macos-arm64",
+        "running": "0.1.4"
+      },
+      "refused": "tooLarge"
+    }
+  ]
+}

@@ -571,9 +571,9 @@ export class Api {
   /**
    * Adds an existing account with a custom role: upstream's Custom type (4)
    * with these permissions, accepted and confirmed like any member. One that manages
-   * members, policies, or account recovery gets an authenticator app first
-   * where the organization requires two-step login for admins, and anyone
-   * where it requires it of everyone, as addMember.
+   * members, groups, shared folders, policies, or account recovery gets an
+   * authenticator app first where the organization requires two-step login for
+   * admins, and anyone where it requires it of everyone, as addMember.
    */
   async addCustomMember(
     owner: Account,
@@ -581,7 +581,13 @@ export class Api {
     member: Account,
     permissions: Record<string, boolean>,
   ) {
-    const elevated = ["manageUsers", "managePolicies", "manageResetPassword"].some((p) => permissions[p]);
+    const elevated = [
+      "manageUsers",
+      "managePolicies",
+      "manageResetPassword",
+      "manageGroups",
+      "keykeeperManageCollections",
+    ].some((p) => permissions[p]);
     const setting = await this.twoStepSetting(owner, orgId);
     if (setting.everyone || (elevated && setting.required)) {
       await this.giveAuthenticator(member);
