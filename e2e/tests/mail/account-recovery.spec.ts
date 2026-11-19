@@ -204,9 +204,13 @@ test("a custom role with account recovery recovers regular members only", async 
       /only manage regular members|own membership/,
     );
   }
-  // And nothing beyond account recovery: forbidden, not a lost session.
-  expect(
-    (await api.call(recoverer, "GET", `/api/organizations/${orgId}/policies`))
-      .status,
-  ).toBe(403);
+  // And nothing beyond account recovery: "You can't do that here", never a
+  // lost session.
+  const policies = await api.call(
+    recoverer,
+    "GET",
+    `/api/organizations/${orgId}/policies`,
+  );
+  expect(policies.status).toBe(404);
+  expect(policies.body.message).toBe("You can't do that here.");
 });
