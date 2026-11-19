@@ -263,13 +263,14 @@ function Get-UnusedName([string] $Path, [string] $Kind) {
   $unused
 }
 
-# Removes the agent's programs that earlier runs moved aside, and a new copy
-# that a run cut off partway left. Windows won't remove one that still runs:
-# it stays, and a later run tries again.
+# Removes the agent's programs that earlier runs moved aside (and the single
+# "<name>.old" that versions of this script before November 2026 left), and a
+# new copy that a run cut off partway left. Windows won't remove one that
+# still runs: it stays, and a later run tries again.
 function Remove-AsideFiles {
   foreach ($name in $AgentFiles) {
     @(Get-ChildItem -LiteralPath $InstallDir -File |
-        Where-Object { $_.Name -like "$name.*.old" -or $_.Name -like "$name.*.new" }) |
+        Where-Object { $_.Name -eq "$name.old" -or $_.Name -like "$name.*.old" -or $_.Name -like "$name.*.new" }) |
       Remove-Item -Force -ErrorAction SilentlyContinue
   }
 }
