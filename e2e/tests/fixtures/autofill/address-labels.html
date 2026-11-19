@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Shipping address</title>
+  </head>
+  <body>
+    <!-- An address known only by labels: no autocomplete attributes. The
+         street is a text area, and the state list's values are full names
+         (value="California"). A search box above the form and a comments
+         field in it must never get the menu inside a field. -->
+    <label for="site-search">Search the shop</label>
+    <input id="site-search" name="q" type="text" />
+    <form action="/signed-in.html" method="post">
+      <label for="fullname">Full name</label>
+      <input id="fullname" name="fullname" type="text" />
+      <label for="street">Street address</label>
+      <textarea id="street" name="street" rows="2"></textarea>
+      <label for="city">City</label>
+      <input id="city" name="city" type="text" />
+      <label for="state">State</label>
+      <select id="state" name="state">
+        <option value="">Choose a state</option>
+        <option value="Arizona">Arizona</option>
+        <option value="California">California</option>
+        <option value="New York">New York</option>
+        <option value="Texas">Texas</option>
+      </select>
+      <label for="zip">ZIP code</label>
+      <input id="zip" name="zip" type="text" />
+      <label for="comments">Comments</label>
+      <textarea id="comments" name="comments" rows="3"></textarea>
+      <button type="submit">Continue</button>
+    </form>
+  </body>
+</html>

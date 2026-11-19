@@ -158,6 +158,8 @@ Neither page goes on by itself, whatever the link that opened it says (an organi
 | `PASSBUNDLE_NOINTERACTION` | `true`: never wait for someone to type (or `--nointeraction`); set it in every script |
 | `PASSBUNDLE_RAW`, `PASSBUNDLE_RESPONSE`, `PASSBUNDLE_PRETTY`, `PASSBUNDLE_QUIET`, `PASSBUNDLE_CLEANEXIT` | `true`: as `--raw`, `--response`, `--pretty`, `--quiet`, `--cleanexit` |
 | `PASSBUNDLE_APPDATA_DIR` | Where the tool keeps its data (below) |
+| `PASSBUNDLE_TOKEN` | A script token, for `script get` ("Script access" below); the PowerShell module reads the same one |
+| `PASSBUNDLE_SERVER` | The server `script get` asks, unless `--server` says another |
 | `PASSBUNDLE_DEBUG` | `true`: log more |
 
 Scripts written for the Bitwarden tool work once `bw` becomes `passbundle` and `BW_` becomes `PASSBUNDLE_`. The tool ignores Bitwarden's own `BW_` variables, so a Bitwarden session or API key left in a shell is never sent to a PassBundle server.
@@ -237,6 +239,28 @@ passbundle get password 'Domain admin' --reprompt-ok   # a script approved to re
 
 Re-prompt is a second check against someone using your unlocked session, not encryption: anyone with your session key and data folder could decrypt the item with their own tools.
 
+## Script access
+
+A script that needs a credential but shouldn't hold a person's account uses a script token (docs/script-access.md): an organization's owners and admins, its MSP's admins, and its MSP's technicians with script access make one in the web vault (Settings, Joining and security, Script access), granting it chosen fields of chosen items. On Windows the PowerShell module reads it; on a Mac or Linux, `passbundle script get` does the same, with nothing else: no sign-in, no session, and no data folder (it doesn't read or write one).
+
+```sh
+# Your RMM's secret variable, and your MSP's server (unless it's vault.passbundle.com).
+export PASSBUNDLE_TOKEN='pbs1_...'
+export PASSBUNDLE_SERVER='https://vault.example.com'
+
+admin_password="$(passbundle script get 'Domain admin')"
+admin_user="$(passbundle script get 'Domain admin' --field username)"
+code="$(passbundle script get 'Domain admin' --field totp)"
+api_key="$(passbundle script get 0d1e2f3a-4b5c-4d6e-8f70-819a2b3c4d5e --field 'API key')"
+```
+
+- **The item:** its id, or its name among the token's items (case doesn't matter; if two have the name, ask by id). The settings page shows the first item's id when it shows the token.
+- **`--field`:** `username`, `password` (when `--field` is left out), `totp` (a current one-time code, made on this computer from the copied secret), or a custom field's name. Anything the token wasn't granted is refused: "This token wasn't granted 'PIN' of Domain admin."
+- **The token:** from `PASSBUNDLE_TOKEN`, or else the first line on stdin (`printf '%s\n' "$token" | passbundle script get 'Domain admin'`). It's the variable the settings page names and the PowerShell module reads, so an RMM sets one secret variable for Windows, Mac, and Linux scripts alike. Upstream's code reads no variable of that name, and the tool doesn't copy it to one. `--token <token>` works too, with a warning on stderr: other programs on the computer can read a command line, and your shell may keep it.
+- **The server:** `--server`, else `PASSBUNDLE_SERVER`, else PassBundle's own service; https only. A private certificate authority's certificate goes in `NODE_EXTRA_CA_CERTS`, as for the rest of the tool.
+- **What it prints:** the value alone (with no newline when it goes to another program, so `$(...)` gets it exactly), or `{"success": true, "data": {"object": "string", "data": ...}}` with `--response`. A refusal goes to stderr and exits with 1, unless `--cleanexit`: a revoked or expired token, one whose maker no longer manages the organization, or one used from a network it isn't allowed on ("The server refused the token: ..."), an item it can't read, a field it wasn't granted, or more than 60 reads in a minute.
+- **What it checks:** the copy is decrypted on this computer with a key from the token, which the server never has; one that doesn't open with it, or that was made for another token or item, is refused, so a server can't hand the script something else.
+
 ## The local API
 
 `passbundle serve` answers the same commands over HTTP (`--port`, default 8087), for tools that would rather call an API. Whatever reaches it can read and change your vault while it's unlocked, without your session key or master password, so:
@@ -272,7 +296,7 @@ Anyone who can decrypt an item can take it apart with their own tools, which is 
 ## What it doesn't do
 
 - Checking for updates by itself (`passbundle update` does when you run it; see Updates).
-- Secrets Manager: upstream's separate tool isn't part of PassBundle. Script access tokens, for scripts that shouldn't hold a person's account, are the PowerShell module in docs/script-access.md.
+- Secrets Manager: upstream's separate tool isn't part of PassBundle. Script access tokens, for scripts that shouldn't hold a person's account, are `script get` ("Script access" above) and the PowerShell module (docs/script-access.md).
 - Approving another device's sign-in (it only asks), and unlocking with a key connector or a trusted device (PassBundle has neither yet).
 - Making accounts or organizations, and organization administration beyond what upstream's tool does (listing and confirming members, folders and their access).
 
@@ -311,4 +335,4 @@ Replacing it: make a new one the same way. First add its public key to `cli.rele
 
 ## Tests
 
-Jest in passbundle-clients for everything PassBundle changes in the tool (`apps/cli/src/keykeeper/*.spec.ts`, and upstream's specs for the commands it touches), and tier 1 here, which builds the tool as a release does (`tools/cli/pack.sh`, Linux x64) and runs `e2e/tests/cli` against the test server: a member signs in with an API key, unlocks, lists items, gets a password from a folder where she may see passwords and is refused one where she may not (by id, by search, its code, its breach count), gets that item's plain values, each folder's permissions, item history with and without earlier values, and templates; Bitwarden's variables are ignored and the brand's work; every command's help names PassBundle, never Bitwarden; every kind of item's plain values only, through `get`, `list`, `serve`, and export; `serve` refusing to listen beyond this computer; a warning for a session key on the command line; a data folder others can change refused; single sign-on through the web vault's page and the server's own page and the Entra stand-in back to the tool's listener (on the next port when the first is taken), and a link with only an email never starting it; and, with Require single sign-on, what a script is told, and an API key still signing in; a sign-in the web vault approves (`login --device`), after which the tool lists items; an item marked "Master password re-prompt" refused to a script's `get password` and given with `--reprompt-ok`; and `update` saying updates aren't available while no key is made, with the workflow's key and the tool's agreeing. Jest covers each of `update`'s checks against a stand-in for GitHub (never a real release) and its test vectors (`docs/vectors/cli-update-v1.json`), putting the program in place on macOS, Linux, and Windows with a stand-in file system, the device sign-in's phrase, waits, denial, expiry, and Ctrl-C, and re-prompt in each command and in `serve`. `e2e/tests/api/sso.spec.ts` checks the server takes the tool's listener for the tool only, and that its authorize answers with a page, never Microsoft, whose Continue works only same-origin, with its cookie, once.
+Jest in passbundle-clients for everything PassBundle changes in the tool (`apps/cli/src/keykeeper/*.spec.ts`, and upstream's specs for the commands it touches; `script-access.spec.ts` checks `script get` against `docs/vectors/script-access-v1.json`, a copy of which sits next to it, through the tool's own code: the token, the auth secret and key, each refused copy, each field, RFC 6238's codes, where the token comes from, and the server's refusals), and tier 1 here, which builds the tool as a release does (`tools/cli/pack.sh`, Linux x64) and runs `e2e/tests/cli` against the test server: `script get` with a token made through the API reads each field from the variable, stdin, and `--token` (which warns), writes nothing in an empty home folder, refuses another item's copy, a forged one, and a field it wasn't granted, and is refused once the token is revoked (`script-access.spec.ts`); a member signs in with an API key, unlocks, lists items, gets a password from a folder where she may see passwords and is refused one where she may not (by id, by search, its code, its breach count), gets that item's plain values, each folder's permissions, item history with and without earlier values, and templates; Bitwarden's variables are ignored and the brand's work; every command's help names PassBundle, never Bitwarden; every kind of item's plain values only, through `get`, `list`, `serve`, and export; `serve` refusing to listen beyond this computer; a warning for a session key on the command line; a data folder others can change refused; single sign-on through the web vault's page and the server's own page and the Entra stand-in back to the tool's listener (on the next port when the first is taken), and a link with only an email never starting it; and, with Require single sign-on, what a script is told, and an API key still signing in; a sign-in the web vault approves (`login --device`), after which the tool lists items; an item marked "Master password re-prompt" refused to a script's `get password` and given with `--reprompt-ok`; and `update` saying updates aren't available while no key is made, with the workflow's key and the tool's agreeing. Jest covers each of `update`'s checks against a stand-in for GitHub (never a real release) and its test vectors (`docs/vectors/cli-update-v1.json`), putting the program in place on macOS, Linux, and Windows with a stand-in file system, the device sign-in's phrase, waits, denial, expiry, and Ctrl-C, and re-prompt in each command and in `serve`. `e2e/tests/api/sso.spec.ts` checks the server takes the tool's listener for the tool only, and that its authorize answers with a page, never Microsoft, whose Continue works only same-origin, with its cookie, once.

@@ -310,6 +310,13 @@ jobs:
           path: meta
           sparse-checkout: docs/vectors
           persist-credentials: false
+      # Script access (docs/script-access.md): the web vault's copy and the
+      # command-line tool's are the meta repo's vectors; the tool's unit test
+      # (run below) checks its own crypto against its copy.
+      - name: The web vault's and the command-line tool's copies of the script access test vectors
+        run: |
+          cmp meta/docs/vectors/script-access-v1.json libs/admin-console/src/common/keykeeper/script-access.vectors.json
+          cmp meta/docs/vectors/script-access-v1.json apps/cli/src/keykeeper/script-access.vectors.json
       - name: The core's test vectors, checked with upstream's own crypto
         run: node meta/docs/vectors/check-core-vectors.mjs meta/docs/vectors/core-v1.json .
       - name: The desktop updater's test vectors, as their generator makes them
@@ -473,10 +480,23 @@ jobs:
 
   script-module:
     # RMMs mostly run scripts in Windows PowerShell 5.1, which the Linux
-    # end-to-end suite can't, so the module's checks run here under both.
-    name: Script access module on Windows
+    # end-to-end suite can't, so the module's checks run here under both on
+    # Windows, and under PowerShell 7 on Linux and on a Mac too, where Mac and
+    # Linux scripts run it (docs/script-access.md, "On a Mac or Linux"). Each
+    # runner has PowerShell 7 already; nothing is installed.
+    name: Script access module on ${{ matrix.name }}
     needs: refs
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            runner: windows-latest
+          - name: Linux
+            runner: ubuntu-24.04
+          - name: macOS
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -492,11 +512,21 @@ jobs:
           sparse-checkout: src/static/scripts
           persist-credentials: false
       - name: Windows PowerShell 5.1
+        if: matrix.name == 'Windows'
         shell: powershell
         run: .\docs\vectors\check-script-module.ps1 -Module server\src\static\scripts\PassBundle.psm1 -Vectors docs\vectors\script-access-v1.json
       - name: PowerShell 7
         shell: pwsh
-        run: .\docs\vectors\check-script-module.ps1 -Module server\src\static\scripts\PassBundle.psm1 -Vectors docs\vectors\script-access-v1.json
+        run: ./docs/vectors/check-script-module.ps1 -Module server/src/static/scripts/PassBundle.psm1 -Vectors docs/vectors/script-access-v1.json
+      # The settings page shows `Import-Module .\PassBundle.psm1`, which a Mac
+      # or Linux script runs as it is.
+      - name: The settings page's import line, as it is
+        if: matrix.name != 'Windows'
+        shell: pwsh
+        working-directory: server/src/static/scripts
+        run: |
+          Import-Module .\PassBundle.psm1
+          Get-Command Get-PassBundleCredential, Get-PassBundleSecret | Out-Null
 
   install-scripts:
     # The Mac and Linux install scripts: shellcheck, and the Mac configuration

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Payment</title>
+  </head>
+  <body>
+    <!-- The name on the card on the shop's own page, and the card's number,
+         expiry, and security code twice: in a frame of a payment service on
+         the extension's list (js.stripe.com, which the test's browser sends
+         to the local fixture server, a stand-in for its hosted card fields),
+         and in a frame from another site that isn't a payment service
+         (pay.elsewhere.test). A card fill started on the shop's page fills
+         the first and never the second. -->
+    <form action="/signed-in.html" method="post">
+      <label for="ccname">Name on card</label>
+      <input id="ccname" name="ccname" autocomplete="cc-name" />
+      <iframe id="payment" title="Card details" src="https://js.stripe.com/card-frame-fields.html" width="420" height="180"></iframe>
+      <iframe id="elsewhere" title="Another site's card details" src="https://pay.elsewhere.test/card-frame-widget.html" width="420" height="180"></iframe>
+      <button type="submit">Pay</button>
+    </form>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+# The commits the next release builds. A tag server-v<major>.<minor>.<patch>
+# on main builds the server and the web vault from the two commits named here
+# at that tag, each a full commit SHA on that repository's keykeeper branch:
+# set both in a pull request, merge it, then tag (deploy/README.md, "Making a
+# release"). Builds of main, pull requests, and runs by hand don't use them.
+server=
+clients=
