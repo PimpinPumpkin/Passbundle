@@ -7,7 +7,9 @@
 // and its state list too, never a search box or a comments field, and a state
 // list of full names gets the right one from a code; a German address fills
 // its Bundesland and Land lists of names from codes; a card fills a payment
-// service's frame and never another site's, unless the fill starts there; and
+// service's frame and never another site's, unless the fill starts there; the
+// fill picker puts a card's number into a payment service's frame and never
+// into another site's, even when the pick starts there; and
 // an organization that turns the browser's own card and address autofill off
 // has the extension turn them off in a work profile, and let go of them again.
 import fs from "node:fs";
@@ -393,6 +395,108 @@ test("a card fills a payment service's frame and never another site's, unless th
     await expect(number).toHaveValue(card.values.number);
     await expect(elsewhere.locator("#ccexp")).toHaveValue("03/27");
     await expect(elsewhere.locator("#cvc")).toHaveValue("123");
+  } finally {
+    await context.close();
+    fs.rmSync(profile, { recursive: true, force: true });
+  }
+});
+
+/**
+ * The fill picker's "Fill this field with", from the right-click menu, for
+ * the field last right-clicked in the frame at `host`: the same handler the
+ * menu item runs, with its id (Chrome's own menu can't be driven from a test).
+ */
+async function pickInFrame(context: BrowserContext, page: Page, host: string, itemName: string, choiceKey: string) {
+  await context.serviceWorkers()[0].evaluate(
+    async ({ url, host, itemName, choiceKey }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const main = (self as any).bitwardenMain;
+      const userId = await new Promise<string>((resolve) =>
+        main.accountService.activeAccount$.subscribe((a: { id: string }) => resolve(a.id)),
+      );
+      const ciphers: { id: string; name: string }[] = await main.cipherService.getAllDecrypted(userId);
+      const cipher = ciphers.find((c) => c.name === itemName)!;
+      const tab = (await chrome.tabs.query({})).find((t) => t.url === url)!;
+      const frames = (await chrome.webNavigation.getAllFrames({ tabId: tab.id! })) ?? [];
+      const frame = frames.find((f) => new URL(f.url).host === host)!;
+      await main.contextMenusBackground.contextMenuClickedHandler.run(
+        { menuItemId: `kkfill_${cipher.id}_${choiceKey}`, frameId: frame.frameId, editable: true, pageUrl: url },
+        tab,
+      );
+    },
+    { url: page.url(), host, itemName, choiceKey },
+  );
+}
+
+/** The fill rules an item carries. */
+async function fillRulesOf(context: BrowserContext, itemName: string): Promise<{ host: string; fill: unknown }[]> {
+  return context.serviceWorkers()[0].evaluate(async (itemName) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const main = (self as any).bitwardenMain;
+    const userId = await new Promise<string>((resolve) =>
+      main.accountService.activeAccount$.subscribe((a: { id: string }) => resolve(a.id)),
+    );
+    const ciphers: { name: string; fields?: { name: string; value: string }[] }[] =
+      await main.cipherService.getAllDecrypted(userId);
+    return (ciphers.find((c) => c.name === itemName)?.fields ?? [])
+      .filter((f) => f.name === "keykeeper.fill")
+      .map((f) => JSON.parse(f.value));
+  }, itemName);
+}
+
+// The fill picker with a card's values (DESIGN.md, "Choosing what fills
+// where"): a card's number picked for a field in a payment service's frame
+// fills it and is remembered on the card; in another site's frame it's
+// refused, even though the pick starts there, and nothing is remembered.
+test("the fill picker puts a card's number into a payment service's frame, and never into another site's", async ({
+  request,
+}) => {
+  const { context, profile } = await launchWithExtension(paymentServiceRules);
+  try {
+    const extensionId = await extensionIdOf(context);
+    await shopper(context, extensionId, request, "card-picker", [card]);
+    const page = await context.newPage();
+    await page.goto(`${shop}/card-frames.html`);
+    await waitForFields(context, page, "ccnumber");
+    const frameOf = (host: string) =>
+      page.frames().find((f) => new URL(f.url()).host === host) as Frame;
+    await expect.poll(() => Boolean(frameOf("js.stripe.com") && frameOf("pay.elsewhere.test"))).toBe(true);
+    const payment = frameOf("js.stripe.com");
+    const elsewhere = frameOf("pay.elsewhere.test");
+
+    // In the payment service's frame: filled, and kept on the card for that frame's host.
+    await payment.locator("#ccnumber").click({ button: "right" });
+    await page.keyboard.press("Escape");
+    await pickInFrame(context, page, "js.stripe.com", "Test Visa", "c1");
+    await expect(payment.locator("#ccnumber")).toHaveValue(card.values.number);
+    await expect
+      .poll(() => fillRulesOf(context, "Test Visa"))
+      .toEqual([
+        {
+          v: 1,
+          host: "js.stripe.com",
+          scheme: "https",
+          field: { id: "ccnumber", name: "ccnumber", label: "card number" },
+          fill: { from: "card", value: "number" },
+        },
+      ]);
+
+    // In another site's frame: refused, the name on the card too, and nothing more kept.
+    await elsewhere.locator("#ccnumber").click({ button: "right" });
+    await page.keyboard.press("Escape");
+    await pickInFrame(context, page, "pay.elsewhere.test", "Test Visa", "c1");
+    await pickInFrame(context, page, "pay.elsewhere.test", "Test Visa", "c0");
+    // A pick on the shop's own page after them lands after anything they sent.
+    await page.locator("#ccname").click({ button: "right" });
+    await page.keyboard.press("Escape");
+    await pickInFrame(context, page, "shop.example.test", "Test Visa", "c0");
+    await expect(page.locator("#ccname")).toHaveValue("Alice B Example");
+    await expect(elsewhere.locator("#ccnumber")).toHaveValue("");
+    await expect.poll(async () => (await fillRulesOf(context, "Test Visa")).length).toBe(2);
+    expect((await fillRulesOf(context, "Test Visa")).map((r) => r.host)).toEqual([
+      "js.stripe.com",
+      "shop.example.test",
+    ]);
   } finally {
     await context.close();
     fs.rmSync(profile, { recursive: true, force: true });
