@@ -416,9 +416,11 @@ test("an import never plants our own fields: fill rules, or an MSP's template co
     }),
     expect.objectContaining({ name: "Imported keykeeper.fill", value: "{not a rule" }),
   ]);
-  // So every item shows in All items, none hidden as a copy.
+  // So none is hidden as a copy: the template is under Item templates, as
+  // templates are, and the rest in All items.
   await page.goto("/#/vault");
-  await expect(menuEntry(page, "All items")).toContainText("4");
+  await expect(menuEntry(page, "All items")).toContainText("3");
+  await expect(menuEntry(page, "Item templates")).toContainText("1");
 });
 
 // The same from an organization's admin console, where the import can leave

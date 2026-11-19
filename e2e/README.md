@@ -71,6 +71,16 @@ The tests of event streaming across restarts and servers (`tests/api/event-strea
 - No live network beyond the local server.
 - Timezone UTC, locale en-US.
 
+## Google Chrome (tier 2)
+
+`chrome/` runs the extension's passkeys in Google Chrome's stable channel as installed on the machine (Playwright's channel `chrome`, never its own Chromium), with the extension loaded unpacked as a person loads it, against the main test server and Harbor Books (`chrome/relying-party.mjs`), a site whose server is SimpleWebAuthn's library, at `https://www.harbor-books.test` on `KK_CHROME_SITE_PORT` (default 8170). The test makes a certificate authority for the site, which only its own Chrome trusts. See DESIGN.md, "Passkeys".
+
+```bash
+npx playwright test -c playwright.chrome.config.ts
+```
+
+It needs Google Chrome installed (it never downloads one) and the same builds as the rest. Chrome runs headless unless `KK_CHROME_HEADED=1`; CI runs it with a window, on a virtual display (`.github/workflows/tier2-chrome.yml`, nightly). Each Chrome gets a new profile in a temporary folder, never your own.
+
 ## Windows (tier 2)
 
-`installer/windows/tests/Test-Install.ps1` applies the policies on a disposable Windows machine, then `npx playwright test -c playwright.windows.config.ts` checks that real Chrome and Edge report them. CI runs both nightly on `windows-latest`.
+`installer/windows/tests/Test-Install.ps1` applies the policies on a disposable Windows machine, then `npx playwright test -c playwright.windows.config.ts` checks that real Chrome and Edge report them. Between the two, `installer/windows/tests/Test-AgentUpdate.ps1` installs a test release of the agent, its host, and the app, and has the SYSTEM update task take it to the next one from a stand-in for the update site, signed with a throwaway key. CI runs them nightly on `windows-latest`.

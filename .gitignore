@@ -6,4 +6,5 @@ target/
 # What the RMM package puts next to the install scripts; CI builds them.
 installer/windows/agent/
 installer/windows/app/
+installer/windows/update-test/
 installer/macos/PassBundle.app/
