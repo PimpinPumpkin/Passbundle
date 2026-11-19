@@ -97,8 +97,11 @@ export default defineConfig({
     { name: "cli", testDir: "tests/cli" },
     {
       name: "chromium",
-      testIgnore: ["api/**", "mail/**", "cli/**"],
+      testIgnore: ["api/**", "mail/**", "cli/**", "firefox/**"],
       use: { ...devices["Desktop Chrome"] },
     },
+    // The extension's Firefox build in a real Firefox (KK_FIREFOX), through
+    // geckodriver, not Playwright's browser (tests/support/firefox.ts).
+    { name: "firefox", testDir: "tests/firefox" },
   ],
 });

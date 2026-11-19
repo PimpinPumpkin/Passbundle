@@ -122,6 +122,9 @@ export const invoicesRefusedServerPort = process.env.KK_INVOICES_REFUSED_SERVER_
 // data; and a second server on the main test server's database.
 export const streamingServerPort = process.env.KK_STREAMING_SERVER_PORT ?? "8160";
 export const streamingSecondServerPort = process.env.KK_STREAMING_SECOND_SERVER_PORT ?? "8161";
+// Where geckodriver listens while the Firefox tests (tests/firefox) drive
+// Firefox through it, one Firefox at a time.
+export const geckodriverPort = process.env.KK_GECKODRIVER_PORT ?? "8170";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??
@@ -130,6 +133,14 @@ export const paths = {
     process.env.KK_WEB_VAULT ?? repo("clients", "apps/web/build"),
   extension:
     process.env.KK_EXTENSION ?? repo("clients", "apps/browser/build"),
+  // The Firefox build (`npm run build:prod:firefox`), which writes the same
+  // folder as the Chrome build: the Firefox tests check which one it is.
+  firefoxExtension:
+    process.env.KK_FIREFOX_EXTENSION ?? repo("clients", "apps/browser/build"),
+  // Firefox itself and geckodriver, for tests/firefox. Tier 1 installs the
+  // Firefox it names (tier1.yml) and uses the runner's geckodriver.
+  firefox: process.env.KK_FIREFOX,
+  geckodriver: process.env.KK_GECKODRIVER ?? "geckodriver",
   brand: process.env.KK_BRAND ?? repo("clients", "brand/brand.json"),
   // The desktop agent and its native-messaging host, built with the
   // stand-in authenticator: `cargo build --features test-authenticator`.

@@ -32,6 +32,8 @@ npm ci && npx playwright install chromium && npx playwright test
 
 Override any build location with `KK_SERVER_BIN`, `KK_WEB_VAULT`, `KK_EXTENSION`, or `KK_BRAND`, and the port with `KK_PORT` (default 8091).
 
+The Firefox tests (`tests/firefox`, project `firefox`) run the extension's Firefox build in a real Firefox, through geckodriver rather than Playwright's browser (`tests/support/firefox.ts` says why). They need the Firefox build (`npm run build:prod:firefox` in `apps/browser`, with the branding applied), which writes the same folder as the Chrome build, so build it last or copy it and name the copy in `KK_FIREFOX_EXTENSION`; a Firefox, named by `KK_FIREFOX` (tier 1 installs the release `tier1.yml` names with `npx @puppeteer/browsers install firefox@<that release>`); and geckodriver 0.36 or later, named by `KK_GECKODRIVER` unless it's on the PATH, which they start on `KK_GECKODRIVER_PORT` (default 8170). Without `KK_FIREFOX` they skip, except in CI.
+
 The command-line tool's tests (`tests/cli`, project `cli`) run the packed program `KK_CLI` names, which `tools/cli/pack.sh` makes from the clients checkout (see docs/cli.md, "Building it yourself"); without it they skip, except in CI. They use `KK_BRAND`'s `cli` part for the command's name.
 
 Single sign-on tests use `entra-standin.mjs`, a local stand-in for Microsoft Entra ID's sign-in (an OpenID provider at Entra's per-tenant paths, with keys made when it starts) and a DNS server for domain checks, on `KK_ENTRA_PORT` (default 8101) and `KK_DNS_PORT` (UDP, default 8102). Every test server points at it.
