@@ -122,6 +122,10 @@ export const invoicesRefusedServerPort = process.env.KK_INVOICES_REFUSED_SERVER_
 // data; and a second server on the main test server's database.
 export const streamingServerPort = process.env.KK_STREAMING_SERVER_PORT ?? "8160";
 export const streamingSecondServerPort = process.env.KK_STREAMING_SECOND_SERVER_PORT ?? "8161";
+// A server that may push to phones' endpoints on 127.0.0.1, trusting the
+// stand-in push service's certificate, with the new-device check on, which
+// the push tests start themselves (tests/api/unified-push.spec.ts).
+export const unifiedPushServerPort = process.env.KK_UNIFIED_PUSH_SERVER_PORT ?? "8162";
 // Tier 2 in Google Chrome (chrome/, playwright.chrome.config.ts): the site
 // with passkeys whose checks we didn't write (chrome/relying-party.mjs),
 // which Chrome reaches as www.harbor-books.test over HTTPS.

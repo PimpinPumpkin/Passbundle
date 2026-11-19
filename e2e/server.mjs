@@ -199,6 +199,17 @@ const child = spawn(paths.serverBin, [], {
           EVENT_STREAMING_AZURE_CA_FILE: siemCert,
         }
       : {}),
+    // KK_UNIFIED_PUSH_CA=<certificate file>: push to phones may reach the
+    // stand-in push service on 127.0.0.1 and trusts only its certificate
+    // (DESIGN.md, "Push to phones"), for the server the push tests start
+    // themselves (tests/api/unified-push.spec.ts). Every other server keeps
+    // the defaults, where push never reaches a private or loopback address.
+    ...(keptData && process.env.KK_UNIFIED_PUSH_CA
+      ? {
+          UNIFIED_PUSH_TEST_ONLY_ALLOW_PRIVATE_ADDRESSES: "true",
+          UNIFIED_PUSH_TEST_ONLY_CA_FILE: process.env.KK_UNIFIED_PUSH_CA,
+        }
+      : {}),
     ...(withMail
       ? {
           SMTP_HOST: "127.0.0.1",
