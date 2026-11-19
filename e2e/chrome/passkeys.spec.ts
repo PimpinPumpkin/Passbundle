@@ -300,3 +300,32 @@ test("a site that names a passkey PassBundle has (excludeCredentials) is told it
   // Nothing new on either side.
   await expectVaultHasSitesPasskey(request, account);
 });
+
+test("Chrome itself takes the site, its name, and its RP ID: with PassBundle signed out, Chrome's own authenticator makes a passkey there and signs in with it, verified by the library", async ({
+  chrome: launch,
+}) => {
+  // A check of the site rather than of PassBundle: the extension, signed
+  // out, hands the requests to Chrome, whose own WebAuthn checks the origin
+  // and the RP ID, and answers with a virtual authenticator of its own.
+  const chrome = await launch(rules, trustedKeys);
+  const page = await chrome.context.newPage();
+  await page.goto(`${origin}/?account=${siteAccount}`);
+  const cdp = await chrome.context.newCDPSession(page);
+  await cdp.send("WebAuthn.enable");
+  await cdp.send("WebAuthn.addVirtualAuthenticator", {
+    options: {
+      protocol: "ctap2",
+      transport: "internal",
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  });
+  await page.getByRole("button", { name: "Add a passkey" }).click();
+  await expect(page.getByRole("status")).toHaveText("Passkey added");
+  expect(lastVerification("registration").registrationInfo.aaguid).not.toBe(passBundleAAGUID);
+  await page.getByRole("button", { name: "Sign in with a passkey" }).click();
+  await expect(page.getByRole("status")).toHaveText(`Signed in as ${siteAccount}`);
+  expect(lastVerification("authentication").verified).toBe(true);
+});
