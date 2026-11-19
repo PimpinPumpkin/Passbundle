@@ -246,6 +246,16 @@ const rows: Row[] = [
     }),
   },
   {
+    // The Collections page, for anyone who doesn't edit every item: the
+    // items in the shared folders they reach.
+    name: "list the organization's items in the shared folders the caller reaches",
+    allowed: [...ADMINS, "manager"],
+    request: async ({ orgId }) => ({
+      method: "GET",
+      path: `/api/ciphers/organization-details/assigned?organizationId=${orgId}`,
+    }),
+  },
+  {
     name: "see an item without access to its collection",
     allowed: ADMINS,
     request: async (ctx) => ({

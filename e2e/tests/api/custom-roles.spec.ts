@@ -327,14 +327,23 @@ const rows: Row[] = [
     }),
   },
   {
-    // The reports load the organization's items, and so does the Collections
-    // page for someone with access to all items. A custom role gets only the
+    // The reports load the organization's items. A custom role gets only the
     // items it reaches.
-    name: "load the organization's items for reports and the Collections page",
+    name: "load the organization's items for reports",
     allowed: [...ADMINS, "accessReports", "manageCollections"],
     request: async ({ orgId }) => ({
       method: "GET",
       path: `/api/ciphers/organization-details?organizationId=${orgId}`,
+    }),
+  },
+  {
+    // The Collections page loads its items here for every custom role, since
+    // none edits every item: the items in the shared folders it reaches.
+    name: "load the Collections page's items",
+    allowed: [...ADMINS, "accessReports", "manageCollections"],
+    request: async ({ orgId }) => ({
+      method: "GET",
+      path: `/api/ciphers/organization-details/assigned?organizationId=${orgId}`,
     }),
   },
   {
@@ -1701,4 +1710,143 @@ test("a custom role with reports reads the organization's items it reaches, or e
   const refused = await api.call(poc, "GET", path);
   expect(refused.status).toBe(404);
   expect(refused.body.message).toBe("You can't do that here.");
+});
+
+/** A shared folder of the organization's, made by its owner. */
+async function odaFolder(api: Api, owner: Account, orgId: string, name: string): Promise<string> {
+  const created = await api.call(owner, "POST", `/api/organizations/${orgId}/collections`, {
+    name: encString(`oda-${name}`),
+    groups: [],
+    users: [],
+  });
+  expect(created.status, JSON.stringify(created.body)).toBe(200);
+  return created.body.id;
+}
+
+/** Gives a member these shared folders, keeping their role. */
+async function giveFolders(
+  api: Api,
+  owner: Account,
+  orgId: string,
+  memberId: string,
+  role: { type: number; permissions?: Record<string, boolean> },
+  collections: unknown[],
+) {
+  const given = await api.call(owner, "PUT", `/api/organizations/${orgId}/users/${memberId}`, {
+    permissions: {},
+    ...role,
+    accessAll: false,
+    collections,
+    groups: [],
+  });
+  expect(given.status, JSON.stringify(given.body)).toBe(200);
+}
+
+test("the Collections page lists each role's items in the shared folders it reaches, and never one in a folder it doesn't reach, in no folder, or in another organization", async ({
+  request,
+}) => {
+  const api = new Api(request);
+  const owner = await api.account("owner");
+  const orgId = await api.organization(owner, "Assigned Org");
+  const reached = await odaFolder(api, owner, orgId, "front-desk");
+  const hidden = await odaFolder(api, owner, orgId, "billing");
+  const inReached = await api.orgItem(owner, orgId, reached);
+  const inHidden = await api.orgItem(owner, orgId, hidden);
+  // One in both folders, and one the owner takes out of its last folder.
+  const inBoth = await api.orgItem(owner, orgId, reached);
+  const both = await api.call(owner, "PUT", `/api/ciphers/${inBoth}/collections-admin`, {
+    collectionIds: [reached, hidden],
+  });
+  expect(both.status, JSON.stringify(both.body)).toBe(200);
+  const inNoFolder = await api.orgItem(owner, orgId, reached);
+  const none = await api.call(owner, "PUT", `/api/ciphers/${inNoFolder}/collections-admin`, {
+    collectionIds: [],
+  });
+  expect(none.status, JSON.stringify(none.body)).toBe(200);
+  // Another organization's item, in a folder the shared folders role below
+  // reaches there too.
+  const otherOwner = await api.account("other-owner");
+  const otherOrgId = await api.organization(otherOwner, "Elsewhere Org");
+  const otherFolder = await odaFolder(api, otherOwner, otherOrgId, "elsewhere");
+  const otherItem = await api.orgItem(otherOwner, otherOrgId, otherFolder);
+
+  const path = (org: string) => `/api/ciphers/organization-details/assigned?organizationId=${org}`;
+  type Listed = { id: string; collectionIds: string[] };
+  const listed = async (as: Account): Promise<Listed[]> => {
+    const got = await api.call(as, "GET", path(orgId));
+    expect(got.status, JSON.stringify(got.body)).toBe(200);
+    return got.body.data;
+  };
+  const ids = (items: Listed[]) => items.map((c) => c.id).sort();
+  const everyFolder = [inReached, inHidden, inBoth].sort();
+  const oneFolder = [inReached, inBoth].sort();
+
+  // Owners and admins: every item in a folder, an admin without access to
+  // all items too, and each item with all of its folders.
+  const admin = await api.account("admin");
+  await api.addMember(owner, orgId, admin, "admin");
+  for (const who of [owner, admin]) {
+    const items = await listed(who);
+    expect(ids(items)).toEqual(everyFolder);
+    expect(items.find((c) => c.id === inBoth)!.collectionIds.sort()).toEqual([reached, hidden].sort());
+  }
+
+  // A manager who reaches one folder.
+  const manager = await api.account("manager");
+  const managerId = await api.addMember(owner, orgId, manager, "manager");
+  await giveFolders(api, owner, orgId, managerId, { type: 3 }, [{ id: reached, ...VIEW }]);
+  expect(ids(await listed(manager))).toEqual(oneFolder);
+
+  // A custom role that manages shared folders, reaching one folder here and
+  // one in the other organization, with an item of its own.
+  const poc = await api.account("poc");
+  const pocRole = { type: 4, permissions: { keykeeperManageCollections: true } };
+  const pocId = await api.addCustomMember(owner, orgId, poc, pocRole.permissions);
+  await giveFolders(api, owner, orgId, pocId, pocRole, [{ id: reached, ...EDIT }]);
+  const pocElsewhere = await api.addMember(otherOwner, otherOrgId, poc, "user");
+  await giveFolders(api, otherOwner, otherOrgId, pocElsewhere, { type: 2 }, [{ id: otherFolder, ...VIEW }]);
+  const own = await api.personalItem(poc);
+  const pocItems = await listed(poc);
+  expect(ids(pocItems)).toEqual(oneFolder);
+  for (const never of [inHidden, inNoFolder, otherItem, own]) {
+    expect(ids(pocItems)).not.toContain(never);
+  }
+  // The item in both folders shows only the folder it reaches.
+  expect(pocItems.find((c) => c.id === inBoth)!.collectionIds).toEqual([reached]);
+  // It sees the other organization's item in its own vault, but as a regular
+  // member there it doesn't list that organization's items.
+  const synced = await api.call(poc, "GET", "/api/sync");
+  expect(synced.body.ciphers.map((c: { id: string }) => c.id)).toContain(otherItem);
+  const elsewhere = await api.call(poc, "GET", path(otherOrgId));
+  expect(elsewhere.status, JSON.stringify(elsewhere.body)).toBe(404);
+
+  // A custom role with reports, reaching the folder through a group.
+  const reporter = await api.account("reporter");
+  const reporterId = await api.addCustomMember(owner, orgId, reporter, { accessReports: true });
+  const ctx = { api, orgId, owner, memberIds: {} } as Context;
+  await group(ctx, { collections: [{ id: reached, ...VIEW }], users: [reporterId] });
+  expect(ids(await listed(reporter))).toEqual(oneFolder);
+
+  // One with reports and access to all items: every item in a folder.
+  const auditor = await api.account("auditor");
+  await api.addCustomMember(owner, orgId, auditor, { accessReports: true, keykeeperAccessAllItems: true });
+  expect(ids(await listed(auditor))).toEqual(everyFolder);
+
+  // A regular member and a custom role without reports or shared folders,
+  // both reaching the folder, get 404: the custom role in its words.
+  const member = await api.account("member");
+  const memberId = await api.addMember(owner, orgId, member, "user");
+  await giveFolders(api, owner, orgId, memberId, { type: 2 }, [{ id: reached, ...VIEW }]);
+  const refusedMember = await api.call(member, "GET", path(orgId));
+  expect(refusedMember.status, JSON.stringify(refusedMember.body)).toBe(404);
+  const helpdesk = await api.account("helpdesk");
+  const helpdeskRole = { type: 4, permissions: { manageUsers: true } };
+  const helpdeskId = await api.addCustomMember(owner, orgId, helpdesk, helpdeskRole.permissions);
+  await giveFolders(api, owner, orgId, helpdeskId, helpdeskRole, [{ id: reached, ...VIEW }]);
+  const refusedRole = await api.call(helpdesk, "GET", path(orgId));
+  expect(refusedRole.status, JSON.stringify(refusedRole.body)).toBe(404);
+  expect(refusedRole.body.message).toBe("You can't do that here.");
+  // Someone outside the organization, and anyone signed out, are refused.
+  expect([401, 404]).toContain((await api.call(otherOwner, "GET", path(orgId))).status);
+  expect((await api.call(null, "GET", path(orgId))).status).toBe(401);
 });
