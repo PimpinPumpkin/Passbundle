@@ -108,9 +108,10 @@ test("offers to save a new login after a sign-in, and saves what was typed", asy
   await firefox.type("#password", `a-new-password-for-the-shop-3${Key.Enter}`);
   await expect.poll(() => firefox.url()).toBe(`${site}/signed-in.html`);
 
-  // The save prompt, the extension's page in a frame of the next page.
+  // The save prompt, the extension's page in a frame of the next page. Its
+  // Save is pressed with Enter (Firefox.pressOn says why not a click).
   await firefox.intoFrame("notification/bar.html");
-  await firefox.click("//button[normalize-space(.)='Save']");
+  await firefox.pressOn("//button[normalize-space(.)='Save']", Key.Enter);
   await firefox.top();
 
   await expect
@@ -126,12 +127,26 @@ test("offers to save a new login after a sign-in, and saves what was typed", asy
  * (biometric-unlock.spec.ts, lockNow), since Chrome can't restart an extension
  * loaded from the command line. So the background page is marked first, and
  * the popup that's opened next is checked to be the restarted extension's.
+ *
+ * Before the restart the popup closes itself, as the toolbar's popup does
+ * (BrowserPopupUtils.closeCurrentPopupOrPopout: an address without
+ * "uilocation" counts as the popup), and in Firefox an extension's page may
+ * close its own tab. A window's last tab closing closes the window, and the
+ * last window quits Firefox, so another tab stays open first.
  */
 async function lockNow(firefox: Firefox) {
+  const popup = await firefox.handle();
+  await firefox.newTab();
+  await firefox.switchTo(popup);
   await firefox.run("chrome.extension.getBackgroundPage().keykeeperTestBeforeLock = true");
   await firefox.goto(`${popupUrl}#/account-switcher`);
-  await firefox.click("//button[normalize-space(.)='Lock now']");
-  // The restart can close the popup's tab; each try opens one of its own.
+  // Clicked once: the tab can close before WebDriver hears back from the
+  // click, which isn't a failure. Whether it locked is what's checked next.
+  const lock = await firefox.waitFor("//button[normalize-space(.)='Lock now']");
+  await firefox.cmd("POST", `/element/${lock}/click`).catch((error) => {
+    console.log(`Lock now, while its tab closed: ${error}`);
+  });
+  // Each try opens a popup in a tab of its own.
   await expect(async () => {
     const handles = await firefox.handles();
     if (!handles.includes(await firefox.handle().catch(() => ""))) {
@@ -158,8 +173,9 @@ async function lockNow(firefox: Firefox) {
 /**
  * Picks the first item in the menu inside a field with the keyboard, as
  * Chrome's tests do (support/autofill.ts, chooseFirstInlineMenuItem). The menu
- * is the extension's own pages in frames of the page: ArrowDown in the field
- * moves the focus into the list's frame, and Enter there fills. Keys go where
+ * is the extension's own pages in frames of the page: the page holds
+ * overlay/menu.html, which holds the list (menu-list.html). ArrowDown in the
+ * field moves the focus into the list, and Enter there fills. Keys go where
  * WebDriver's chosen frame is, so Enter is pressed from inside the list.
  */
 async function chooseFirstInlineMenuItem(firefox: Firefox, field: string, itemName: string) {
@@ -167,7 +183,11 @@ async function chooseFirstInlineMenuItem(firefox: Firefox, field: string, itemNa
     await firefox.top();
     await firefox.click(field);
     await firefox.intoFrame("menu-list.html", 5_000);
-    // The list has the item: what the extension's background offers this tab.
+    // The list has the item: what the extension's background offers this
+    // tab, asked from the frame that holds the list. That one is the
+    // extension's own page; the list itself is sandboxed, with no extension
+    // APIs.
+    await firefox.parentFrame();
     const offered = await firefox.run<string[]>(
       "return [...chrome.extension.getBackgroundPage().bitwardenMain.overlayBackground.inlineMenuCiphers.values()].map((c) => c.name)",
     );

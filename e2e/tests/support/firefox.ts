@@ -199,14 +199,20 @@ export class Firefox {
   }
 
   private async keepForFailure(testInfo: TestInfo) {
-    const handles = await this.handles();
-    for (const [i, handle] of handles.entries()) {
-      await this.switchTo(handle);
-      await this.top();
-      const url = await this.url();
-      const png = Buffer.from(await this.cmd<string>("GET", "/screenshot"), "base64");
-      await testInfo.attach(`firefox-tab-${i + 1}.png`, { body: png, contentType: "image/png" });
-      await testInfo.attach(`firefox-tab-${i + 1}-url.txt`, { body: url, contentType: "text/plain" });
+    // Each tab as it is. Firefox may be gone by now (that can be the failure),
+    // and the log is kept all the same.
+    try {
+      const handles = await this.handles();
+      for (const [i, handle] of handles.entries()) {
+        await this.switchTo(handle);
+        await this.top();
+        const url = await this.url();
+        const png = Buffer.from(await this.cmd<string>("GET", "/screenshot"), "base64");
+        await testInfo.attach(`firefox-tab-${i + 1}.png`, { body: png, contentType: "image/png" });
+        await testInfo.attach(`firefox-tab-${i + 1}-url.txt`, { body: url, contentType: "text/plain" });
+      }
+    } catch (error) {
+      await testInfo.attach("firefox-tabs.txt", { body: `No screenshots: ${error}`, contentType: "text/plain" });
     }
     await testInfo.attach("geckodriver.log", { path: this.logPath, contentType: "text/plain" });
   }
@@ -251,32 +257,42 @@ export class Firefox {
   /** Back to the tab's own page. */
   top = () => this.cmd("POST", "/frame", { id: null });
 
+  /** Out to the frame that holds the chosen one. */
+  parentFrame = () => this.cmd("POST", "/frame/parent");
+
   /**
-   * Into the frame of the tab's page whose address contains `part`, found by
-   * its place among the page's frames: the extension puts its frames inside
-   * closed shadow roots, where no selector reaches, but a frame is a frame.
+   * Into the frame of the tab's page whose address contains `part`, at any
+   * depth, found by its place among each page's frames: the extension puts
+   * its frames inside closed shadow roots, where no selector reaches, but a
+   * frame is a frame. The menu inside a field is two deep: the page holds
+   * overlay/menu.html, which holds the button or the list.
    */
   async intoFrame(part: string, timeout = 15_000) {
     await expect
       .poll(
         async () => {
           await this.top();
-          for (let i = 0; ; i++) {
-            try {
-              await this.cmd("POST", "/frame", { id: i });
-            } catch (error) {
-              if (error instanceof WebDriverError && error.error === "no such frame") break;
-              throw error;
-            }
-            const href = await this.run<string>("return location.href").catch(() => "");
-            if (href.includes(part)) return true;
-            await this.top();
-          }
-          return false;
+          return this.findFrame(part, 0);
         },
         { timeout, message: `a frame at ${part}` },
       )
       .toBe(true);
+  }
+
+  /** Depth first from the chosen frame: ends inside the one found, or back where it started. */
+  private async findFrame(part: string, depth: number): Promise<boolean> {
+    if (depth > 3) return false;
+    for (let i = 0; ; i++) {
+      try {
+        await this.cmd("POST", "/frame", { id: i });
+      } catch (error) {
+        if (error instanceof WebDriverError && error.error === "no such frame") return false;
+        throw error;
+      }
+      const href = await this.run<string>("return location.href").catch(() => "");
+      if (href.includes(part) || (await this.findFrame(part, depth + 1))) return true;
+      await this.parentFrame();
+    }
   }
 
   // Elements.
@@ -313,6 +329,18 @@ export class Firefox {
   async type(selector: string, text: string, timeout = 15_000) {
     const id = await this.waitFor(selector, timeout);
     await this.cmd("POST", `/element/${id}/value`, { text });
+  }
+
+  /**
+   * Presses keys on an element once it's shown: WebDriver focuses it first.
+   * For a button in one of the extension's frames, Enter is a person's way to
+   * press it that needs no screen position: a click WebDriver synthesizes
+   * inside such a frame (another process) never reached its button in
+   * Firefox 158.
+   */
+  async pressOn(selector: string, ...keys: string[]) {
+    const id = await this.waitFor(selector);
+    await this.cmd("POST", `/element/${id}/value`, { text: keys.join("") });
   }
 
   /** A form field's value. */
