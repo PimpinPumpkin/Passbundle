@@ -122,9 +122,13 @@ export const invoicesRefusedServerPort = process.env.KK_INVOICES_REFUSED_SERVER_
 // data; and a second server on the main test server's database.
 export const streamingServerPort = process.env.KK_STREAMING_SERVER_PORT ?? "8160";
 export const streamingSecondServerPort = process.env.KK_STREAMING_SECOND_SERVER_PORT ?? "8161";
+// Tier 2 in Google Chrome (chrome/, playwright.chrome.config.ts): the site
+// with passkeys whose checks we didn't write (chrome/relying-party.mjs),
+// which Chrome reaches as www.harbor-books.test over HTTPS.
+export const chromeSitePort = process.env.KK_CHROME_SITE_PORT ?? "8170";
 // Where geckodriver listens while the Firefox tests (tests/firefox) drive
 // Firefox through it, one Firefox at a time.
-export const geckodriverPort = process.env.KK_GECKODRIVER_PORT ?? "8170";
+export const geckodriverPort = process.env.KK_GECKODRIVER_PORT ?? "8175";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??
