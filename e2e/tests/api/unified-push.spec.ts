@@ -8,7 +8,8 @@
 // VAPID key; the device that asked gets none; a push service that never
 // answers doesn't slow the request; and one that answers 410 has the endpoint
 // removed. On the main test server, which keeps the defaults: the endpoints
-// the server refuses, and that a device registers and removes only its own.
+// the server refuses, that a device registers and removes only its own, and
+// that an account keeps 10 endpoints, an 11th replacing its oldest.
 import { type ChildProcess, spawn } from "node:child_process";
 import {
   createDecipheriv,
@@ -455,4 +456,44 @@ test("the server refuses endpoints it can't use, and a device registers and remo
   expect(padded.status, JSON.stringify(padded.body)).toBe(200);
   expect((await api.call(ana, "DELETE", ROUTE)).status).toBe(200);
   expect((await api.call(ana, "GET", ROUTE)).body.registered).toBe(false);
+});
+
+test("an account keeps 10 endpoints, and an 11th replaces its oldest", async ({ request }) => {
+  // Eleven sign-ins, each hashed by the server's debug build.
+  test.setTimeout(120_000);
+  const api = new Api(request);
+  const ana = await api.account("ana");
+  const phones: { token: string }[] = [];
+  for (let i = 0; i < 11; i++) {
+    const signedIn = await api.signIn(ana.email, ana.password, {
+      client_id: "mobile",
+      deviceType: ANDROID,
+      deviceIdentifier: randomUUID(),
+      deviceName: `phone ${i}`,
+    });
+    expect(signedIn.status, JSON.stringify(signedIn.body)).toBe(200);
+    const phone = { token: signedIn.body.access_token as string };
+    const keys = phoneKeys();
+    const registered = await api.call(phone, "PUT", ROUTE, {
+      endpoint: `https://push.example.net/up/phone-${i}`,
+      publicKey: keys.publicKey.toString("base64url"),
+      auth: keys.auth.toString("base64url"),
+    });
+    expect(registered.status, JSON.stringify(registered.body)).toBe(200);
+    phones.push(phone);
+  }
+  // The first one registered is gone; the ten after it stay.
+  expect((await api.call(phones[0], "GET", ROUTE)).body.registered).toBe(false);
+  for (const phone of phones.slice(1)) {
+    expect((await api.call(phone, "GET", ROUTE)).body.registered).toBe(true);
+  }
+  // Registering again keeps a phone's place: the next oldest stays.
+  const keys = phoneKeys();
+  const again = await api.call(phones[5], "PUT", ROUTE, {
+    endpoint: "https://push.example.net/up/phone-5-again",
+    publicKey: keys.publicKey.toString("base64url"),
+    auth: keys.auth.toString("base64url"),
+  });
+  expect(again.status, JSON.stringify(again.body)).toBe(200);
+  expect((await api.call(phones[1], "GET", ROUTE)).body.registered).toBe(true);
 });
