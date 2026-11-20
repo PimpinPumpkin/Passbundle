@@ -337,7 +337,11 @@ const child = spawn(paths.serverBin, [], {
           }
         : { SIGNUPS_ALLOWED: "true" }),
     SIGNUPS_VERIFY: process.env.KK_SIGNUPS_VERIFY === "1" ? "true" : "false",
-    MSP_SIGNUPS_ALLOWED: "true",
+    // KK_MSP_SIGNUPS=off: nobody may set up an MSP, the default on a server
+    // someone runs for themselves, for a side server the tests of MSPs signing
+    // up by themselves start (tests/support/msp-signups-off.ts). Every other
+    // server allows it, as the hosted service does.
+    MSP_SIGNUPS_ALLOWED: process.env.KK_MSP_SIGNUPS === "off" ? "false" : "true",
     DISABLE_ICON_DOWNLOAD: "true",
     // Single sign-on goes to the local stand-in for Microsoft Entra ID, and
     // domain checks ask its DNS server (entra-standin.mjs).

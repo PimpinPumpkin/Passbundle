@@ -501,7 +501,10 @@ jobs:
           - name: Linux
             runner: ubuntu-24.04
           - name: macOS
-            runner: macos-15
+            # Intel: GitHub's Apple silicon Macs ran out of capacity in November
+            # 2026 and dropped queued jobs, and this check doesn't depend on the
+            # chip.
+            runner: macos-15-intel
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 10
     steps:
