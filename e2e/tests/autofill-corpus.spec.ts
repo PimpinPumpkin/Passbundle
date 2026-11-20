@@ -373,6 +373,11 @@ async function fillFromMenu(context: BrowserContext, page: Page, where: Page | F
   }
   await page.keyboard.press("Enter");
   if (optional) {
+    // Whatever the pick fills ends before the tab closes. Upstream's
+    // extension keeps every field's menu closed, on every page after, when a
+    // tab closes mid-fill (tab-close-mid-fill.spec.ts), which would score
+    // its misses on the pages after this one.
+    await page.waitForTimeout(1000);
     return;
   }
   try {
