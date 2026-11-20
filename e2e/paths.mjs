@@ -134,6 +134,13 @@ export const streamingSecondServerPort = process.env.KK_STREAMING_SECOND_SERVER_
 // start themselves.
 export const familyLinkServerPort = process.env.KK_FAMILY_LINK_SERVER_PORT ?? "8180";
 export const familyLinkUiServerPort = process.env.KK_FAMILY_LINK_UI_SERVER_PORT ?? "8181";
+// The site rules tests (tests/site-rules.spec.ts): a feed of their own, over
+// plain HTTP on 127.0.0.1, signed with the test vectors' key, and two servers
+// of their own that mirror it as an operator's feed (SITE_RULES_FEED): one
+// mirrors it as signed, one with a byte of its manifest changed.
+export const siteRulesFeedPort = process.env.KK_SITE_RULES_FEED_PORT ?? "8190";
+export const siteRulesServerPort = process.env.KK_SITE_RULES_SERVER_PORT ?? "8191";
+export const siteRulesChangedServerPort = process.env.KK_SITE_RULES_CHANGED_SERVER_PORT ?? "8192";
 // Tier 2 in Google Chrome (chrome/, playwright.chrome.config.ts): the site
 // with passkeys whose checks we didn't write (chrome/relying-party.mjs),
 // which Chrome reaches as www.harbor-books.test over HTTPS.

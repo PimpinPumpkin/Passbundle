@@ -5,6 +5,13 @@
 # open the app on, and xdg-utils and desktop-file-utils. It writes machine
 # policies and installs into /opt and /usr/share. It ends with the policies
 # applied, for the browser check that follows.
+#
+#   sudo sh test-install.sh [passbundle_<version>_amd64.deb]
+#
+# With the app's .deb, made from the same folder (passbundle-apps,
+# tools/linux-packages.sh), it also checks the package installs what the
+# script does, and that the script and the package agree on who has the app
+# (DESIGN.md, "Linux packages"). It installs and removes that package with apt.
 
 set -u
 
@@ -20,6 +27,10 @@ edge="/etc/opt/edge/policies/managed"
 firefox="/etc/firefox/policies/policies.json"
 firefox_added="/etc/passbundle/firefox-policies-added"
 foreign="$chrome/another-vendor.json"
+deb="${1:-}"
+if [ -n "$deb" ]; then
+  deb=$(cd "$(dirname "$deb")" && pwd)/$(basename "$deb")
+fi
 person="${SUDO_USER:-runner}"
 person_home=$(getent passwd "$person" | cut -d: -f6)
 server_url="https://vault.example.test"
@@ -58,6 +69,18 @@ done
 # Reads a policy file and checks one value, in Python's JSON (so the file must parse).
 policy_is() { # file python-expression-of-p
   python3 -I -c "import json, sys; p = json.load(open(sys.argv[1])); sys.exit(0 if ($2) else 1)" "$1"
+}
+
+# Every path the app's install puts on the computer, with its type, owner,
+# and mode, and each file's SHA-256: what the app's package installs too.
+installed() {
+  find "$app" "$entry" "$icon" -printf '%p %y %u:%g %m\n' 2> /dev/null | LC_ALL=C sort
+  find "$app" "$entry" "$icon" -type f -exec sha256sum {} + 2> /dev/null | LC_ALL=C sort -k2
+}
+
+# The package that has a path, if any (what the script and the app ask).
+package_of() {
+  dpkg-query -S "$1" 2> /dev/null | sed -n '1s/:.*//p'
 }
 
 refuses() { # what-it-says args...
@@ -162,6 +185,9 @@ check "Firefox password manager, card, and address autofill off" policy_is "$fir
 check "Firefox's policies are root's and read-only" sh -c "[ \"\$(stat -c '%U:%G %a' '$firefox')\" = 'root:root 644' ]"
 check "the app gets the server, without a trailing slash" policy_is /etc/passbundle/policy.json "p == {\"ServerUrl\": \"$server_url\"}"
 check "the app's policy is root's and read-only" sh -c "[ \"\$(stat -c '%U:%G %a' /etc/passbundle/policy.json)\" = 'root:root 644' ]"
+check "no package has the app" test -z "$(package_of "$app/passbundle")"
+# What the app's package must install the same.
+script_installed=$(installed)
 
 echo "Again, with nothing new"
 out=$(sh "$script" --disable-card-autofill --disable-address-autofill --server-url "$server_url/" \
@@ -288,6 +314,65 @@ check "and no list of Firefox policies is left" test ! -e "$firefox_added"
 check "the other vendor's file is still there" sh -c "[ \"\$(cat '$foreign')\" = \"\$1\" ]" _ "$foreign_before"
 check "removing again is fine" sh "$script" --remove
 rm -f "$foreign"
+
+if [ -n "$deb" ]; then
+  echo "Installed by the app's .deb"
+  check "the .deb installs" apt-get install -y -q "$deb"
+  check "it installs what the script does: the same paths, owners, modes, and contents" \
+    sh -c "[ \"\$1\" = \"\$2\" ]" _ "$(installed)" "$script_installed"
+  check "the package has the app" test "$(package_of "$app/passbundle")" = passbundle
+  check "the system's cache lists it for passbundle:// links" grep -qx "x-scheme-handler/passbundle=com.passbundle.app.desktop;" "$mime_cache"
+  check "passbundle:// links open it for the person" sh -c "[ \"\$(sudo -H -u '$person' xdg-mime query default x-scheme-handler/passbundle)\" = com.passbundle.app.desktop ]"
+  check "no policies come with it" sh -c "[ ! -e '$chrome/passbundle.json' ] && [ ! -e '$edge/passbundle.json' ] && [ ! -e /etc/passbundle ]"
+
+  echo "The script, where the package has the app"
+  out=$(sh "$script" --disable-card-autofill --server-url "$server_url/" --enrollment-token "$token" \
+    --join-secret "$join_secret" --org-key "$org_key" 2>&1)
+  echo "$out"
+  check "says the package has the app, and leaves it alone" sh -c "printf '%s' \"\$1\" | grep -q 'came from the passbundle package, so apt updates and removes it'" _ "$out"
+  check "the app is as the package installed it" sh -c "[ \"\$1\" = \"\$2\" ]" _ "$(installed)" "$script_installed"
+  check "the package still has it" test "$(package_of "$app/passbundle")" = passbundle
+  check "it still sets the browser policies" policy_is "$chrome/passbundle.json" 'p["PasswordManagerEnabled"] is False'
+  check "and the app's policy" policy_is /etc/passbundle/policy.json "p == {\"ServerUrl\": \"$server_url\"}"
+  out=$(sh "$script" --disable-card-autofill --server-url "$server_url/" --enrollment-token "$token" \
+    --join-secret "$join_secret" --org-key "$org_key" 2>&1)
+  check "again, nothing changed" sh -c "printf '%s' \"\$1\" | grep -q 'nothing changed'" _ "$out"
+  out=$(sh "$script" --remove 2>&1)
+  echo "$out"
+  check "--remove says how to remove the package's app" sh -c "printf '%s' \"\$1\" | grep -q 'remove it with apt remove passbundle'" _ "$out"
+  check "and leaves it" sh -c "[ \"\$1\" = \"\$2\" ]" _ "$(installed)" "$script_installed"
+  check "and takes the policies away" sh -c "[ ! -e '$chrome/passbundle.json' ] && [ ! -e /etc/passbundle/policy.json ]"
+
+  echo "Removing the package"
+  sh "$script" --disable-card-autofill --server-url "$server_url/" > /dev/null || failures=$((failures + 1))
+  check "the package removes" apt-get remove -y -q passbundle
+  check "the app is gone" test ! -e "$app"
+  check "the menu entry is gone" test ! -e "$entry"
+  check "the icon is gone" test ! -e "$icon"
+  check "its copyright file is gone" test ! -e /usr/share/doc/passbundle
+  check "no package has the app" test -z "$(package_of "$app/passbundle")"
+  check "nothing in the system's cache takes passbundle:// links" sh -c "! grep -q '^x-scheme-handler/passbundle=' '$mime_cache'"
+  check "nothing opens them for the person" sh -c "[ -z \"\$(sudo -H -u '$person' xdg-mime query default x-scheme-handler/passbundle)\" ]"
+  check "the script's app policy stays" policy_is /etc/passbundle/policy.json "p == {\"ServerUrl\": \"$server_url\"}"
+  check "and its browser policies" policy_is "$chrome/passbundle.json" 'p["PasswordManagerEnabled"] is False'
+  apt-get purge -y -q passbundle > /dev/null 2>&1
+  check "purging it leaves the script's app policy too" test -f /etc/passbundle/policy.json
+
+  echo "The package, where the script has the app"
+  sh "$script" --disable-card-autofill > /dev/null || failures=$((failures + 1))
+  check "the script installed the app" sh -c "[ \"\$1\" = \"\$2\" ]" _ "$(installed)" "$script_installed"
+  out=$(apt-get install -y -q "$deb" 2>&1)
+  status=$?
+  printf '%s\n' "$out" | tail -n 5
+  check "the package won't go over it" test "$status" -ne 0
+  check "and says how to switch: the script's --remove, then the package" \
+    sh -c "printf '%s' \"\$1\" | grep -q 'install-passbundle.sh' && printf '%s' \"\$1\" | grep -q -- '--remove'" _ "$out"
+  check "the script's app is as it was" sh -c "[ \"\$1\" = \"\$2\" ]" _ "$(installed)" "$script_installed"
+  check "and no package has it" test -z "$(package_of "$app/passbundle")"
+  dpkg --purge passbundle > /dev/null 2>&1
+  sh "$script" --remove > /dev/null || failures=$((failures + 1))
+  check "the script removes its app again" test ! -e "$app"
+fi
 
 # This machine's own Firefox policies back where they were.
 for dir in $firefox_installs; do
