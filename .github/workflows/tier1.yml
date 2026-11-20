@@ -325,10 +325,18 @@ jobs:
       # signed feed"): the vectors as their generator makes them, and the copy
       # the extension's jest tests (site-rules-feed.spec.ts and the others
       # beside it, run below) read.
+      # A clients branch and a meta branch from before the feed have neither
+      # file; one with only one of them fails.
       - name: The site rules feed's test vectors, as their generator makes them, and the extension's copy
         run: |
-          node meta/docs/vectors/make-site-rules-v1.mjs | cmp - meta/docs/vectors/site-rules-v1.json
-          cmp meta/docs/vectors/site-rules-v1.json apps/browser/src/autofill/keykeeper/site-rules-v1.vectors.json
+          vectors=meta/docs/vectors/site-rules-v1.json
+          copy=apps/browser/src/autofill/keykeeper/site-rules-v1.vectors.json
+          if [ ! -e "$vectors" ] && [ ! -e "$copy" ]; then
+            echo "No site rules feed on these branches yet."
+            exit 0
+          fi
+          node meta/docs/vectors/make-site-rules-v1.mjs | cmp - "$vectors"
+          cmp "$vectors" "$copy"
       # The command-line tool's updater (DESIGN.md, "Command-line tool",
       # "Updating itself"): the vectors as their generator makes them, and the
       # copy the clients' jest test (self-update.spec.ts) reads.
