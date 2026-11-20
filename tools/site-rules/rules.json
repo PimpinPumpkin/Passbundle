@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "hosts": {
+    "corpus.example.test": {
+      "pathnames": {
+        "/site-rules-shadow.html": {
+          "forms": [
+            {
+              "category": "account-login",
+              "fields": {
+                "username": ["#signin-box >>> #member-number"],
+                "password": ["#signin-box >>> #secret"]
+              },
+              "passbundle": { "id": "corpus-shadow-member-number", "verified": "2026-11-19" }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
