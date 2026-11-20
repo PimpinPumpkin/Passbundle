@@ -23,7 +23,9 @@
   installs the desktop agent to Program Files: it starts at every sign-in,
   the browsers can reach it for Windows Hello unlock (our extensions only), and
   a SYSTEM task installs signed updates of the agent, its browser helper, and
-  the app, all three together. Without them, policies only.
+  the app, all three together. Without them, policies only. It can run again,
+  with the same files or newer ones, while people use the agent: it moves a
+  running program aside instead of writing over it.
   With the app's files in an "app" folder next to this script, it installs the
   PassBundle app next to the agent, with a Start menu shortcut: the agent's
   tray opens it, and it starts the agent if it isn't running. passbundle://
@@ -244,19 +246,103 @@ function Test-AgentSource {
   -not ($AgentFiles | Where-Object { -not (Test-Path (Join-Path $AgentSource $_)) })
 }
 
-# Copies a file into place unless it's already there. A running agent can't be
-# overwritten, but it can be moved aside; it deletes the old copy when it next starts.
-function Copy-AgentFile([string] $Name) {
-  $from = Join-Path $AgentSource $Name
-  $to = Join-Path $InstallDir $Name
-  if ((Test-Path $to) -and (Get-FileHash $to).Hash -eq (Get-FileHash $from).Hash) { return }
-  if (Test-Path $to) { Move-Item -Path $to -Destination "$to.old" -Force }
-  Copy-Item -Path $from -Destination $to
+# Ends the programs with these names, for everyone signed in, and waits until
+# they have: Windows keeps a program's files in use until it ends.
+function Stop-Programs([string[]] $Names) {
+  $running = @(Get-Process -Name $Names -ErrorAction SilentlyContinue)
+  if (-not $running) { return }
+  $running | Stop-Process -Force
+  $running | Wait-Process -Timeout 30 -ErrorAction SilentlyContinue
+}
+
+# A name beside $Path that nothing has yet: "<name>.<time>.<Kind>".
+function Get-UnusedName([string] $Path, [string] $Kind) {
+  $time = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmssfff")
+  $unused = "$Path.$time.$Kind"
+  for ($n = 2; (Test-Path -LiteralPath $unused); $n++) { $unused = "$Path.$time-$n.$Kind" }
+  $unused
+}
+
+# Removes the agent's programs that earlier runs moved aside (and the single
+# "<name>.old" that versions of this script before November 2026 left), and a
+# new copy that a run cut off partway left. Windows won't remove one that
+# still runs: it stays, and a later run tries again.
+function Remove-AsideFiles {
+  foreach ($name in $AgentFiles) {
+    @(Get-ChildItem -LiteralPath $InstallDir -File |
+        Where-Object { $_.Name -eq "$name.old" -or $_.Name -like "$name.*.old" -or $_.Name -like "$name.*.new" }) |
+      Remove-Item -Force -ErrorAction SilentlyContinue
+  }
+}
+
+# Puts the agent's programs that are in $From in place, all of them or none.
+# Windows won't let a running program be replaced or deleted, but it lets one
+# be renamed. The agent runs from $InstallDir for each person signed in, a
+# browser may have started the host, and a copy of either that an earlier run
+# moved aside may still run. So these programs are never written over: each
+# one that changed is copied in beside the installed one, the installed one
+# is moved aside to a name no run used before, and the new one takes its
+# name. One that's the same is left as it is. If a step fails, the steps done
+# are undone, last first, so the installed programs stay as they were and
+# keep running, and the script stops and says what to do. Last, what earlier
+# runs moved aside goes, unless it still runs. See DESIGN.md, "Running it
+# again while PassBundle runs".
+function Install-AgentFiles([string] $From) {
+  $changes = @()
+  try {
+    $changes = @(foreach ($name in $AgentFiles) {
+        $source = Join-Path $From $name
+        $target = Join-Path $InstallDir $name
+        if (-not (Test-Path -LiteralPath $source)) { continue }
+        $there = Test-Path -LiteralPath $target
+        if ($there -and (Get-FileHash -LiteralPath $target).Hash -eq (Get-FileHash -LiteralPath $source).Hash) { continue }
+        [pscustomobject]@{
+          Source     = $source
+          Target     = $target
+          There      = $there
+          New        = (Get-UnusedName $target "new")
+          Old        = (Get-UnusedName $target "old")
+          MovedAside = $false
+          MovedIn    = $false
+        }
+      })
+    foreach ($change in $changes) {
+      Copy-Item -LiteralPath $change.Source -Destination $change.New
+    }
+    foreach ($change in $changes) {
+      if ($change.There) {
+        Move-Item -LiteralPath $change.Target -Destination $change.Old
+        $change.MovedAside = $true
+      }
+      Move-Item -LiteralPath $change.New -Destination $change.Target
+      $change.MovedIn = $true
+    }
+  } catch {
+    $failed = $_.Exception.Message
+    $restored = $true
+    for ($i = $changes.Count - 1; $i -ge 0; $i--) {
+      $change = $changes[$i]
+      try {
+        if ($change.MovedIn) { Move-Item -LiteralPath $change.Target -Destination $change.New }
+        if ($change.MovedAside) { Move-Item -LiteralPath $change.Old -Destination $change.Target }
+      } catch {
+        $restored = $false
+        $failed += " Putting $($change.Target) back failed too: $($_.Exception.Message)"
+        continue
+      }
+      if (Test-Path -LiteralPath $change.New) { Remove-Item -LiteralPath $change.New -Force -ErrorAction SilentlyContinue }
+    }
+    if ($restored) {
+      throw "PassBundle's desktop agent couldn't be put in place: $failed Its programs are as they were, and an agent that's running keeps working. Sign out of Windows and back in (everyone signed in to this computer), or restart it, then run this script again."
+    }
+    throw "PassBundle's desktop agent couldn't be put in place: $failed Restart this computer, then run this script again. Until it has run, people who sign in may not get the agent."
+  }
+  Remove-AsideFiles
 }
 
 function Install-Agent {
   if (-not (Test-Path $InstallDir)) { New-Item -Path $InstallDir -ItemType Directory | Out-Null }
-  foreach ($name in $AgentFiles) { Copy-AgentFile $name }
+  Install-AgentFiles $AgentSource
 
   # The native-messaging host, for our extensions only: the store IDs and
   # our own, each fixed in this script.
@@ -352,12 +438,36 @@ function Remove-LinkHandler {
   }
 }
 
+# Copies the app's own files (not the agent's) over the installed ones. Windows
+# can hold a file for a moment after the app has ended (a data file it mapped
+# into memory, or a virus scan reading it), so a file in use is tried again
+# for up to 15 seconds before the script stops and says what to do.
+function Copy-AppFiles {
+  $items = @(Get-ChildItem -LiteralPath $AppSource -Force | Where-Object { $AgentFiles -notcontains $_.Name })
+  $deadline = (Get-Date).AddSeconds(15)
+  while ($true) {
+    try {
+      $items | Copy-Item -Destination $InstallDir -Recurse -Force -ErrorAction Stop
+      return
+    } catch {
+      if ($_.Exception -isnot [System.IO.IOException]) { throw }
+      if ((Get-Date) -ge $deadline) {
+        throw "PassBundle's app couldn't be put in place: $($_.Exception.Message) Close PassBundle for everyone signed in to this computer, or restart it, then run this script again."
+      }
+      Start-Sleep -Milliseconds 500
+    }
+  }
+}
+
 function Install-App {
   if (-not (Test-Path $InstallDir)) { New-Item -Path $InstallDir -ItemType Directory | Out-Null }
   # The app's files can't be replaced while it runs. It's a window: whoever
   # had it open opens it again from the tray or the Start menu.
-  Get-Process -Name "passbundle" -ErrorAction SilentlyContinue | Stop-Process -Force
-  Copy-Item -Path (Join-Path $AppSource "*") -Destination $InstallDir -Recurse -Force
+  Stop-Programs "passbundle"
+  # A release's folder holds the agent's programs too. They may be running,
+  # so they go in as the agent's own do, never copied over.
+  Install-AgentFiles $AppSource
+  Copy-AppFiles
   $shell = New-Object -ComObject WScript.Shell
   $link = $shell.CreateShortcut($AppShortcut)
   $link.TargetPath = Join-Path $InstallDir "passbundle.exe"
@@ -369,7 +479,7 @@ function Install-App {
 }
 
 function Remove-Agent {
-  Get-Process -Name "passbundle", "passbundle-agent", "passbundle-agent-host" -ErrorAction SilentlyContinue | Stop-Process -Force
+  Stop-Programs "passbundle", "passbundle-agent", "passbundle-agent-host"
   if (Test-Path $AppShortcut) { Remove-Item -Path $AppShortcut -Force }
   Remove-LinkHandler
   if (Get-ScheduledTask -TaskName $UpdateTask -ErrorAction SilentlyContinue) {

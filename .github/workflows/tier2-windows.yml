@@ -4,6 +4,12 @@
 name: Tier 2 (Windows)
 
 on:
+  pull_request:
+    paths:
+      - "installer/windows/**"
+      - "e2e/windows/**"
+      - "e2e/playwright.windows.config.ts"
+      - ".github/workflows/tier2-windows.yml"
   push:
     branches: [main]
     paths:
@@ -69,6 +75,9 @@ jobs:
       - name: Install as an RMM would, and check the registry
         shell: pwsh
         run: ./installer/windows/tests/Test-Install.ps1
+      - name: Run the install script again, and with another build, while the agent, its browser helper, and the app run
+        shell: pwsh
+        run: ./installer/windows/tests/Test-Rerun.ps1
       - name: Two test releases of the agent, its host, and the app, signed with a throwaway key
         # Two releases of the same build: 0.1.1, which the next step installs,
         # and 0.1.2, which a stand-in for the update site serves. Each has a

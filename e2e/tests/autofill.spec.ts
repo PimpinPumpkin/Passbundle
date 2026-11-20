@@ -69,6 +69,42 @@ test("fills a simple login form from the icon inside the field", async ({
   await expect(page.getByLabel("Password")).toHaveValue("not-a-real-password-1");
 });
 
+// The extension's background and every open extension page share one
+// decrypted copy of the vault, and a vault page left open (here the popup as a
+// tab) could write its copy from just before a save after it. A login saved
+// from the save prompt is in the menu inside the field at once, with the
+// vault open (DESIGN.md, "Passkeys", "A passkey saved a moment before").
+test("a login saved from the save prompt, with the vault open in a tab, is in the menu inside the field at once", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const user = userFor("saved-vault-open", testInfo.repeatEachIndex);
+  const site = "https://saved.example.test";
+  await (await createAccount(context, user)).close();
+  await logInPopup(await openPopup(context, extensionId), user);
+
+  const page = await context.newPage();
+  await page.goto(`${site}/simple-login.html`);
+  await waitForExtensionScan(context, page, "username");
+  await page.getByLabel("Username").fill("ana-saved");
+  const password = page.getByLabel("Password");
+  await password.fill("a-new-password-1");
+  await password.press("Enter");
+  await page.waitForURL(`${site}/signed-in.html`);
+  await expect.poll(() => hasNotificationBar(page), { timeout: 10_000 }).toBe(true);
+  const bar = page.frames().find((f) => f.url().includes("notification/bar.html"))!;
+  await bar.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(bar.getByText("Login saved")).toBeVisible();
+
+  // At once: the sign-in page again, and the login in its menu.
+  const again = await context.newPage();
+  await again.goto(`${site}/simple-login.html`);
+  await again.getByLabel("Username").click();
+  await chooseFirstInlineMenuItem(context, again, "saved.example.test");
+  await expect(again.getByLabel("Username")).toHaveValue("ana-saved");
+  await expect(again.getByLabel("Password")).toHaveValue("a-new-password-1");
+});
+
 // Calibration, not the thing under test: a real password change on the login
 // page must prompt, which proves the save detector is alive in this browser.
 // Upstream's detector itself sometimes misses a prompt (see DESIGN.md), so this
