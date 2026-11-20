@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sign in</title>
+  </head>
+  <body>
+    <!-- A work sign-in with a domain list between the username and the
+         password, and "remember me" after them. Only the two fields fill. -->
+    <form action="/signed-in.html" method="post">
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" />
+      <label for="domain">Domain</label>
+      <select id="domain" name="domain">
+        <option value="corp">CORP</option>
+        <option value="lab">LAB</option>
+        <option value="partners">PARTNERS</option>
+      </select>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" />
+      <label><input id="remember" name="remember" type="checkbox" /> Remember me</label>
+      <button type="submit">Sign in</button>
+    </form>
+  </body>
+</html>

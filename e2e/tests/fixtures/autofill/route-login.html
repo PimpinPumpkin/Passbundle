@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Home</title>
+  </head>
+  <body>
+    <!-- A single-page app's router: the home view has no fields. "Sign in"
+         changes the address without loading a page, shows a spinner, and only
+         then draws the sign-in form. -->
+    <nav><a id="sign-in-link" href="/account/sign-in">Sign in</a></nav>
+    <main id="view"><h1>Our store</h1><p>New this week.</p></main>
+    <script>
+      const view = document.getElementById("view");
+      document.getElementById("sign-in-link").addEventListener("click", (event) => {
+        event.preventDefault();
+        history.pushState({}, "", "/account/sign-in");
+        document.title = "Sign in";
+        view.innerHTML = "<p>Loading…</p>";
+        setTimeout(() => {
+          view.innerHTML = `
+            <form action="/signed-in.html" method="post">
+              <h1>Sign in</h1>
+              <label for="username">Username</label>
+              <input id="username" name="username" type="text" />
+              <label for="password">Password</label>
+              <input id="password" name="password" type="password" />
+              <button type="submit">Sign in</button>
+            </form>`;
+        }, 600);
+      });
+    </script>
+  </body>
+</html>
