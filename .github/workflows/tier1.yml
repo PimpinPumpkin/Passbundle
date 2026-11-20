@@ -355,6 +355,14 @@ jobs:
           node meta/docs/vectors/make-device-signin-v1.mjs passbundle-apps/core/src/words/eff-large.txt | cmp - meta/docs/vectors/device-signin-v1.json
           node meta/docs/vectors/check-device-signin-vectors.mjs meta/docs/vectors/device-signin-v1.json .
           cmp meta/docs/vectors/device-signin-v1.json passbundle-apps/core/tests/vectors/device-signin-v1.json
+      # Enrolling in account recovery at unlock in our apps (DESIGN.md,
+      # "Enrolling at unlock", "Our apps"): the vectors as their generator
+      # makes them, checked with upstream's own crypto, and the apps' copy.
+      - name: The apps' account recovery at unlock test vectors, as their generator makes them and as upstream's crypto opens them
+        run: |
+          node meta/docs/vectors/make-recovery-at-unlock-v1.mjs | cmp - meta/docs/vectors/recovery-at-unlock-v1.json
+          node meta/docs/vectors/check-recovery-at-unlock-vectors.mjs meta/docs/vectors/recovery-at-unlock-v1.json .
+          cmp meta/docs/vectors/recovery-at-unlock-v1.json passbundle-apps/core/tests/vectors/recovery-at-unlock-v1.json
       # Sending a security key its PIN (DESIGN.md, "A security key's PIN"):
       # the vectors as their generator makes them, and the apps' copy.
       - name: The security key PIN test vectors, as their generator makes them, and the apps' copy
