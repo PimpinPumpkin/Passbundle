@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <title>Lieferadresse</title>
+  </head>
+  <body>
+    <!-- A German checkout's address, known only by names and labels. The
+         Bundesland list and the Land list have full names as their values
+         (value="Bayern", value="Deutschland"), which an identity that stores
+         the codes BY and DE must still choose. -->
+    <form action="/signed-in.html" method="post">
+      <label for="vorname">Vorname</label>
+      <input id="vorname" name="vorname" type="text" />
+      <label for="nachname">Nachname</label>
+      <input id="nachname" name="nachname" type="text" />
+      <label for="strasse">Straße und Hausnummer</label>
+      <input id="strasse" name="strasse" type="text" />
+      <label for="plz">PLZ</label>
+      <input id="plz" name="plz" type="text" />
+      <label for="ort">Ort</label>
+      <input id="ort" name="ort" type="text" />
+      <label for="bundesland">Bundesland</label>
+      <select id="bundesland" name="bundesland">
+        <option value="">Bitte wählen</option>
+        <option value="Baden-Württemberg">Baden-Württemberg</option>
+        <option value="Bayern">Bayern</option>
+        <option value="Berlin">Berlin</option>
+        <option value="Hamburg">Hamburg</option>
+        <option value="Hessen">Hessen</option>
+      </select>
+      <label for="land">Land</label>
+      <select id="land" name="land">
+        <option value="">Bitte wählen</option>
+        <option value="Deutschland">Deutschland</option>
+        <option value="Österreich">Österreich</option>
+        <option value="Schweiz">Schweiz</option>
+        <option value="Vereinigtes Königreich">Vereinigtes Königreich</option>
+      </select>
+      <button type="submit">Weiter</button>
+    </form>
+  </body>
+</html>

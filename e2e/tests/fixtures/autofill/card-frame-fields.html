@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Card details</title>
+  </head>
+  <body>
+    <!-- A card's fields in a frame of their own, in no form, as a payment
+         service hosts them on a shop's checkout (card-frames.html): the form
+         the fill started in, on the shop's page, mustn't hide them. -->
+    <label for="ccnumber">Card number</label>
+    <input id="ccnumber" name="ccnumber" autocomplete="cc-number" inputmode="numeric" />
+    <label for="ccexp">Expiry (MM/YY)</label>
+    <input id="ccexp" name="ccexp" autocomplete="cc-exp" placeholder="MM/YY" />
+    <label for="cvc">Security code</label>
+    <input id="cvc" name="cvc" autocomplete="cc-csc" inputmode="numeric" />
+  </body>
+</html>

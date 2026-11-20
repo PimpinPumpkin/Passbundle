@@ -110,7 +110,8 @@ export async function reloadVault(page: Page) {
  * Accepts a role on the vault page. The test servers send no email, so an
  * invitation joins an existing account without asking, and a role that
  * requires two-step login for admins (an owner, an admin, or a custom role
- * that manages members, policies, or account recovery) waits for its person
+ * that manages members, groups, shared folders, policies, or account
+ * recovery) waits for its person
  * to accept it before anyone lets them in (DESIGN.md, "Two-step login for
  * admins"). With two-step login set up, accepting leaves them signed in.
  */

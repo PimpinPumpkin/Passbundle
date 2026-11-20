@@ -4,6 +4,12 @@
 name: Tier 2 (Windows)
 
 on:
+  pull_request:
+    paths:
+      - "installer/windows/**"
+      - "e2e/windows/**"
+      - "e2e/playwright.windows.config.ts"
+      - ".github/workflows/tier2-windows.yml"
   push:
     branches: [main]
     paths:
@@ -69,6 +75,42 @@ jobs:
       - name: Install as an RMM would, and check the registry
         shell: pwsh
         run: ./installer/windows/tests/Test-Install.ps1
+      - name: Run the install script again, and with another build, while the agent, its browser helper, and the app run
+        shell: pwsh
+        run: ./installer/windows/tests/Test-Rerun.ps1
+      - name: Two test releases of the agent, its host, and the app, signed with a throwaway key
+        # Two releases of the same build: 0.1.1, which the next step installs,
+        # and 0.1.2, which a stand-in for the update site serves. Each has a
+        # test build of the agent with the throwaway key and the stand-in
+        # compiled in (passbundle-apps, agent/README.md, "Updates"), which
+        # release builds refuse.
+        shell: bash
+        run: |
+          if [ ! -f apps/agent/examples/test-release.rs ]; then
+            echo "This passbundle-apps has no test releases for the update task: its checks don't run."
+            exit 0
+          fi
+          test=installer/windows/update-test
+          testw=$(cygpath -w "$PWD/$test")
+          site=http://127.0.0.1:8719/agent
+          mkdir -p "$test/site/agent"
+          (cd apps/agent && cargo run --locked --example test-release -- key "$testw/key")
+          key=$(cat "$test/key/key.pub")
+          (cd apps/agent && PB_TEST_UPDATE_KEY="$key" PB_TEST_UPDATE_SOURCE="$site" cargo build --locked --features test-update)
+          # Each says its version, and has a file the other doesn't.
+          for version in 0.1.1 0.1.2; do
+            bundle="$test/bundle-$version"
+            mkdir -p "$bundle"
+            cp -R apps/app/build/windows/x64/runner/Release/. "$bundle/"
+            echo "$version" > "$bundle/update-test.txt"
+            echo "$version" > "$bundle/only-$version.txt"
+            apps/tools/release-folder.sh "$bundle" apps/core/target/release apps/agent/target/debug "$test/$version" "$version" windows-x64
+          done
+          python apps/tools/zip-release.py "$test/0.1.2" "$test/site/agent/PassBundle-0.1.2-windows-x64.zip"
+          (cd apps/agent && cargo run --locked --example test-release -- sign "$testw/key" "$testw/site/agent/PassBundle-0.1.2-windows-x64.zip" 0.1.2 "$site" "$testw/site/agent")
+      - name: The update task puts 0.1.2 in place of 0.1.1, end to end
+        shell: pwsh
+        run: ./installer/windows/tests/Test-AgentUpdate.ps1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24

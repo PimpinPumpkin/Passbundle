@@ -1,7 +1,8 @@
 // Two-step login for admins (DESIGN.md, "Two-step login for admins"): an
 // organization that requires it (the Business preset and an MSP's clients, by
 // default) requires its owners, admins, custom roles that manage members,
-// policies, or account recovery, and everyone its MSP brings in to have an
+// groups, shared folders, policies, or account recovery, and everyone its MSP
+// brings in to have an
 // authenticator app, a security key or passkey, or Duo with the server's own
 // Duo account; an MSP requires it of its whole staff. Someone it covers who
 // signs in without one gets a setup session, which can only set one up,
@@ -112,7 +113,7 @@ async function refresh(request: APIRequestContext, refreshToken: string) {
   return { status: response.status(), body: await response.json().catch(() => null) };
 }
 
-test("an organization's owners, admins, and custom roles that manage members, policies, or account recovery need it; nobody else does", async ({
+test("an organization's owners, admins, and custom roles that manage members, groups, shared folders, policies, or account recovery need it; nobody else does", async ({
   request,
 }) => {
   test.setTimeout(120_000);
@@ -163,15 +164,18 @@ test("an organization's owners, admins, and custom roles that manage members, po
   }
   // A revoked admin reaches nothing, so isn't covered.
   expectSignedIn(await api.signIn(revoked.email, revoked.password));
-  // Custom roles that manage members, policies, or account recovery are
-  // covered; members, managers, and custom roles that only see the event log
-  // or import and export aren't.
+  // Custom roles that manage members, groups, shared folders, policies, or
+  // account recovery are covered; members, managers, and custom roles that
+  // only see the event log, reports, or import and export aren't.
   const CUSTOM = 4;
   for (const [type, permissions, covered] of [
     [CUSTOM, { manageUsers: true }, true],
     [CUSTOM, { managePolicies: true }, true],
     [CUSTOM, { manageResetPassword: true }, true],
+    [CUSTOM, { manageGroups: true }, true],
+    [CUSTOM, { keykeeperManageCollections: true }, true],
     [CUSTOM, { accessEventLogs: true }, false],
+    [CUSTOM, { accessReports: true }, false],
     [CUSTOM, { accessImportExport: true }, false],
     [3, {}, false],
     [2, {}, false],

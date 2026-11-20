@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Card details</title>
+  </head>
+  <body>
+    <!-- A card's fields in a frame from another site that isn't a payment
+         service (card-frames.html). They're in a form, the first on this
+         page as the shop's form is on the shop's, which the menu's narrowing
+         to the form the fill started in doesn't tell apart: only the frame
+         rule keeps the card out of them. -->
+    <form>
+      <label for="ccnumber">Card number</label>
+      <input id="ccnumber" name="ccnumber" autocomplete="cc-number" inputmode="numeric" />
+      <label for="ccexp">Expiry (MM/YY)</label>
+      <input id="ccexp" name="ccexp" autocomplete="cc-exp" placeholder="MM/YY" />
+      <label for="cvc">Security code</label>
+      <input id="cvc" name="cvc" autocomplete="cc-csc" inputmode="numeric" />
+    </form>
+  </body>
+</html>

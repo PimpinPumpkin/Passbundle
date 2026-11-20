@@ -310,10 +310,24 @@ jobs:
           path: meta
           sparse-checkout: docs/vectors
           persist-credentials: false
+      # Script access (docs/script-access.md): the web vault's copy and the
+      # command-line tool's are the meta repo's vectors; the tool's unit test
+      # (run below) checks its own crypto against its copy.
+      - name: The web vault's and the command-line tool's copies of the script access test vectors
+        run: |
+          cmp meta/docs/vectors/script-access-v1.json libs/admin-console/src/common/keykeeper/script-access.vectors.json
+          cmp meta/docs/vectors/script-access-v1.json apps/cli/src/keykeeper/script-access.vectors.json
       - name: The core's test vectors, checked with upstream's own crypto
         run: node meta/docs/vectors/check-core-vectors.mjs meta/docs/vectors/core-v1.json .
       - name: The desktop updater's test vectors, as their generator makes them
         run: node meta/docs/vectors/make-desktop-update-v1.mjs | cmp - meta/docs/vectors/desktop-update-v1.json
+      # The command-line tool's updater (DESIGN.md, "Command-line tool",
+      # "Updating itself"): the vectors as their generator makes them, and the
+      # copy the clients' jest test (self-update.spec.ts) reads.
+      - name: The command-line tool's update test vectors, as their generator makes them, and the clients' copy
+        run: |
+          node meta/docs/vectors/make-cli-update-v1.mjs | cmp - meta/docs/vectors/cli-update-v1.json
+          cmp meta/docs/vectors/cli-update-v1.json apps/cli/src/keykeeper/cli-update-v1.vectors.json
       - name: The apps' attachment and Send test vectors, as their generator makes them
         run: node meta/docs/vectors/make-attachments-send-v1.mjs | cmp - meta/docs/vectors/attachments-send-v1.json
       # The password-protected export (DESIGN.md, "Archive, export, and import
@@ -341,6 +355,12 @@ jobs:
           node meta/docs/vectors/make-device-signin-v1.mjs passbundle-apps/core/src/words/eff-large.txt | cmp - meta/docs/vectors/device-signin-v1.json
           node meta/docs/vectors/check-device-signin-vectors.mjs meta/docs/vectors/device-signin-v1.json .
           cmp meta/docs/vectors/device-signin-v1.json passbundle-apps/core/tests/vectors/device-signin-v1.json
+      # Sending a security key its PIN (DESIGN.md, "A security key's PIN"):
+      # the vectors as their generator makes them, and the apps' copy.
+      - name: The security key PIN test vectors, as their generator makes them, and the apps' copy
+        run: |
+          node meta/docs/vectors/make-security-key-pin-v1.mjs | cmp - meta/docs/vectors/security-key-pin-v1.json
+          cmp meta/docs/vectors/security-key-pin-v1.json passbundle-apps/core/tests/vectors/security-key-pin-v1.json
       - name: The web vault's reload key test vectors, checked with upstream's own crypto
         run: node meta/docs/vectors/check-reload-key-vectors.mjs meta/docs/vectors/reload-key-v1.json .
       - name: The reload key test vectors, as their generator makes them, and the web vault's copy
@@ -466,10 +486,26 @@ jobs:
 
   script-module:
     # RMMs mostly run scripts in Windows PowerShell 5.1, which the Linux
-    # end-to-end suite can't, so the module's checks run here under both.
-    name: Script access module on Windows
+    # end-to-end suite can't, so the module's checks run here under both on
+    # Windows, and under PowerShell 7 on Linux and on a Mac too, where Mac and
+    # Linux scripts run it (docs/script-access.md, "On a Mac or Linux"). Each
+    # runner has PowerShell 7 already; nothing is installed.
+    name: Script access module on ${{ matrix.name }}
     needs: refs
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            runner: windows-latest
+          - name: Linux
+            runner: ubuntu-24.04
+          - name: macOS
+            # Intel: GitHub's Apple silicon Macs ran out of capacity in November
+            # 2026 and dropped queued jobs, and this check doesn't depend on the
+            # chip.
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -485,11 +521,21 @@ jobs:
           sparse-checkout: src/static/scripts
           persist-credentials: false
       - name: Windows PowerShell 5.1
+        if: matrix.name == 'Windows'
         shell: powershell
         run: .\docs\vectors\check-script-module.ps1 -Module server\src\static\scripts\PassBundle.psm1 -Vectors docs\vectors\script-access-v1.json
       - name: PowerShell 7
         shell: pwsh
-        run: .\docs\vectors\check-script-module.ps1 -Module server\src\static\scripts\PassBundle.psm1 -Vectors docs\vectors\script-access-v1.json
+        run: ./docs/vectors/check-script-module.ps1 -Module server/src/static/scripts/PassBundle.psm1 -Vectors docs/vectors/script-access-v1.json
+      # The settings page shows `Import-Module .\PassBundle.psm1`, which a Mac
+      # or Linux script runs as it is.
+      - name: The settings page's import line, as it is
+        if: matrix.name != 'Windows'
+        shell: pwsh
+        working-directory: server/src/static/scripts
+        run: |
+          Import-Module .\PassBundle.psm1
+          Get-Command Get-PassBundleCredential, Get-PassBundleSecret | Out-Null
 
   install-scripts:
     # The Mac and Linux install scripts: shellcheck, and the Mac configuration

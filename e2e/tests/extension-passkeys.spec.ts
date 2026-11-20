@@ -93,6 +93,41 @@ test("a site makes a passkey through the extension and signs in with it, here an
   }
 });
 
+// The extension's background and every open extension page share one
+// decrypted copy of the vault. A vault page left open (here the popup as a
+// tab, for people a popped-out vault window) used to write its copy from just
+// before a save after the save had cleared it, and the background then
+// answered from that copy: making a passkey as a new login is two saves in
+// quick succession, and a site that named the new passkey at once was offered
+// to save another (DESIGN.md, "Passkeys", "A passkey saved a moment before").
+test("with the vault open in a tab, a passkey made a moment before is recognized when the site names it at once", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const user = userFor("passkeys-vault-open", testInfo.repeatEachIndex);
+  await (await createAccount(context, user)).close();
+  await logInPopup(await openPopup(context, extensionId), user);
+
+  const page = await context.newPage();
+  await page.goto(site);
+  const saving = context.waitForEvent("page");
+  await page.getByRole("button", { name: "Make a passkey" }).click();
+  const save = await saving;
+  await expect(save.getByRole("heading", { name: "Save passkey" })).toBeVisible();
+  await answerAndClose(save, save.getByRole("button", { name: "Save passkey as new login" }));
+  await expect(page.getByRole("status")).toHaveText("Made a passkey");
+
+  // At once, the site asks for another for the same account, naming that one.
+  const asking = context.waitForEvent("page");
+  await page.getByRole("button", { name: "Make another, naming the one you have" }).click();
+  const ask = await asking;
+  await expect(ask.getByText("A passkey already exists for this application.")).toBeVisible();
+  // Not offered to save another, in a new login or in the one it's in.
+  await expect(ask.getByRole("button", { name: "Save passkey as new login" })).toHaveCount(0);
+  await expect(ask.getByRole("heading", { name: "Choose a login to save this passkey to" })).toHaveCount(0);
+});
+
 /** What the extension says, in the apps' words, when it refuses a counting passkey in a login kept out of Personal. */
 const keptOut =
   "Your organization keeps items out of Personal, so this login can't be changed. Its passkey counts its sign-ins, and signing in would change the login. You can move it to a shared folder in the web vault, then try again.";
