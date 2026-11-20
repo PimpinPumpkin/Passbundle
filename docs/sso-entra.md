@@ -45,6 +45,8 @@ PassBundle recognizes people by their Entra object ID, never their email. The em
 
 Now people can sign in: on the sign-in page, they type their email and choose **Use single sign-on**. With a verified domain, they go straight to Microsoft; otherwise they type the SSO identifier. The page also shows a link that starts the sign-in, for an intranet page or a bookmark.
 
+PassBundle's desktop and phone apps have **Use single sign-on** too, with nothing more to set up in Entra: the app opens the person's own browser (on an iPhone, its sign-in sheet; on Android, a Custom Tab), PassBundle's server asks once whether to go on ("Sign in to the PassBundle app?"), Microsoft signs them in, and the browser hands the sign-in back to the app, which asks for their master password. Microsoft only ever answers PassBundle's server, at the one redirect URI above.
+
 ## 6. Optional: require it
 
 Policies, **Require single sign-on**, makes members sign in with it. It needs single sign-on on and the **Single organization** policy. Owners and your IT provider's staff can always sign in with their passwords, and account recovery keeps working.
@@ -98,3 +100,4 @@ Not done yet: PassBundle's tests use a stand-in for Entra. With a Microsoft 365 
 - [ ] Account recovery: reset a member's master password; they sign in with Microsoft and unlock with the new one.
 - [ ] Conditional Access (for example, requiring MFA for the app) applies at Microsoft's sign-in, with nothing to change here. Whether the ID token carries `amr` with `mfa` after it.
 - [ ] A guest (B2B) user in the tenant, invited to the organization: links only by their own invited email.
+- [ ] The desktop app (Windows, Mac, Linux) and the phone apps sign in a linked member with **Use single sign-on**, back to the app by themselves, and the master password unlocks; with Require single sign-on on, a member's password in the app goes on to it.
