@@ -1,0 +1,743 @@
+{
+  "version": 1,
+  "testOnly": "Every key here is made from a fixed, published seed, for tests only. Nothing may trust them outside tests: the extension's built-in key list ships empty.",
+  "prefix": "PassBundle site rules v1\n",
+  "now": "2026-11-19T12:00:00Z",
+  "key": {
+    "testOnly": true,
+    "seed": "303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f",
+    "public": "8bb04e1c1b83dddf311f5bcddf7c50ede3c0802f47ec796e2a131cf41298d9f3"
+  },
+  "otherKey": {
+    "testOnly": true,
+    "seed": "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f",
+    "public": "cd14b37f956e953194ff7fb73b3d81dcc561d61a7538094b7c3e1a643ee5f3aa"
+  },
+  "cases": [
+    {
+      "name": "as signed",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "8ovSdGzc1/VWRVJP7jOIzhczhwNLtdsF6/cYYZ55xAMDinWi1VdcQGhscYjwCY0f/tO+ed1cx7o5Bci81Iw3CQ==\n",
+      "rules": "{\"schemaVersion\":\"1.0.0\",\"hosts\":{\"login.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#signin-box >>> #member-number\"],\"password\":[\"#signin-box >>> #secret\"]},\"passbundle\":{\"id\":\"login-shadow\",\"verified\":\"2026-11-15\"}}]},\"bank.example.test\":{\"pathnames\":{\"/sign-in/\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"email\":[\"input[name=\\\"customer\\\"]\"],\"phone\":[\"#phone\"],\"password\":[\"#pin\",\"#password\"],\"oneTimeCode\":[\"#code\"],\"newPassword\":[\"#new-pin\"]},\"passbundle\":{\"id\":\"bank-sign-in\",\"verified\":\"2026-10-01\"}}]}}},\"change.example.test\":{\"forms\":[{\"category\":\"account-update\",\"fields\":{\"password\":[\"#current\"],\"newPassword\":[\"#new\"],\"oneTimeCode\":[[\"#d1\",\"#d2\",\"#d3\"],\"#code\"]},\"passbundle\":{\"id\":\"change-current\",\"verified\":\"2026-11-10\"}}]},\"stale.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"]},\"passbundle\":{\"id\":\"stale\",\"verified\":\"2026-08-21\"}}]},\"cards.example.test\":{\"forms\":[{\"category\":\"payment-card\",\"fields\":{\"cardNumber\":[\"#cc\"]},\"passbundle\":{\"id\":\"card\",\"verified\":\"2026-11-15\"}}]}}}",
+      "lastSequence": 41,
+      "taken": {
+        "sequence": 42,
+        "issued": "2026-11-18T00:00:00Z",
+        "expires": "2026-12-02T00:00:00Z",
+        "sha256": "6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77",
+        "hosts": {
+          "login.example.test": [
+            {
+              "id": "login-shadow",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#signin-box >>> #member-number"
+                ],
+                "password": [
+                  "#signin-box >>> #secret"
+                ]
+              }
+            }
+          ],
+          "bank.example.test": [
+            {
+              "id": "bank-sign-in",
+              "path": "/sign-in",
+              "verified": "2026-10-01",
+              "fields": {
+                "username": [
+                  "input[name=\"customer\"]"
+                ],
+                "password": [
+                  "#pin",
+                  "#password"
+                ],
+                "totp": [
+                  "#code"
+                ]
+              }
+            }
+          ],
+          "change.example.test": [
+            {
+              "id": "change-current",
+              "path": null,
+              "verified": "2026-11-10",
+              "fields": {
+                "password": [
+                  "#current"
+                ],
+                "totp": [
+                  "#code"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "the same sequence as the copy kept, taken again",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "8ovSdGzc1/VWRVJP7jOIzhczhwNLtdsF6/cYYZ55xAMDinWi1VdcQGhscYjwCY0f/tO+ed1cx7o5Bci81Iw3CQ==\n",
+      "rules": "{\"schemaVersion\":\"1.0.0\",\"hosts\":{\"login.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#signin-box >>> #member-number\"],\"password\":[\"#signin-box >>> #secret\"]},\"passbundle\":{\"id\":\"login-shadow\",\"verified\":\"2026-11-15\"}}]},\"bank.example.test\":{\"pathnames\":{\"/sign-in/\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"email\":[\"input[name=\\\"customer\\\"]\"],\"phone\":[\"#phone\"],\"password\":[\"#pin\",\"#password\"],\"oneTimeCode\":[\"#code\"],\"newPassword\":[\"#new-pin\"]},\"passbundle\":{\"id\":\"bank-sign-in\",\"verified\":\"2026-10-01\"}}]}}},\"change.example.test\":{\"forms\":[{\"category\":\"account-update\",\"fields\":{\"password\":[\"#current\"],\"newPassword\":[\"#new\"],\"oneTimeCode\":[[\"#d1\",\"#d2\",\"#d3\"],\"#code\"]},\"passbundle\":{\"id\":\"change-current\",\"verified\":\"2026-11-10\"}}]},\"stale.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"]},\"passbundle\":{\"id\":\"stale\",\"verified\":\"2026-08-21\"}}]},\"cards.example.test\":{\"forms\":[{\"category\":\"payment-card\",\"fields\":{\"cardNumber\":[\"#cc\"]},\"passbundle\":{\"id\":\"card\",\"verified\":\"2026-11-15\"}}]}}}",
+      "lastSequence": 42,
+      "taken": {
+        "sequence": 42,
+        "issued": "2026-11-18T00:00:00Z",
+        "expires": "2026-12-02T00:00:00Z",
+        "sha256": "6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77",
+        "hosts": {
+          "login.example.test": [
+            {
+              "id": "login-shadow",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#signin-box >>> #member-number"
+                ],
+                "password": [
+                  "#signin-box >>> #secret"
+                ]
+              }
+            }
+          ],
+          "bank.example.test": [
+            {
+              "id": "bank-sign-in",
+              "path": "/sign-in",
+              "verified": "2026-10-01",
+              "fields": {
+                "username": [
+                  "input[name=\"customer\"]"
+                ],
+                "password": [
+                  "#pin",
+                  "#password"
+                ],
+                "totp": [
+                  "#code"
+                ]
+              }
+            }
+          ],
+          "change.example.test": [
+            {
+              "id": "change-current",
+              "path": null,
+              "verified": "2026-11-10",
+              "fields": {
+                "password": [
+                  "#current"
+                ],
+                "totp": [
+                  "#code"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a bad signature (one bit of it changed)",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "8ovSdGzc1/VWRVNP7jOIzhczhwNLtdsF6/cYYZ55xAMDinWi1VdcQGhscYjwCY0f/tO+ed1cx7o5Bci81Iw3CQ==\n",
+      "refused": "signature"
+    },
+    {
+      "name": "one byte of the manifest changed after signing",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":43,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "8ovSdGzc1/VWRVJP7jOIzhczhwNLtdsF6/cYYZ55xAMDinWi1VdcQGhscYjwCY0f/tO+ed1cx7o5Bci81Iw3CQ==\n",
+      "rules": "{\"schemaVersion\":\"1.0.0\",\"hosts\":{\"login.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#signin-box >>> #member-number\"],\"password\":[\"#signin-box >>> #secret\"]},\"passbundle\":{\"id\":\"login-shadow\",\"verified\":\"2026-11-15\"}}]},\"bank.example.test\":{\"pathnames\":{\"/sign-in/\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"email\":[\"input[name=\\\"customer\\\"]\"],\"phone\":[\"#phone\"],\"password\":[\"#pin\",\"#password\"],\"oneTimeCode\":[\"#code\"],\"newPassword\":[\"#new-pin\"]},\"passbundle\":{\"id\":\"bank-sign-in\",\"verified\":\"2026-10-01\"}}]}}},\"change.example.test\":{\"forms\":[{\"category\":\"account-update\",\"fields\":{\"password\":[\"#current\"],\"newPassword\":[\"#new\"],\"oneTimeCode\":[[\"#d1\",\"#d2\",\"#d3\"],\"#code\"]},\"passbundle\":{\"id\":\"change-current\",\"verified\":\"2026-11-10\"}}]},\"stale.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"]},\"passbundle\":{\"id\":\"stale\",\"verified\":\"2026-08-21\"}}]},\"cards.example.test\":{\"forms\":[{\"category\":\"payment-card\",\"fields\":{\"cardNumber\":[\"#cc\"]},\"passbundle\":{\"id\":\"card\",\"verified\":\"2026-11-15\"}}]}}}",
+      "refused": "signature"
+    },
+    {
+      "name": "signed with another key",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "vP9MGmtj6QWF/EWhy0S9B2FIUKF/+BoYqwUfrOJh5+QgC6/JV/WKc+/+9kPRBEYB4RMia8qy34laQYrJ9LLLDw==\n",
+      "refused": "signature"
+    },
+    {
+      "name": "signed with another key that's trusted too",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "vP9MGmtj6QWF/EWhy0S9B2FIUKF/+BoYqwUfrOJh5+QgC6/JV/WKc+/+9kPRBEYB4RMia8qy34laQYrJ9LLLDw==\n",
+      "rules": "{\"schemaVersion\":\"1.0.0\",\"hosts\":{\"login.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#signin-box >>> #member-number\"],\"password\":[\"#signin-box >>> #secret\"]},\"passbundle\":{\"id\":\"login-shadow\",\"verified\":\"2026-11-15\"}}]},\"bank.example.test\":{\"pathnames\":{\"/sign-in/\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"email\":[\"input[name=\\\"customer\\\"]\"],\"phone\":[\"#phone\"],\"password\":[\"#pin\",\"#password\"],\"oneTimeCode\":[\"#code\"],\"newPassword\":[\"#new-pin\"]},\"passbundle\":{\"id\":\"bank-sign-in\",\"verified\":\"2026-10-01\"}}]}}},\"change.example.test\":{\"forms\":[{\"category\":\"account-update\",\"fields\":{\"password\":[\"#current\"],\"newPassword\":[\"#new\"],\"oneTimeCode\":[[\"#d1\",\"#d2\",\"#d3\"],\"#code\"]},\"passbundle\":{\"id\":\"change-current\",\"verified\":\"2026-11-10\"}}]},\"stale.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"]},\"passbundle\":{\"id\":\"stale\",\"verified\":\"2026-08-21\"}}]},\"cards.example.test\":{\"forms\":[{\"category\":\"payment-card\",\"fields\":{\"cardNumber\":[\"#cc\"]},\"passbundle\":{\"id\":\"card\",\"verified\":\"2026-11-15\"}}]}}}",
+      "keys": [
+        "8bb04e1c1b83dddf311f5bcddf7c50ede3c0802f47ec796e2a131cf41298d9f3",
+        "cd14b37f956e953194ff7fb73b3d81dcc561d61a7538094b7c3e1a643ee5f3aa"
+      ],
+      "taken": {
+        "sequence": 42,
+        "issued": "2026-11-18T00:00:00Z",
+        "expires": "2026-12-02T00:00:00Z",
+        "sha256": "6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77",
+        "hosts": {
+          "login.example.test": [
+            {
+              "id": "login-shadow",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#signin-box >>> #member-number"
+                ],
+                "password": [
+                  "#signin-box >>> #secret"
+                ]
+              }
+            }
+          ],
+          "bank.example.test": [
+            {
+              "id": "bank-sign-in",
+              "path": "/sign-in",
+              "verified": "2026-10-01",
+              "fields": {
+                "username": [
+                  "input[name=\"customer\"]"
+                ],
+                "password": [
+                  "#pin",
+                  "#password"
+                ],
+                "totp": [
+                  "#code"
+                ]
+              }
+            }
+          ],
+          "change.example.test": [
+            {
+              "id": "change-current",
+              "path": null,
+              "verified": "2026-11-10",
+              "fields": {
+                "password": [
+                  "#current"
+                ],
+                "totp": [
+                  "#code"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "signed without the prefix",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "iv5ad2R9Si7Xvf5cAIVf1T31dfPAThHovi9lO3qEQU7rDvPJ+BE2BRbAuclI0akkOQXIX8fpmt0cmgLUw1boAA==\n",
+      "refused": "signature"
+    },
+    {
+      "name": "signed with the desktop updates' prefix",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "1/IcT9XMISeen7fyoYQCtWXB+b2IGdfFYaP5ssU1b+0DubyVsuQQvbWEzxyHFa3OXxN1DXMej+z5nkCIyvZSAQ==\n",
+      "refused": "signature"
+    },
+    {
+      "name": "S isn't reduced (S + L, the same signature written another way)",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "8ovSdGzc1/VWRVJP7jOIzhczhwNLtdsF6/cYYZ55xAPwXWv/77pumD4JaSvPA2w0/tO+ed1cx7o5Bci81Iw3GQ==\n",
+      "refused": "signature"
+    },
+    {
+      "name": "R is a small-order point (the neutral point), signed with the key's own secret",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADNcXzGn/HrA6weCQKefpvR62HZdJM2SbID+FyVftW+Dg==\n",
+      "refused": "signature"
+    },
+    {
+      "name": "a small-order key (the neutral point), whose neutral R and zero S any message passes",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==\n",
+      "keys": [
+        "0100000000000000000000000000000000000000000000000000000000000000"
+      ],
+      "refused": "signature"
+    },
+    {
+      "name": "a key that isn't a canonical encoding (y = p + 3)",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "8ovSdGzc1/VWRVJP7jOIzhczhwNLtdsF6/cYYZ55xAMDinWi1VdcQGhscYjwCY0f/tO+ed1cx7o5Bci81Iw3CQ==\n",
+      "keys": [
+        "f0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f"
+      ],
+      "refused": "signature"
+    },
+    {
+      "name": "a signature file that isn't strict base64 (a bit set past its 64 bytes)",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "8ovSdGzc1/VWRVJP7jOIzhczhwNLtdsF6/cYYZ55xAMDinWi1VdcQGhscYjwCY0f/tO+ed1cx7o5Bci81Iw3CR==\n",
+      "refused": "signature"
+    },
+    {
+      "name": "no keys trusted (as PassBundle's feed in a build before the owner adds one)",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "8ovSdGzc1/VWRVJP7jOIzhczhwNLtdsF6/cYYZ55xAMDinWi1VdcQGhscYjwCY0f/tO+ed1cx7o5Bci81Iw3CQ==\n",
+      "keys": [],
+      "refused": "signature"
+    },
+    {
+      "name": "an older sequence than the copy kept (a rollback)",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":41,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "2lFG9PsdxMTC/aFlEZTBixKF+6zCkj6toCjOFnkVK4yoQschCCQN5ZH5jBjIVFDNt/6bNZj+bCDiFFiNlfDBCQ==\n",
+      "lastSequence": 42,
+      "refused": "rollback"
+    },
+    {
+      "name": "expired",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "8ovSdGzc1/VWRVJP7jOIzhczhwNLtdsF6/cYYZ55xAMDinWi1VdcQGhscYjwCY0f/tO+ed1cx7o5Bci81Iw3CQ==\n",
+      "now": "2026-12-02T00:00:00Z",
+      "refused": "expired"
+    },
+    {
+      "name": "a second before it expires",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "8ovSdGzc1/VWRVJP7jOIzhczhwNLtdsF6/cYYZ55xAMDinWi1VdcQGhscYjwCY0f/tO+ed1cx7o5Bci81Iw3CQ==\n",
+      "rules": "{\"schemaVersion\":\"1.0.0\",\"hosts\":{\"login.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#signin-box >>> #member-number\"],\"password\":[\"#signin-box >>> #secret\"]},\"passbundle\":{\"id\":\"login-shadow\",\"verified\":\"2026-11-15\"}}]},\"bank.example.test\":{\"pathnames\":{\"/sign-in/\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"email\":[\"input[name=\\\"customer\\\"]\"],\"phone\":[\"#phone\"],\"password\":[\"#pin\",\"#password\"],\"oneTimeCode\":[\"#code\"],\"newPassword\":[\"#new-pin\"]},\"passbundle\":{\"id\":\"bank-sign-in\",\"verified\":\"2026-10-01\"}}]}}},\"change.example.test\":{\"forms\":[{\"category\":\"account-update\",\"fields\":{\"password\":[\"#current\"],\"newPassword\":[\"#new\"],\"oneTimeCode\":[[\"#d1\",\"#d2\",\"#d3\"],\"#code\"]},\"passbundle\":{\"id\":\"change-current\",\"verified\":\"2026-11-10\"}}]},\"stale.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"]},\"passbundle\":{\"id\":\"stale\",\"verified\":\"2026-08-21\"}}]},\"cards.example.test\":{\"forms\":[{\"category\":\"payment-card\",\"fields\":{\"cardNumber\":[\"#cc\"]},\"passbundle\":{\"id\":\"card\",\"verified\":\"2026-11-15\"}}]}}}",
+      "now": "2026-12-01T23:59:59Z",
+      "taken": {
+        "sequence": 42,
+        "issued": "2026-11-18T00:00:00Z",
+        "expires": "2026-12-02T00:00:00Z",
+        "sha256": "6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77",
+        "hosts": {
+          "login.example.test": [
+            {
+              "id": "login-shadow",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#signin-box >>> #member-number"
+                ],
+                "password": [
+                  "#signin-box >>> #secret"
+                ]
+              }
+            }
+          ],
+          "bank.example.test": [
+            {
+              "id": "bank-sign-in",
+              "path": "/sign-in",
+              "verified": "2026-10-01",
+              "fields": {
+                "username": [
+                  "input[name=\"customer\"]"
+                ],
+                "password": [
+                  "#pin",
+                  "#password"
+                ],
+                "totp": [
+                  "#code"
+                ]
+              }
+            }
+          ],
+          "change.example.test": [
+            {
+              "id": "change-current",
+              "path": null,
+              "verified": "2026-11-10",
+              "fields": {
+                "password": [
+                  "#current"
+                ],
+                "totp": [
+                  "#code"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "more than 14 days from issued to expires",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:01Z\"}}",
+      "signature": "dhJxireV9NJxZ8QOqIeEOH2hVCH2B+VmAVB8KdxCIuNq7iIT3FQvtkt2j+S6np9RPNRHrRgLITSUVGSrMV2TBw==\n",
+      "refused": "lifetime"
+    },
+    {
+      "name": "issued more than a day ahead of the clock",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-20T12:00:01Z\",\"expires\":\"2026-11-22T12:00:00Z\"}}",
+      "signature": "FsIF0knJXrYKb21mn6WStxCFEOK0zLFkwFkDc3a9BNEwMASmRcz9Noo39tu9Uiv5AbyzR+NHWXvq6rfEW56FDQ==\n",
+      "refused": "lifetime"
+    },
+    {
+      "name": "the rules file isn't the one the manifest names (another SHA-256)",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-6639454392c081db.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "8ovSdGzc1/VWRVJP7jOIzhczhwNLtdsF6/cYYZ55xAMDinWi1VdcQGhscYjwCY0f/tO+ed1cx7o5Bci81Iw3CQ==\n",
+      "rules": "{\"schemaVersion\":\"1.0.0\",\"hosts\":{\"login.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#signin-box >>> #member-number\"],\"password\":[\"#signin-box >>> #secret\"]},\"passbundle\":{\"id\":\"login-shadow\",\"verified\":\"2026-11-15\"}}]}}}",
+      "refused": "hash"
+    },
+    {
+      "name": "signed, but naming no rules file",
+      "manifest": "{\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "8DRExcpQoX/RFOcp70paGNgeauKTPtaLPrTgdeJb3W4ozE1RySbPtYxAGNOfBLaAJgIwHz5c1D84SXd6EGzxAg==\n",
+      "refused": "malformed"
+    },
+    {
+      "name": "signed, but its rules file's name has a slash",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"../forms.json\",\"cid\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\",\"sha256\":\"6639454392c081db78ca4e7d821157cdb594856d9bc1ee5f3eed52ec933c4a77\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "0+qh0fUseeApc0xIiuSuzWUYB1F9UeXOTaw1cwX9Wccpo+bQa5B7L003b5EEnd///G9h0BQxUPNOXmk3uDkVCw==\n",
+      "refused": "malformed"
+    },
+    {
+      "name": "a selector longer than 500 characters is skipped with its rule, one of 500 taken",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-c4885cb62098c509.json\",\"cid\":\"c4885cb62098c50995edd3d6683739dd9658a018663943adab294ceff95bcfed\",\"sha256\":\"c4885cb62098c50995edd3d6683739dd9658a018663943adab294ceff95bcfed\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "Zras+uvhZiQTWfZaY1sf3ye/XY/h4JuV1+Osg4zc+kLbXuRh0G5nS8ynMgylQmaM8gHdvEhIDHQ+wca2KYhwDw==\n",
+      "rules": "{\"schemaVersion\":\"1.0.0\",\"hosts\":{\"fits.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"]},\"passbundle\":{\"id\":\"fits\",\"verified\":\"2026-11-15\"}}]},\"long.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"],\"password\":[\"#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"]},\"passbundle\":{\"id\":\"too-long\",\"verified\":\"2026-11-15\"}}]}}}",
+      "taken": {
+        "sequence": 42,
+        "issued": "2026-11-18T00:00:00Z",
+        "expires": "2026-12-02T00:00:00Z",
+        "sha256": "c4885cb62098c50995edd3d6683739dd9658a018663943adab294ceff95bcfed",
+        "hosts": {
+          "fits.example.test": [
+            {
+              "id": "fits",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a >>> into a frame is skipped with its rule; one into a shadow root is taken",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-290bf9fed01ca684.json\",\"cid\":\"290bf9fed01ca684c925e3dd69c42ed4711f4eeb42246399a5fdc95d1a542623\",\"sha256\":\"290bf9fed01ca684c925e3dd69c42ed4711f4eeb42246399a5fdc95d1a542623\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "OIOrfVXnoeOB85R7TjVYnu98SXQL9/QiBGX9uhoPzvVk/IGP1ovI2105W3X4y5Z0lG+ACz4EpKs2JJOWVm37Cw==\n",
+      "rules": "{\"schemaVersion\":\"1.0.0\",\"hosts\":{\"shadow.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"login-box >>> #username\"]},\"passbundle\":{\"id\":\"into-shadow\",\"verified\":\"2026-11-15\"}}]},\"frame.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"iframe#login >>> #username\"]},\"passbundle\":{\"id\":\"into-frame\",\"verified\":\"2026-11-15\"}}]},\"frame-two.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"password\":[\"#outer >>> div > IFRAME.box >>> #password\"]},\"passbundle\":{\"id\":\"into-frame-later\",\"verified\":\"2026-11-15\"}}]}}}",
+      "taken": {
+        "sequence": 42,
+        "issued": "2026-11-18T00:00:00Z",
+        "expires": "2026-12-02T00:00:00Z",
+        "sha256": "290bf9fed01ca684c925e3dd69c42ed4711f4eeb42246399a5fdc95d1a542623",
+        "hosts": {
+          "shadow.example.test": [
+            {
+              "id": "into-shadow",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "login-box >>> #username"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a host with more than 20 forms (its pages' forms counted too) is skipped; one with 20 taken",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-d06820cf74d4c4b9.json\",\"cid\":\"d06820cf74d4c4b9a54c6535918937125acf924b5a4a85deb33d59530a95f9ee\",\"sha256\":\"d06820cf74d4c4b9a54c6535918937125acf924b5a4a85deb33d59530a95f9ee\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "LDEiNWuxVIYjLS+Vz2aPmPQ+Msz565E989JDicg29LJvTLy0ZkCNb+BVFBMqHsKLobX/a7M/vmu0zxlgVLnmDA==\n",
+      "rules": "{\"schemaVersion\":\"1.0.0\",\"hosts\":{\"twenty.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u0\"]},\"passbundle\":{\"id\":\"many-0\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u1\"]},\"passbundle\":{\"id\":\"many-1\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u2\"]},\"passbundle\":{\"id\":\"many-2\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u3\"]},\"passbundle\":{\"id\":\"many-3\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u4\"]},\"passbundle\":{\"id\":\"many-4\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u5\"]},\"passbundle\":{\"id\":\"many-5\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u6\"]},\"passbundle\":{\"id\":\"many-6\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u7\"]},\"passbundle\":{\"id\":\"many-7\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u8\"]},\"passbundle\":{\"id\":\"many-8\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u9\"]},\"passbundle\":{\"id\":\"many-9\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u10\"]},\"passbundle\":{\"id\":\"many-10\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u11\"]},\"passbundle\":{\"id\":\"many-11\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u12\"]},\"passbundle\":{\"id\":\"many-12\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u13\"]},\"passbundle\":{\"id\":\"many-13\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u14\"]},\"passbundle\":{\"id\":\"many-14\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u15\"]},\"passbundle\":{\"id\":\"many-15\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u16\"]},\"passbundle\":{\"id\":\"many-16\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u17\"]},\"passbundle\":{\"id\":\"many-17\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u18\"]},\"passbundle\":{\"id\":\"many-18\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u19\"]},\"passbundle\":{\"id\":\"many-19\",\"verified\":\"2026-11-15\"}}]},\"too-many.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u0\"]},\"passbundle\":{\"id\":\"many-0\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u1\"]},\"passbundle\":{\"id\":\"many-1\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u2\"]},\"passbundle\":{\"id\":\"many-2\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u3\"]},\"passbundle\":{\"id\":\"many-3\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u4\"]},\"passbundle\":{\"id\":\"many-4\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u5\"]},\"passbundle\":{\"id\":\"many-5\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u6\"]},\"passbundle\":{\"id\":\"many-6\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u7\"]},\"passbundle\":{\"id\":\"many-7\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u8\"]},\"passbundle\":{\"id\":\"many-8\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u9\"]},\"passbundle\":{\"id\":\"many-9\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u10\"]},\"passbundle\":{\"id\":\"many-10\",\"verified\":\"2026-11-15\"}}],\"pathnames\":{\"/in\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u11\"]},\"passbundle\":{\"id\":\"many-11\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u12\"]},\"passbundle\":{\"id\":\"many-12\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u13\"]},\"passbundle\":{\"id\":\"many-13\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u14\"]},\"passbundle\":{\"id\":\"many-14\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u15\"]},\"passbundle\":{\"id\":\"many-15\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u16\"]},\"passbundle\":{\"id\":\"many-16\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u17\"]},\"passbundle\":{\"id\":\"many-17\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u18\"]},\"passbundle\":{\"id\":\"many-18\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u19\"]},\"passbundle\":{\"id\":\"many-19\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u20\"]},\"passbundle\":{\"id\":\"many-20\",\"verified\":\"2026-11-15\"}}]}}}}}",
+      "taken": {
+        "sequence": 42,
+        "issued": "2026-11-18T00:00:00Z",
+        "expires": "2026-12-02T00:00:00Z",
+        "sha256": "d06820cf74d4c4b9a54c6535918937125acf924b5a4a85deb33d59530a95f9ee",
+        "hosts": {
+          "twenty.example.test": [
+            {
+              "id": "many-0",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u0"
+                ]
+              }
+            },
+            {
+              "id": "many-1",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u1"
+                ]
+              }
+            },
+            {
+              "id": "many-2",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u2"
+                ]
+              }
+            },
+            {
+              "id": "many-3",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u3"
+                ]
+              }
+            },
+            {
+              "id": "many-4",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u4"
+                ]
+              }
+            },
+            {
+              "id": "many-5",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u5"
+                ]
+              }
+            },
+            {
+              "id": "many-6",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u6"
+                ]
+              }
+            },
+            {
+              "id": "many-7",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u7"
+                ]
+              }
+            },
+            {
+              "id": "many-8",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u8"
+                ]
+              }
+            },
+            {
+              "id": "many-9",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u9"
+                ]
+              }
+            },
+            {
+              "id": "many-10",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u10"
+                ]
+              }
+            },
+            {
+              "id": "many-11",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u11"
+                ]
+              }
+            },
+            {
+              "id": "many-12",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u12"
+                ]
+              }
+            },
+            {
+              "id": "many-13",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u13"
+                ]
+              }
+            },
+            {
+              "id": "many-14",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u14"
+                ]
+              }
+            },
+            {
+              "id": "many-15",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u15"
+                ]
+              }
+            },
+            {
+              "id": "many-16",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u16"
+                ]
+              }
+            },
+            {
+              "id": "many-17",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u17"
+                ]
+              }
+            },
+            {
+              "id": "many-18",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u18"
+                ]
+              }
+            },
+            {
+              "id": "many-19",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u19"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a rule verified more than 90 days ago is dropped, and one verified ahead of the clock skipped",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-3008b701e847dc52.json\",\"cid\":\"3008b701e847dc5203a5dee6e8702532e479e265020430e5be23114658dcad69\",\"sha256\":\"3008b701e847dc5203a5dee6e8702532e479e265020430e5be23114658dcad69\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "MwnozeK0XQC3WlaOT+ZdwSjwC7R40TJ4b9bjzpFGAfo9IgtTe3FWuOVYVbtjyEUf2pegzpd/PG+ftKAF3rY6Aw==\n",
+      "rules": "{\"schemaVersion\":\"1.0.0\",\"hosts\":{\"kept.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"]},\"passbundle\":{\"id\":\"kept\",\"verified\":\"2026-08-22\"}}]},\"dropped.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"]},\"passbundle\":{\"id\":\"dropped\",\"verified\":\"2026-08-21\"}}]},\"future.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"]},\"passbundle\":{\"id\":\"future\",\"verified\":\"2026-11-21\"}}]}}}",
+      "taken": {
+        "sequence": 42,
+        "issued": "2026-11-18T00:00:00Z",
+        "expires": "2026-12-02T00:00:00Z",
+        "sha256": "3008b701e847dc5203a5dee6e8702532e479e265020430e5be23114658dcad69",
+        "hosts": {
+          "kept.example.test": [
+            {
+              "id": "kept",
+              "path": null,
+              "verified": "2026-08-22",
+              "fields": {
+                "username": [
+                  "#u"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "bad entries are skipped one by one, and the rest taken",
+      "manifest": "{\"maps\":{\"forms\":{\"v1\":{\"filename\":\"forms-e5c75684647fb5a2.json\",\"cid\":\"e5c75684647fb5a2f69fabf8d3624d6924303ff28220d60be24748d2b53ff218\",\"sha256\":\"e5c75684647fb5a2f69fabf8d3624d6924303ff28220d60be24748d2b53ff218\"}}},\"passbundle\":{\"sequence\":42,\"issued\":\"2026-11-18T00:00:00Z\",\"expires\":\"2026-12-02T00:00:00Z\"}}",
+      "signature": "dM7CWKDZJAfPoeZcirW9WMkJko7M1gcscPm9kgdxIaLV539dtMjEDcnEP5jUL2u8gPnGWUKKQapPv1es3e31Ag==\n",
+      "rules": "{\"schemaVersion\":\"1.0.0\",\"hosts\":{\"good.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"],\"password\":[\"#p\"]},\"passbundle\":{\"id\":\"good\",\"verified\":\"2026-11-15\"}}]},\"Upper.Example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"]},\"passbundle\":{\"id\":\"upper\",\"verified\":\"2026-11-15\"}}]},\"bad host.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"]},\"passbundle\":{\"id\":\"space\",\"verified\":\"2026-11-15\"}}]},\"port.example.test:8443\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"]},\"passbundle\":{\"id\":\"port\",\"verified\":\"2026-11-15\"}}]},\"null.example.test\":null,\"mixed.example.test\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#no-id\"]}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"]},\"passbundle\":{\"id\":\"bad id\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"]},\"passbundle\":{\"id\":\"not-a-date\",\"verified\":\"15 November 2026\"}},{\"category\":\"account-login\",\"fields\":\"#u\",\"passbundle\":{\"id\":\"no-fields\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[\"\"]},\"passbundle\":{\"id\":\"empty-selector\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"username\":[7]},\"passbundle\":{\"id\":\"number-selector\",\"verified\":\"2026-11-15\"}},{\"category\":\"account-login\",\"fields\":{\"password\":[\"#p\"]},\"passbundle\":{\"id\":\"still-good\",\"verified\":\"2026-11-15\"}}],\"pathnames\":{\"no-slash\":{\"forms\":[{\"category\":\"account-login\",\"fields\":{\"username\":[\"#u\"]},\"passbundle\":{\"id\":\"path-without-slash\",\"verified\":\"2026-11-15\"}}]}}}}}",
+      "taken": {
+        "sequence": 42,
+        "issued": "2026-11-18T00:00:00Z",
+        "expires": "2026-12-02T00:00:00Z",
+        "sha256": "e5c75684647fb5a2f69fabf8d3624d6924303ff28220d60be24748d2b53ff218",
+        "hosts": {
+          "good.example.test": [
+            {
+              "id": "good",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u"
+                ],
+                "password": [
+                  "#p"
+                ]
+              }
+            }
+          ],
+          "port.example.test:8443": [
+            {
+              "id": "port",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "username": [
+                  "#u"
+                ]
+              }
+            }
+          ],
+          "mixed.example.test": [
+            {
+              "id": "still-good",
+              "path": null,
+              "verified": "2026-11-15",
+              "fields": {
+                "password": [
+                  "#p"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

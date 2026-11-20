@@ -66,6 +66,8 @@ The tests of billing by the day (`tests/api/invoices.spec.ts`) start `stripe-sta
 
 The tests of event streaming across restarts and servers (`tests/api/event-streaming-servers.spec.ts`) start a server of their own that keeps its data and may send to receivers on 127.0.0.1 (`KK_EVENT_STREAMING=1`), which they stop, freeze, kill, and start again on the same data, on `KK_STREAMING_SERVER_PORT` (default 8160). The one that kills it mid-send waits out the two-minute lease the killed server held; the one that stops it normally mid-send doesn't, since a server that stops normally gives its leases back. They also start a second server on the main test server's database and RSA key (`KK_SHARES_DATABASE_OF`: its SQLite file, or PostgreSQL in the PostgreSQL job), on `KK_STREAMING_SECOND_SERVER_PORT` (default 8161).
 
+The site rules tests (`tests/site-rules.spec.ts`) sign the hand-made rules (`tools/site-rules/rules.json`) with the test vectors' key through `tools/site-rules/sign.mjs`, serve the feed over plain HTTP on 127.0.0.1 on `KK_SITE_RULES_FEED_PORT` (default 8190), and start two servers of their own that mirror it as an operator's feed (`KK_SITE_RULES_FEED`, `KK_SITE_RULES_FEED_KEY`): one as signed on `KK_SITE_RULES_SERVER_PORT` (default 8191), and one with a byte of its manifest changed on `KK_SITE_RULES_CHANGED_SERVER_PORT` (default 8192). Every other test server mirrors no feed (`SITE_RULES_FEED=none`), so none reaches PassBundle's feed on the internet.
+
 ## Website screenshots
 
 `site-shots/` makes the website's screenshots from the real apps (`npx playwright test -c playwright.site.config.ts`). It isn't a test and CI doesn't run it. See `site/README.md`.

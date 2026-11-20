@@ -411,6 +411,22 @@ jobs:
         run: node meta/docs/vectors/check-core-vectors.mjs meta/docs/vectors/core-v1.json .
       - name: The desktop updater's test vectors, as their generator makes them
         run: node meta/docs/vectors/make-desktop-update-v1.mjs | cmp - meta/docs/vectors/desktop-update-v1.json
+      # Site rules feeds (DESIGN.md, "Fill rules for everyone", "Shipping: a
+      # signed feed"): the vectors as their generator makes them, and the copy
+      # the extension's jest tests (site-rules-feed.spec.ts and the others
+      # beside it, run below) read.
+      # A meta branch from before the feed has nothing to compare; once it
+      # has the vectors, the extension's copy must be the same.
+      - name: The site rules feed's test vectors, as their generator makes them, and the extension's copy
+        run: |
+          vectors=meta/docs/vectors/site-rules-v1.json
+          copy=apps/browser/src/autofill/keykeeper/site-rules-v1.vectors.json
+          if [ ! -e "$vectors" ]; then
+            echo "No site rules vectors on this meta branch yet."
+            exit 0
+          fi
+          node meta/docs/vectors/make-site-rules-v1.mjs | cmp - "$vectors"
+          cmp "$vectors" "$copy"
       # The command-line tool's updater (DESIGN.md, "Command-line tool",
       # "Updating itself"): the vectors as their generator makes them, and the
       # copy the clients' jest test (self-update.spec.ts) reads.
