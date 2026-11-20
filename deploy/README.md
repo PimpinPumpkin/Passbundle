@@ -86,7 +86,7 @@ The settings are the server's environment variables, as in Vaultwarden. The ones
 | `DATABASE_URL` | `postgresql://user:password@host/db` for PostgreSQL. Without it, SQLite in `/data`. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` | Email. Account recovery, emailed invitations, join emails, and email domain limits need it. |
 | `SIGNUPS_ALLOWED` | Whether anyone can make an account. |
-| `MSP_SIGNUPS_ALLOWED` | Whether anyone can set up an MSP. |
+| `MSP_SIGNUPS_ALLOWED` | Whether anyone can set up an MSP. Off by default, which suits a server run for one company or one family; there, the MSP console says so where Create MSP would be. The hosted service turns it on (the private ops repo's `hosting/app.env.example`), because MSPs sign up there by themselves: the website's MSP page links to the web vault's `/#/set-up-msp`, which leads to sign-up or sign-in and then to setting up the MSP. |
 | `ADMIN_TOKEN` | Turns on the server's admin page. Leave it unset in production; turn it on for a task, then off again (see "The admin page"). |
 | `HSTS_INCLUDE_SUBDOMAINS` | `true` adds `includeSubDomains` to the HTTPS-only header (HSTS) the server sends when `DOMAIN` is https on a host name. Off by default; turn it on only when every name under `DOMAIN`'s host serves HTTPS. |
 | `IP_HEADER`, `IP_HEADER_TRUSTED_PROXIES` | Where the visitor's address comes from (see "The client's address"). Required on a public `DOMAIN`. |
