@@ -1,11 +1,17 @@
 // The fill picker: right-click a field (or open the menu inside it), "Fill
-// this field with", an item, and a value or "Never fill this field". It fills now and remembers the choice on
-// the item for every later autofill.
+// this field with", an item, and a value, "Never fill this field", or "Never
+// fill this field on this site". It fills now and remembers the choice on
+// the item (or, for the whole site, in the account's settings) for every
+// later autofill. And the menu inside a field offers a login's custom field
+// whose name matches the field's label with one tap, filling nothing until
+// it's pressed.
 import type { BrowserContext, Page } from "@playwright/test";
 
 import {
   addLogin,
   chooseFirstInlineMenuItem,
+  extensionFrame,
+  hasElementDeep,
   waitForExtensionScan,
   waitForInlineMenuItem,
 } from "./support/autofill";
@@ -292,4 +298,157 @@ test("the web vault shows a fill rule in plain language, keeps it through an edi
   await without.goto(`${site}/bank-login.html`);
   await autofillFrom(context, without, "Username", "Example Bank");
   await expect(without.getByLabel("Customer number")).toHaveValue("");
+});
+
+/** Whether the menu inside the focused field shows this text now. */
+async function menuShows(context: BrowserContext, page: Page, text: string) {
+  const list = await extensionFrame(page, "menu-list.html");
+  return hasElementDeep(context, list, (n) => n.nodeType === 3 && (n.nodeValue ?? "").includes(text));
+}
+
+// The one-tap suggestion: "Customer number" on the bank's page and the
+// login's "Customer ID" are the same words once ID and number count as one.
+// The menu inside that field offers it under the login, filling nothing until
+// it's pressed; pressing it fills the field and remembers it, as picking it
+// with "Fill this field with" would. Driven with the keyboard, as the menu is
+// in a closed shadow root: into the menu (the login), down to the suggestion,
+// Enter.
+test("offers a custom field whose name matches the field's label with one tap, fills nothing before, and remembers it", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const user = userFor("picker-suggest", testInfo.repeatEachIndex);
+  const web = await createAccount(context, user);
+  await addLogin(web, {
+    name: "Example Bank",
+    username: "alice-bank",
+    password: "not-a-real-password-1",
+    uri: site,
+    customFields: { "Customer ID": "C-12345" },
+  });
+  await web.close();
+  await logInPopup(await openPopup(context, extensionId), user);
+
+  const page = await context.newPage();
+  await page.goto(`${site}/bank-login.html`);
+  const customerNumber = page.getByLabel("Customer number");
+  await waitForExtensionScan(context, page, "custno");
+  // Not in the Username box's menu: it's for the field whose label matches.
+  await page.getByLabel("Username", { exact: true }).click();
+  await waitForInlineMenuItem(context, page, "Example Bank");
+  expect(await menuShows(context, page, "Fill Customer ID here?")).toBe(false);
+  await customerNumber.click();
+  await waitForInlineMenuItem(context, page, "Fill Customer ID here?");
+
+  // Shown, not filled, and nothing remembered yet.
+  await expect(customerNumber).toHaveValue("");
+  expect(await itemHasFillRule(context, "Example Bank")).toBe(false);
+
+  const focusLeftThePage = () => page.evaluate(() => document.activeElement?.tagName !== "INPUT");
+  await expect(async () => {
+    if (!(await focusLeftThePage())) {
+      await page.keyboard.press("ArrowDown");
+    }
+    await expect.poll(focusLeftThePage, { timeout: 1000 }).toBe(true);
+  }).toPass({ timeout: 10_000 });
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(customerNumber).toHaveValue("C-12345");
+  // Only that field: the username and password wait for a fill of the login.
+  await expect(page.getByLabel("Username", { exact: true })).toHaveValue("");
+  await expect.poll(() => itemHasFillRule(context, "Example Bank")).toBe(true);
+
+  // Remembered: the menu in that field doesn't ask again, and a normal
+  // autofill puts it there with the username and password.
+  const after = await context.newPage();
+  await after.goto(`${site}/bank-login.html`);
+  await waitForExtensionScan(context, after, "custno");
+  await after.getByLabel("Customer number").click();
+  await waitForInlineMenuItem(context, after, "Example Bank");
+  expect(await menuShows(context, after, "Fill Customer ID here?")).toBe(false);
+  await autofillFrom(context, after, "Username", "Example Bank");
+  await expect(after.getByLabel("Customer number")).toHaveValue("C-12345");
+  await expect(after.getByLabel("Username", { exact: true })).toHaveValue("alice-bank");
+  await expect(after.getByLabel("Password")).toHaveValue("not-a-real-password-1");
+});
+
+/** The person's site-wide never-fill list, as the extension's background reads it. */
+async function siteNeverFill(context: BrowserContext): Promise<{ host: string; field: { id?: string } }[]> {
+  return context.serviceWorkers()[0].evaluate(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const main = (self as any).bitwardenMain;
+    const userId = await new Promise<string>((resolve) =>
+      main.accountService.activeAccount$.subscribe((a: { id: string }) => resolve(a.id)),
+    );
+    return main.keykeeperSiteNeverFill.list(userId);
+  });
+}
+
+/** The account's settings document as the server keeps it. */
+async function serverSettings(context: BrowserContext): Promise<string | null> {
+  return context.serviceWorkers()[0].evaluate(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const main = (self as any).bitwardenMain;
+    const response = await main.apiService.send("GET", "/keykeeper/settings", null, true, true);
+    return response?.data ?? null;
+  });
+}
+
+test("never fill this field on this site keeps it empty for every item there, until it's removed in Autofill settings", async ({
+  context,
+  extensionId,
+}, testInfo) => {
+  const user = userFor("never-site", testInfo.repeatEachIndex);
+  const site = "https://shared.example.test";
+  const web = await createAccount(context, user);
+  for (const [name, username] of [
+    ["Front desk", "front-desk"],
+    ["Back office", "back-office"],
+  ]) {
+    await addLogin(web, { name, username, password: "not-a-real-password-1", uri: site });
+    const view = web.getByRole("dialog", { name: "View Login" });
+    await view.getByRole("button", { name: "Close" }).first().click();
+    await expect(view).toBeHidden();
+  }
+  await web.close();
+  const popup = await openPopup(context, extensionId);
+  await logInPopup(popup, user);
+
+  // Picked with one login, for the whole site.
+  const page = await context.newPage();
+  await page.goto(`${site}/simple-login.html`);
+  await waitForExtensionScan(context, page, "username");
+  await page.getByLabel("Username").click({ button: "right" });
+  await page.keyboard.press("Escape");
+  await pickFromMenu(context, page, "Front desk", "s");
+  await expect
+    .poll(() => siteNeverFill(context))
+    .toEqual([{ v: 1, host: "shared.example.test", scheme: "https", field: { id: "username" }, fill: { from: "never" } }]);
+  // Not on the item: in the account's settings, which the server keeps
+  // encrypted, without the site in plain text.
+  expect(await itemHasFillRule(context, "Front desk")).toBe(false);
+  await expect.poll(async () => (await serverSettings(context))?.startsWith("2.")).toBe(true);
+  expect(await serverSettings(context)).not.toContain("shared.example.test");
+
+  // The other login on the site leaves the field empty too.
+  const other = await context.newPage();
+  await other.goto(`${site}/simple-login.html`);
+  await autofillFrom(context, other, "Password", "Back office");
+  await expect(other.getByLabel("Password")).toHaveValue("not-a-real-password-1");
+  await expect(other.getByLabel("Username")).toHaveValue("");
+
+  // Listed in the extension's Autofill settings, and removed there.
+  await popup.goto(`chrome-extension://${extensionId}/popup/index.html#/autofill`);
+  const settings = popup.getByTestId("site-never-fill-settings");
+  const rule = "shared.example.test: the field with id username gets nothing (never fill)";
+  await expect(settings).toContainText(rule);
+  await settings.getByRole("button", { name: `Remove the rule: ${rule.replace(": ", ", ")}` }).click();
+  await expect(settings).toContainText("None yet.");
+  await expect.poll(() => siteNeverFill(context)).toEqual([]);
+
+  // It fills again.
+  const again = await context.newPage();
+  await again.goto(`${site}/simple-login.html`);
+  await autofillFrom(context, again, "Password", "Back office");
+  await expect(again.getByLabel("Username")).toHaveValue("back-office");
 });
