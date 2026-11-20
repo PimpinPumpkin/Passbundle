@@ -36,6 +36,8 @@ The Firefox tests (`tests/firefox`, project `firefox`) run the extension's Firef
 
 The command-line tool's tests (`tests/cli`, project `cli`) run the packed program `KK_CLI` names, which `tools/cli/pack.sh` makes from the clients checkout (see docs/cli.md, "Building it yourself"); without it they skip, except in CI. They use `KK_BRAND`'s `cli` part for the command's name.
 
+The autofill corpus (`tests/autofill-corpus.spec.ts`, project `corpus`) fills each page in `tests/fixtures/autofill` from the menu inside a field, with our extension and then with upstream's, and prints the two scores side by side; the summary, page by page, is `test-results/autofill-scoreboard.json`. Upstream's extension is the one `KK_UPSTREAM_EXTENSION` names, built by `upstream-extension.sh` from a checkout of upstream's release tag the clients are based on (their `.keykeeper-base`), made without `bitwarden_license/`; `KK_UPSTREAM_TAG` names that tag in the output. Without it, the corpus runs with ours only. `CORPUS_ONLY=<page>.html` runs one page.
+
 Single sign-on tests use `entra-standin.mjs`, a local stand-in for Microsoft Entra ID's sign-in (an OpenID provider at Entra's per-tenant paths, with keys made when it starts) and a DNS server for domain checks, on `KK_ENTRA_PORT` (default 8101) and `KK_DNS_PORT` (UDP, default 8102). Every test server points at it.
 
 The seats tests (`tests/api/msp-seats.spec.ts`) start a server of their own whose seats job runs every second (`KK_SEATS_SCHEDULE`), and write earlier days into its SQLite database, on `KK_SEATS_SERVER_PORT` (default 8105).

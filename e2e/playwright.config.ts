@@ -97,7 +97,14 @@ export default defineConfig({
     { name: "cli", testDir: "tests/cli" },
     {
       name: "chromium",
-      testIgnore: ["api/**", "mail/**", "cli/**", "firefox/**"],
+      testIgnore: ["api/**", "mail/**", "cli/**", "firefox/**", "autofill-corpus.spec.ts"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    // The autofill corpus and scoreboard, ours and upstream's extension
+    // (KK_UPSTREAM_EXTENSION), in a tier 1 job of its own.
+    {
+      name: "corpus",
+      testMatch: "autofill-corpus.spec.ts",
       use: { ...devices["Desktop Chrome"] },
     },
     // The extension's Firefox build in a real Firefox (KK_FIREFOX), through

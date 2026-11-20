@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sign in</title>
+  </head>
+  <body>
+    <!-- The password comes first in the page's source and the username after
+         it; the layout puts the username on top, so people see the usual
+         order. -->
+    <form action="/signed-in.html" method="post" style="display: flex; flex-direction: column; width: 240px">
+      <label for="password" style="order: 3">Password</label>
+      <input id="password" name="password" type="password" style="order: 4" />
+      <label for="username" style="order: 1">Username</label>
+      <input id="username" name="username" type="text" style="order: 2" />
+      <button type="submit" style="order: 5">Sign in</button>
+    </form>
+  </body>
+</html>
