@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sign in</title>
+  </head>
+  <body>
+    <!--
+      A sign-in inside a web component's shadow root, with the password first
+      and the member number (the username) after it. The generic matching
+      looks for a username before the password, so it finds none here; the
+      hand-made site rules (tools/site-rules/rules.json) name both fields by
+      selector, through the shadow root (site-rules.spec.ts).
+    -->
+    <signin-box id="signin-box"></signin-box>
+    <script>
+      customElements.define(
+        "signin-box",
+        class extends HTMLElement {
+          connectedCallback() {
+            const root = this.attachShadow({ mode: "open" });
+            root.innerHTML = `
+              <form action="/signed-in.html" method="post">
+                <label for="secret">Password</label>
+                <input id="secret" name="secret" type="password" autocomplete="current-password" />
+                <label for="member-number">Member number</label>
+                <input id="member-number" name="member" type="text" />
+                <button type="submit">Sign in</button>
+              </form>`;
+          }
+        },
+      );
+    </script>
+  </body>
+</html>
