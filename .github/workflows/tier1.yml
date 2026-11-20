@@ -365,10 +365,17 @@ jobs:
       # our apps"): the extension's copy, which its unit test
       # (fill-rules.vectors.spec.ts, run below) fills from, and the apps'
       # core's, which its tests fill from.
+      # A meta branch from before these vectors has nothing to compare; once
+      # it has them, both copies must be the same.
       - name: The fill rules' test vectors, the extension's copy and the apps'
         run: |
-          cmp meta/docs/vectors/fill-rules-v1.json apps/browser/src/autofill/keykeeper/fill-rules-v1.vectors.json
-          cmp meta/docs/vectors/fill-rules-v1.json passbundle-apps/core/tests/vectors/fill-rules-v1.json
+          vectors=meta/docs/vectors/fill-rules-v1.json
+          if [ ! -e "$vectors" ]; then
+            echo "No fill rules vectors on this meta branch yet."
+            exit 0
+          fi
+          cmp "$vectors" apps/browser/src/autofill/keykeeper/fill-rules-v1.vectors.json
+          cmp "$vectors" passbundle-apps/core/tests/vectors/fill-rules-v1.json
       - name: The web vault's reload key test vectors, checked with upstream's own crypto
         run: node meta/docs/vectors/check-reload-key-vectors.mjs meta/docs/vectors/reload-key-v1.json .
       - name: The reload key test vectors, as their generator makes them, and the web vault's copy
