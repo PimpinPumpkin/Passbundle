@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sign in</title>
+  </head>
+  <body>
+    <!-- A framework that keeps its own copy of each field and draws the
+         fields from it again and again: a value only stays if the field said
+         it changed (an input event), as a person typing makes it say. -->
+    <form id="f" action="/signed-in.html" method="post">
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" />
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" />
+      <button type="submit">Sign in</button>
+    </form>
+    <script>
+      const state = { username: "", password: "" };
+      for (const name of Object.keys(state)) {
+        document.getElementById(name).addEventListener("input", (event) => {
+          state[name] = event.target.value;
+        });
+      }
+      setInterval(() => {
+        for (const [name, value] of Object.entries(state)) {
+          const field = document.getElementById(name);
+          if (field.value !== value) field.value = value;
+        }
+      }, 250);
+    </script>
+  </body>
+</html>

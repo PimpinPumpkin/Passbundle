@@ -220,8 +220,10 @@ export async function realCollection(
 
 /**
  * Adds an account to the organization as a regular member with these
- * folders (upstream's grant fields), confirmed with the organization's key
- * wrapped to the member's own public key, as an owner's app confirms them.
+ * folders (upstream's grant fields, and a folder's grid in `keykeeper` when
+ * it isn't a preset), confirmed with the organization's key wrapped to the
+ * member's own public key, as an owner's app confirms them. `role` makes it
+ * another role instead, such as a custom role (type 4) with its permissions.
  */
 export async function realMember(
   request: APIRequestContext,
@@ -233,7 +235,9 @@ export async function realMember(
     readOnly: boolean;
     hidePasswords: boolean;
     manage: boolean;
+    keykeeper?: Record<string, boolean>;
   }[],
+  role: { type: number; permissions: Record<string, boolean> } = { type: 2, permissions: {} },
 ): Promise<string> {
   const invited = await request.post(
     `/api/organizations/${org.id}/users/invite`,
@@ -241,11 +245,11 @@ export async function realMember(
       headers: auth(owner),
       data: {
         emails: [member.email],
-        type: 2,
+        type: role.type,
         collections,
         groups: [],
         accessSecretsManager: false,
-        permissions: {},
+        permissions: role.permissions,
       },
     },
   );
@@ -299,19 +303,19 @@ function loginBody(
   };
 }
 
-/** A login in one of the organization's folders, encrypted with its key. */
+/** A login in one of the organization's folders (or several), encrypted with its key. */
 export async function realLogin(
   request: APIRequestContext,
   owner: RealAccount,
   org: RealOrganization,
-  collectionId: string,
+  collectionId: string | string[],
   values: LoginValues,
 ): Promise<string> {
   const created = await request.post("/api/ciphers/create", {
     headers: auth(owner),
     data: {
       cipher: loginBody(org, owner, values),
-      collectionIds: [collectionId],
+      collectionIds: Array.isArray(collectionId) ? collectionId : [collectionId],
     },
   });
   expect(created.status(), await created.text()).toBe(200);

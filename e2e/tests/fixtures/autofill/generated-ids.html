@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sign in</title>
+  </head>
+  <body>
+    <!-- A framework that makes up new ids and names on every load, and asks
+         browsers not to autofill anything. -->
+    <form id="f" action="/signed-in.html" method="post" autocomplete="off">
+      <label>Username</label>
+      <input type="text" autocomplete="off" />
+      <label>Password</label>
+      <input type="password" autocomplete="off" />
+      <button type="submit">Sign in</button>
+    </form>
+    <script>
+      const made = () => "x" + Math.random().toString(36).slice(2, 10);
+      for (const input of document.querySelectorAll("#f input")) {
+        input.id = made();
+        input.name = made();
+        input.previousElementSibling.htmlFor = input.id;
+      }
+    </script>
+  </body>
+</html>

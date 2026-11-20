@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Welcome</title>
+  </head>
+  <body>
+    <!-- The sign-in is in a modal dialog that a button opens. The form is in
+         the page from the start but closed, and the open dialog sits above
+         everything else (the browser's top layer). -->
+    <header><button id="open" type="button">Sign in</button></header>
+    <main><h1>Welcome</h1><p>Sign in to see your orders.</p></main>
+    <dialog id="sign-in">
+      <form action="/signed-in.html" method="post">
+        <h2>Sign in</h2>
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" autocomplete="username" />
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" />
+        <button type="submit">Sign in</button>
+        <button type="button" id="close">Cancel</button>
+      </form>
+    </dialog>
+    <script>
+      const dialog = document.getElementById("sign-in");
+      document.getElementById("open").addEventListener("click", () => dialog.showModal());
+      document.getElementById("close").addEventListener("click", () => dialog.close());
+    </script>
+  </body>
+</html>
