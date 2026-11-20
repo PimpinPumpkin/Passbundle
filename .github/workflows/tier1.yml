@@ -358,8 +358,13 @@ jobs:
       # Enrolling in account recovery at unlock in our apps (DESIGN.md,
       # "Enrolling at unlock", "Our apps"): the vectors as their generator
       # makes them, checked with upstream's own crypto, and the apps' copy.
+      # A meta branch from before them has nothing to compare.
       - name: The apps' account recovery at unlock test vectors, as their generator makes them and as upstream's crypto opens them
         run: |
+          if [ ! -e meta/docs/vectors/recovery-at-unlock-v1.json ]; then
+            echo "No account recovery at unlock vectors on this meta branch yet."
+            exit 0
+          fi
           node meta/docs/vectors/make-recovery-at-unlock-v1.mjs | cmp - meta/docs/vectors/recovery-at-unlock-v1.json
           node meta/docs/vectors/check-recovery-at-unlock-vectors.mjs meta/docs/vectors/recovery-at-unlock-v1.json .
           cmp meta/docs/vectors/recovery-at-unlock-v1.json passbundle-apps/core/tests/vectors/recovery-at-unlock-v1.json
