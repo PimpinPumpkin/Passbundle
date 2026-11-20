@@ -172,8 +172,11 @@ const child = spawn(paths.serverBin, [], {
         }
       : {}),
     ...(withGroups ? { ORG_GROUPS_ENABLED: "true" } : {}),
-    // KK_EVENTS=1: the event log on, for a server a test starts itself
-    // (tests/api/plans-families.spec.ts). Every other server keeps it off.
+    // KK_EVENTS=1: the event log on, said outright, for a server a test
+    // starts itself (tests/api/plans-families.spec.ts). Every other server has
+    // it on too, since that's the server's default (ORG_EVENTS_ENABLED): the
+    // events a test's requests log are kept, and sent to any event
+    // destination the test sets up.
     ...(process.env.KK_EVENTS === "1" ? { ORG_EVENTS_ENABLED: "true" } : {}),
     // KK_SINGLE_ORG_FOR_RECOVERY=1: account recovery needs single organization
     // first, as Bitwarden always does (tests/api/msp-required-policies.spec.ts).

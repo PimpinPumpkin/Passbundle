@@ -1,7 +1,8 @@
 # Tier 2 on Linux: the RMM-style install on a disposable machine, with the
 # app built from passbundle-apps: policies alone, then the app (with the
-# passbundle:// links it opens), updated and removed, then real Chrome and
-# Edge confirm they picked up the policies.
+# passbundle:// links it opens), updated and removed; then the app's .deb,
+# made from the same build, installed and removed alongside the script; then
+# real Chrome and Edge confirm they picked up the policies.
 # Nightly, on installer changes (pull requests included), and on demand.
 name: Tier 2 (Linux)
 
@@ -39,16 +40,32 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: The passbundle-apps branch to build the app from
+        id: apps
+        env:
+          ASKED: ${{ inputs.apps-ref }}
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          # The one asked for; otherwise the pull request's branch name, where
+          # passbundle-apps has such a branch (as tier 1 links branches);
+          # otherwise main.
+          ref=${ASKED:-main}
+          if [ -z "$ASKED" ] && [ -n "$BRANCH" ] &&
+            git ls-remote --exit-code --heads https://github.com/PimpinPumpkin/passbundle-apps.git "refs/heads/$BRANCH" > /dev/null; then
+            ref=$BRANCH
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "passbundle-apps: $ref"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: PimpinPumpkin/passbundle-apps
-          ref: ${{ inputs.apps-ref || 'main' }}
+          ref: ${{ steps.apps.outputs.ref }}
           path: apps
           persist-credentials: false
-      - name: Build tools, a virtual display, the desktop entry checker, and xdg-utils (for passbundle:// links)
+      - name: Build tools, a virtual display, the desktop entry checker, xdg-utils (for passbundle:// links), and dpkg-dev (for the app's .deb)
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang cmake ninja-build pkg-config libgtk-3-dev libdbus-1-dev libssl-dev xvfb desktop-file-utils xdg-utils
+          sudo apt-get install -y --no-install-recommends clang cmake ninja-build pkg-config libgtk-3-dev libdbus-1-dev libssl-dev xvfb desktop-file-utils xdg-utils dpkg-dev
       - name: Install the core's Rust toolchain
         working-directory: apps/core
         run: rustup toolchain install
@@ -67,11 +84,16 @@ jobs:
           cp -R apps/app/build/linux/x64/release/bundle installer/linux/passbundle
           cp apps/core/target/release/libpassbundle_core.so installer/linux/passbundle/lib/
           ls installer/linux/passbundle installer/linux/passbundle/data
-      - name: Install as an RMM would, update, and remove
+      - name: The app's .deb, from the same folder (passbundle-apps' tools/linux-packages.sh)
+        run: |
+          version=$(sed -n 's/^version: \([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p' apps/app/pubspec.yaml)
+          apps/tools/linux-packages.sh deb installer/linux/passbundle "$version" linux-x64 "$RUNNER_TEMP/packages"
+          echo "PASSBUNDLE_DEB=$RUNNER_TEMP/packages/passbundle_${version}_amd64.deb" >> "$GITHUB_ENV"
+      - name: Install as an RMM would, update, and remove; then the .deb, with the script
         run: |
           Xvfb :99 -screen 0 1280x800x24 &
           sleep 2
-          sudo DISPLAY=:99 sh installer/linux/tests/test-install.sh
+          sudo DISPLAY=:99 sh installer/linux/tests/test-install.sh "$PASSBUNDLE_DEB"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24

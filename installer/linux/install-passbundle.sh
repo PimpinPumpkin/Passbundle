@@ -20,15 +20,19 @@
 # Firefox's PasswordManagerEnabled and OfferToSaveLogins, both off unless
 # --keep-browser-password-manager. They go in Firefox's system-wide policies
 # file (FIREFOX_POLICY below says which Firefox builds read it).
-# Without the app's folder, it sets the policies only. The policies are a
-# file of our own in each browser's managed policies folder; other vendors'
-# files are left alone. Firefox reads only one policies file, so when another
-# vendor's is there, ours are added to it (with python3, where the computer
-# has it), and nothing of theirs is changed. When there's none but a Firefox
+# Without the app's folder, it sets the policies only. Where the app's .deb
+# or .rpm installed it (passbundle-apps' Linux packages, which install the
+# same files), the package manager has the app: this script says so, leaves
+# it alone, and sets the policies. The policies are a file of our own in
+# each browser's managed policies folder; other vendors' files are left
+# alone. Firefox reads only one policies file, so when another vendor's is
+# there, ours are added to it (with python3, where the computer has it), and
+# nothing of theirs is changed. When there's none but a Firefox
 # installation has a policies file in its own folder, which ours would hide,
 # Firefox is left as it is, with a warning.
 # The desktop agent isn't installed: on Linux it has no tray and no biometric
-# unlock yet. Running it again changes nothing.
+# unlock yet. Running it again changes nothing. --remove takes away what this
+# script put there, and leaves a package's app to its package manager.
 #
 #   sudo ./install-passbundle.sh --browsers chrome,edge --disable-card-autofill
 #   sudo ./install-passbundle.sh --server-url https://vault.example.com --enrollment-token <token> \
@@ -194,6 +198,32 @@ put_file() {
   chmod 644 "$tmp"
   mv "$tmp" "$1"
   CHANGED=yes
+}
+
+# The package that installed the app in $APP, if one did: its name, and the
+# command that updates and removes it. passbundle-apps' .deb and .rpm install
+# the same files as this script (its README, "Linux packages"), so that's the
+# package manager's app, which this script leaves alone. The app asks the
+# same, to say how to update it (its core/src/updates/package.rs).
+package_name=""
+package_tool=""
+find_package() {
+  package_name=""
+  package_tool=""
+  if command -v dpkg-query > /dev/null 2>&1 && owner=$(dpkg-query -S "$APP/passbundle" 2> /dev/null); then
+    package_name=${owner%%:*}
+    package_tool=apt
+  elif command -v rpm > /dev/null 2>&1 && owner=$(rpm -qf --queryformat '%{NAME}' "$APP/passbundle" 2> /dev/null); then
+    package_name=$owner
+    package_tool=dnf
+    if command -v zypper > /dev/null 2>&1; then
+      package_tool=zypper
+    fi
+  fi
+  # One package's name, for a message.
+  case "$package_name" in
+    "" | *[!A-Za-z0-9.+_-]*) [ -z "$package_tool" ] || package_name=passbundle ;;
+  esac
 }
 
 # The menus' icons, and the cache of what each desktop entry opens
@@ -589,23 +619,36 @@ install_policies() {
   rm -f "$written"
 }
 
+find_package
 if [ -n "$remove" ]; then
-  pkill -x passbundle 2> /dev/null || true
-  rm -rf "$APP" "/opt/.passbundle.installing"
-  rm -f "$DESKTOP_ENTRY" "$ICON" "$CHROME_POLICIES/$POLICY_FILE" "$EDGE_POLICIES/$POLICY_FILE" "$APP_POLICY"
+  # A package's app, desktop entry, and icon are its package manager's to take away.
+  if [ -z "$package_tool" ]; then
+    pkill -x passbundle 2> /dev/null || true
+    rm -rf "$APP" "/opt/.passbundle.installing"
+    rm -f "$DESKTOP_ENTRY" "$ICON"
+  fi
+  rm -f "$CHROME_POLICIES/$POLICY_FILE" "$EDGE_POLICIES/$POLICY_FILE" "$APP_POLICY"
   remove_firefox_policy
   rmdir "$(dirname "$APP_POLICY")" 2> /dev/null || true
-  refresh_menus
-  echo "Removed PassBundle and its browser policies."
+  if [ -n "$package_tool" ]; then
+    echo "Removed PassBundle's browser policies. The app in $APP is the $package_name package's: remove it with $package_tool remove $package_name."
+  else
+    refresh_menus
+    echo "Removed PassBundle and its browser policies."
+  fi
   exit 0
 fi
 
-if [ -d "$APP_SOURCE" ]; then
+if [ -n "$package_tool" ]; then
+  echo "The app in $APP came from the $package_name package, so $package_tool updates and removes it, and this script leaves it alone."
+elif [ -d "$APP_SOURCE" ]; then
   install_app
 fi
 install_policies
 if [ -z "$CHANGED" ]; then
   echo "PassBundle is already set up; nothing changed."
+elif [ -n "$package_tool" ]; then
+  echo "Set the browser policies. The app is the $package_name package's."
 elif [ -d "$APP_SOURCE" ]; then
   echo "Installed PassBundle to $APP, where passbundle:// links open it, and set the browser policies."
 else
