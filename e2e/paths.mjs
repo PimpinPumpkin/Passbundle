@@ -54,6 +54,11 @@ export const plansOffServerPort = process.env.KK_PLANS_OFF_SERVER_PORT ?? "8109"
 // domains (server.mjs, KK_SIGNUPS), which the tests of what such a server
 // says start themselves (tests/support/closed-server.ts).
 export const closedServerPort = process.env.KK_CLOSED_SERVER_PORT ?? "8110";
+// A server that doesn't let anyone set up an MSP (server.mjs,
+// KK_MSP_SIGNUPS=off: MSP_SIGNUPS_ALLOWED as a self-hosted server has it),
+// which the tests of MSPs signing up by themselves start themselves
+// (tests/support/msp-signups-off.ts).
+export const mspSignupsOffServerPort = process.env.KK_MSP_SIGNUPS_OFF_SERVER_PORT ?? "8115";
 // A stand-in for Microsoft Entra ID's sign-in (entra-standin.mjs), which
 // every test server uses for single sign-on, and its DNS server (UDP) for
 // domain checks.
