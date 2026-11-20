@@ -150,6 +150,8 @@ jobs:
           cmp meta/docs/vectors/script-grants-v3.json src/db/models/vectors/script-grants-v3.json
       - name: The server's payment webhook signature test vectors are the meta repo's
         run: cmp meta/docs/vectors/billing-webhook-v1.json src/keykeeper_billing/vectors/billing-webhook-v1.json
+      - name: The server's push encryption test vector (RFC 8291's) is the meta repo's
+        run: cmp meta/docs/vectors/web-push-rfc8291.json src/keykeeper_push/vectors/web-push-rfc8291.json
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       # One binary for both supported databases (SQLite and PostgreSQL); the
       # database URL picks which one at startup.
