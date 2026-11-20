@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Online banking</title>
+  </head>
+  <body>
+    <!-- The username is an account number: a phone-style field with a number
+         keypad, as banks and utilities use. -->
+    <form action="/signed-in.html" method="post">
+      <h1>Online banking</h1>
+      <label for="account">Account number</label>
+      <input id="account" name="acctno" type="tel" inputmode="numeric" maxlength="16" />
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" />
+      <button type="submit">Log on</button>
+    </form>
+  </body>
+</html>

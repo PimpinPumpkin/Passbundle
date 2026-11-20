@@ -24,10 +24,12 @@ export const serverUrl = `https://127.0.0.1:${port}`;
  * A real Chromium profile with the built extension loaded, in a new folder:
  * close it, then remove the folder. Extensions need the full Chromium build,
  * not the headless shell, so this uses channel "chromium". `rules` replaces
- * the host resolver rules, for a test with hosts of its own.
+ * the host resolver rules, for a test with hosts of its own; `extension`
+ * loads another build (upstream's, for the autofill scoreboard).
  */
 export async function launchWithExtension(
   rules = hostResolverRules,
+  extension = paths.extension,
 ): Promise<{ context: BrowserContext; profile: string }> {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), "keykeeper-ext-"));
   const context = await chromium.launchPersistentContext(profile, {
@@ -35,8 +37,8 @@ export async function launchWithExtension(
     locale: "en-US",
     timezoneId: "UTC",
     args: [
-      `--disable-extensions-except=${paths.extension}`,
-      `--load-extension=${paths.extension}`,
+      `--disable-extensions-except=${extension}`,
+      `--load-extension=${extension}`,
       // The test server uses a throwaway self-signed certificate.
       "--ignore-certificate-errors",
       // Headless Chromium says "HeadlessChrome/", which upstream's browser

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sign in or create an account</title>
+  </head>
+  <body>
+    <!-- Returning and new customers side by side, as many shops do. Neither
+         form says which password is which with autocomplete: only the labels
+         and the buttons tell them apart. -->
+    <div style="display: flex; gap: 48px">
+      <form id="returning" action="/signed-in.html" method="post">
+        <h2>Returning customer</h2>
+        <label for="login-email">Email</label>
+        <input id="login-email" name="email" type="email" />
+        <label for="login-password">Password</label>
+        <input id="login-password" name="password" type="password" />
+        <button type="submit">Sign in</button>
+      </form>
+      <form id="new" action="/signed-in.html" method="post">
+        <h2>New customer</h2>
+        <label for="signup-name">Your name</label>
+        <input id="signup-name" name="name" type="text" />
+        <label for="signup-email">Email</label>
+        <input id="signup-email" name="email" type="email" />
+        <label for="signup-password">Choose a password</label>
+        <input id="signup-password" name="new_password" type="password" />
+        <label for="signup-confirm">Type it again</label>
+        <input id="signup-confirm" name="new_password2" type="password" />
+        <button type="submit">Create account</button>
+      </form>
+    </div>
+  </body>
+</html>

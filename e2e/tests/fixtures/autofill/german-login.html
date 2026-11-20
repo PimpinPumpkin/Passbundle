@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <title>Anmelden</title>
+  </head>
+  <body>
+    <!-- A page in German, with a site search in the header whose field is a
+         plain text field named in German too. -->
+    <header>
+      <form action="/suche">
+        <input name="suchbegriff" type="text" placeholder="Suchen…" aria-label="Suchbegriff" />
+        <button type="submit">Suchen</button>
+      </form>
+    </header>
+    <form action="/signed-in.html" method="post">
+      <h1>Anmelden</h1>
+      <label for="benutzer">E-Mail-Adresse oder Benutzername</label>
+      <input id="benutzer" name="benutzer" type="text" />
+      <label for="kennwort">Passwort</label>
+      <input id="kennwort" name="kennwort" type="password" />
+      <button type="submit">Anmelden</button>
+      <a href="/vergessen">Passwort vergessen?</a>
+    </form>
+  </body>
+</html>
