@@ -160,7 +160,8 @@ check "Edge address autofill off" policy_is "$edge/passbundle.json" 'p["Autofill
 check "Firefox password manager, card, and address autofill off" policy_is "$firefox" \
   'p == {"policies": {"PasswordManagerEnabled": False, "OfferToSaveLogins": False, "AutofillCreditCardEnabled": False, "AutofillAddressEnabled": False}}'
 check "Firefox's policies are root's and read-only" sh -c "[ \"\$(stat -c '%U:%G %a' '$firefox')\" = 'root:root 644' ]"
-check "the app gets the server, without a trailing slash" policy_is /etc/passbundle/policy.json "p == {\"ServerUrl\": \"$server_url\"}"
+check "the app gets the server, without a trailing slash, and the organization key fingerprint" policy_is /etc/passbundle/policy.json \
+  "p == {\"ServerUrl\": \"$server_url\", \"OrgKeyFingerprint\": \"$org_key\"}"
 check "the app's policy is root's and read-only" sh -c "[ \"\$(stat -c '%U:%G %a' /etc/passbundle/policy.json)\" = 'root:root 644' ]"
 
 echo "Again, with nothing new"

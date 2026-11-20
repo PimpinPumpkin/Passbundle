@@ -52,7 +52,9 @@ DESKTOP_ENTRY="/usr/share/applications/$APP_ID.desktop"
 LINKS="x-scheme-handler/passbundle"
 ICON="/usr/share/icons/hicolor/256x256/apps/$APP_ID.png"
 POLICY_FILE="passbundle.json"
-# The app's own policy: the server it signs in to (docs/core.md, "Servers").
+# The app's own policy: the server it signs in to (docs/core.md, "Servers"),
+# and the organization key fingerprint, the one key it enrolls people's
+# account recovery to at unlock (DESIGN.md, "Enrolling at unlock", "Our apps").
 APP_POLICY="/etc/passbundle/policy.json"
 CHROME_POLICIES="/etc/opt/chrome/policies/managed"
 EDGE_POLICIES="/etc/opt/edge/policies/managed"
@@ -566,10 +568,22 @@ install_policies() {
   firefox_password=yes
   [ -z "$keep_password_manager" ] || firefox_password=""
   install_firefox_policy "$firefox_password" "$card" "$address"
-  # The app signs in to the organization's server without asking.
-  if [ -n "$server_url" ]; then
-    one_line ServerUrl "$server_url"
-    printf '{\n  "ServerUrl": "%s"\n}\n' "$server_url" > "$written"
+  # The app signs in to the organization's server without asking, and
+  # enrolls account recovery only to the organization key named here.
+  if [ -n "$server_url$org_key" ]; then
+    {
+      printf '{'
+      sep=""
+      for pair in "ServerUrl=$server_url" "OrgKeyFingerprint=$org_key"; do
+        name=${pair%%=*}
+        value=${pair#*=}
+        [ -n "$value" ] || continue
+        one_line "$name" "$value"
+        printf '%s\n  "%s": "%s"' "$sep" "$name" "$value"
+        sep=","
+      done
+      printf '\n}\n'
+    } > "$written"
     put_file "$APP_POLICY" < "$written"
   fi
   rm -f "$written"
