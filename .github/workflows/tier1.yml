@@ -944,9 +944,15 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: e2e/package-lock.json
+      # libpq for the server, and psql, with which server.mjs makes a
+      # database of its own on this job's PostgreSQL for each server a test
+      # starts itself.
       - name: Install test dependencies
         working-directory: e2e
-        run: sudo apt-get install -y --no-install-recommends libpq5 && npm ci --no-audit --no-fund
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libpq5 postgresql-client
+          npm ci --no-audit --no-fund
       - name: Run API tests
         working-directory: e2e
         env:

@@ -166,6 +166,8 @@ function serverEnv(port: string, dataDir: string, setup: ServerSetup, adminToken
     ...process.env,
     KK_PORT: port,
     KK_DATA_DIR: dataDir,
+    // A SQLite file in either job: the tests read and age its rows (database).
+    KK_SQLITE: "1",
     KK_ADMIN_TOKEN: adminToken,
     KK_SERVER_LOG: path.join(dataDir, "server.log"),
     KK_PLANS_ENFORCED: setup.enforced ? "1" : "",

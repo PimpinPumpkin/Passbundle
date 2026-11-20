@@ -40,6 +40,8 @@ export async function startTenantsServer(): Promise<TenantsServer> {
       ...process.env,
       KK_PORT: testTenantsServerPort,
       KK_DATA_DIR: dataDir,
+      // A SQLite file in either job: the tests read its bytes (databaseBytes).
+      KK_SQLITE: "1",
       KK_LIKE_TEST_SERVER: "1",
       KK_SIGNUPS_DOMAINS: DOMAINS.join(","),
     },
