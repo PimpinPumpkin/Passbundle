@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Create an account</title>
+  </head>
+  <body>
+    <!-- A sign-up whose second password box has a short maxlength, left over
+         from an old eight-character limit on one field only. It's a new
+         password typed twice, not a password and a PIN: whatever fills the
+         first box fills the second. -->
+    <form action="/signed-in.html" method="post">
+      <h1>Create an account</h1>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" />
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" />
+      <label for="repeat">Repeat password</label>
+      <input id="repeat" name="repeat" type="password" maxlength="8" />
+      <button type="submit">Create account</button>
+    </form>
+  </body>
+</html>
