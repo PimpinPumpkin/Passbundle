@@ -1,12 +1,15 @@
 <!doctype html>
 <!-- A site with passkeys (extension-passkeys.spec.ts): makes one, then signs
      in with it, and checks what comes back as a site would: its challenge,
-     its own origin, its ID, and the signature with the passkey's public key. -->
+     its own origin, its ID, and the signature with the passkey's public key.
+     It can also ask for another for the same account, naming the one it
+     made (excludeCredentials). -->
 <html lang="en">
 <head><meta charset="utf-8"><title>Passkeys Example</title></head>
 <body>
   <h1>Passkeys Example</h1>
   <button id="make">Make a passkey</button>
+  <button id="again">Make another, naming the one you have</button>
   <button id="signin">Sign in with a passkey</button>
   <p id="result" role="status"></p>
   <script>
@@ -46,7 +49,10 @@
       if ((authData[32] & 1) === 0) return "no user presence";
       return null;
     }
-    document.getElementById("make").onclick = async () => {
+    // The passkey made here, which a site names (excludeCredentials) when it
+    // asks for another for the same account.
+    let made;
+    const make = async (excludeCredentials) => {
       try {
         const challenge = crypto.getRandomValues(new Uint8Array(32));
         const credential = await navigator.credentials.create({
@@ -57,10 +63,12 @@
             pubKeyCredParams: [{ type: "public-key", alg: -7 }],
             authenticatorSelection: { residentKey: "required", userVerification: "discouraged" },
             attestation: "none",
+            excludeCredentials,
           },
         });
         const problem = await checks(credential.response, "webauthn.create", challenge);
         if (problem) return say(`Making a passkey went wrong: ${problem}`);
+        made = credential.rawId;
         publicKey = await crypto.subtle.importKey("spki", credential.response.getPublicKey(), { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
         // For a test to hand to another browser, as the site's server would keep it.
         window.passkeyPublicKey = btoa(String.fromCharCode(...bytes(credential.response.getPublicKey())));
@@ -69,6 +77,9 @@
         say(`Making a passkey failed: ${e.name} ${e.message}`);
       }
     };
+    document.getElementById("make").onclick = () => make([]);
+    document.getElementById("again").onclick = () =>
+      made ? make([{ type: "public-key", id: made }]) : say("No passkey made here yet");
     document.getElementById("signin").onclick = async () => {
       try {
         const challenge = crypto.getRandomValues(new Uint8Array(32));

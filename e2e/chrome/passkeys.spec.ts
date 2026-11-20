@@ -68,8 +68,7 @@ async function chromeAt(
   const popup = await openPopup(chrome.context, chrome.extensionId);
   await logInPopup(popup, { email: account.email, name: "ana", password: account.password });
   // Chrome's popup closes once the person clicks on the page; here it's a
-  // tab, so the test closes it. (With a vault page left open, the extension
-  // can miss a passkey saved a moment before: DESIGN.md, "Passkeys".)
+  // tab, so the test closes it.
   await popup.close();
   const page = await chrome.context.newPage();
   await page.goto(`${origin}/?${query}`);
