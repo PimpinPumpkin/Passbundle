@@ -134,6 +134,10 @@ export const paths = {
     process.env.KK_WEB_VAULT ?? repo("clients", "apps/web/build"),
   extension:
     process.env.KK_EXTENSION ?? repo("clients", "apps/browser/build"),
+  // Upstream's own extension, built by upstream-extension.sh from the tag the
+  // clients are based on, for the autofill scoreboard. No default: without
+  // it, the scoreboard has our column only.
+  upstreamExtension: process.env.KK_UPSTREAM_EXTENSION,
   brand: process.env.KK_BRAND ?? repo("clients", "brand/brand.json"),
   // The desktop agent and its native-messaging host, built with the
   // stand-in authenticator: `cargo build --features test-authenticator`.
