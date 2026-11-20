@@ -6,8 +6,10 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
 
+import { port } from "../../paths.mjs";
+
 import { type MatrixRow, permissionMatrix } from "./matrix";
-import { type Account, type Api, encString } from "./support";
+import { type Account, Api, encString } from "./support";
 
 const ACTORS = [
   "owner",
@@ -568,4 +570,38 @@ test.describe("Organization permissions", () => {
     },
     rows,
   );
+});
+
+// An app can ask for the organization's export without checking the member's
+// role first. A 401 there signs the app out, so the server answers "not
+// found", as it does on the shared folders' routes.
+test("the organization's export answers a member who isn't an admin \"not found\", not 401", async ({
+  playwright,
+}) => {
+  const request = await playwright.request.newContext({
+    baseURL: `https://127.0.0.1:${port}`,
+    ignoreHTTPSErrors: true,
+  });
+  try {
+    const api = new Api(request);
+    const owner = await api.account("owner");
+    const orgId = await api.organization(owner, "Export Org");
+    const path = `/api/organizations/${orgId}/export`;
+    for (const role of ["manager", "user"] as const) {
+      const member = await api.account(role);
+      await api.addMember(owner, orgId, member, role);
+      const asked = await api.call(member, "GET", path);
+      expect(asked.status, `${role}: ${JSON.stringify(asked.body)}`).toBe(404);
+    }
+    // Someone invited who hasn't joined yet keeps upstream's answer.
+    const invited = await api.account("invited");
+    await api.addMember(owner, orgId, invited, "user", { accept: false, confirm: false });
+    expect((await api.call(invited, "GET", path)).status).toBe(401);
+    const admin = await api.account("admin");
+    await api.addMember(owner, orgId, admin, "admin");
+    const exported = await api.call(admin, "GET", path);
+    expect(exported.status, JSON.stringify(exported.body)).toBe(200);
+  } finally {
+    await request.dispose();
+  }
 });
