@@ -102,6 +102,22 @@ jobs:
     needs: refs
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    # PostgreSQL for the unit tests of what requests writing at the same
+    # moment do there (`on_postgresql`), each in a database of its own.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: keykeeper
+          POSTGRES_PASSWORD: keykeeper
+          POSTGRES_DB: keykeeper
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U keykeeper"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -143,6 +159,13 @@ jobs:
         run: cargo clippy --features sqlite,postgresql
       - name: Unit tests
         run: cargo test --features sqlite,postgresql
+      # The tests above made with on_each_database! (src/db/mod.rs) ran on
+      # SQLite; their PostgreSQL halves need a server, so they're ignored
+      # there and run here.
+      - name: Unit tests on PostgreSQL
+        env:
+          KK_TEST_POSTGRESQL_URL: postgresql://keykeeper:keykeeper@localhost:5432/keykeeper
+        run: cargo test --features sqlite,postgresql -- --ignored on_postgresql
       - name: Build
         run: cargo build --features sqlite,postgresql
       # The server, and its script for the IP location database, which the
