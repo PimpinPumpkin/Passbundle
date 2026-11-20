@@ -134,6 +134,10 @@ export const streamingSecondServerPort = process.env.KK_STREAMING_SECOND_SERVER_
 // start themselves.
 export const familyLinkServerPort = process.env.KK_FAMILY_LINK_SERVER_PORT ?? "8180";
 export const familyLinkUiServerPort = process.env.KK_FAMILY_LINK_UI_SERVER_PORT ?? "8181";
+// A server that may push to phones' endpoints on 127.0.0.1, trusting the
+// stand-in push service's certificate, with the new-device check on, which
+// the push tests start themselves (tests/api/unified-push.spec.ts).
+export const unifiedPushServerPort = process.env.KK_UNIFIED_PUSH_SERVER_PORT ?? "8162";
 // The site rules tests (tests/site-rules.spec.ts): a feed of their own, over
 // plain HTTP on 127.0.0.1, signed with the test vectors' key, and two servers
 // of their own that mirror it as an operator's feed (SITE_RULES_FEED): one

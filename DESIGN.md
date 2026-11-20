@@ -62,7 +62,7 @@ Status: kept up to date as work lands (last checked November 6, 2026). Each feat
       | Memory, vault open | 103 MB private | 42 MB footprint | 290 MB (software rendering) |
 - Open-source build of the Bitwarden clients (`passbundle-clients`), rebranded: web vault, browser extension, CLI. The extension and web vault stay upstream's for now, and can move onto the core later, compiled to WebAssembly.
 - **No Electron.** We don't ship upstream's Electron desktop app (about 150 MB on disk and hundreds of MB of RAM for what is mostly a tray icon). The desktop side is a small native agent. See "Desktop agent" below.
-- Mobile push delivery is our own (APNs, FCM, and UnifiedPush on Android).
+- Mobile push delivery is our own (APNs, FCM, and UnifiedPush on Android). UnifiedPush on Android is built; APNs and FCM wait ("Push to phones").
 - The SDK comes from the upstream open-source `sdk-internal` build. Fork it only when we need to change it.
 
 ### Desktop agent (no Electron, no web view)
@@ -1594,7 +1594,7 @@ No key moves. The new device already has the master password; the check only dec
 Built (November 2026): the server (`keykeeper_new_device.rs`, `keykeeper_location.rs`, the `keykeeper_new_device_check` migration for SQLite and PostgreSQL, the emails, `tools/update-ip-location.sh`), the web vault's and the extension's waiting page and prompt, the event log's locations, the CLI's wait, and the apps on both sides.
 
 ### Not yet
-- Push to phones while PassBundle is closed, so a phone prompts without being opened (our own push service).
+- Push to an iPhone while PassBundle is closed (APNs), and to Android phones without a UnifiedPush distributor (FCM). Android phones with one get a notification now ("Push to phones").
 - Telling a VPN service's exit from a home address, which needs a commercial database.
 - Location in the event streaming feed, and in the prompts for "Sign in with a device" (upstream's dialog has a place for it, but no room for the database's credit, which its license asks for next to it).
 - The apps' email code against a real server (the apps' test server sends no email; their unit tests cover it, and the API tests cover the server's side).
@@ -2578,7 +2578,7 @@ Vaultwarden had the endpoints. What's ours (`src/api/core/keykeeper_device_appro
 - **The key:** an approval must carry a type 4 encrypted string (RSA-OAEP with SHA-1, of a ciphertext's size). The server stores it as it came and can't open it: only the asking device has the private key. It never stores or returns a master password hash, whatever a client sends. The server never holds a key that opens a vault.
 - **Once:** an approved request signs in one time (Vaultwarden's rule).
 - **Events**, logged for the person and each of their organizations, as upstream's: requested (1010), approved (1513), denied (1514), the sign-in as a sign-in (1000), and failures as failed sign-ins (1005).
-- **Notifications:** as upstream, the server tells the account's devices on its websocket (and push, where a push relay is set up), and tells the asking device on the anonymous websocket when it's approved. Our apps ask every 10 seconds instead (below).
+- **Notifications:** as upstream, the server tells the account's devices on its websocket (and push, where a push relay is set up), and tells the asking device on the anonymous websocket when it's approved. Our apps ask every 10 seconds instead (below), and the server also pushes to the account's phones with a UnifiedPush endpoint ("Push to phones").
 - **Email two-step login** with a request sends the code only to the request's own account, and not once it's expired.
 - **The server's own log** leaves out a request's access code: the answer's address (`/response?code=`) is logged without its query.
 
@@ -2595,7 +2595,7 @@ Design in `docs/core.md`, "Approving a sign-in", and `docs/phones.md`, "Approvin
   - turning "Confirm before approving" off asks for the same confirmation first, and uses it up; turning it on asks nothing.
 - **The core sends the key only to the request whose phrase the person saw.** It keeps the requests it listed, approves only one of them by the phrase shown, checks the server still has it waiting with the same public key, and wraps the user key to the key it listed. A public key that isn't RSA-2048 with the exponent 65537 (what upstream makes) is refused, with nothing sent.
 - **Where the user key goes:** on a computer, it stays in Rust: the agent hands it to the core over its encrypted channel, the core compares it and wraps it. On phones and in the Mac app, confirming with biometrics passes it through the app's native code exactly as biometric unlock already does: Kotlin opens it from the Keystore after the prompt (Swift reads it from the Keychain on iOS, and opens its Secure Enclave seal on the Mac) and hands the bytes straight to the core, then zeroes them (Kotlin and Swift; Swift's copy is a `Data` it resets). It never reaches Dart, and the wrap to the request's public key is made and sent from Rust.
-- **Phones** show a request while PassBundle is open, or the next time it opens. A prompt while it's closed needs push notifications, which wait on our own push service (APNs, FCM, UnifiedPush; "Clients" above).
+- **Phones** show a request while PassBundle is open, or the next time it opens. An Android phone with a UnifiedPush distributor (ntfy, for example) also gets a notification while PassBundle is closed, and opening it shows the prompt ("Push to phones"). An iPhone, and an Android phone without a distributor, wait on APNs and FCM.
 
 ### Our apps asking
 
@@ -2650,13 +2650,80 @@ Upstream's GPL code already approves: the extension shows its approval dialog wh
 
 ### Not yet
 
-- Push to phones while PassBundle is closed (our own push service).
+- Push to an iPhone while PassBundle is closed (APNs), and to Android phones without a UnifiedPush distributor (FCM) ("Push to phones").
 - Where an address is, in these prompts: the server can now say it, from its own location database ("New-device check"), but upstream's dialog has no room for the database's credit.
 - SSO sessions approving, with SSO's trusted-device design.
 - Signing in with a device on one that never signed in to the account (upstream and Vaultwarden don't allow it).
 - In the apps, asking for the master password once after signing in with a device, before anything is saved, which would catch an approval a hacked server made up ("Our apps asking").
 - Approving from the command-line tool: it asks (`login --device`), and approves nothing.
 - A confirmation in the web vault's and the extension's approval dialog (upstream's), to match our apps.
+
+## Push to phones
+
+Design, November 19, 2026. A phone shows a sign-in request ("Sign in with a device", or a new-device check) only while PassBundle is open, or the next time it opens, so someone signing in elsewhere has to open PassBundle on their phone first. This is PassBundle's own push, built in a shape APNs and FCM can join later. Its first part is UnifiedPush on Android, which needs no account with anyone: a distributor app on the phone (ntfy, for example) gives PassBundle an address, the endpoint, and the server posts to it. What's sent is encrypted to the phone's own keys, so this note and its vector come before the code.
+
+### What's sent
+
+- **A kind, and nothing else:** `{"kind":"sign-in"}`, which means "this account has a sign-in waiting for an answer": a "Sign in with a device" request or a new-device check. Never an email, an address, a location, a device or its name, an item, the request's id, or a count. The push service and the phone's lock screen learn that PassBundle has something for this phone, and when.
+- **When:** a device asks to sign in with a device (`POST /api/auth-requests`), and a new-device check starts. It goes to each of the account's devices with an endpoint, except the device asking.
+- **Not sent:** a sync. The phones sync when they open, and do nothing with a sync while closed, so it would only wake them ("Not yet").
+
+### How
+
+- **Web Push** (RFC 8030): a POST to the endpoint with `TTL: 900` (a request lasts 15 minutes, a check 10), `Urgency: high` (so a phone that's asleep gets it now), `Topic: sign-in` (a push service that keeps undelivered messages keeps only the newest), `Content-Type: application/octet-stream`, and `Content-Encoding: aes128gcm`.
+- **Encrypted to the phone's keys** (RFC 8291): the phone gives the server its P-256 public key and a 16-byte auth secret with the endpoint. For each message the server makes a new P-256 key pair and a 16-byte salt, and derives the content key and nonce from the ECDH secret with HKDF-SHA-256 under the auth secret, as the RFC says. The message is one AES-128-GCM record (record size 4096) after the RFC's 86-byte header. Only the phone opens it; the push service carries ciphertext.
+- **VAPID** (RFC 8292): each POST carries `Authorization: vapid t=<JWT>, k=<the server's public key>`, an ES256 JWT whose `aud` is the endpoint's origin, `exp` 12 hours on, and `sub` the server's address (`DOMAIN`). Some distributors accept messages for an endpoint only when they're signed with the key it was registered with, so the phone registers with the server's public key.
+- **The server's VAPID key:** a P-256 key the server makes on its first start and keeps beside its RSA key, as `vapid_key.pem` in the same folder or bucket, never in the database. Two servers sharing a database share the RSA key's folder, and so this key too. If the file is replaced, the phones register again the next time PassBundle opens (they compare the server's key with the one they registered with).
+- **Test vector:** RFC 8291's own example (its Appendix A), `docs/vectors/web-push-rfc8291.json`. The server's unit test encrypts the RFC's plaintext with the RFC's keys and salt, gets the RFC's message byte for byte, and opens it with the RFC's receiving key; tier 1 opens a real message with Node's own crypto.
+
+### Registering a phone
+
+- **The routes**, for the signed-in device only (the device its session is for; no device is named in the request):
+  - `GET /api/keykeeper/push/unified-push`: `{ enabled, vapidPublicKey, registered }`.
+  - `PUT /api/keykeeper/push/unified-push` with `{ endpoint, publicKey, auth }`: the endpoint, the phone's public key (65 bytes, uncompressed, base64url), and its auth secret (16 bytes, base64url). A new one takes the old one's place.
+  - `DELETE /api/keykeeper/push/unified-push`.
+- **Kept** in a table of ours, `push_endpoints`, one row per account and device, removed with the device's row or the account (migrations for SQLite and PostgreSQL).
+- **At most 10 endpoints an account:** registering an 11th replaces the account's oldest (the one registered longest ago), so someone who replaces phones never gets stuck. Devices per account aren't capped, and every endpoint hears of each sign-in request, which anyone who knows the email can start, so this bounds how far one request fans out, to whatever hosts the endpoints name. Ending every session of an account (a new master password, "Deauthorize sessions", a new encryption key) removes its endpoints too, so a phone that's signed out hears nothing more.
+- **Stored as given:** the endpoint and the auth secret aren't encrypted in the database. Someone with a copy of it could post to a phone's endpoint, and the phone would then ask its server what's waiting and find nothing: a wake-up, and no more.
+- **Upstream's push** (the device token route, `/api/devices/identifier/<id>/token`, and Bitwarden's relay, `PUSH_ENABLED`) is untouched and works as before, beside this.
+
+### The server posts to an address a client gave it
+
+So the endpoint is guarded as the event destinations are ("What the server fetches"):
+
+- **`https://` only,** with a host, no user name or password, and at most 2,048 characters.
+- **Public addresses only:** the host is resolved when a message is sent, and every address it resolves to is checked (`keykeeper_streaming::guard::reach`): loopback, private networks (10/8, 172.16/12, 192.168/16, 100.64/10, fc00::/7), link-local, cloud metadata and platform services, multicast, reserved ranges, and IPv4 written as IPv6 are refused, and so is anything `HTTP_REQUEST_BLOCK_REGEX` matches. A name with any refused address is refused as a whole. The check is in the push client's own resolver, so the connection goes only to an address that was checked: there's no second lookup that could answer differently. An address written in the endpoint is checked as it is.
+- **No proxy, no redirects** (a redirect is a failure), 5 seconds to connect and 10 in all, and the push service's answer is never read past its status.
+- **10 messages a minute** to one device at most, and **20 a minute** to one account's devices together (two sign-in requests reaching all 10 endpoints); more are dropped. A device over its own limit doesn't use up the account's.
+- **A push service that answers 404 or 410** has dropped the endpoint, so the server removes it. Any other failure is logged without the endpoint, which works like a password for posting to the phone.
+- **Never on the request's path:** the request is answered as before, and the push goes from a task of its own. A push service that's slow, down, or refused never delays or fails a sign-in request or a sign-in.
+- **The settings,** set only in the environment:
+  - `UNIFIED_PUSH_ENABLED` (on by default): off, the server sends no push, and the routes say so.
+  - `UNIFIED_PUSH_ALLOWED_HOSTS`: host names the server may push to, separated by commas (`ntfy.sh, push.example.com`). Empty, the default, is any public host.
+  - For tests only: `UNIFIED_PUSH_TEST_ONLY_ALLOW_PRIVATE_ADDRESSES` lets push reach loopback and private addresses (never link-local or metadata ones), and `UNIFIED_PUSH_TEST_ONLY_CA_FILE` names the only certificate authority push trusts. The server won't start with either on a public `DOMAIN`, or with the second without the first.
+
+### The phone (Android)
+
+- **Registering:** when a UnifiedPush distributor is installed, the app registers each account on the phone with it, as one of its "instances" (the account's id on the phone, which says nothing about the account), with that account's server's VAPID key. With several distributors, the person's default is used, or Android asks once. The endpoint and keys go to the account's server when the distributor gives them, after signing in or unlocking, and when the server's key changes; signing out removes them from the server and the distributor.
+- **The library:** UnifiedPush's connector, `org.unifiedpush.android:connector` 3.3.5 from Maven Central, Apache-2.0. It makes the phone's key pair and auth secret, keeps them, and opens each message. It brings Google's Tink crypto library (Apache-2.0) for that, and nothing else: no Firebase or Play services, and no embedded FCM distributor.
+- **On a message:** a kind it doesn't know (anything but exactly `{"kind":"sign-in"}`), or one that didn't open, is dropped. For `sign-in`, the core asks that account's server what's waiting, as the app does while open (`GET /api/auth-requests/pending` and `GET /api/keykeeper/new-device-checks`, read the same way), with the account's kept session: its refresh token, which the Keystore seal keeps without the vault being unlocked, for a session token in memory only, for that call. The vault stays locked, and no key from it is needed or touched. The core hands back only how many of each are waiting, never a key, phrase, device, or address. With one or more, the phone shows one notification in the prompt's words, "Approve sign-in?", with "Open PassBundle to review it." under it, on a channel of its own, "Sign-in requests", gone after 15 minutes. It never names the account, the device, or where it is. Tapping it opens PassBundle, which asks at once after unlocking and shows the prompt as before. With none waiting (answered already), no notification shows, and one showing is taken away. With PassBundle in front, the vault's own prompt shows it instead, and coming to the front takes the notification away.
+- **A session that's ended** (the server refuses the refresh token): nothing shows, and the app drops the registration until the account signs in again.
+- **With no distributor, nothing changes:** the app asks every 10 seconds while open, as before. Settings, "Sign-in requests", says which, in a row of its own, "Notifications while closed": "On, through ntfy." (the distributor's name, as the phone shows it), "Off for this account: its server doesn't send them, or ntfy hasn't answered yet.", or "Off. Install a UnifiedPush app, such as ntfy, and sign-in requests reach PassBundle while it's closed."
+- **What it doesn't change:** approving still happens in the app, after the phrase or the number and the confirmation, as before. The notification approves nothing.
+
+### Tests
+
+- **Server unit tests** (`keykeeper_push`): the RFC 8291 vector, both ways; the VAPID JWT's header, claims, and signature; each refused range, IPv4 and IPv6, and the test setting allowing loopback and private but never link-local or metadata; a host that resolves to a private address (`localhost`); the allowed hosts; the endpoint's form; a 410 and a 404 removing the endpoint and a 500 keeping it, against a local HTTPS stand-in; 10 messages a minute to a device and 20 to an account's devices; an account keeping 10 endpoints, an 11th replacing the oldest and a device registering again keeping its place; and a push service that never answers holding up nothing but its own task.
+- **Tier 1** (`e2e/tests/api/unified-push.spec.ts`, on a server of its own with the test settings): a phone registers with its own keys; another device asks to sign in, and a tiny local push service (standing in for the distributor's) gets exactly one message, signed with the server's VAPID key, that opens with the phone's keys to `{"kind":"sign-in"}` and nothing else; a new-device check sends one too; the asking device gets none; refused endpoints (http, a private address, credentials in it); another account and no session; an account's 11th endpoint replacing its oldest; a push service that never answers doesn't slow the sign-in request; and a 410 removes the endpoint.
+- **The apps:** the core's tests (`core/src/push.rs`, against a stand-in server): asking what's waiting while locked, with the kept refresh token and nothing that unlocks, in numbers only (a request past its time not counted, and none for a session that began from an approval); registering and removing the endpoint; a refresh token the server refuses; no session kept; and a server without push. Android's JVM tests (`PushTest`): the kind read only from exactly what the server sends, what the phone does with the core's answer, when an account registers again, and the words. The app's tests (`app/test/push_test.dart`): unlocking and locking tell the phone the accounts, signing out tells it first, and Settings' row. And on Android's emulator, against a real server (`app/integration_test/phone_test.dart`, `tools/android-app-test.sh`): a message handed to the phone's own code as the library would, with the vault locked, asks the server, shows nothing while nothing waits, and the notification once another of the account's devices asks to sign in, with the vault still locked; a message of another kind, or one that didn't open, asks nothing.
+
+### Not yet
+
+- **iPhone:** APNs needs the owner's Apple Developer account (and a signed build).
+- **FCM:** needs a Google project, and the owner avoids Google where there's another way. Phones without a UnifiedPush distributor ask while open, as before.
+- **The desktop apps:** the agent is running anyway.
+- **A sync kind**, for the apps to sync as soon as something changes while they're open.
+- **Our own push service** in front of APNs and FCM (the relay upstream's apps use is Bitwarden's), which those two need.
 
 ## Autofill
 
@@ -2785,6 +2852,15 @@ On a site that answers a sign-in at once (a fast intranet app, a local server), 
 - **Every character typed:** the values the prompt offers were kept from the fields only after a tenth of a second's pause in typing, so a password typed quickly and sent with Enter came without its last characters, and the prompt offered to save the wrong password. They're kept at each keystroke now; the menu inside the field still waits for the pause. This is the "capture at submit" this note planned: the content script already sent the form's values at the submit itself (on the form's submit event and the submit button), but from those late copies.
 - **Not changed:** a page that signs in with no submit event and no submit button the extension recognizes (a script that calls `form.submit()`) still relies on upstream's ask-the-page fallback while the request is in flight. Nothing in the page says when such a submission happens, so there's nothing to capture it at.
 - **Tests:** unit tests for the wait (a page already loaded with no navigation event, a later event, once only, other tabs ignored, giving up) and for the prompt still showing when the page loaded first (`when-tab-loaded.spec.ts`, `overlay-notifications.background.spec.ts`), and for the last character before a quick submit (`autofill-overlay-content.service.spec.ts`); each fails without its fix. Tier 1's fixture server answers every request at once now, and `autofill.spec.ts` signs in five times on it, each with a last character typed and Enter at once, and needs a prompt every time with the password exactly as typed (no tries again); it fails without the fix.
+
+### A tab closed in the middle of a fill (upstream bug)
+
+Closing a tab, or a page going to another page, in the moment between picking a login in the menu inside a field and the fill ending, kept the menu closed in every field of every tab until another fill (from the popup, say) ended. The autofill corpus found it in November 2026: a step that picked a login on a sign-up page and closed the tab half a second later left the next pages with no menu, in our extension and upstream's. Fixed November 2026:
+
+- **Why:** a fill tells the extension's background it has started, and 250 ms after its last field, that it has ended (upstream's `content/autofill-init.ts`). While it's filling, a field that gets focus doesn't open the menu, so the fill's own focusing doesn't open it. It's one flag for the whole browser, and a page gone before the end never sends it. On a plain sign-in page that's from about 100 ms to about 450 ms after the pick.
+- **Fixed:** the background keeps which tab said it's filling, and that tab closing, or its page being replaced, ends its fill (`OverlayBackground.removePageDetails`, in `// Keykeeper:` blocks). Not changed: the flag is still one for the whole browser, so for that half second a field in another tab doesn't open its menu either, as upstream has it.
+- **Upstream:** web-v2026.10.1 does the same, in the same cases. Worth reporting to them.
+- **Tests:** unit tests that a fill ends when its tab closes or goes to another page, and not when another tab closes or a frame in its tab navigates (`overlay.background.spec.ts`; the first two fail without the fix). `tab-close-mid-fill.spec.ts` closes the tab, sends it to another page, or sends it to the next sign-in, right away and about 100, 300, and 500 ms after the pick and once after the fill, and the next sign-in must get its menu and fill; it fails without the fix. The corpus waits a second after an optional step's pick, so upstream's column isn't charged for the pages after one.
 
 ## Assisted password change
 
@@ -3376,7 +3452,7 @@ Some changes let someone read what an organization does, or sign its people in, 
 
 ### The admin page
 
-Leave `ADMIN_TOKEN` unset in production; turn the admin page on for a task, then off. Whoever has the token can do anything the page does, so the settings that could quietly send people's secrets elsewhere are set only in the environment and can't be changed there: `DOMAIN` (links in emails, passkeys), every `SMTP_*` setting (sign-in codes and links go by email), `IP_HEADER*`, `EVENT_STREAMING_ALLOWED_NETWORKS`, `HTTP_REQUEST_BLOCK_*`, `YUBICO_SERVER`, `DUO_HOST`, `FILL_ASSIST_RULES_URL` (where the extension would fetch upstream's Fill Assist rules), and `SITE_RULES_FEED` and `SITE_RULES_FEED_KEY` (whose site rules the server mirrors, and the key the extension checks an operator's with). A value saved on the admin page before is ignored. `FILL_ASSIST_RULES_URL` is empty by default (upstream's default is Bitwarden's own feed), which keeps Fill Assist off: upstream's clients take an empty rules URL to mean Bitwarden's feed, so with none set the server also sends the clients' `fill-assist-targeting-rules` flag as off, even when `EXPERIMENTAL_CLIENT_FEATURE_FLAGS` lists it, and warns at start when it does. A feed someone sets keeps upstream's checks (https, a host, and no credentials, query, fragment, or surrounding whitespace). So no PassBundle install sends people to Bitwarden's feed unless its operator sets that address on purpose (`docs/fill-rules-study.md`).
+Leave `ADMIN_TOKEN` unset in production; turn the admin page on for a task, then off. Whoever has the token can do anything the page does, so the settings that could quietly send people's secrets elsewhere are set only in the environment and can't be changed there: `DOMAIN` (links in emails, passkeys), every `SMTP_*` setting (sign-in codes and links go by email), `IP_HEADER*`, `EVENT_STREAMING_ALLOWED_NETWORKS`, `UNIFIED_PUSH_*` ("Push to phones"), `HTTP_REQUEST_BLOCK_*`, `YUBICO_SERVER`, `DUO_HOST`, `FILL_ASSIST_RULES_URL` (where the extension would fetch upstream's Fill Assist rules), and `SITE_RULES_FEED` and `SITE_RULES_FEED_KEY` (whose site rules the server mirrors, and the key the extension checks an operator's with). A value saved on the admin page before is ignored. `FILL_ASSIST_RULES_URL` is empty by default (upstream's default is Bitwarden's own feed), which keeps Fill Assist off: upstream's clients take an empty rules URL to mean Bitwarden's feed, so with none set the server also sends the clients' `fill-assist-targeting-rules` flag as off, even when `EXPERIMENTAL_CLIENT_FEATURE_FLAGS` lists it, and warns at start when it does. A feed someone sets keeps upstream's checks (https, a host, and no credentials, query, fragment, or surrounding whitespace). So no PassBundle install sends people to Bitwarden's feed unless its operator sets that address on purpose (`docs/fill-rules-study.md`).
 
 ### Logs
 
@@ -3405,7 +3481,7 @@ Decided November 2026: the server takes only the KDF settings PassBundle's apps 
 
 ### What the server fetches
 
-Icons, change-password pages, event destinations, and the site rules feed (`SITE_RULES_FEED`, "Fill rules for everyone") share one guard (`keykeeper_streaming::guard`): never cloud metadata and platform services (169.254.169.254, Azure's 168.63.129.16, Alibaba's and Oracle's, AWS's fd00:ec2::/32), link-local, multicast, or reserved addresses, or IPv4 written as IPv6 (NAT64, 6to4, Teredo, IPv4-compatible), whatever the settings say; private addresses only where the operator allows them. Every address a name resolves to is checked before connecting. With `HTTP_PROXY`, `HTTPS_PROXY`, or `ALL_PROXY` set, the proxy looks up names, so icons and change-password lookups are checked only for addresses written in URLs: the proxy has to refuse the rest (event streaming never uses a proxy). The change-password lookup, which anyone may ask for, as for icons, also gives each address (an IPv6 /64) 30 answers at once, then one every 2 seconds; looks up at most 60 new sites at once across the server, then one a second; has people asking about one site at once share one lookup; and reaches only ports 443 and 80.
+Icons, change-password pages, event destinations, phones' push endpoints ("Push to phones"), and the site rules feed (`SITE_RULES_FEED`, "Fill rules for everyone") share one guard (`keykeeper_streaming::guard`): never cloud metadata and platform services (169.254.169.254, Azure's 168.63.129.16, Alibaba's and Oracle's, AWS's fd00:ec2::/32), link-local, multicast, or reserved addresses, or IPv4 written as IPv6 (NAT64, 6to4, Teredo, IPv4-compatible), whatever the settings say; private addresses only where the operator allows them. Every address a name resolves to is checked before connecting. With `HTTP_PROXY`, `HTTPS_PROXY`, or `ALL_PROXY` set, the proxy looks up names, so icons and change-password lookups are checked only for addresses written in URLs: the proxy has to refuse the rest (event streaming and push never use a proxy). The change-password lookup, which anyone may ask for, as for icons, also gives each address (an IPv6 /64) 30 answers at once, then one every 2 seconds; looks up at most 60 new sites at once across the server, then one a second; has people asking about one site at once share one lookup; and reaches only ports 443 and 80.
 
 ### Crashes from text
 
