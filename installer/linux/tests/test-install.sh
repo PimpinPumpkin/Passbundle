@@ -334,7 +334,8 @@ if [ -n "$deb" ]; then
   check "the app is as the package installed it" sh -c "[ \"\$1\" = \"\$2\" ]" _ "$(installed)" "$script_installed"
   check "the package still has it" test "$(package_of "$app/passbundle")" = passbundle
   check "it still sets the browser policies" policy_is "$chrome/passbundle.json" 'p["PasswordManagerEnabled"] is False'
-  check "and the app's policy" policy_is /etc/passbundle/policy.json "p == {\"ServerUrl\": \"$server_url\"}"
+  check "and the app's policy, with the organization key fingerprint" policy_is /etc/passbundle/policy.json \
+    "p == {\"ServerUrl\": \"$server_url\", \"OrgKeyFingerprint\": \"$org_key\"}"
   out=$(sh "$script" --disable-card-autofill --server-url "$server_url/" --enrollment-token "$token" \
     --join-secret "$join_secret" --org-key "$org_key" 2>&1)
   check "again, nothing changed" sh -c "printf '%s' \"\$1\" | grep -q 'nothing changed'" _ "$out"
