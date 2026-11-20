@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sign in</title>
+  </head>
+  <body>
+    <!-- A design system's components: the sign-in card has a shadow root,
+         and inside it each field is a component with a shadow root of its
+         own, so the two inputs and the form are in three different roots. -->
+    <sign-in-card></sign-in-card>
+    <script>
+      customElements.define(
+        "text-field",
+        class extends HTMLElement {
+          connectedCallback() {
+            const root = this.attachShadow({ mode: "open" });
+            const id = this.getAttribute("field-id");
+            root.innerHTML = `
+              <label for="${id}">${this.getAttribute("label")}</label>
+              <input id="${id}" type="${this.getAttribute("type") ?? "text"}" />`;
+          }
+        },
+      );
+      customElements.define(
+        "sign-in-card",
+        class extends HTMLElement {
+          connectedCallback() {
+            const root = this.attachShadow({ mode: "open" });
+            root.innerHTML = `
+              <form action="/signed-in.html" method="post">
+                <h2>Sign in</h2>
+                <text-field field-id="username" label="Username"></text-field>
+                <text-field field-id="password" label="Password" type="password"></text-field>
+                <button type="submit">Sign in</button>
+              </form>`;
+          }
+        },
+      );
+    </script>
+  </body>
+</html>

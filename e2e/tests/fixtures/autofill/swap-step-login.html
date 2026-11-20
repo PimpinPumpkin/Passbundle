@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sign in</title>
+  </head>
+  <body>
+    <!-- A single-page app's two steps: Next throws the username form away and
+         draws a new form with the password field in its place. Nothing loads,
+         and the password field doesn't exist until Next. -->
+    <main id="app"></main>
+    <script>
+      const app = document.getElementById("app");
+      app.innerHTML = `
+        <form id="identify">
+          <h1>Sign in</h1>
+          <label for="username">Email or username</label>
+          <input id="username" name="identifier" type="text" autocomplete="username" />
+          <button type="button" id="next">Next</button>
+        </form>`;
+      document.getElementById("next").addEventListener("click", () => {
+        const who = document.getElementById("username").value;
+        app.innerHTML = `
+          <form id="challenge" action="/signed-in.html" method="post">
+            <h1>Welcome</h1>
+            <p>Signing in as <span id="who"></span></p>
+            <input type="hidden" name="identifier" />
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" />
+            <button type="submit">Sign in</button>
+          </form>`;
+        document.getElementById("who").textContent = who;
+        document.querySelector("input[name=identifier]").value = who;
+      });
+    </script>
+  </body>
+</html>

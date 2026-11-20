@@ -229,6 +229,73 @@ jobs:
           path: out
           retention-days: 3
 
+  # Upstream's own Chrome extension, for the autofill scoreboard: built from
+  # the release tag the clients are based on (their .keykeeper-base), in its
+  # open-source configuration, from a checkout without bitwarden_license/
+  # (CLEAN_ROOM.md), and with no commercial SDK (e2e/upstream-extension.sh).
+  # Cached by that tag and the script, so it's built again only when the
+  # clients move to a new base.
+  upstream-extension:
+    name: Upstream's extension
+    needs: refs
+    if: ${{ !inputs.skip-tests }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    outputs:
+      tag: ${{ steps.base.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/Passbundle
+          ref: ${{ needs.refs.outputs.meta }}
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/passbundle-clients
+          ref: ${{ needs.refs.outputs.clients }}
+          path: clients
+          sparse-checkout: .keykeeper-base
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: The tag the clients are based on
+        id: base
+        run: |
+          tag=$(cat clients/.keykeeper-base)
+          if ! echo "$tag" | grep -Eq '^(web|browser)-v[0-9.]+$'; then
+            echo "The clients' .keykeeper-base isn't a release tag: $tag" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Upstream's extension from $tag"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: cache
+        with:
+          path: upstream-extension
+          key: upstream-extension-${{ steps.base.outputs.tag }}-${{ hashFiles('e2e/upstream-extension.sh') }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          repository: bitwarden/clients
+          ref: ${{ steps.base.outputs.tag }}
+          path: upstream
+          sparse-checkout: |
+            /*
+            !/bitwarden_license/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          node-version-file: upstream/.nvmrc
+      - name: Build it
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: e2e/upstream-extension.sh upstream "$GITHUB_WORKSPACE/upstream-extension"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: upstream-extension
+          path: upstream-extension
+          retention-days: 3
+
   # The command-line tool, branded and packed as one program the way the
   # release packs it (tools/cli/pack.sh, docs/cli.md), for the end-to-end
   # tests in tests/cli.
@@ -727,6 +794,82 @@ jobs:
         if: failure()
         with:
           name: e2e-report-${{ strategy.job-index }}
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            e2e/server-log
+          retention-days: 14
+
+  # The autofill corpus, filled by our extension and then by upstream's, with
+  # the two scores side by side in the log and page by page in the job's
+  # autofill-scoreboard artifact (DESIGN.md, "How it keeps getting better").
+  # Ours fails the build when a page that filled stops filling; upstream's
+  # misses are only reported. Without an upstream build (its job failed), ours
+  # still runs and the scoreboard has our column only.
+  scoreboard:
+    name: Autofill scoreboard
+    needs: [refs, server, clients, chrome-extension, upstream-extension]
+    if: ${{ !cancelled() && !inputs.skip-tests && needs.server.result == 'success' && needs.clients.result == 'success' && needs.chrome-extension.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/Passbundle
+          ref: ${{ needs.refs.outputs.meta }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: server
+          path: build/server
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: clients
+          path: build/clients
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: chrome-extension
+          path: build/clients
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: needs.upstream-extension.result == 'success'
+        with:
+          name: upstream-extension
+          path: build/upstream-extension
+      - name: Upstream's build, when there is one
+        if: needs.upstream-extension.result == 'success'
+        env:
+          TAG: ${{ needs.upstream-extension.outputs.tag }}
+        run: |
+          echo "KK_UPSTREAM_EXTENSION=$GITHUB_WORKSPACE/build/upstream-extension" >> "$GITHUB_ENV"
+          echo "KK_UPSTREAM_TAG=$TAG" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Install test dependencies
+        working-directory: e2e
+        run: sudo apt-get install -y --no-install-recommends libpq5 && npm ci --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: Fill the corpus with both extensions
+        working-directory: e2e
+        env:
+          KK_SERVER_BIN: ${{ github.workspace }}/build/server/vaultwarden
+          KK_WEB_VAULT: ${{ github.workspace }}/build/clients/web-vault
+          KK_EXTENSION: ${{ github.workspace }}/build/clients/extension-chrome
+          KK_BRAND: ${{ github.workspace }}/build/clients/brand.json
+          KK_SERVER_LOG: ${{ github.workspace }}/e2e/server-log/server.log
+        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" && npx playwright test --project=corpus
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: autofill-scoreboard
+          path: e2e/test-results/autofill-scoreboard.json
+          if-no-files-found: warn
+          retention-days: 30
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: scoreboard-report
           path: |
             e2e/playwright-report
             e2e/test-results
