@@ -104,7 +104,7 @@ The settings are the server's environment variables, as in Vaultwarden. The ones
 
 `ADMIN_TOKEN` turns on the server's admin page at `/admin`, which can delete accounts and organizations and change settings. Someone who gets the token can do all of that, so leave it unset in production: set it, use the page, and unset it again (restart the container both times). Use an Argon2 hash (`passbundle-server hash`), never the token itself.
 
-Settings that could quietly send people's secrets somewhere else are set only in the environment, so the admin page can't change them: `DOMAIN` (links in emails and passkeys), every `SMTP_*` setting (sign-in codes and links go by email), `IP_HEADER` and `IP_HEADER_TRUSTED_PROXIES`, `EVENT_STREAMING_ALLOWED_NETWORKS`, `HTTP_REQUEST_BLOCK_REGEX` and `HTTP_REQUEST_BLOCK_NON_GLOBAL_IPS`, `YUBICO_SERVER`, and `DUO_HOST`. A value for one of them saved on the admin page before is ignored.
+Settings that could quietly send people's secrets somewhere else are set only in the environment, so the admin page can't change them: `DOMAIN` (links in emails and passkeys), every `SMTP_*` setting (sign-in codes and links go by email), `IP_HEADER` and `IP_HEADER_TRUSTED_PROXIES`, `EVENT_STREAMING_ALLOWED_NETWORKS`, the `UNIFIED_PUSH_*` settings, `HTTP_REQUEST_BLOCK_REGEX` and `HTTP_REQUEST_BLOCK_NON_GLOBAL_IPS`, `YUBICO_SERVER`, and `DUO_HOST`. A value for one of them saved on the admin page before is ignored.
 
 ## Plans
 
@@ -188,7 +188,20 @@ In Stripe's dashboard:
 
 ## What the server fetches
 
-The server fetches websites' icons and change-password pages, and sends events to the destinations organizations choose. It never reaches cloud metadata services (169.254.169.254, Azure's 168.63.129.16, and the like), link-local addresses, or IPv4 written as IPv6 (NAT64, 6to4, Teredo), whatever the settings say, and by default no private address either (`HTTP_REQUEST_BLOCK_NON_GLOBAL_IPS`). It checks each address a name resolves to before connecting. With `HTTP_PROXY`, `HTTPS_PROXY`, or `ALL_PROXY` set, the proxy looks up names instead, so those checks see only addresses written in URLs: the proxy has to refuse the rest. Event streaming never uses a proxy.
+The server fetches websites' icons and change-password pages, sends events to the destinations organizations choose, and pushes to phones' push services ("Push to phones"). It never reaches cloud metadata services (169.254.169.254, Azure's 168.63.129.16, and the like), link-local addresses, or IPv4 written as IPv6 (NAT64, 6to4, Teredo), whatever the settings say, and by default no private address either (`HTTP_REQUEST_BLOCK_NON_GLOBAL_IPS`). It checks each address a name resolves to before connecting. With `HTTP_PROXY`, `HTTPS_PROXY`, or `ALL_PROXY` set, the proxy looks up names instead, so those checks see only addresses written in URLs: the proxy has to refuse the rest. Event streaming and push never use a proxy.
+
+## Push to phones
+
+PassBundle tells phones with a UnifiedPush distributor (ntfy, for example) that a sign-in is waiting for them, so the phone prompts while PassBundle is closed (DESIGN.md, "Push to phones"). Each message says only that, encrypted to the phone's own keys, and goes to the address the phone's distributor gave it. The server signs each one with a key of its own (VAPID), `vapid_key.pem`, which it makes on its first start beside `rsa_key.pem` and keeps there: back it up with the RSA key. If it's replaced, phones register again the next time PassBundle opens on them.
+
+| Setting | What it does |
+|---|---|
+| `UNIFIED_PUSH_ENABLED` | `true` by default. `false` sends no push, and the apps hear that the server doesn't. |
+| `UNIFIED_PUSH_ALLOWED_HOSTS` | The push hosts the server may send to, separated by commas: `ntfy.sh, push.example.com`. Empty, the default, is any public host. |
+
+The address comes from a phone, so the server reaches only public addresses there, over `https://` only, with no proxy and no redirects, checking every address the host resolves to before connecting (as in "What the server fetches"). It sends one device at most 10 messages a minute and one account's devices 20, keeps at most 10 endpoints for an account (a new one replaces the oldest), and gives a push service 10 seconds. A push service that answers 404 or 410 no longer has the address, and the server forgets it. A push service that's slow or down never slows anything else.
+
+**For tests only:** `UNIFIED_PUSH_TEST_ONLY_ALLOW_PRIVATE_ADDRESSES=true` lets push reach loopback and private addresses (never link-local or cloud metadata ones), and `UNIFIED_PUSH_TEST_ONLY_CA_FILE` names the only certificate authority push trusts then, for a stand-in push service with a throwaway certificate. They're how the tests reach a push service on `127.0.0.1`. Never set them on a server anyone uses: the server refuses to start with either on a public `DOMAIN`, and with the second without the first. Like the other settings here, all four are set only in the environment.
 
 ## Making a release
 
@@ -205,4 +218,4 @@ What's recorded is enough to build a release again: the tag holds the Dockerfile
 
 ## Not yet
 
-- Push notifications for the mobile apps, which come with the apps.
+- Push to iPhones (APNs) and to Android phones without a UnifiedPush distributor (FCM).
