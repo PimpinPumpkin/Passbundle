@@ -51,8 +51,22 @@ const withStreaming = process.env.KK_EVENT_STREAMING === "1";
 // its RSA key, which signs logins and seals event streaming's secrets. This
 // server's own data folder holds the rest, its certificate among them.
 const sharesWith = process.env.KK_SHARES_DATABASE_OF;
+// KK_SITE_RULES_FEED=<url> with KK_SITE_RULES_FEED_KEY: a server that mirrors
+// that site rules feed as an operator's own (SITE_RULES_FEED), from this
+// machine, which the site rules tests start themselves (tests/site-rules.spec.ts).
+// Every other server mirrors none, so no test server fetches PassBundle's
+// feed from the internet.
+const siteRulesFeed = process.env.KK_SITE_RULES_FEED;
 const side =
-  withMail || withLimits || withGroups || withNewDevice || likeTestServer || !!signUps || !!keptData || !!sharesWith;
+  withMail ||
+  withLimits ||
+  withGroups ||
+  withNewDevice ||
+  likeTestServer ||
+  !!signUps ||
+  !!keptData ||
+  !!sharesWith ||
+  !!siteRulesFeed;
 
 for (const [name, p] of Object.entries({
   server: paths.serverBin,
@@ -172,8 +186,11 @@ const child = spawn(paths.serverBin, [], {
         }
       : {}),
     ...(withGroups ? { ORG_GROUPS_ENABLED: "true" } : {}),
-    // KK_EVENTS=1: the event log on, for a server a test starts itself
-    // (tests/api/plans-families.spec.ts). Every other server keeps it off.
+    // KK_EVENTS=1: the event log on, said outright, for a server a test
+    // starts itself (tests/api/plans-families.spec.ts). Every other server has
+    // it on too, since that's the server's default (ORG_EVENTS_ENABLED): the
+    // events a test's requests log are kept, and sent to any event
+    // destination the test sets up.
     ...(process.env.KK_EVENTS === "1" ? { ORG_EVENTS_ENABLED: "true" } : {}),
     // KK_SINGLE_ORG_FOR_RECOVERY=1: account recovery needs single organization
     // first, as Bitwarden always does (tests/api/msp-required-policies.spec.ts).
@@ -337,6 +354,15 @@ const child = spawn(paths.serverBin, [], {
     // server allows it, as the hosted service does.
     MSP_SIGNUPS_ALLOWED: process.env.KK_MSP_SIGNUPS === "off" ? "false" : "true",
     DISABLE_ICON_DOWNLOAD: "true",
+    ...(siteRulesFeed
+      ? {
+          SITE_RULES_FEED: siteRulesFeed,
+          SITE_RULES_FEED_KEY: process.env.KK_SITE_RULES_FEED_KEY ?? "",
+          // The feed is on 127.0.0.1, which the server's fetch guard refuses
+          // unless the operator allows private addresses.
+          HTTP_REQUEST_BLOCK_NON_GLOBAL_IPS: "false",
+        }
+      : { SITE_RULES_FEED: "none" }),
     // Single sign-on goes to the local stand-in for Microsoft Entra ID, and
     // domain checks ask its DNS server (entra-standin.mjs).
     SSO_ENTRA_AUTHORITY: `http://127.0.0.1:${entraPort}`,
@@ -373,6 +399,8 @@ const child = spawn(paths.serverBin, [], {
               ? "-mail$1"
               : sharesWith
               ? "-second$1"
+              : siteRulesFeed
+              ? `-site-rules-${port}$1`
               : withLimits
                 ? "-limits$1"
                 : withGroups

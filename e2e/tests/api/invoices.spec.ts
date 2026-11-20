@@ -196,13 +196,26 @@ type ServerSetup = {
   invoices?: string;
 };
 
+/**
+ * Where a server here keeps its log: with the run's other server logs when
+ * the run keeps them (KK_SERVER_LOG; CI keeps that folder with a failed
+ * run's report), one file for each port, so what the server said about a
+ * webhook or a month can be read after a failure. Otherwise in its data
+ * folder, which goes when the server stops. server.mjs adds "-restart" to
+ * the name, as for every server that keeps its data.
+ */
+function serverLog(port: string, dataDir: string): string {
+  const kept = process.env.KK_SERVER_LOG;
+  return kept ? path.join(path.dirname(kept), `invoices-${port}.log`) : path.join(dataDir, "server.log");
+}
+
 function serverEnv(port: string, dataDir: string, setup: ServerSetup, adminToken: string) {
   const env: Record<string, string> = {
     ...(process.env as Record<string, string>),
     KK_PORT: port,
     KK_DATA_DIR: dataDir,
     KK_ADMIN_TOKEN: adminToken,
-    KK_SERVER_LOG: path.join(dataDir, "server.log"),
+    KK_SERVER_LOG: serverLog(port, dataDir),
     KK_PLANS_ENFORCED: setup.enforced ? "1" : "",
     KK_BILLING_PROVIDER: setup.provider ?? "",
     KK_BILLING_API_BASE: standinBase,
@@ -244,7 +257,8 @@ async function startServer(
     .toBe(200);
   const signedIn = await admin.post("/admin", { form: { token: adminToken } });
   expect(signedIn.status(), "the operator's sign-in to the admin page").toBe(200);
-  return { port, process: child, dataDir, log: path.join(dataDir, "server-restart.log"), admin, adminToken };
+  const log = serverLog(port, dataDir).replace(/(\.log)?$/, "-restart$1");
+  return { port, process: child, dataDir, log, admin, adminToken };
 }
 
 /** Stops a server, as a crash would, keeping its data unless asked not to. */
