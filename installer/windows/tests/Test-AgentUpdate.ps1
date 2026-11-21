@@ -77,7 +77,10 @@ function Invoke-UpdateTask {
   for ($try = 0; $try -lt 600; $try++) {
     Start-Sleep -Milliseconds 500
     $info = Get-ScheduledTaskInfo -TaskName $task
-    if ($info.LastRunTime -ne $before -and (Get-ScheduledTask -TaskName $task).State -ne "Running") {
+    # 267009 (SCHED_S_TASK_RUNNING) is the run still going: read just before
+    # it ends, with its state read just after, it would pass for its result.
+    if ($info.LastRunTime -ne $before -and $info.LastTaskResult -ne 267009 -and
+      (Get-ScheduledTask -TaskName $task).State -ne "Running") {
       Write-Host "      (the update task ended with $($info.LastTaskResult))"
       return $info.LastTaskResult
     }
