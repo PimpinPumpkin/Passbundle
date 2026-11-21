@@ -360,6 +360,32 @@ if ($env:KK_SKIP_REMOVE -ne "1") {
     & $script -Remove | Out-Null
     Check "Remove leaves passbundle:// links that open another program" { (RegValue "$linkKey\shell\open\command" "") -eq $otherCommand }
     Remove-Item -Path $linkKey -Recurse -Force
+
+    # The app without the agent: an RMM package with the app's folder and no
+    # agent folder. The app reads the server and the organization key
+    # fingerprint from the agent's policy key, so the script writes both
+    # there for the app alone too, and -Remove takes them away. Until
+    # November 21, 2026, only the agent's install wrote them, so the app had no
+    # server and never enrolled anyone's account recovery.
+    $appOnly = Join-Path $env:TEMP "pb-app-only"
+    if (Test-Path $appOnly) { Remove-Item -Path $appOnly -Recurse -Force }
+    New-Item -ItemType Directory -Path (Join-Path $appOnly "app") -Force | Out-Null
+    Copy-Item -Path $script -Destination $appOnly
+    Copy-Item -Path (Join-Path $PSScriptRoot "..\app\*") -Destination (Join-Path $appOnly "app") -Recurse
+    $appOnlyScript = Join-Path $appOnly "Install-PassBundle.ps1"
+    # Its warning with what it says, as text.
+    $said = @(& $appOnlyScript -ServerUrl "$serverUrl/" -EnrollmentToken $token -JoinSecret $joinSecret -OrgKey $orgKey 3>&1 | ForEach-Object { "$_" })
+    Check "A package with the app alone says there's no desktop agent next to the script" { @($said -like "No desktop agent next to this script*").Count -eq 1 }
+    Check "The app is installed alone" { Test-Path (Join-Path $installDir "passbundle.exe") }
+    Check "without the agent: nothing starts it at sign-in, and no host is registered" {
+      -not ((Get-Item $runKey).GetValueNames() -contains "PassBundle") -and -not ($hostKeys | Where-Object { Test-Path $_ })
+    }
+    Check "The app installed alone gets the server address" { (RegValue $agentPolicy "ServerUrl") -eq $serverUrl }
+    Check "The app installed alone gets the organization key fingerprint, next to the server" { (RegValue $agentPolicy "OrgKeyFingerprint") -eq $orgKey }
+    & $appOnlyScript -Remove | Out-Null
+    Check "Remove takes the app's server and organization key fingerprint away" { -not (Test-Path $agentPolicy) }
+    Check "Remove uninstalls the app installed alone" { -not (Test-Path $installDir) }
+    Remove-Item -Path $appOnly -Recurse -Force -ErrorAction SilentlyContinue
   }
   # Leave the policies applied for the browser check that follows.
   & $script -DisableCardAutofill | Out-Null

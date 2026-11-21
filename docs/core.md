@@ -419,11 +419,11 @@ Where the apps sign in, so nobody types a server address who doesn't have to:
 
 - **PassBundle's own server** (brand.json's web vault, `https://vault.passbundle.com`) by default. Someone on PassBundle's hosted service signs in with their email and master password and is never asked.
 - **A server an organization set by policy**, which the apps then use and show ("Your organization's server: vault.example.com") instead of a field. It comes only from places an administrator writes:
-  - Windows: the machine policy key the RMM install writes for the desktop agent (`HKLM\SOFTWARE\Policies\PassBundle\Agent`, `ServerUrl`);
+  - Windows: the machine policy key the RMM install writes for the desktop agent and the app, whenever it installs either (`HKLM\SOFTWARE\Policies\PassBundle\Agent`, `ServerUrl`);
   - macOS: the MDM profile's managed preferences (`com.passbundle.agent`, `ServerUrl`);
   - Linux: `/etc/passbundle/policy.json` (`ServerUrl`), which the Linux install script writes, read only if it's root's and only root can change it;
-  - Android: the app's managed configuration (`server_url`), which an MDM sets.
-  - iOS: the app's managed app configuration (`server_url` in `com.apple.configuration.managed`), which an MDM sets.
+  - Android: the app's managed configuration (`server_url`), which an MDM sets;
+  - iOS: the app's managed app configuration (`server_url` in `com.apple.configuration.managed`), which an MDM sets. The console shows both phone values to copy, next to the install command (DESIGN.md, "Our apps").
 
   Nothing the person, or something running as them, can write is read, so nobody can point the apps at another server this way. The same places carry the install command's organization key fingerprint (`OrgKeyFingerprint` on computers, `org_key_fingerprint` on phones), the one key the apps enroll the person's account recovery to at unlock (DESIGN.md, "Enrolling at unlock", "Our apps").
 - **Someone hosting their own**: "Self-hosted?" on the sign-in screen shows the server field. Signing in to that server once keeps it showing, for next time.
