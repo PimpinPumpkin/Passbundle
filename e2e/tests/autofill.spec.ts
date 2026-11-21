@@ -94,7 +94,9 @@ test("a login saved from the save prompt, with the vault open in a tab, is in th
   await expect.poll(() => hasNotificationBar(page), { timeout: 10_000 }).toBe(true);
   const bar = page.frames().find((f) => f.url().includes("notification/bar.html"))!;
   await bar.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(bar.getByText("Login saved")).toBeVisible();
+  // Word for word: the prompt itself reads "Save login" beside this site's
+  // name, saved.example.test, which a looser match takes for "Login saved".
+  await expect(bar.getByText("Login saved", { exact: true })).toBeVisible();
 
   // At once: the sign-in page again, and the login in its menu.
   const again = await context.newPage();
