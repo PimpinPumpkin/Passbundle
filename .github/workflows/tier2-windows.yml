@@ -125,11 +125,11 @@ jobs:
       - name: The update task puts 0.1.2 in place of 0.1.1, end to end (diagnostics, three ways)
         shell: pwsh
         run: |
-          # DIAGNOSTICS (not for merging): as on main; with the download left
-          # changed, so no update goes in; and with the site out of reach for
-          # the changed download's run.
+          # DIAGNOSTICS (not for merging): as on main; with the site out of
+          # reach for the changed download's run; and with the download left
+          # changed, so no update goes in (last: it leaves the zip changed).
           $unmet = 0
-          foreach ($scenario in "as-on-main", "no-update", "site-down") {
+          foreach ($scenario in "as-on-main", "site-down", "no-update") {
             $env:PB_DIAG = $scenario
             Write-Host "===== $scenario"
             $global:LASTEXITCODE = 0
