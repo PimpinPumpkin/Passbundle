@@ -137,14 +137,16 @@ if (site.indexed === false) {
 
 // Links passbundle.com can go live without, because the pages read true
 // while they're empty: with links.vault filled in and links.signup empty,
-// they say new accounts aren't open yet and how to ask for one, and the store
-// listings arrive whenever each store approves the extension. Any other
-// empty link blocks.
+// they say new accounts aren't open yet and how to ask for one, the store
+// listings arrive whenever each store approves the extension, and the
+// unsigned Firefox zip's link falls back to the list of extension releases,
+// each of which has it. Any other empty link blocks.
 const CAN_WAIT = {
   signup: "new accounts: until then, with links.vault filled in, the pages say they aren't open yet and how to ask for one",
   chrome: "the Chrome Web Store listing",
   edge: "the Edge Add-ons listing",
   firefox: "the Firefox Add-ons listing",
+  extensionFirefoxZip: "the unsigned Firefox zip: until then, Download links the extension's releases, where each has it",
 };
 const empty = Object.entries(site.links)
   .filter(([, v]) => v === "")

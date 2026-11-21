@@ -10,12 +10,14 @@
 import {
   constants,
   createCipheriv,
+  createDecipheriv,
   createHmac,
   generateKeyPairSync,
   pbkdf2Sync,
   publicEncrypt,
   randomBytes,
   randomUUID,
+  timingSafeEqual,
 } from "node:crypto";
 
 import { type APIRequestContext, expect } from "@playwright/test";
@@ -34,6 +36,17 @@ export function encrypt(key: SymmetricKey, value: string | Buffer): string {
     .update(Buffer.concat([iv, ct]))
     .digest();
   return `2.${iv.toString("base64")}|${ct.toString("base64")}|${mac.toString("base64")}`;
+}
+
+/** Opens a type 2 value, checking its MAC first, as the apps do: for reading back what a client saved. */
+export function decrypt(key: SymmetricKey, value: string): Buffer {
+  const parts = /^2\.([^|]+)\|([^|]+)\|([^|]+)$/.exec(value);
+  expect(parts, "a type 2 encrypted value").toBeTruthy();
+  const [iv, ct, mac] = parts!.slice(1).map((p) => Buffer.from(p, "base64"));
+  const want = createHmac("sha256", key.subarray(32)).update(Buffer.concat([iv, ct])).digest();
+  expect(want.length === mac.length && timingSafeEqual(want, mac), "its MAC checks out").toBe(true);
+  const decipher = createDecipheriv("aes-256-cbc", key.subarray(0, 32), iv);
+  return Buffer.concat([decipher.update(ct), decipher.final()]);
 }
 
 /** A value encrypted to an RSA public key (SPKI, DER), as upstream's type 4 string. */

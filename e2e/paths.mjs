@@ -149,6 +149,9 @@ export const siteRulesChangedServerPort = process.env.KK_SITE_RULES_CHANGED_SERV
 // with passkeys whose checks we didn't write (chrome/relying-party.mjs),
 // which Chrome reaches as www.harbor-books.test over HTTPS.
 export const chromeSitePort = process.env.KK_CHROME_SITE_PORT ?? "8170";
+// Where geckodriver listens while the Firefox tests (tests/firefox) drive
+// Firefox through it, one Firefox at a time.
+export const geckodriverPort = process.env.KK_GECKODRIVER_PORT ?? "8175";
 export const paths = {
   serverBin:
     process.env.KK_SERVER_BIN ??
@@ -157,6 +160,14 @@ export const paths = {
     process.env.KK_WEB_VAULT ?? repo("clients", "apps/web/build"),
   extension:
     process.env.KK_EXTENSION ?? repo("clients", "apps/browser/build"),
+  // The Firefox build (`npm run build:prod:firefox`), which writes the same
+  // folder as the Chrome build: the Firefox tests check which one it is.
+  firefoxExtension:
+    process.env.KK_FIREFOX_EXTENSION ?? repo("clients", "apps/browser/build"),
+  // Firefox itself and geckodriver, for tests/firefox. Tier 1 installs the
+  // Firefox it names (tier1.yml) and uses the runner's geckodriver.
+  firefox: process.env.KK_FIREFOX,
+  geckodriver: process.env.KK_GECKODRIVER ?? "geckodriver",
   // Upstream's own extension, built by upstream-extension.sh from the tag the
   // clients are based on, for the autofill scoreboard. No default: without
   // it, the scoreboard has our column only.

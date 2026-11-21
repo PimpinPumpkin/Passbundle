@@ -97,7 +97,7 @@ export default defineConfig({
     { name: "cli", testDir: "tests/cli" },
     {
       name: "chromium",
-      testIgnore: ["api/**", "mail/**", "cli/**", "autofill-corpus.spec.ts"],
+      testIgnore: ["api/**", "mail/**", "cli/**", "firefox/**", "autofill-corpus.spec.ts"],
       use: { ...devices["Desktop Chrome"] },
     },
     // The autofill corpus and scoreboard, ours and upstream's extension
@@ -107,5 +107,8 @@ export default defineConfig({
       testMatch: "autofill-corpus.spec.ts",
       use: { ...devices["Desktop Chrome"] },
     },
+    // The extension's Firefox build in a real Firefox (KK_FIREFOX), through
+    // geckodriver, not Playwright's browser (tests/support/firefox.ts).
+    { name: "firefox", testDir: "tests/firefox" },
   ],
 });

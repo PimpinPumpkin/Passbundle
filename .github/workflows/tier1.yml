@@ -640,6 +640,19 @@ jobs:
               if (name !== brand.nameFull) throw new Error(dir + ": extension name is " + name);
               console.log(dir + ": " + name);
             }'
+      # Kept as the Chrome build is: for the Firefox tests (e2e-firefox), and
+      # as a download from the run's page. Unsigned, so Firefox runs it only
+      # where it allows that (DESIGN.md, "The extension in Firefox").
+      - name: Collect the Firefox build
+        run: |
+          mkdir -p out
+          cp -r apps/browser/build out/extension-firefox
+          find out -name '*.map' -delete
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: firefox-extension
+          path: out
+          retention-days: 3
 
   script-module:
     # RMMs mostly run scripts in Windows PowerShell 5.1, which the Linux
@@ -884,6 +897,81 @@ jobs:
         if: failure()
         with:
           name: e2e-report-${{ strategy.job-index }}
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            e2e/server-log
+          retention-days: 14
+
+  # The extension in Firefox (e2e/tests/firefox): the Firefox build above as a
+  # temporary add-on in a real Firefox, driven through geckodriver
+  # (e2e/tests/support/firefox.ts says why not Playwright or WebDriver BiDi).
+  # Firefox is the release FIREFOX names, from Mozilla's own archive
+  # (archive.mozilla.org), fetched by @puppeteer/browsers, which
+  # e2e/package-lock.json pins (3.2.6, from Puppeteer 25.16.0, which is tested
+  # with this release). Moving FIREFOX moves the tests to another release, on
+  # purpose. geckodriver is the runner's own. Both versions are in the log.
+  e2e-firefox:
+    name: End-to-end in Firefox
+    needs: [refs, server, clients, other-browsers]
+    if: ${{ !inputs.skip-tests }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      FIREFOX: stable_158.0.1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: PimpinPumpkin/Passbundle
+          ref: ${{ needs.refs.outputs.meta }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: server
+          path: build/server
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: clients
+          path: build/clients
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: firefox-extension
+          path: build/clients
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Install test dependencies
+        working-directory: e2e
+        run: sudo apt-get install -y --no-install-recommends libpq5 && npm ci --no-audit --no-fund
+      - name: Firefox, and the runner's geckodriver
+        working-directory: e2e
+        run: |
+          firefox=$(npx @puppeteer/browsers install "firefox@$FIREFOX" --path "$RUNNER_TEMP/browsers" --format '{{path}}' | tail -1)
+          if [ ! -x "$firefox" ]; then
+            echo "No Firefox $FIREFOX at \"$firefox\"." >&2
+            exit 1
+          fi
+          "$firefox" --version
+          "$GECKOWEBDRIVER/geckodriver" --version | head -1
+          {
+            echo "KK_FIREFOX=$firefox"
+            echo "KK_GECKODRIVER=$GECKOWEBDRIVER/geckodriver"
+          } >> "$GITHUB_ENV"
+      - name: Run the Firefox tests
+        working-directory: e2e
+        env:
+          KK_SERVER_BIN: ${{ github.workspace }}/build/server/vaultwarden
+          KK_WEB_VAULT: ${{ github.workspace }}/build/clients/web-vault
+          KK_FIREFOX_EXTENSION: ${{ github.workspace }}/build/clients/extension-firefox
+          KK_BRAND: ${{ github.workspace }}/build/clients/brand.json
+          KK_SERVER_LOG: ${{ github.workspace }}/e2e/server-log/server.log
+        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" && npx playwright test --project=firefox
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: e2e-firefox-report
           path: |
             e2e/playwright-report
             e2e/test-results
