@@ -70,6 +70,7 @@ function Test-SameAs([string] $From) {
 # Runs the update task as Windows does (as SYSTEM), waits for it to end, and
 # returns its exit code.
 function Invoke-UpdateTask {
+  Show-Diag "before a run"
   $before = (Get-ScheduledTaskInfo -TaskName $task).LastRunTime
   # Its last run time is to the second.
   Start-Sleep -Seconds 2
@@ -79,10 +80,45 @@ function Invoke-UpdateTask {
     $info = Get-ScheduledTaskInfo -TaskName $task
     if ($info.LastRunTime -ne $before -and (Get-ScheduledTask -TaskName $task).State -ne "Running") {
       Write-Host "      (the update task ended with $($info.LastTaskResult))"
+      Show-Diag "after a run"
       return $info.LastTaskResult
     }
   }
   throw "The update task didn't end within 5 minutes"
+}
+
+
+# DIAGNOSTICS (not for merging): what the task said, and what the Task
+# Scheduler did, around each run.
+$diagLog = "C:\pb-diag\update.log"
+New-Item -ItemType Directory -Force -Path (Split-Path $diagLog) | Out-Null
+wevtutil sl Microsoft-Windows-TaskScheduler/Operational /e:true
+$script:diagSince = (Get-Date).AddSeconds(-5)
+try {
+  $mp = Get-MpComputerStatus -ErrorAction Stop
+  Write-Host "diag  defender realtime=$($mp.RealTimeProtectionEnabled) onaccess=$($mp.OnAccessProtectionEnabled) ioav=$($mp.IoavProtectionEnabled) exclusions=$((Get-MpPreference).ExclusionPath -join ',')"
+} catch { Write-Host "diag  defender: $_" }
+Write-Host "diag  python: $((Get-Command python).Source)"
+function Show-Diag([string] $When) {
+  Write-Host "----- diag: $When ($((Get-Date).ToString('HH:mm:ss.fff')))"
+  if (Test-Path $diagLog) {
+    Get-Content $diagLog | ForEach-Object { Write-Host "  said: $_" }
+    Clear-Content $diagLog
+  }
+  $info = Get-ScheduledTaskInfo -TaskName $task -ErrorAction SilentlyContinue
+  if ($info) {
+    Write-Host "  info: last=$($info.LastRunTime.ToString('HH:mm:ss.fff')) result=$($info.LastTaskResult) missed=$($info.NumberOfMissedRuns) state=$((Get-ScheduledTask -TaskName $task).State)"
+  }
+  Get-WinEvent -FilterHashtable @{ LogName = "Microsoft-Windows-TaskScheduler/Operational"; StartTime = $script:diagSince } -ErrorAction SilentlyContinue |
+    Where-Object { $_.Message -like "*PassBundle agent update*" } | Sort-Object TimeCreated, RecordId |
+    ForEach-Object { Write-Host "  event: $($_.TimeCreated.ToString('HH:mm:ss.fff')) $($_.Id) $((($_.Message -split "`n")[0]).Trim())" }
+  $script:diagSince = Get-Date
+  $there = Test-Path -LiteralPath $work
+  $inWork = @(Get-ChildItem -LiteralPath $work -Force -Recurse -ErrorAction SilentlyContinue | Select-Object -First 12 | ForEach-Object { $_.FullName.Substring($work.Length) }) -join ", "
+  Write-Host "  work: there=$there [$inWork]"
+  $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -and ($_.Path -like "$installDir\*" -or $_.Path -like "$work\*") } | ForEach-Object { "$($_.Id) $($_.Path)" }) -join "; "
+  Write-Host "  running: [$running]"
+  if ($server) { Write-Host "  server: exited=$($server.HasExited)" }
 }
 
 $sids = @{
@@ -92,10 +128,10 @@ $sids = @{
   Users = "S-1-5-32-545"
 }
 function Get-Rules([string] $Path) {
-  foreach ($rule in (Get-Acl -Path $Path).Access) {
+  foreach ($rule in (Get-Acl -Path $Path).GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier])) {
     if ($rule.AccessControlType -ne "Allow") { continue }
     [pscustomobject]@{
-      Sid = $rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
+      Sid = $rule.IdentityReference.Value
       Rights = $rule.FileSystemRights
     }
   }
@@ -121,6 +157,14 @@ try {
   Check "0.1.1 is installed from its release" { (Get-InstalledVersion) -eq "0.1.1" -and (Test-SameAs $old) }
   Check "with the host's manifest beside it" { Test-Path $hostManifest }
   Check "and the SYSTEM update task" { (Get-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue).Principal.UserId -eq "SYSTEM" }
+  $registered = Get-ScheduledTask -TaskName $task
+  Write-Host "diag  task: $($registered.Actions[0].Execute) $($registered.Actions[0].Arguments); multiple=$($registered.Settings.MultipleInstances) whenavailable=$($registered.Settings.StartWhenAvailable) triggers=$(@($registered.Triggers | ForEach-Object { "$($_.CimClass.CimClassName) $($_.StartBoundary)" }) -join '; ')"
+  $agentExe = Join-Path $installDir "passbundle-agent.exe"
+  $cmd = Join-Path $env:SystemRoot "System32\cmd.exe"
+  $wrapped = New-ScheduledTaskAction -Execute $cmd -Argument "/s /c `"echo === %TIME% >> $diagLog & `"$agentExe`" --update >> $diagLog 2>&1`""
+  Register-ScheduledTask -TaskName $task -Action $wrapped -Trigger $registered.Triggers -Principal $registered.Principal -Settings $registered.Settings -Force | Out-Null
+  Write-Host "diag  wrapped: $((Get-ScheduledTask -TaskName $task).Actions[0].Arguments)"
+  Show-Diag "after install"
   $hostManifestHash = (Get-FileHash -Path $hostManifest).Hash
 
   # The stand-in for the update site.
@@ -198,7 +242,11 @@ try {
   & $script -Remove | Out-Null
   Check "Remove takes PassBundle away" { -not (Test-Path $installDir) }
   Check "and the update task's folder" { -not (Test-Path $work) }
+} catch {
+  Write-Host "diag  the test stopped: $_"
+  $failures++
 } finally {
+  Show-Diag "at the end"
   if ($server) { Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue }
   Get-Process -Name "passbundle", "passbundle-agent", "passbundle-agent-host" -ErrorAction SilentlyContinue | Stop-Process -Force
   # Back to what Test-Install.ps1 left, for the browser check that follows.
