@@ -343,6 +343,18 @@ export class Firefox {
     await this.cmd("POST", `/element/${id}/value`, { text: keys.join("") });
   }
 
+  /**
+   * The text inside an element's shadow root, in the chosen tab or frame. The
+   * extension draws the menu inside a field in a closed shadow root, which no
+   * selector or script of the page reaches, but WebDriver's Get Element
+   * Shadow Root returns closed ones too.
+   */
+  async shadowText(selector: string): Promise<string> {
+    const host = await this.cmd<Record<string, string>>("POST", "/element", by(selector));
+    const root = await this.cmd<Record<string, string>>("GET", `/element/${host[ELEMENT]}/shadow`);
+    return this.run<string>("return arguments[0].textContent", root);
+  }
+
   /** A form field's value. */
   async value(selector: string): Promise<string> {
     const id = await this.waitFor(selector);

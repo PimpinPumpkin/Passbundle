@@ -177,21 +177,23 @@ async function lockNow(firefox: Firefox) {
  * overlay/menu.html, which holds the list (menu-list.html). ArrowDown in the
  * field moves the focus into the list, and Enter there fills. Keys go where
  * WebDriver's chosen frame is, so Enter is pressed from inside the list.
+ *
+ * First the list shows the item, as Chrome's tests wait for
+ * (waitForInlineMenuItem): its text, as a person sees it. Not the
+ * background's list of what it offers, as these tests once asked: Firefox
+ * gives an extension's page its full APIs only when every frame around it is
+ * that extension's too, so overlay/menu.html inside a web page gets what a
+ * content script gets, with no getBackgroundPage, and the list, sandboxed,
+ * gets none.
  */
 async function chooseFirstInlineMenuItem(firefox: Firefox, field: string, itemName: string) {
   await expect(async () => {
     await firefox.top();
     await firefox.click(field);
     await firefox.intoFrame("menu-list.html", 5_000);
-    // The list has the item: what the extension's background offers this
-    // tab, asked from the frame that holds the list. That one is the
-    // extension's own page; the list itself is sandboxed, with no extension
-    // APIs.
-    await firefox.parentFrame();
-    const offered = await firefox.run<string[]>(
-      "return [...chrome.extension.getBackgroundPage().bitwardenMain.overlayBackground.inlineMenuCiphers.values()].map((c) => c.name)",
-    );
-    expect(offered).toContain(itemName);
+    await expect
+      .poll(() => firefox.shadowText("autofill-inline-menu-list"), { timeout: 5_000 })
+      .toContain(itemName);
     await firefox.top();
     await firefox.press(Key.ArrowDown);
     await firefox.intoFrame("menu-list.html", 5_000);
