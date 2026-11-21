@@ -21,6 +21,7 @@ import {
   popupUrl,
   test,
   type Firefox,
+  WebDriverError,
 } from "../support/firefox";
 import { decrypt, realAccount, realPersonalLogin, type RealAccount } from "../support/vault-crypto";
 
@@ -191,6 +192,23 @@ async function chooseFirstInlineMenuItem(firefox: Firefox, field: string, itemNa
     await firefox.top();
     await firefox.click(field);
     await firefox.intoFrame("menu-list.html", 5_000);
+    if (!diagDone) {
+      diagDone = true;
+      await diagFrames(firefox, "menu open, before the list check");
+      await firefox.intoFrame("menu-list.html", 5_000);
+      // What these tests did before: the list's parent frame, and its APIs.
+      await firefox.parentFrame();
+      console.log("DIAG parentFrame() from menu-list.html lands in: " + (await firefox.run<string>(probe)));
+      await firefox.intoFrame("menu-list.html", 5_000);
+      const host = await firefox.cmd<Record<string, string>>("POST", "/element", { using: "css selector", value: "autofill-inline-menu-list" });
+      const root = await firefox
+        .cmd("GET", `/element/${Object.values(host)[0]}/shadow`)
+        .then((r) => JSON.stringify(r), (e) => `failed: ${e}`);
+      console.log("DIAG Get Element Shadow Root on the list's host: " + root);
+      console.log("DIAG the list's page sees host.shadowRoot: " + (await firefox.run<string>("return String(document.querySelector('autofill-inline-menu-list').shadowRoot)")));
+      console.log("DIAG shadowText: " + JSON.stringify(await firefox.shadowText("autofill-inline-menu-list").catch((e) => `failed: ${e}`)));
+      await firefox.intoFrame("menu-list.html", 5_000);
+    }
     await expect
       .poll(() => firefox.shadowText("autofill-inline-menu-list"), { timeout: 5_000 })
       .toContain(itemName);
@@ -199,8 +217,78 @@ async function chooseFirstInlineMenuItem(firefox: Firefox, field: string, itemNa
     await firefox.intoFrame("menu-list.html", 5_000);
     await expect.poll(() => firefox.run<boolean>("return document.hasFocus()"), { timeout: 3_000 }).toBe(true);
   }).toPass({ timeout: 45_000 });
+  await diagFrames(firefox, "after ArrowDown, focus in the list");
+  await firefox.intoFrame("menu-list.html", 5_000);
   await firefox.press(Key.Enter);
   await firefox.top();
+  await expect.poll(() => firefox.value(field), { timeout: 5_000 }).not.toBe("").catch(() => {});
+  console.log("DIAG after Enter, " + field + " is " + JSON.stringify(await firefox.value(field)));
+}
+
+let diagDone = false;
+
+/** Diagnostic only (branch firefox-tests-diag): what each frame is, and which extension APIs it has. */
+const probe = `
+  const info = { href: location.href, locationOrigin: location.origin, selfOrigin: String(self.origin) };
+  const t = (f) => { try { return f(); } catch (e) { return "throws " + e.message; } };
+  info.chrome = t(() => typeof chrome);
+  info.browser = t(() => typeof browser);
+  info.getBackgroundPage = t(() => typeof chrome.extension.getBackgroundPage);
+  info.extensionKeys = t(() => Object.getOwnPropertyNames(chrome.extension).sort().join(","));
+  info.runtimeKeys = t(() => Object.getOwnPropertyNames(browser.runtime).sort().join(","));
+  info.tabs = t(() => typeof chrome.tabs);
+  info.hasFocus = document.hasFocus();
+  info.active = document.activeElement ? document.activeElement.tagName : null;
+  return JSON.stringify(info);
+`;
+
+async function diagFrames(firefox: Firefox, label: string) {
+  const lines: string[] = [];
+  const walk = async (path: number[]) => {
+    const info = await firefox.run<string>(probe).catch((e) => `run failed: ${e}`);
+    lines.push(`[${path.join(".") || "top"}] ${info}`);
+    if (path.length > 3) return;
+    for (let i = 0; ; i++) {
+      try {
+        await firefox.cmd("POST", "/frame", { id: i });
+      } catch (error) {
+        if (!(error instanceof WebDriverError && error.error === "no such frame")) lines.push(`  frame ${i}: ${error}`);
+        break;
+      }
+      await walk([...path, i]);
+      await firefox.parentFrame();
+    }
+  };
+  await firefox.top();
+  await walk([]);
+  // The same tab from the browser's side: each frame's process and principal.
+  try {
+    await firefox.cmd("POST", "/moz/context", { context: "chrome" });
+    lines.push(
+      await firefox.run<string>(`
+        const out = [];
+        const t = (f) => { try { return f(); } catch (e) { return "throws " + e.message; } };
+        out.push("fissionAutostart " + t(() => Services.appinfo.fissionAutostart) + ", remote extensions " + t(() => WebExtensionPolicy.useRemoteWebExtensions));
+        const walk = (bc, depth) => {
+          const wg = bc.currentWindowGlobal;
+          out.push("  ".repeat(depth + 1) + t(() => wg.documentURI.spec) +
+            " | process " + t(() => wg.domProcess.remoteType) +
+            " | addon " + t(() => (wg.documentPrincipal.addonPolicy ? wg.documentPrincipal.addonPolicy.id : "none")) +
+            " | principal " + t(() => wg.documentPrincipal.origin) +
+            " | sandboxFlags " + bc.sandboxFlags);
+          for (const child of bc.children) walk(child, depth + 1);
+        };
+        walk(gBrowser.selectedBrowser.browsingContext, 0);
+        return out.join("\\n");
+      `),
+    );
+  } catch (error) {
+    lines.push(`chrome context: ${error}`);
+  } finally {
+    await firefox.cmd("POST", "/moz/context", { context: "content" }).catch(() => {});
+  }
+  await firefox.top();
+  console.log(`DIAG frames (${label}):\n${lines.join("\n")}`);
 }
 
 /** Whether the extension has scanned the tab at this address, the field included, and watches it for a sign-in. */

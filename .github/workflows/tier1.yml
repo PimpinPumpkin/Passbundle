@@ -55,7 +55,7 @@ jobs:
       - name: Pick each repo's branch
         id: pick
         env:
-          BRANCH: ${{ github.head_ref }}
+          BRANCH: firefox-tests
           CALLER: ${{ github.repository }}
           SERVER_IN: ${{ inputs.server-ref }}
           CLIENTS_IN: ${{ inputs.clients-ref }}
@@ -243,6 +243,7 @@ jobs:
           retention-days: 3
 
   chrome-extension:
+    if: false
     name: Branded Chrome extension
     needs: refs
     runs-on: ubuntu-24.04
@@ -282,9 +283,9 @@ jobs:
   # Cached by that tag and the script, so it's built again only when the
   # clients move to a new base.
   upstream-extension:
+    if: false
     name: Upstream's extension
     needs: refs
-    if: ${{ !inputs.skip-tests }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     outputs:
@@ -346,6 +347,7 @@ jobs:
   # release packs it (tools/cli/pack.sh, docs/cli.md), for the end-to-end
   # tests in tests/cli.
   cli:
+    if: false
     name: Command-line tool
     needs: refs
     runs-on: ubuntu-24.04
@@ -386,6 +388,7 @@ jobs:
           retention-days: 3
 
   clients-unit:
+    if: false
     name: Clients unit tests
     needs: refs
     runs-on: ubuntu-24.04
@@ -655,6 +658,7 @@ jobs:
           retention-days: 3
 
   script-module:
+    if: false
     # RMMs mostly run scripts in Windows PowerShell 5.1, which the Linux
     # end-to-end suite can't, so the module's checks run here under both on
     # Windows, and under PowerShell 7 on Linux and on a Mac too, where Mac and
@@ -708,6 +712,7 @@ jobs:
           Get-Command Get-PassBundleCredential, Get-PassBundleSecret | Out-Null
 
   install-scripts:
+    if: false
     # The Mac and Linux install scripts: shellcheck, and the Mac configuration
     # profile, which only an MDM installs, so this reads it back. Also the
     # Linux script's merge of Firefox's policies into another vendor's file,
@@ -730,6 +735,7 @@ jobs:
         run: python3 -I installer/linux/tests/test_firefox_policies.py
 
   agent-test-build:
+    if: false
     # The desktop agent (passbundle-apps, agent/), built with the stand-in for
     # Windows Hello that the extension's end-to-end tests use. Its own checks
     # run in passbundle-apps' CI.
@@ -781,6 +787,7 @@ jobs:
           retention-days: 3
 
   core-interop:
+    if: false
     # Our own apps' core (passbundle-apps), built as the tool the interop
     # test drives (e2e/tests/core-interop.spec.ts).
     name: The core's interop tool
@@ -812,9 +819,9 @@ jobs:
           retention-days: 3
 
   e2e:
+    if: false
     name: End-to-end (${{ matrix.part }})
     needs: [refs, server, clients, chrome-extension, agent-test-build, core-interop, cli]
-    if: ${{ !inputs.skip-tests }}
     runs-on: ubuntu-24.04
     # A part takes about 20 minutes. The limit leaves room for a slow runner:
     # at 30 minutes, the third of three API parts passed every test and was
@@ -967,7 +974,7 @@ jobs:
           KK_FIREFOX_EXTENSION: ${{ github.workspace }}/build/clients/extension-firefox
           KK_BRAND: ${{ github.workspace }}/build/clients/brand.json
           KK_SERVER_LOG: ${{ github.workspace }}/e2e/server-log/server.log
-        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" && npx playwright test --project=firefox
+        run: mkdir -p server-log && chmod +x "$KK_SERVER_BIN" && npx playwright test --project=firefox --repeat-each=2
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
@@ -985,9 +992,9 @@ jobs:
   # misses are only reported. Without an upstream build (its job failed), ours
   # still runs and the scoreboard has our column only.
   scoreboard:
+    if: false
     name: Autofill scoreboard
     needs: [refs, server, clients, chrome-extension, upstream-extension]
-    if: ${{ !cancelled() && !inputs.skip-tests && needs.server.result == 'success' && needs.clients.result == 'success' && needs.chrome-extension.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -1055,9 +1062,9 @@ jobs:
           retention-days: 14
 
   api-postgres:
+    if: false
     name: API tests on PostgreSQL (${{ matrix.shard }}/4)
     needs: [refs, server, clients]
-    if: ${{ !inputs.skip-tests }}
     runs-on: ubuntu-24.04
     # Four parts: with three, the second took 23 minutes of its 30 by
     # November 2026, and a slow runner ran out.
