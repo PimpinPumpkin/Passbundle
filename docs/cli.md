@@ -125,7 +125,8 @@ The tool prints a fingerprint phrase first (five words), then waits up to 15 min
 
 - It works only on a computer where the tool signed in to your account before (with your password or an API key) and kept its data folder, as the web vault and the extension only offer it on a browser that signed in before. Elsewhere it says to sign in once first.
 - Two-step login still applies: the tool asks for its code as after a password (`--method` and `--code` in a script).
-- If your organization requires single sign-on, an approval doesn't stand in for it: the device approving is told to sign in with single sign-on here instead, and sends nothing, so run `passbundle login --sso <identifier>`. (An approval from before your organization required it gets the tool to say so itself.) Where two-step login for admins refuses it, the tool prints the server's message.
+- If your organization requires single sign-on, an approval doesn't stand in for it: the device approving is told to sign in with single sign-on here instead, and sends nothing, so run `passbundle login --sso <identifier>`. (An approval from before your organization required it gets the tool to say so itself.)
+- If your role requires two-step login and you haven't set up a method that counts (an authenticator app, a security key or passkey, or Duo), the device approving is told to set it up in the web vault first, and sends nothing; once it's set up, approve the same request again, and the tool asks for the code. (An approval from before your role required it gets the tool to print the server's message.)
 - A session the tool starts this way can't approve another device's sign-in.
 
 ### With your organization's single sign-on
