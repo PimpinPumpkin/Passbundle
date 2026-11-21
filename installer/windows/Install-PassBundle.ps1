@@ -31,6 +31,10 @@
   tray opens it, and it starts the agent if it isn't running. passbundle://
   links, which Duo's way back at sign-in opens, open it for everyone on the
   machine.
+  Whenever it installs the agent or the app, or both, it gives them the
+  server address and the organization key fingerprint, in the machine policy
+  key both read: the app signs in to that server, and enrolls people's
+  account recovery only to that key.
   Existing policies from other vendors are left alone. Running it again changes nothing.
 
 .EXAMPLE
@@ -366,17 +370,9 @@ function Install-Agent {
   # Every person who signs in gets their own agent.
   New-ItemProperty -Path $RunKey -Name $RunName -Value "`"$(Join-Path $InstallDir 'passbundle-agent.exe')`"" -PropertyType String -Force | Out-Null
 
-  # The agent's own settings.
+  # The agent's own settings. The server and the organization key
+  # fingerprint, which the app reads too, are Set-ServerAndOrgKey's.
   if (-not (Test-Path $AgentPolicy)) { New-Item -Path $AgentPolicy -Force | Out-Null }
-  if ($ServerUrl) {
-    New-ItemProperty -Path $AgentPolicy -Name "ServerUrl" -Value $ServerUrl.TrimEnd("/") -PropertyType String -Force | Out-Null
-  }
-  # The one organization key the app enrolls people's account recovery to
-  # at unlock, read from here, where only administrators write (DESIGN.md,
-  # "Enrolling at unlock", "Our apps").
-  if ($OrgKey) {
-    New-ItemProperty -Path $AgentPolicy -Name "OrgKeyFingerprint" -Value $OrgKey -PropertyType String -Force | Out-Null
-  }
   if ($DisableAgentUpdates) {
     Set-Dword $AgentPolicy "Updates" 0
     if (Get-ScheduledTask -TaskName $UpdateTask -ErrorAction SilentlyContinue) {
@@ -398,6 +394,23 @@ function Install-Agent {
     Register-ScheduledTask -TaskName $UpdateTask -Action $action -Trigger $triggers -Principal $principal -Settings $settings -Force | Out-Null
   }
   Write-Output "Installed the PassBundle desktop agent to $InstallDir; it starts when people next sign in"
+}
+
+# The server and the organization key fingerprint, in the machine policy key
+# that the agent and the app both read (passbundle-apps, core/src/managed.rs),
+# where only administrators and SYSTEM write. Written whenever this script
+# installs the agent or the app, so the app installed without the agent signs
+# in to the organization's server too, and enrolls people's account recovery
+# at unlock only to the one organization key named here (DESIGN.md,
+# "Enrolling at unlock", "Our apps"). -Remove takes them away with the key.
+function Set-ServerAndOrgKey {
+  if (-not (Test-Path $AgentPolicy)) { New-Item -Path $AgentPolicy -Force | Out-Null }
+  if ($ServerUrl) {
+    New-ItemProperty -Path $AgentPolicy -Name "ServerUrl" -Value $ServerUrl.TrimEnd("/") -PropertyType String -Force | Out-Null
+  }
+  if ($OrgKey) {
+    New-ItemProperty -Path $AgentPolicy -Name "OrgKeyFingerprint" -Value $OrgKey -PropertyType String -Force | Out-Null
+  }
 }
 
 function Test-AppSource {
@@ -506,12 +519,18 @@ function Remove-Agent {
 if ($Remove) {
   Remove-Agent
 } else {
-  if (Test-AgentSource) {
+  $withAgent = Test-AgentSource
+  $withApp = Test-AppSource
+  if ($withAgent) {
     Install-Agent
   } else {
     Write-Warning "No desktop agent next to this script ($AgentSource): no tray or Windows Hello."
   }
-  if (Test-AppSource) { Install-App }
+  # Before the app's files, where the agent's install wrote them before: when
+  # the app's files can't go in yet (the script stops and says so), the agent
+  # installed above still has its server.
+  if ($withAgent -or $withApp) { Set-ServerAndOrgKey }
+  if ($withApp) { Install-App }
 }
 
 foreach ($browser in $Browsers) {
