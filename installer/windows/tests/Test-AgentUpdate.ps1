@@ -24,6 +24,7 @@ if (-not (Test-Path (Join-Path $test "site\agent\windows-x86_64.json"))) {
   exit 0
 }
 $failures = 0
+$diagLog = $null
 # A check that can't be made (its condition stops with an error) fails, with
 # the error, and the checks after it still run.
 function Check([string] $Name, [scriptblock] $Condition) {
@@ -87,6 +88,11 @@ function Invoke-UpdateTask([string] $Name = $task) {
     if ($info.LastRunTime -ne $before -and $info.LastTaskResult -ne 267009 -and
       (Get-ScheduledTask -TaskName $Name).State -ne "Running") {
       Write-Host "      (the $Name task ended with $($info.LastTaskResult))"
+      # DIAGNOSTICS (not for merging): what the real task said, once kept.
+      if ($script:diagLog -and (Test-Path $script:diagLog)) {
+        Get-Content -Path $script:diagLog | ForEach-Object { Write-Host "      (the real task said: $_)" }
+        Clear-Content -Path $script:diagLog
+      }
       return $info.LastTaskResult
     }
   }
@@ -210,6 +216,23 @@ try {
       } catch { Start-Sleep -Milliseconds 250 }
     }
     Write-Host "diag  the stand-in for the update site is up again: $up"
+    Get-NetTCPConnection -LocalPort 8719 -State Listen -ErrorAction SilentlyContinue | ForEach-Object {
+      Write-Host "diag  listening: $($_.LocalAddress):$($_.LocalPort) pid $($_.OwningProcess) $((Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue).Path) (server pid $($server.Id))"
+    }
+    foreach ($name in "windows-x86_64.json", "windows-x86_64.json.minisig", "PassBundle-0.1.2-windows-x64.zip") {
+      try {
+        $r = Invoke-WebRequest -Uri "http://127.0.0.1:8719/agent/$name" -UseBasicParsing
+        Write-Host "diag  ${name}: $($r.StatusCode), $($r.RawContentLength) bytes"
+      } catch { Write-Host "diag  ${name}: $_" }
+    }
+    # From here on, the real task keeps what it says.
+    New-Item -ItemType Directory -Force -Path "C:\pb-diag" | Out-Null
+    $script:diagLog = "C:\pb-diag\real.log"
+    $registered = Get-ScheduledTask -TaskName $task
+    $exe = $registered.Actions[0].Execute
+    $wrapped = New-ScheduledTaskAction -Execute (Join-Path $env:SystemRoot "System32\cmd.exe") -Argument "/d /s /c `"`"$exe`" $($registered.Actions[0].Arguments) >> `"$($script:diagLog)`" 2>&1`""
+    Register-ScheduledTask -TaskName $task -Action $wrapped -Trigger $registered.Triggers -Principal $registered.Principal -Settings $registered.Settings -Force | Out-Null
+    Write-Host "diag  the real task now runs: $((Get-ScheduledTask -TaskName $task).Actions[0].Arguments)"
   }
   if ($env:PB_DIAG -eq "no-update") {
     Write-Host "diag  the download stays changed, so no update goes in"
