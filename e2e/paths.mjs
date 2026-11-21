@@ -131,6 +131,13 @@ export const invoicesRefusedServerPort = process.env.KK_INVOICES_REFUSED_SERVER_
 // data; and a second server on the main test server's database.
 export const streamingServerPort = process.env.KK_STREAMING_SERVER_PORT ?? "8160";
 export const streamingSecondServerPort = process.env.KK_STREAMING_SECOND_SERVER_PORT ?? "8161";
+// The tests of a family's invite link (DESIGN.md, "A family's invite link"):
+// servers that enforce plans, with the admin page on so the operator can
+// make an organization a family, which the API tests (tests/api/
+// family-link.spec.ts) and the web vault's (tests/family-link.spec.ts) each
+// start themselves.
+export const familyLinkServerPort = process.env.KK_FAMILY_LINK_SERVER_PORT ?? "8180";
+export const familyLinkUiServerPort = process.env.KK_FAMILY_LINK_UI_SERVER_PORT ?? "8181";
 // A server that may push to phones' endpoints on 127.0.0.1, trusting the
 // stand-in push service's certificate, with the new-device check on, which
 // the push tests start themselves (tests/api/unified-push.spec.ts).
