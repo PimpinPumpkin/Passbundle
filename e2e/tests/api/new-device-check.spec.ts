@@ -50,6 +50,8 @@ test.beforeAll(async () => {
       ...process.env,
       KK_PORT: newDeviceServerPort,
       KK_DATA_DIR: dataDir,
+      // A SQLite file in either job: the tests stand in for time passing in it (sql).
+      KK_SQLITE: "1",
       KK_MAIL: "1",
       KK_NEW_DEVICE: "1",
     },
