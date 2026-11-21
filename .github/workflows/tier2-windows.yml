@@ -122,9 +122,41 @@ jobs:
           done
           python apps/tools/zip-release.py "$test/0.1.2" "$test/site/agent/PassBundle-0.1.2-windows-x64.zip"
           (cd apps/agent && cargo run --locked --example test-release -- sign "$testw/key" "$testw/site/agent/PassBundle-0.1.2-windows-x64.zip" 0.1.2 "$site" "$testw/site/agent")
-      - name: The update task puts 0.1.2 in place of 0.1.1, end to end
+      - name: The update task puts 0.1.2 in place of 0.1.1, end to end (diagnostics, three ways)
         shell: pwsh
-        run: ./installer/windows/tests/Test-AgentUpdate.ps1
+        run: |
+          # DIAGNOSTICS (not for merging): as on main; with the download left
+          # changed, so no update goes in; and with the site out of reach for
+          # the changed download's run.
+          $unmet = 0
+          foreach ($scenario in "as-on-main", "no-update", "site-down") {
+            $env:PB_DIAG = $scenario
+            Write-Host "===== $scenario"
+            $global:LASTEXITCODE = 0
+            $stopped = $null
+            try {
+              $out = @(& ./installer/windows/tests/Test-AgentUpdate.ps1 *>&1 | ForEach-Object { $line = "$_"; Write-Host $line; $line })
+            } catch { $stopped = "$_"; Write-Host "===== $scenario stopped: $_" }
+            $code = $LASTEXITCODE
+            $text = $out -join "`n"
+            $fails = @($out | Where-Object { $_ -like "FAIL  *" }).Count
+            $checks = @($out | Where-Object { $_ -like "ok    *" -or $_ -like "FAIL  *" }).Count
+            Write-Host "===== $scenario ended with $code; $checks checks reported, $fails failed; stopped: $([bool] $stopped)"
+            $want = switch ($scenario) {
+              "as-on-main" { $code -eq 0 -and $fails -eq 0 -and $text -like "*all checks passed*" -and
+                  $text -like "*(it said: Update failed: the download doesn't match the release's SHA-256)*" }
+              "no-update" { -not $stopped -and $code -eq 1 -and $text -like "*check(s) failed*" -and
+                  @($out | Where-Object { $_ -like "*Everyone can run the new*" }).Count -eq 3 -and
+                  @($out | Where-Object { $_ -like "*and the update task's folder*" }).Count -eq 1 }
+              "site-down" { -not $stopped -and $code -eq 1 -and $fails -eq 1 -and
+                  @($out | Where-Object { $_ -like "FAIL  A download that isn't the signed one is refused*" }).Count -eq 1 -and
+                  $text -like "*(it said: Update failed: couldn't reach the update site*" }
+            }
+            Write-Host "===== $scenario as expected: $want"
+            if (-not $want) { $unmet++ }
+          }
+          Write-Host "===== $unmet of 3 not as expected"
+          exit $unmet
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24

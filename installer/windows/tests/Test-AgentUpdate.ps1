@@ -185,6 +185,12 @@ try {
   $at = $tampered.Length - 100
   $tampered[$at] = $tampered[$at] -bxor 1
   [System.IO.File]::WriteAllBytes($zip, $tampered)
+  # DIAGNOSTICS (not for merging): the site out of reach for this run.
+  if ($env:PB_DIAG -eq "site-down") {
+    Stop-Process -Id $server.Id -Force
+    $server.WaitForExit()
+    Write-Host "diag  the stand-in for the update site is stopped for the changed download's run"
+  }
   # Refused for that, not for anything else (the site out of reach, say).
   $refused = Invoke-UpdateCommand
   Check "A download that isn't the signed one is refused, as not matching the release's SHA-256" {
@@ -192,7 +198,24 @@ try {
   }
   Check "and 0.1.1 stays as it was" { (Get-InstalledVersion) -eq "0.1.1" -and (Test-SameAs $old) }
   Check "with nothing of it left" { -not (Test-Path $work) }
-  [System.IO.File]::WriteAllBytes($zip, $real)
+  # DIAGNOSTICS (not for merging): the site back up; or the download left
+  # changed, so no update goes in.
+  if ($env:PB_DIAG -eq "site-down") {
+    $server = Start-Process -FilePath "python" -ArgumentList "-m", "http.server", "8719", "--bind", "127.0.0.1", "--directory", "`"$site`"" -PassThru -WindowStyle Hidden
+    $up = $false
+    for ($try = 0; $try -lt 60 -and -not $up; $try++) {
+      try {
+        Invoke-WebRequest -Uri "http://127.0.0.1:8719/agent/windows-x86_64.json" -UseBasicParsing | Out-Null
+        $up = $true
+      } catch { Start-Sleep -Milliseconds 250 }
+    }
+    Write-Host "diag  the stand-in for the update site is up again: $up"
+  }
+  if ($env:PB_DIAG -eq "no-update") {
+    Write-Host "diag  the download stays changed, so no update goes in"
+  } else {
+    [System.IO.File]::WriteAllBytes($zip, $real)
+  }
 
   # Someone's agent runs from the folder: the update waits.
   $agent = Start-Process -FilePath (Join-Path $installDir "passbundle-agent.exe") -ArgumentList "--serve" -PassThru -WindowStyle Hidden
@@ -214,6 +237,15 @@ try {
       (Test-Path (Join-Path $installDir "only-0.1.2.txt")) -and -not (Test-Path (Join-Path $installDir "only-0.1.1.txt"))
   }
   Check "The host's manifest is as the install script wrote it" { (Get-FileHash -Path $hostManifest).Hash -eq $hostManifestHash }
+  if ($env:PB_DIAG -eq "no-update") {
+    $exe = Join-Path $installDir "passbundle.exe"
+    Write-Host "diag  installed version: $(Get-InstalledVersion)"
+    Write-Host "diag  rules on $exe by SID: $(@(Get-Rules $exe | ForEach-Object { "$($_.Sid)=$($_.Rights)" }) -join '; ')"
+    try {
+      $names = foreach ($rule in (Get-Acl -Path $exe).Access) { "$($rule.IdentityReference) -> $($rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value)" }
+      Write-Host "diag  the old way, by name and back: $($names -join '; ')"
+    } catch { Write-Host "diag  the old way, by name and back, stops: $_" }
+  }
   foreach ($program in "passbundle.exe", "passbundle-agent.exe", "passbundle-agent-host.exe") {
     Check "Everyone can run the new $program, and only administrators can change it" {
       Test-RunByAllChangedByAdmins (Join-Path $installDir $program)
