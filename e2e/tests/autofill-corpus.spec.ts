@@ -259,8 +259,21 @@ const corpus: Fixture[] = [
     what: "a security PIN beside the password, both masked: only the password",
     steps: [{ field: "#customer" }],
     want: { "#customer": "username", "#password": "password", "#pin": "empty" },
-    known:
-      "two masked fields in one form read as a sign-up form, so no field gets the menu (upstream's rule); a short numeric one should count as a PIN, not a second password",
+  },
+  {
+    file: "pin-after-password.html",
+    what: "a PIN box after the password, known only by its label and a number keypad",
+    steps: [{ field: "#password" }],
+    want: { "#email": "username", "#password": "password", "#extra": "empty" },
+  },
+  {
+    // The menu for a new account lists the site's logins too, as upstream's
+    // does, and picking one fills both password boxes, as a sign-up has
+    // them. Read as a password and a PIN, the second box would stay empty.
+    file: "signup-short-confirm.html",
+    what: "a sign-up whose second password has a short maxlength: a password, not a PIN",
+    steps: [{ field: "#email" }],
+    want: { "#email": "username", "#password": "password", "#repeat": "password" },
   },
   {
     file: "controlled-inputs.html",
