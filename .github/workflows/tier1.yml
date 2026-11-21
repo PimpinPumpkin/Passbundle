@@ -89,13 +89,34 @@ jobs:
           fi
           # Our own apps' core, for the interop test (passbundle-apps has its own CI).
           apps=$(linked passbundle-apps main)
+          # Each branch as the commit it is now, so every job of this run, and
+          # a rerun of any of them, tests the same commits, though a branch
+          # moves while the run waits for runners. A caller's own commit
+          # (server-ref, clients-ref) is one already.
+          commit() {
+            if [ -z "$2" ] || printf '%s' "$2" | grep -Eqx '[0-9a-f]{40}'; then
+              printf '%s' "$2"
+              return
+            fi
+            sha=$(git ls-remote "https://github.com/PimpinPumpkin/$1.git" "refs/heads/$2" |
+              awk -v ref="refs/heads/$2" '$2 == ref { print $1 }')
+            if [ -z "$sha" ]; then
+              echo "No branch $2 in $1." >&2
+              return 1
+            fi
+            printf '%s' "$sha"
+          }
+          server_commit=$(commit passbundle-server "$server")
+          clients_commit=$(commit passbundle-clients "$clients")
+          meta_commit=$(commit Passbundle "$meta")
+          apps_commit=$(commit passbundle-apps "$apps")
           {
-            echo "server=$server"
-            echo "clients=$clients"
-            echo "meta=$meta"
-            echo "apps=$apps"
+            echo "server=$server_commit"
+            echo "clients=$clients_commit"
+            echo "meta=$meta_commit"
+            echo "apps=$apps_commit"
           } >> "$GITHUB_OUTPUT"
-          echo "Server: $server. Clients: $clients. Apps: $apps. Tests: ${meta:-this commit}."
+          echo "Server: $server ($server_commit). Clients: $clients ($clients_commit). Apps: $apps ($apps_commit). Tests: ${meta:-this commit}${meta:+ ($meta_commit)}."
 
   server:
     name: Server tests and build
