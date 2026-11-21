@@ -24,9 +24,14 @@ if (-not (Test-Path (Join-Path $test "site\agent\windows-x86_64.json"))) {
   exit 0
 }
 $failures = 0
+# A check that can't be made (its condition stops with an error) fails, with
+# the error, and the checks after it still run.
 function Check([string] $Name, [scriptblock] $Condition) {
-  if (& $Condition) { Write-Output "ok    $Name" }
-  else { Write-Output "FAIL  $Name"; $script:failures++ }
+  $why = ""
+  try { $ok = if (& $Condition) { $true } else { $false } }
+  catch { $ok = $false; $why = " ($_)" }
+  if ($ok) { Write-Output "ok    $Name" }
+  else { Write-Output "FAIL  $Name$why"; $script:failures++ }
 }
 
 $installDir = Join-Path $env:ProgramFiles "PassBundle"
@@ -69,23 +74,56 @@ function Test-SameAs([string] $From) {
 
 # Runs the update task as Windows does (as SYSTEM), waits for it to end, and
 # returns its exit code.
-function Invoke-UpdateTask {
-  $before = (Get-ScheduledTaskInfo -TaskName $task).LastRunTime
+function Invoke-UpdateTask([string] $Name = $task) {
+  $before = (Get-ScheduledTaskInfo -TaskName $Name).LastRunTime
   # Its last run time is to the second.
   Start-Sleep -Seconds 2
-  Start-ScheduledTask -TaskName $task | Out-Null
+  Start-ScheduledTask -TaskName $Name | Out-Null
   for ($try = 0; $try -lt 600; $try++) {
     Start-Sleep -Milliseconds 500
-    $info = Get-ScheduledTaskInfo -TaskName $task
+    $info = Get-ScheduledTaskInfo -TaskName $Name
     # 267009 (SCHED_S_TASK_RUNNING) is the run still going: read just before
     # it ends, with its state read just after, it would pass for its result.
     if ($info.LastRunTime -ne $before -and $info.LastTaskResult -ne 267009 -and
-      (Get-ScheduledTask -TaskName $task).State -ne "Running") {
-      Write-Host "      (the update task ended with $($info.LastTaskResult))"
+      (Get-ScheduledTask -TaskName $Name).State -ne "Running") {
+      Write-Host "      (the $Name task ended with $($info.LastTaskResult))"
       return $info.LastTaskResult
     }
   }
-  throw "The update task didn't end within 5 minutes"
+  throw "The $Name task didn't end within 5 minutes"
+}
+
+# Windows keeps only a task's exit code, not what it says. To see why a run
+# refused something, this runs the update task's own command (its program and
+# arguments, read from the task) as SYSTEM with the task's own settings, in a
+# task of its own whose action keeps what the command says in a folder only
+# SYSTEM and administrators can change. Returns its exit code and what it said.
+$keptTask = "PassBundle agent update, kept"
+$kept = Join-Path $env:TEMP "pb-update-said"
+function Remove-KeptTask {
+  if (Get-ScheduledTask -TaskName $keptTask -ErrorAction SilentlyContinue) {
+    Unregister-ScheduledTask -TaskName $keptTask -Confirm:$false
+  }
+  if (Test-Path $kept) { Remove-Item -Path $kept -Recurse -Force }
+}
+function Invoke-UpdateCommand {
+  Remove-KeptTask
+  New-Item -ItemType Directory -Path $kept | Out-Null
+  icacls $kept /inheritance:r /grant:r "*$($sids.System):(OI)(CI)F" "*$($sids.Administrators):(OI)(CI)F" | Out-Null
+  if ($LASTEXITCODE) { throw "Can't make $kept only SYSTEM's and administrators'" }
+  $said = Join-Path $kept "said.txt"
+  $registered = Get-ScheduledTask -TaskName $task
+  $command = $registered.Actions[0]
+  $cmd = Join-Path $env:SystemRoot "System32\cmd.exe"
+  # cmd /s takes off the outer quotes and runs what's inside them.
+  $action = New-ScheduledTaskAction -Execute $cmd -Argument "/d /s /c `"`"$($command.Execute)`" $($command.Arguments) > `"$said`" 2>&1`""
+  Register-ScheduledTask -TaskName $keptTask -Action $action -Principal $registered.Principal -Settings $registered.Settings -Force | Out-Null
+  try {
+    $result = Invoke-UpdateTask $keptTask
+    $words = if (Test-Path $said) { @(Get-Content -Path $said) -join "`n" } else { "" }
+    Write-Host "      (it said: $words)"
+    [pscustomobject]@{ Result = $result; Said = $words }
+  } finally { Remove-KeptTask }
 }
 
 $sids = @{
@@ -94,11 +132,15 @@ $sids = @{
   TrustedInstaller = "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464"
   Users = "S-1-5-32-545"
 }
+# A file's allow rules, each by the SID it's for, as Windows keeps it: none is
+# turned into a name and back, which not all can be. What the install script
+# puts in Program Files keeps its rule for ALL APPLICATION PACKAGES
+# (S-1-15-2-1), whose name doesn't turn back into its SID.
 function Get-Rules([string] $Path) {
-  foreach ($rule in (Get-Acl -Path $Path).Access) {
+  foreach ($rule in (Get-Acl -Path $Path).GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier])) {
     if ($rule.AccessControlType -ne "Allow") { continue }
     [pscustomobject]@{
-      Sid = $rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
+      Sid = $rule.IdentityReference.Value
       Rights = $rule.FileSystemRights
     }
   }
@@ -143,8 +185,11 @@ try {
   $at = $tampered.Length - 100
   $tampered[$at] = $tampered[$at] -bxor 1
   [System.IO.File]::WriteAllBytes($zip, $tampered)
-  $result = Invoke-UpdateTask
-  Check "A download that isn't the signed one is refused" { $result -ne 0 }
+  # Refused for that, not for anything else (the site out of reach, say).
+  $refused = Invoke-UpdateCommand
+  Check "A download that isn't the signed one is refused, as not matching the release's SHA-256" {
+    $refused.Result -ne 0 -and $refused.Said -eq "Update failed: the download doesn't match the release's SHA-256"
+  }
   Check "and 0.1.1 stays as it was" { (Get-InstalledVersion) -eq "0.1.1" -and (Test-SameAs $old) }
   Check "with nothing of it left" { -not (Test-Path $work) }
   [System.IO.File]::WriteAllBytes($zip, $real)
@@ -207,6 +252,7 @@ try {
   # Back to what Test-Install.ps1 left, for the browser check that follows.
   & (Join-Path $PSScriptRoot "..\Install-PassBundle.ps1") -DisableCardAutofill | Out-Null
   if (Test-Path $package) { Remove-Item -Path $package -Recurse -Force }
+  Remove-KeptTask
 }
 
 if ($failures) { Write-Output "$failures check(s) failed"; exit 1 }
