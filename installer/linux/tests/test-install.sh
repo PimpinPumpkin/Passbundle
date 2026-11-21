@@ -183,7 +183,8 @@ check "Edge address autofill off" policy_is "$edge/passbundle.json" 'p["Autofill
 check "Firefox password manager, card, and address autofill off" policy_is "$firefox" \
   'p == {"policies": {"PasswordManagerEnabled": False, "OfferToSaveLogins": False, "AutofillCreditCardEnabled": False, "AutofillAddressEnabled": False}}'
 check "Firefox's policies are root's and read-only" sh -c "[ \"\$(stat -c '%U:%G %a' '$firefox')\" = 'root:root 644' ]"
-check "the app gets the server, without a trailing slash" policy_is /etc/passbundle/policy.json "p == {\"ServerUrl\": \"$server_url\"}"
+check "the app gets the server, without a trailing slash, and the organization key fingerprint" policy_is /etc/passbundle/policy.json \
+  "p == {\"ServerUrl\": \"$server_url\", \"OrgKeyFingerprint\": \"$org_key\"}"
 check "the app's policy is root's and read-only" sh -c "[ \"\$(stat -c '%U:%G %a' /etc/passbundle/policy.json)\" = 'root:root 644' ]"
 check "no package has the app" test -z "$(package_of "$app/passbundle")"
 # What the app's package must install the same.
@@ -333,7 +334,8 @@ if [ -n "$deb" ]; then
   check "the app is as the package installed it" sh -c "[ \"\$1\" = \"\$2\" ]" _ "$(installed)" "$script_installed"
   check "the package still has it" test "$(package_of "$app/passbundle")" = passbundle
   check "it still sets the browser policies" policy_is "$chrome/passbundle.json" 'p["PasswordManagerEnabled"] is False'
-  check "and the app's policy" policy_is /etc/passbundle/policy.json "p == {\"ServerUrl\": \"$server_url\"}"
+  check "and the app's policy, with the organization key fingerprint" policy_is /etc/passbundle/policy.json \
+    "p == {\"ServerUrl\": \"$server_url\", \"OrgKeyFingerprint\": \"$org_key\"}"
   out=$(sh "$script" --disable-card-autofill --server-url "$server_url/" --enrollment-token "$token" \
     --join-secret "$join_secret" --org-key "$org_key" 2>&1)
   check "again, nothing changed" sh -c "printf '%s' \"\$1\" | grep -q 'nothing changed'" _ "$out"

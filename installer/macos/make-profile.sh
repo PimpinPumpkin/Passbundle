@@ -16,7 +16,10 @@
 # signed by Mozilla yet). The password ones are Firefox's
 # PasswordManagerEnabled and OfferToSaveLogins, both off unless
 # --keep-browser-password-manager.
-# It also gives the desktop agent its server address.
+# It also gives the desktop agent its server address, and the organization
+# key fingerprint, the one key the app enrolls people's account recovery to
+# at unlock (DESIGN.md, "Enrolling at unlock", "Our apps"); the app reads
+# both from the agent's managed preferences.
 # The same options make the same profile, so the MDM replaces it in place.
 #
 #   ./make-profile.sh --disable-card-autofill > PassBundle.mobileconfig
@@ -251,9 +254,10 @@ if [ -z "$keep_password_manager" ] || [ -n "$card$address" ]; then
   [ -z "$address" ] || off AutofillAddressEnabled
   payload_end
 fi
-if [ -n "$server_url" ]; then
+if [ -n "$server_url$org_key" ]; then
   payload_start com.passbundle.agent agent "$AGENT_UUID" "PassBundle desktop agent"
-  text ServerUrl "$server_url"
+  [ -z "$server_url" ] || text ServerUrl "$server_url"
+  [ -z "$org_key" ] || text OrgKeyFingerprint "$org_key"
   payload_end
 fi
 cat << EOF
