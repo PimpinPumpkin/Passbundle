@@ -629,7 +629,7 @@ DESIGN or the apps say these aren't built; note it only if one appears:
 - In the desktop app's Import from browsers: importing into a shared folder (for an organization that keeps items out of Personal), saved cards and addresses, and KWallet on Linux. Importing the browsers' saved passwords is built there, and so is the guided import.
 - Touch ID in the extension on the Mac; biometrics on Linux; the Linux agent and Linux packages; signed and notarized apps, the signed MSI, and the CLI's signed manifest.
 - Security keys and YubiKey codes over NFC on iPhone, saving a new login and filling one-time codes through iPhone's AutoFill, and any iPhone release. (iPhone AutoFill and passkeys are built and wait on a signed build: section 4.)
-- Push to phones while PassBundle is closed; a confirmation in the web vault's and extension's approval dialog; SSO sessions approving.
+- Push to phones while PassBundle is closed; a confirmation in the web vault's and extension's approval dialog.
 - Passkeys on computers (the desktop app only shows them); replacing an old passkey or choosing an existing login on phones.
 - Trusted-device unlock; other identity providers; linking an account and setting a first master password from the desktop and phone apps (the web vault does both).
 - The nudge in the desktop and phone apps.

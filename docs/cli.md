@@ -115,7 +115,7 @@ passbundle login ana@example.com --passwordenv PB_MASTER_PASSWORD --method 0 --c
 
 ### With another device's approval
 
-On a computer where the tool has signed in to your account before, it can sign in again without your master password: a device where you're signed in with your master password (the web vault, the browser extension, or PassBundle's app) approves it.
+On a computer where the tool has signed in to your account before, it can sign in again without your master password: a device where you're signed in with your master password or your organization's single sign-on (the web vault, the browser extension, or PassBundle's app) approves it.
 
 ```sh
 passbundle login ana@example.com --device
