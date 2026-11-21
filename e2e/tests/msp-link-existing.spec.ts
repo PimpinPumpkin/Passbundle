@@ -10,6 +10,7 @@
 // since the phrases come from real keys.
 import { expect, test, type Page } from "@playwright/test";
 
+import { fingerprintPhrase } from "./support/fingerprint";
 import { reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
@@ -19,7 +20,7 @@ const toast = (page: Page, text: string | RegExp) => page.getByText(text, { exac
 async function ownPhrase(page: Page): Promise<string> {
   await page.goto("/#/settings/account");
   const phrase = page.locator("app-account-fingerprint code");
-  await expect(phrase).toHaveText(/^[a-z]+(-[a-z]+){4}$/);
+  await expect(phrase).toHaveText(fingerprintPhrase);
   return (await phrase.textContent())!.trim();
 }
 
@@ -115,7 +116,7 @@ test("the owner of an organization that already uses PassBundle joins it to an M
   await expect(memberRow(owner, techUser.email).getByText("Needs confirmation")).toBeVisible();
   const waiting = banner.getByTestId(`client-msp-waiting-${adminUser.email}`);
   const phrase = waiting.getByTestId("client-msp-waiting-phrase");
-  await expect(phrase).toHaveText(/^[a-z]+(-[a-z]+){4}$/);
+  await expect(phrase).toHaveText(fingerprintPhrase);
   await expect(waiting.getByTestId("client-msp-waiting-compare")).toHaveText(
     `Ask ${adminUser.name} to read the phrase in Settings, My account, and confirm them only if it's the same: otherwise the key this server gave out for them isn't theirs.`,
   );

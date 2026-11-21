@@ -13,6 +13,7 @@ import { type Browser, expect, type Page, test } from "@playwright/test";
 
 import { brand, familyLinkUiServerPort } from "../paths.mjs";
 
+import { fingerprintPhrase } from "./support/fingerprint";
 import { DAY, fromNow, type PlansServer, startPlansServer } from "./support/plans";
 import { reloadVault, signUp, webUserFor, type WebUser } from "./support/web";
 
@@ -56,7 +57,7 @@ async function joinWithLink(page: Page, link: string): Promise<string> {
   await expect(page.getByTestId("family-join-invited")).toHaveText(`family-owner invited you to join ${FAMILY}.`);
   await page.getByTestId("family-join-button").click();
   const phrase = page.getByTestId("family-join-phrase");
-  await expect(phrase).toHaveText(/^[a-z]+(-[a-z]+){4}$/);
+  await expect(phrase).toHaveText(fingerprintPhrase);
   return (await phrase.textContent())!;
 }
 

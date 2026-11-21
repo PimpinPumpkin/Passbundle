@@ -8,6 +8,7 @@
 // the UI, since the phrases come from real keys.
 import { expect, test, type Page } from "@playwright/test";
 
+import { fingerprintPhrase } from "./support/fingerprint";
 import { acceptRole, chooseRole, reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
@@ -17,7 +18,7 @@ const toast = (page: Page, text: string) => page.getByText(text, { exact: true }
 async function ownPhrase(page: Page): Promise<string> {
   await page.goto("/#/settings/account");
   const phrase = page.locator("app-account-fingerprint code");
-  await expect(phrase).toHaveText(/^[a-z]+(-[a-z]+){4}$/);
+  await expect(phrase).toHaveText(fingerprintPhrase);
   return (await phrase.textContent())!.trim();
 }
 
