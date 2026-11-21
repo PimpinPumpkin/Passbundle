@@ -11,9 +11,10 @@
 // one that's gone (expired, denied, replaced, or purged) answers 404 whenever
 // the purge runs; a
 // device asks five times an hour at most; an organization's "Require single
-// sign-on" holds for it too; a session an approval began can't use
-// emergency access on either side, while a password's or single sign-on's
-// can; and where a request comes from, from the server's own location
+// sign-on" holds for it too, and an approval for someone it binds is refused
+// when it's given, saying what to do instead; a session an approval began
+// can't use emergency access on either side, while a password's or single
+// sign-on's can; and where a request comes from, from the server's own location
 // database (on a server of its own with the tiny one in fixtures/location),
 // and nothing without one.
 // The server stores keys as it gets them, so the public key is a real one
@@ -406,29 +407,49 @@ test("a device asks five times an hour at most", async ({ request }) => {
   expect((await ask(request, ana, (await session(request, ana)).device)).status).toBe(200);
 });
 
-test("an organization that requires single sign-on requires it of a device's approval too", async ({ request }) => {
-  const api = new Api(request);
-  const sso = await ssoOrg(api, "approval-sso");
-  const { owner, orgId, identifier, domain } = sso;
-  const gus = await api.account("approval-gus", `gus-${randomUUID().slice(0, 8)}@${domain}`);
-  await api.addMember(owner, orgId, gus, "user");
-  // Signed in on two devices before the organization requires it.
-  const laptop = await session(request, gus);
-  const asking = await session(request, gus);
+/** What the person approving is told when the account must sign in with single sign-on. */
+const USE_SSO_INSTEAD =
+  "Your organization requires single sign-on, so an approval can't sign that device in. On that device, sign in with single sign-on instead.";
+
+/** Turns on Single organization, then Require single sign-on. */
+async function requireSso(api: Api, owner: Account, orgId: string) {
   for (const type of [3, 4]) {
     const on = await api.call(owner, "PUT", `/api/organizations/${orgId}/policies/${type}`, {
       policy: { enabled: true, data: null },
     });
     expect(on.status, JSON.stringify(on.body)).toBe(200);
   }
-  // Gus's password goes to single sign-on now; so does a device's approval,
-  // even one his still-open session gives.
-  const a = await asked(request, gus, asking.device);
-  expect((await answer(api, laptop, laptop.device, a, true)).status).toBe(200);
-  const refused = await signIn(request, gus, asking.device, a);
+}
+
+test("an organization that requires single sign-on requires it of a device's approval too", async ({ request }) => {
+  const api = new Api(request);
+  const sso = await ssoOrg(api, "approval-sso");
+  const { owner, orgId, identifier, domain } = sso;
+  const gus = await api.account("approval-gus", `gus-${randomUUID().slice(0, 8)}@${domain}`);
+  await api.addMember(owner, orgId, gus, "user");
+  // Signed in on two devices before the organization requires it, and an
+  // approval given then.
+  const laptop = await session(request, gus);
+  const asking = await session(request, gus);
+  const before = await asked(request, gus, asking.device);
+  expect((await answer(api, laptop, laptop.device, before, true)).status).toBe(200);
+  await requireSso(api, owner, orgId);
+  // Gus's password goes to single sign-on now; so does that approval.
+  const refused = await signIn(request, gus, asking.device, before);
   expect(refused.status).toBe(400);
   expect(refused.body.SsoOrganizationIdentifier).toBe(identifier);
   expect(refused.body.access_token).toBeUndefined();
+  // And an approval his still-open session gives now is refused as it's
+  // given, saying what to do instead: nothing is sent, the request still
+  // waits, and he may deny it.
+  const a = await asked(request, gus, asking.device);
+  const notTaken = await answer(api, laptop, laptop.device, a, true);
+  expect(notTaken.status).toBe(400);
+  expect(JSON.stringify(notTaken.body)).toContain(USE_SSO_INSTEAD);
+  expect((await poll(request, a)).body).toMatchObject({ key: null, requestApproved: null });
+  expect(await pending(api, laptop)).toEqual([a.id]);
+  expect((await answer(api, laptop, laptop.device, a, false)).status).toBe(200);
+  expect(await pending(api, laptop)).toEqual([]);
   // The owner, whom it never binds, still signs in with a device.
   const ownerLaptop = await session(request, owner);
   const ownerAsking = await session(request, owner);
@@ -604,27 +625,41 @@ test("a session from a single sign-on session's approval can't approve, nor can 
   expect((await signIn(request, member, tablet.device, second)).status).toBe(200);
 });
 
-test("with single sign-on required, a single sign-on session's approval still doesn't stand in for it", async ({
+test("with single sign-on required, a single sign-on session's approval is refused as it's given, saying what to do instead", async ({
   request,
 }) => {
   const api = new Api(request);
   const { sso, real, member, ssoSession } = await ssoMember(request, api, "sso-approves-required");
-  // A device the account knows, from before the organization required it.
+  // A device the account knows, from before the organization required it,
+  // and an approval the member's single sign-on session gave then.
   const phone = await session(request, member);
-  for (const type of [3, 4]) {
-    const on = await api.call(sso.owner, "PUT", `/api/organizations/${sso.orgId}/policies/${type}`, {
-      policy: { enabled: true, data: null },
-    });
-    expect(on.status, JSON.stringify(on.body)).toBe(200);
-  }
-  // The member's single sign-on session approves, but the device that asked
-  // is sent to single sign-on, as a password would be.
-  const a = await asked(request, member, phone.device);
-  expect((await answer(api, ssoSession, ssoSession.device, a, true, encryptTo(a.key, real.userKey))).status).toBe(200);
-  const refused = await signIn(request, member, phone.device, a);
+  const before = await askedKeepingKey(request, member, phone.device);
+  const approved = await answer(api, ssoSession, ssoSession.device, before, true, encryptTo(before.key, real.userKey));
+  expect(approved.status, JSON.stringify(approved.body)).toBe(200);
+  await requireSso(api, sso.owner, sso.orgId);
+  // That approval doesn't stand in for single sign-on: the device that asked
+  // is sent there, as a password would be.
+  const refused = await signIn(request, member, phone.device, before);
   expect(refused.status).toBe(400);
   expect(refused.body.SsoOrganizationIdentifier).toBe(sso.identifier);
   expect(refused.body.access_token).toBeUndefined();
+
+  // Now that it's required, the single sign-on session's approval is refused
+  // as it's given, with what to do on the device that asked, and the user
+  // key isn't kept: the request still waits, with no key, for the device
+  // that asked as for the account's other devices.
+  const a = await askedKeepingKey(request, member, phone.device);
+  const notTaken = await answer(api, ssoSession, ssoSession.device, a, true, encryptTo(a.key, real.userKey));
+  expect(notTaken.status).toBe(400);
+  expect(JSON.stringify(notTaken.body)).toContain(USE_SSO_INSTEAD);
+  expect((await poll(request, a)).body).toMatchObject({ key: null, requestApproved: null });
+  const seen = await api.call(ssoSession, "GET", `/api/auth-requests/${a.id}`);
+  expect(seen.status, JSON.stringify(seen.body)).toBe(200);
+  expect(seen.body).toMatchObject({ key: null, requestApproved: null });
+  // Denying is open as always, and ends it.
+  expect((await answer(api, ssoSession, ssoSession.device, a, false)).status).toBe(200);
+  expect(await pending(api, ssoSession)).toEqual([]);
+  expect((await signIn(request, member, phone.device, a)).status).toBe(400);
 });
 
 test("a session an approval began can't set up emergency access", async ({ request }) => {
