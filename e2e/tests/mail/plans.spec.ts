@@ -341,3 +341,55 @@ test("an emailed invitation into a family is accepted while it has six people at
   expect(refused.body.message).toBe("A Families plan covers 6 people, and this one has 8. Remove someone first.");
   expect(await statusOf(late.email)).toBe(0);
 });
+
+test("a join with a family's invite link emails its owners, waiting for a tap or let in, and an emailed invitation stays the inviter's", async ({
+  request,
+}) => {
+  test.setTimeout(120_000);
+  const api = new Api(request);
+  const owner = await api.account("plans-mail-link-owner");
+  const ben = await api.account("plans-mail-link-ben");
+  const cy = await api.account("plans-mail-link-cy");
+  const invited = await api.account("plans-mail-link-invited");
+  const family = "Plans Link Family";
+  const orgId = await api.organization(owner, family);
+  await setPlan(orgId, { plan: "families", standing: "until", until: fromNow(365 * DAY), renews: true });
+  // The link, as the owner's browser makes it (DESIGN.md, "A family's invite link").
+  const token = randomBytes(32).toString("base64url");
+  const linkPath = `/api/keykeeper/organizations/${orgId}/family-link`;
+  const made = await api.call(owner, "PUT", linkPath, { token, sealed: encString("settings"), automatic: false, days: 7 });
+  expect(made.status, JSON.stringify(made.body)).toBe(200);
+  const join = (who: typeof ben, n: number) =>
+    api.call(who, "POST", "/api/keykeeper/family-link/join", {
+      organizationId: orgId,
+      token,
+      proof: Buffer.alloc(32, n).toString("base64"),
+    });
+
+  // One tap: the owners hear someone is waiting.
+  expect((await join(ben, 1)).status).toBe(200);
+  const waiting = await waitForMessage(owner.email, new RegExp(`^${ben.email} is waiting to join ${family}$`));
+  expect(flat(waiting)).toContain(`${ben.email} asked to join ${family} with your invite link.`);
+  expect(flat(waiting)).toContain("They get access once an admin approves them on the Members page");
+
+  // Automatic: they hear who joined, and that nobody needs to confirm them.
+  const approval = await api.call(owner, "PUT", `${linkPath}/approval`, { automatic: true, sealed: encString("automatic") });
+  expect(approval.status, JSON.stringify(approval.body)).toBe(200);
+  expect((await join(cy, 2)).status).toBe(200);
+  const joined = await waitForMessage(owner.email, new RegExp(`^${cy.email} joined ${family}$`));
+  expect(flat(joined)).toContain(`${cy.email} joined ${family} with your invite link.`);
+  expect(flat(joined)).toContain("They get access without anyone confirming them.");
+
+  // Invited by email and not accepted yet: the link won't take the invitation.
+  const invite = await api.call(owner, "POST", `/api/organizations/${orgId}/users/invite`, {
+    emails: [invited.email],
+    type: 2,
+    collections: [],
+    groups: [],
+    permissions: {},
+  });
+  expect(invite.status, JSON.stringify(invite.body)).toBe(200);
+  const refused = await join(invited, 3);
+  expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+  expect(refused.body.message).toBe(`You have an emailed invitation to ${family}. Accept it from the email instead.`);
+});
