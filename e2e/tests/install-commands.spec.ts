@@ -131,6 +131,10 @@ test("the install command comes for Windows, Mac, and Linux with the same token,
     expect(profile.split(`<key>${key}</key>\n\t\t\t<string>${value}</string>`)).toHaveLength(5);
   }
   expect(profile).toContain(`<string>${server}</string>`);
+  // The app's own copy of the fingerprint, once, in the desktop agent's
+  // managed preferences next to the server: the one key it enrolls account
+  // recovery to at unlock (DESIGN.md, "Enrolling at unlock", "Our apps").
+  expect(profile.split(`<key>OrgKeyFingerprint</key>\n\t\t\t<string>${orgKey}</string>`)).toHaveLength(2);
   // The build loaded by hand has the extension ID this build's brand gives.
   for (const browser of ["com.google.Chrome", "com.microsoft.Edge"]) {
     expect(profile).toContain(`<string>${browser}.extensions.${brand.extension.chromiumId}</string>`);

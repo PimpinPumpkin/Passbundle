@@ -14,8 +14,9 @@
 // - two servers on one database both send, and each event goes once, never
 //   once per server.
 // The restarts are on a server of these tests' own, which keeps its data
-// and may send to 127.0.0.1 (server.mjs, KK_EVENT_STREAMING). The second
-// server shares the main test server's database (its SQLite file, or
+// (its SQLite file, or a PostgreSQL database of its own in the PostgreSQL
+// job) and may send to 127.0.0.1 (server.mjs, KK_EVENT_STREAMING). The
+// second server shares the main test server's database (its SQLite file, or
 // PostgreSQL in the PostgreSQL job) and RSA key (KK_SHARES_DATABASE_OF).
 import { type ChildProcess, spawn } from "node:child_process";
 import fs from "node:fs";
@@ -248,9 +249,6 @@ async function holdingReceiver() {
 }
 
 test.describe("Event streaming across a restart", () => {
-  // The same SQLite server in either job, so it runs in the main API job only.
-  test.skip(!!process.env.KK_DATABASE_URL, "Runs on its own SQLite server, in the main API job");
-
   test("events that wait while a receiver is down, through a restart, all arrive once it's back, each once", async () => {
     test.setTimeout(180_000);
     const server = new OwnServer(streamingServerPort, { KK_EVENT_STREAMING: "1" }, true);

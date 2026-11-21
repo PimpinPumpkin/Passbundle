@@ -272,6 +272,8 @@ test.describe("on a server that records seats every second", () => {
         ...process.env,
         KK_PORT: seatsServerPort,
         KK_DATA_DIR: dataDir,
+        // A SQLite file in either job: the tests write earlier days into it (database).
+        KK_SQLITE: "1",
         KK_SEATS_SCHEDULE: "* * * * * *",
       },
       stdio: "ignore",

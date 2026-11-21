@@ -1,6 +1,7 @@
 // Starts the server for one test run with a throwaway data folder,
 // no outbound network features, and our built web vault.
 import { execFileSync, spawn } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -10,8 +11,9 @@ import { dnsPort, entraPort, paths, port, siemPort, smtpPort } from "./paths.mjs
 
 // KK_MAIL=1 starts the server that sends email to the mail catcher. KK_LIMITS=1
 // starts one with the real login limits, which the others relax. KK_GROUPS=1
-// starts one with groups turned on. Each always keeps its own SQLite file, so
-// they never share a database with the main one.
+// starts one with groups turned on. Each keeps a database of its own, never
+// the main one's: a SQLite file, or on PostgreSQL one of its own when a test
+// starts it itself (KK_DATA_DIR; see databaseUrl below).
 const withMail = process.env.KK_MAIL === "1";
 const withLimits = process.env.KK_LIMITS === "1";
 const withGroups = process.env.KK_GROUPS === "1";
@@ -47,9 +49,10 @@ const keptData = process.env.KK_DATA_DIR;
 const withStreaming = process.env.KK_EVENT_STREAMING === "1";
 // KK_SHARES_DATABASE_OF=<port>: a second server on the database of the
 // server on that port, as two servers behind one address would be (the same
-// tests): its PostgreSQL database (KK_DATABASE_URL) or its SQLite file, and
-// its RSA key, which signs logins and seals event streaming's secrets. This
-// server's own data folder holds the rest, its certificate among them.
+// tests): its PostgreSQL database (the main one, KK_DATABASE_URL, or its own)
+// or its SQLite file, and its RSA key, which signs logins and seals event
+// streaming's secrets. This server's own data folder holds the rest, its
+// certificate among them.
 const sharesWith = process.env.KK_SHARES_DATABASE_OF;
 // KK_SITE_RULES_FEED=<url> with KK_SITE_RULES_FEED_KEY: a server that mirrors
 // that site rules feed as an operator's own (SITE_RULES_FEED), from this
@@ -91,6 +94,74 @@ fs.writeFileSync(dataNote, data);
 const sharedData = sharesWith
   ? fs.readFileSync(path.join(os.tmpdir(), `keykeeper-e2e-data-${sharesWith}`), "utf8")
   : null;
+
+// KK_DATABASE_URL (the PostgreSQL job): the main server uses that database.
+// A server a test starts itself (KK_DATA_DIR) uses a database of its own on
+// the same PostgreSQL server, made when it first starts and named in its data
+// folder, so it starts again on the same data. KK_SQLITE=1 keeps such a
+// server on a SQLite file in its data folder, for a test that reads or
+// changes that file itself. The other servers the run starts (mail, limits,
+// groups) keep a SQLite file of their own, as every server does without
+// KK_DATABASE_URL.
+function databaseUrl() {
+  const postgres = process.env.KK_DATABASE_URL;
+  // A database on the same PostgreSQL server as the main one.
+  const named = (name) => {
+    const url = new URL(postgres);
+    url.pathname = `/${name}`;
+    return url.toString();
+  };
+  if (sharedData) {
+    if (!postgres) {
+      return `sqlite://${path.join(sharedData, "db.sqlite3")}`;
+    }
+    const theirs = path.join(sharedData, "postgresql-database");
+    return fs.existsSync(theirs) ? named(fs.readFileSync(theirs, "utf8").trim()) : postgres;
+  }
+  if (!postgres) {
+    return null;
+  }
+  if (!side) {
+    return postgres;
+  }
+  if (!keptData || process.env.KK_SQLITE === "1") {
+    return null;
+  }
+  const note = path.join(data, "postgresql-database");
+  if (!fs.existsSync(note)) {
+    const name = `keykeeper_e2e_${crypto.randomBytes(8).toString("hex")}`;
+    try {
+      execFileSync(
+        "psql",
+        ["--no-psqlrc", "--quiet", "--set", "ON_ERROR_STOP=1", "--dbname", postgres, "--command", `CREATE DATABASE ${name}`],
+        { stdio: ["ignore", "ignore", "pipe"] },
+      );
+    } catch (e) {
+      noteDatabase(`couldn't make ${name}: ${e.stderr?.toString().trim() || e.message}`);
+      throw e;
+    }
+    noteDatabase(`made ${name}`);
+    fs.writeFileSync(note, name);
+  }
+  return named(fs.readFileSync(note, "utf8").trim());
+}
+// Which database each server a test starts got, or why it got none, beside
+// the servers' logs when they're kept (KK_SERVER_LOG, as CI keeps them): the
+// test itself sees only a server that never answers.
+function noteDatabase(line) {
+  if (!process.env.KK_SERVER_LOG) {
+    return;
+  }
+  try {
+    fs.appendFileSync(
+      path.join(path.dirname(process.env.KK_SERVER_LOG), "postgresql-databases.log"),
+      `${new Date().toISOString()} port ${port}: ${line}\n`,
+    );
+  } catch {
+    // Only a note: the server starts without it.
+  }
+}
+const database = databaseUrl();
 
 // The made-up places, for the server with the new-device check on.
 const locationDatabase = path.join(data, "ip-location.mmdb");
@@ -174,17 +245,10 @@ const child = spawn(paths.serverBin, [], {
   env: {
     PATH: process.env.PATH,
     DATA_FOLDER: data,
-    // Set KK_DATABASE_URL to use PostgreSQL instead of a fresh SQLite file.
-    ...(process.env.KK_DATABASE_URL && !side
-      ? { DATABASE_URL: process.env.KK_DATABASE_URL }
-      : {}),
-    ...(sharedData
-      ? {
-          DATABASE_URL:
-            process.env.KK_DATABASE_URL ?? `sqlite://${path.join(sharedData, "db.sqlite3")}`,
-          RSA_KEY_FILENAME: path.join(sharedData, "rsa_key"),
-        }
-      : {}),
+    // PostgreSQL, or another server's SQLite file, instead of a fresh SQLite
+    // file in this server's data folder (databaseUrl, above).
+    ...(database ? { DATABASE_URL: database } : {}),
+    ...(sharedData ? { RSA_KEY_FILENAME: path.join(sharedData, "rsa_key") } : {}),
     ...(withGroups ? { ORG_GROUPS_ENABLED: "true" } : {}),
     // KK_EVENTS=1: the event log on, said outright, for a server a test
     // starts itself (tests/api/plans-families.spec.ts). Every other server has
