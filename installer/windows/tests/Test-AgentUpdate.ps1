@@ -74,11 +74,14 @@ function Invoke-UpdateTask {
   $before = (Get-ScheduledTaskInfo -TaskName $task).LastRunTime
   # Its last run time is to the second.
   Start-Sleep -Seconds 2
+  Write-Host "  start: $((Get-Date).ToString('HH:mm:ss.fff'))"
   Start-ScheduledTask -TaskName $task | Out-Null
   for ($try = 0; $try -lt 600; $try++) {
     Start-Sleep -Milliseconds 500
     $info = Get-ScheduledTaskInfo -TaskName $task
-    if ($info.LastRunTime -ne $before -and (Get-ScheduledTask -TaskName $task).State -ne "Running") {
+    $state = (Get-ScheduledTask -TaskName $task).State
+    Write-Host "  poll: $((Get-Date).ToString('HH:mm:ss.fff')) last=$($info.LastRunTime.ToString('HH:mm:ss')) before=$($before.ToString('HH:mm:ss')) result=$($info.LastTaskResult) state=$state"
+    if ($info.LastRunTime -ne $before -and $state -ne "Running") {
       Write-Host "      (the update task ended with $($info.LastTaskResult))"
       Show-Diag "after a run"
       return $info.LastTaskResult
@@ -162,7 +165,12 @@ try {
   $agentExe = Join-Path $installDir "passbundle-agent.exe"
   $cmd = Join-Path $env:SystemRoot "System32\cmd.exe"
   $wrapped = New-ScheduledTaskAction -Execute $cmd -Argument "/s /c `"echo === %TIME% >> $diagLog & `"$agentExe`" --update >> $diagLog 2>&1`""
-  Register-ScheduledTask -TaskName $task -Action $wrapped -Trigger $registered.Triggers -Principal $registered.Principal -Settings $registered.Settings -Force | Out-Null
+  $triggers = $registered.Triggers
+  if ($env:PB_DIAG_PAST -eq "1") {
+    $triggers = @((New-ScheduledTaskTrigger -Daily -At (Get-Date).AddHours(-1)), (New-ScheduledTaskTrigger -AtStartup))
+    Write-Host "diag  daily trigger moved to an hour ago: $($triggers[0].StartBoundary)"
+  }
+  Register-ScheduledTask -TaskName $task -Action $wrapped -Trigger $triggers -Principal $registered.Principal -Settings $registered.Settings -Force | Out-Null
   Write-Host "diag  wrapped: $((Get-ScheduledTask -TaskName $task).Actions[0].Arguments)"
   Show-Diag "after install"
   $hostManifestHash = (Get-FileHash -Path $hostManifest).Hash

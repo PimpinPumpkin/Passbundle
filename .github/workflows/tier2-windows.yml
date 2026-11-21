@@ -108,16 +108,17 @@ jobs:
           done
           python apps/tools/zip-release.py "$test/0.1.2" "$test/site/agent/PassBundle-0.1.2-windows-x64.zip"
           (cd apps/agent && cargo run --locked --example test-release -- sign "$testw/key" "$testw/site/agent/PassBundle-0.1.2-windows-x64.zip" 0.1.2 "$site" "$testw/site/agent")
-      - name: The update task puts 0.1.2 in place of 0.1.1, end to end (diagnostics, three times)
+      - name: The update task puts 0.1.2 in place of 0.1.1, end to end (diagnostics, six times)
         shell: pwsh
         run: |
           $failed = 0
-          foreach ($i in 1..3) {
-            Write-Host "===== pass $i"
+          foreach ($i in 1..6) {
+            $env:PB_DIAG_PAST = if ($i % 2 -eq 0) { "1" } else { "0" }
+            Write-Host "===== pass $i (daily trigger in the past: $env:PB_DIAG_PAST)"
             ./installer/windows/tests/Test-AgentUpdate.ps1
-            if ($LASTEXITCODE -ne 0) { $failed++ }
+            if ($LASTEXITCODE -ne 0) { $failed++; Write-Host "===== pass $i FAILED" }
           }
-          Write-Host "===== $failed of 3 failed"
+          Write-Host "===== $failed of 6 failed"
           exit $failed
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
