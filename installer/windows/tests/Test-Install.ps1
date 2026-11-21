@@ -373,8 +373,9 @@ if ($env:KK_SKIP_REMOVE -ne "1") {
     Copy-Item -Path $script -Destination $appOnly
     Copy-Item -Path (Join-Path $PSScriptRoot "..\app\*") -Destination (Join-Path $appOnly "app") -Recurse
     $appOnlyScript = Join-Path $appOnly "Install-PassBundle.ps1"
-    # Its warning with what it says, as text.
-    $said = @(& $appOnlyScript -ServerUrl "$serverUrl/" -EnrollmentToken $token -JoinSecret $joinSecret -OrgKey $orgKey 3>&1 | ForEach-Object { "$_" })
+    # What it says, its warning included, as text.
+    $said = @(& $appOnlyScript -ServerUrl "$serverUrl/" -EnrollmentToken $token -JoinSecret $joinSecret -OrgKey $orgKey 3>&1 |
+        ForEach-Object { if ($_ -is [System.Management.Automation.WarningRecord]) { $_.Message } else { "$_" } })
     Check "A package with the app alone says there's no desktop agent next to the script" { @($said -like "No desktop agent next to this script*").Count -eq 1 }
     Check "The app is installed alone" { Test-Path (Join-Path $installDir "passbundle.exe") }
     Check "without the agent: nothing starts it at sign-in, and no host is registered" {
