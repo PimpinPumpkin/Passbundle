@@ -227,6 +227,7 @@ if ($haveAgent) {
     (Get-Item $runKey).GetValue("PassBundle") -eq "`"$(Join-Path $installDir 'passbundle-agent.exe')`""
   }
   Check "The agent gets the server address" { (Get-Item $agentPolicy).GetValue("ServerUrl") -eq $serverUrl }
+  Check "The app gets the organization key fingerprint, next to the server" { (Get-Item $agentPolicy).GetValue("OrgKeyFingerprint") -eq $orgKey }
   $task = Get-ScheduledTask -TaskName $updateTask -ErrorAction SilentlyContinue
   Check "A SYSTEM task installs the agent's signed updates" {
     $task -and $task.Principal.UserId -eq "SYSTEM" -and $task.Actions[0].Arguments -eq "--update"

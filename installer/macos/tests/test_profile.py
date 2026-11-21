@@ -236,6 +236,17 @@ check(
     "the agent gets the server address",
     items.get("com.passbundle.agent", {}).get("ServerUrl") == "https://vault.example.test",
 )
+check(
+    "the app gets the organization key fingerprint in the agent's managed preferences, and nothing else is there",
+    items.get("com.passbundle.agent", {}).get("OrgKeyFingerprint") == ORG_KEY
+    and set(items.get("com.passbundle.agent", {})) - PAYLOAD_KEYS == {"ServerUrl", "OrgKeyFingerprint"},
+)
+_, p = profile("--org-key", ORG_KEY)
+agent = payloads(p).get("com.passbundle.agent", {})
+check(
+    "with only the fingerprint, the agent's preferences have it and no server",
+    set(agent) - PAYLOAD_KEYS == {"OrgKeyFingerprint"} and agent["OrgKeyFingerprint"] == ORG_KEY,
+)
 
 _, p = profile("--keep-browser-password-manager", "--browsers", "edge")
 items = payloads(p)

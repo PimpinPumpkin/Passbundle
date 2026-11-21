@@ -61,7 +61,7 @@ param(
   [ValidatePattern('^[A-Za-z0-9_-]{43}$')]
   [string] $JoinSecret,
   # The fingerprint of the client's organization key, which the extension
-  # checks before it escrows anything for account recovery.
+  # and the app check before they escrow anything for account recovery.
   [ValidatePattern('^[A-Za-z0-9_-]{43}$')]
   [string] $OrgKey,
   # PassBundle (the agent, its browser helper, and the app) doesn't update
@@ -370,6 +370,12 @@ function Install-Agent {
   if (-not (Test-Path $AgentPolicy)) { New-Item -Path $AgentPolicy -Force | Out-Null }
   if ($ServerUrl) {
     New-ItemProperty -Path $AgentPolicy -Name "ServerUrl" -Value $ServerUrl.TrimEnd("/") -PropertyType String -Force | Out-Null
+  }
+  # The one organization key the app enrolls people's account recovery to
+  # at unlock, read from here, where only administrators write (DESIGN.md,
+  # "Enrolling at unlock", "Our apps").
+  if ($OrgKey) {
+    New-ItemProperty -Path $AgentPolicy -Name "OrgKeyFingerprint" -Value $OrgKey -PropertyType String -Force | Out-Null
   }
   if ($DisableAgentUpdates) {
     Set-Dword $AgentPolicy "Updates" 0
