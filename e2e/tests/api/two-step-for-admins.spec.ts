@@ -6,8 +6,9 @@
 // authenticator app, a security key or passkey, or Duo with the server's own
 // Duo account; an MSP requires it of its whole staff. Someone it covers who
 // signs in without one gets a setup session, which can only set one up,
-// instead of a login, and someone a change brings under it without one is
-// signed out everywhere at once.
+// instead of a login, another device's approval for them is refused as it's
+// given, and someone a change brings under it without one is signed out
+// everywhere at once.
 import { constants, generateKeyPairSync, publicEncrypt, randomBytes, randomUUID } from "node:crypto";
 
 import { type APIRequestContext, expect, test } from "@playwright/test";
@@ -1005,16 +1006,25 @@ test("on a server without email, an admin confirmed before the setting was turne
 // real public key, and the user key wrapped to it as type 4.
 const WEB = "9";
 
-async function signInOn(api: Api, who: Account, deviceIdentifier: string, authRequest?: { id: string; code: string }) {
+async function signInOn(
+  api: Api,
+  who: Account,
+  deviceIdentifier: string,
+  authRequest?: { id: string; code: string },
+  extra: Record<string, string> = {},
+) {
   return api.signIn(who.email, authRequest ? authRequest.code : who.password, {
     deviceType: WEB,
     deviceIdentifier,
     ...(authRequest ? { authRequest: authRequest.id } : {}),
+    ...extra,
   });
 }
 
-/** A known device asks to sign in, and a session that signed in with the master password approves it. */
-async function approvedRequest(api: Api, request: APIRequestContext, who: Account, approver: string, device: string) {
+type SignInRequest = { id: string; code: string; der: Buffer };
+
+/** A known device asks to sign in with another device's approval. */
+async function askToSignIn(request: APIRequestContext, who: Account, device: string): Promise<SignInRequest> {
   const { publicKey: key } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const der = key.export({ type: "spki", format: "der" });
   const code = randomBytes(32).toString("base64").replace(/[^A-Za-z0-9]/g, "").slice(0, 25);
@@ -1023,19 +1033,40 @@ async function approvedRequest(api: Api, request: APIRequestContext, who: Accoun
     data: { email: who.email, deviceIdentifier: device, publicKey: der.toString("base64"), accessCode: code, type: 0 },
   });
   expect(asked.status(), await asked.text()).toBe(200);
-  const id = (await asked.json()).id as string;
-  const wrapped = publicEncrypt(
-    { key: der, format: "der", type: "spki", padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha1" },
+  return { id: (await asked.json()).id as string, code, der };
+}
+
+/** A user key (here 64 random bytes) wrapped to the request's public key, as type 4. */
+const wrappedFor = (a: SignInRequest) =>
+  `4.${publicEncrypt(
+    { key: a.der, format: "der", type: "spki", padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha1" },
     randomBytes(64),
-  ).toString("base64");
-  const approved = await api.call({ token: approver }, "PUT", `/api/auth-requests/${id}`, {
+  ).toString("base64")}`;
+
+/** Approves a request from a session, as an approving app sends it. */
+const approve = (api: Api, approver: string, a: SignInRequest, key = wrappedFor(a)) =>
+  api.call({ token: approver }, "PUT", `/api/auth-requests/${a.id}`, {
     deviceIdentifier: claims(approver).device,
-    key: `4.${wrapped}`,
+    key,
     masterPasswordHash: null,
     requestApproved: true,
   });
+
+/** What the device that asked reads, with its access code. */
+async function answerOf(request: APIRequestContext, a: SignInRequest) {
+  const read = await request.get(`/api/auth-requests/${a.id}/response?code=${a.code}`, {
+    headers: { "Device-Type": WEB },
+  });
+  expect(read.status(), await read.text()).toBe(200);
+  return read.json();
+}
+
+/** A known device asks to sign in, and a session that signed in with the master password approves it. */
+async function approvedRequest(api: Api, request: APIRequestContext, who: Account, approver: string, device: string) {
+  const a = await askToSignIn(request, who, device);
+  const approved = await approve(api, approver, a);
   expect(approved.status, JSON.stringify(approved.body)).toBe(200);
-  return { id, code };
+  return { id: a.id, code: a.code };
 }
 
 test("a sign-in another device approved doesn't start setup, and a session one began ends when its person comes under the rule", async ({
@@ -1089,6 +1120,80 @@ test("a sign-in another device approved doesn't start setup, and a session one b
   const stopped = await refresh(request, refreshed.body.refresh_token);
   expect(stopped.status).toBe(400);
   expect(stopped.body.error).toBe("invalid_grant");
+});
+
+/** What the person approving is told when the rule would refuse the sign-in their approval is for. */
+const approvalRefused = (orgName: string) =>
+  `${orgName} requires two-step login for your role. Until you set it up, an approval can't sign that device in. ` +
+  `Set up an authenticator app, a security key or passkey, or Duo in the web vault at ${origin} ` +
+  "(Settings, Security, Two-step login), then approve again.";
+
+test("an admin signed in with single sign-on approving their other device is refused as it's given until they set up two-step login, then the device signs in", async ({
+  request,
+}) => {
+  test.setTimeout(180_000);
+  const api = new Api(request);
+  const { owner, orgId, tenant, identifier } = await ssoOrg(api, "approve2fa");
+  await api.giveAuthenticator(owner);
+  const orgName = (await api.call(owner, "GET", `/api/organizations/${orgId}`)).body.name as string;
+
+  // An admin linked to its single sign-on, who signed in on a phone before
+  // the organization required two-step login, so the account knows it.
+  const admin = await api.account("approve2fa-admin");
+  await api.addMember(owner, orgId, admin, "admin");
+  const person = await tenant.person(admin.email, true, "Approving Admin");
+  await tenant.next(person);
+  const linked = await linkFromSession(request, origin, admin, identifier);
+  expect(linked.status, JSON.stringify(linked.body)).toBe(200);
+  const phone = randomUUID();
+  expectSignedIn(await signInOn(api, admin, phone));
+  await requireIt(api, owner, orgId, true);
+
+  // The organization's single sign-on meets the rule for them, so it signs
+  // them in on their laptop.
+  await tenant.next(person);
+  const viaSso = await ssoSignIn(request, origin, identifier);
+  expectSignedIn(viaSso.token!);
+  const laptop = viaSso.token!.body.access_token as string;
+  expect(claims(laptop)).toMatchObject({ keykeeper_signin: "sso", kk_sso_org: orgId });
+
+  // The phone asks. Its sign-in would be refused (no single sign-on there,
+  // and no method that counts), so the laptop's approval is refused as it's
+  // given, saying who requires it and what to do, and no key is kept: the
+  // request still waits, with no key, for the phone and for the laptop.
+  const a = await askToSignIn(request, admin, phone);
+  const refused = await approve(api, laptop, a);
+  expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+  expect(refused.body.message).toBe(approvalRefused(orgName));
+  expect(await answerOf(request, a)).toMatchObject({ key: null, requestApproved: null });
+  const seen = await api.call({ token: laptop }, "GET", `/api/auth-requests/${a.id}`);
+  expect(seen.status, JSON.stringify(seen.body)).toBe(200);
+  expect(seen.body).toMatchObject({ key: null, requestApproved: null });
+  const waiting = await api.call({ token: laptop }, "GET", "/api/auth-requests/pending");
+  expect((waiting.body.data as { id: string }[]).map((r) => r.id)).toEqual([a.id]);
+  expect((await signInOn(api, admin, phone, a)).body).not.toHaveProperty("access_token");
+
+  // They set up an authenticator app in the web vault where single sign-on
+  // signed them in (Settings asks for the master password), which keeps
+  // that session, and approve again: it's taken, with the key.
+  const key = await api.turnOnAuthenticator({ token: laptop }, admin.password);
+  expect(await works(api, laptop)).toBe(true);
+  const userKey = wrappedFor(a);
+  const approved = await approve(api, laptop, a, userKey);
+  expect(approved.status, JSON.stringify(approved.body)).toBe(200);
+  expect(await answerOf(request, a)).toMatchObject({ key: userKey, requestApproved: true });
+
+  // The phone signs in with it, answering two-step login as after a
+  // password, as a session from an approval.
+  const asked = await signInOn(api, admin, phone, a);
+  expect(asked.status, JSON.stringify(asked.body)).toBe(400);
+  expect(asked.body.TwoFactorProviders).toEqual(["0"]);
+  const signedIn = await signInOn(api, admin, phone, a, {
+    twoFactorProvider: "0",
+    twoFactorToken: totp(key, Date.now() + 30_000),
+  });
+  expectSignedIn(signedIn);
+  expect(claims(signedIn.body.access_token).keykeeper_signin).toBe("authrequest");
 });
 
 // Who reads and changes the settings. Anyone else gets "not found" (never 403
