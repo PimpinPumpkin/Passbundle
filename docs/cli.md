@@ -121,7 +121,7 @@ On a computer where the tool has signed in to your account before, it can sign i
 passbundle login ana@example.com --device
 ```
 
-The tool prints a fingerprint phrase first (five words), then waits up to 15 minutes. On the other device, open the request (in the web vault: Settings, Security, Devices, then the device with "Request pending"; the extension and the app show it themselves), and approve it only if it shows the same phrase and you started this sign-in yourself. The tool then signs in and unlocks, and prints your session key as a password sign-in does. Ctrl-C stops it; nothing is signed in, and the request expires on the server.
+The tool prints a fingerprint phrase first (five words), then waits up to 15 minutes. On the other device, open the request (in the web vault: Settings, Security, Devices, then the device with "Request pending"; the extension and the app show it themselves), and approve it only if it shows the same phrase and you started this sign-in yourself. Approving asks you to confirm it's you first: your master password, or biometrics where they're set up. The tool then signs in and unlocks, and prints your session key as a password sign-in does. Ctrl-C stops it; nothing is signed in, and the request expires on the server.
 
 - It works only on a computer where the tool signed in to your account before (with your password or an API key) and kept its data folder, as the web vault and the extension only offer it on a browser that signed in before. Elsewhere it says to sign in once first.
 - Two-step login still applies: the tool asks for its code as after a password (`--method` and `--code` in a script).

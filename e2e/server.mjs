@@ -23,6 +23,11 @@ const withGroups = process.env.KK_GROUPS === "1";
 // server themselves. Every other server turns the check off: their tests sign
 // in from fresh browsers and API calls, each a new device.
 const withNewDevice = process.env.KK_NEW_DEVICE === "1";
+// KK_LOCATION=1 gives a server the same tiny location database with the
+// check off, for the tests of where a "Sign in with a device" request comes
+// from (tests/api/device-approval.spec.ts), which start such a server
+// themselves.
+const withLocation = withNewDevice || process.env.KK_LOCATION === "1";
 // KK_LIKE_TEST_SERVER=1 starts one set up as the hosted test server is
 // (ops, passbundle-test/setup-vps.sh) while the test tenants tool seeds it
 // (tools/test-tenants/README.md): no email, the new-device check on, sign-up
@@ -64,7 +69,7 @@ const side =
   withMail ||
   withLimits ||
   withGroups ||
-  withNewDevice ||
+  withLocation ||
   likeTestServer ||
   !!signUps ||
   !!keptData ||
@@ -163,9 +168,10 @@ function noteDatabase(line) {
 }
 const database = databaseUrl();
 
-// The made-up places, for the server with the new-device check on.
+// The made-up places, for the servers with the new-device check on or
+// KK_LOCATION.
 const locationDatabase = path.join(data, "ip-location.mmdb");
-if (withNewDevice) {
+if (withLocation) {
   const { build } = await import("./fixtures/location/make.mjs");
   fs.writeFileSync(locationDatabase, build());
 }
@@ -301,7 +307,7 @@ const child = spawn(paths.serverBin, [], {
         }
       : {}),
     NEW_DEVICE_CHECK: withNewDevice || likeTestServer ? "true" : "false",
-    ...(withNewDevice ? { IP_LOCATION_DATABASE: locationDatabase } : {}),
+    ...(withLocation ? { IP_LOCATION_DATABASE: locationDatabase } : {}),
     WEB_VAULT_FOLDER: paths.webVault,
     WEB_VAULT_ENABLED: "true",
     ROCKET_ADDRESS: "127.0.0.1",
@@ -466,6 +472,8 @@ const child = spawn(paths.serverBin, [], {
             /(\.log)?$/,
             withNewDevice
               ? "-new-device$1"
+              : withLocation
+              ? "-location$1"
               : likeTestServer
               ? "-test-tenants$1"
               : signUps

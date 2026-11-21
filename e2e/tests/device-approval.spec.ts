@@ -7,17 +7,24 @@
 // wraps the user key to the web vault's public key, and the web vault opens
 // it and signs in. Also: a denial, a request that's expired, and another
 // account, which never sees it.
+//
+// And the web vault approving another browser's request from Settings,
+// Security, Devices: only after the master password, checked in the
+// approving browser and never sent, with a wrong one sending nothing; Cancel
+// sends nothing either, and Deny asks for nothing (DESIGN.md, "The web vault
+// and the extension"). These need no core.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { expect, test, type Page } from "@playwright/test";
+import { type Browser, expect, type Request, test, type Page } from "@playwright/test";
 
 import { ageSignInRequests } from "./api/support";
 import { core, coreTool, serverCertificate } from "./support/core";
 import { signUp, webUserFor, type WebUser } from "./support/web";
 
-test.skip(!coreTool && !process.env.CI, "KK_CORE_INTEROP isn't set; tier 1 builds the core's interop tool");
+const needsCore = () =>
+  test.skip(!coreTool && !process.env.CI, "KK_CORE_INTEROP isn't set; tier 1 builds the core's interop tool");
 
 /**
  * Signs out of the web vault (Sign out, from the account menu behind the
@@ -44,6 +51,7 @@ function coreDir() {
 }
 
 test("the web vault signs in with a device, approved from our app", async ({ page }, testInfo) => {
+  needsCore();
   test.setTimeout(180_000);
   const user = webUserFor("device-approval", testInfo.repeatEachIndex);
   await signUp(page, user);
@@ -78,6 +86,7 @@ test("the web vault signs in with a device, approved from our app", async ({ pag
 });
 
 test("a denied sign-in goes nowhere", async ({ page }, testInfo) => {
+  needsCore();
   test.setTimeout(180_000);
   const user = webUserFor("device-denial", testInfo.repeatEachIndex);
   await signUp(page, user);
@@ -95,6 +104,7 @@ test("a denied sign-in goes nowhere", async ({ page }, testInfo) => {
 });
 
 test("an expired sign-in request disappears and can't be approved", async ({ page }, testInfo) => {
+  needsCore();
   test.setTimeout(180_000);
   const user = webUserFor("device-expired", testInfo.repeatEachIndex);
   await signUp(page, user);
@@ -113,6 +123,7 @@ test("an expired sign-in request disappears and can't be approved", async ({ pag
 });
 
 test("another account never sees the request", async ({ page, browser }, testInfo) => {
+  needsCore();
   test.setTimeout(240_000);
   const user = webUserFor("device-owner", testInfo.repeatEachIndex);
   const other = webUserFor("device-other", testInfo.repeatEachIndex);
@@ -131,4 +142,118 @@ test("another account never sees the request", async ({ page, browser }, testInf
   const own = core(dir, cert, user, { action: "signInRequests" }).signIn!;
   expect(own.requests.map((r) => r.fingerprint)).toEqual([phrase]);
   await expect(page).toHaveURL(/#\/login-with-device/);
+});
+
+/** Signs in to the web vault with the master password, in a browser of its own. */
+async function approvingBrowser(browser: Browser, user: WebUser) {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto("/#/login");
+  await page.getByLabel(/Email address/).fill(user.email);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("textbox", { name: /Master password/ }).fill(user.password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.waitForURL(/#\/vault/, { timeout: 60_000 });
+  // Every call it makes from here on, to see what an answer sends.
+  const calls: Request[] = [];
+  page.on("request", (r) => calls.push(r));
+  const answers = () =>
+    calls.filter((r) => r.method() === "PUT" && /\/api\/auth-requests\/[^/]+$/.test(new URL(r.url()).pathname));
+  return { context, page, calls, answers };
+}
+
+/** Opens the request from Settings, Security, Devices: upstream's approval dialog, with its phrase. */
+async function openRequest(page: Page, phrase: string) {
+  await page.goto("/#/settings/security/device-management");
+  const pending = page.getByRole("row").filter({ hasText: "Request pending" });
+  await expect(pending).toHaveCount(1, { timeout: 30_000 });
+  await pending.getByRole("link").click();
+  const dialog = page.getByRole("dialog").filter({ hasText: phrase });
+  await expect(dialog.getByText(phrase, { exact: true })).toBeVisible();
+  return dialog;
+}
+
+test("the web vault approves another browser's sign-in only after the master password, and a wrong one sends nothing", async ({
+  page,
+  browser,
+}, testInfo) => {
+  test.setTimeout(240_000);
+  const user = webUserFor("device-web-confirm", testInfo.repeatEachIndex);
+  await signUp(page, user);
+  const approver = await approvingBrowser(browser, user);
+  const phrase = await askToSignInWithDevice(page, user);
+
+  const dialog = await openRequest(approver.page, phrase);
+  // This server has no location database: the address alone, as upstream
+  // shows it, with no location and no credit.
+  await expect(dialog).toContainText("(127.0.0.1)");
+  await expect(dialog.getByTestId("keykeeper-login-approval-location")).toHaveCount(0);
+  await expect(dialog).not.toContainText("Unknown location");
+
+  // Confirm access asks for the master password first.
+  await dialog.getByRole("button", { name: "Confirm access" }).click();
+  const confirm = approver.page.getByTestId("keykeeper-confirm-approval");
+  await expect(confirm).toContainText("Confirm it's you");
+  await expect(confirm).toContainText("Enter your master password to approve this sign-in.");
+
+  // A wrong one: said so, the field emptied, and nothing sent. The asking
+  // browser is still waiting.
+  const wrong = "not-the-master-password-1";
+  await confirm.getByRole("textbox", { name: /Master password/ }).fill(wrong);
+  await confirm.getByRole("button", { name: "Approve" }).click();
+  await expect(confirm.getByRole("alert")).toHaveText("That isn't your master password, so nothing was sent.");
+  await expect(confirm.getByRole("textbox", { name: /Master password/ })).toHaveValue("");
+  expect(approver.answers()).toEqual([]);
+  await expect(page).toHaveURL(/#\/login-with-device/);
+  await expect(page.locator("code")).toHaveText(phrase);
+
+  // The right one: the key goes, and the asking browser signs in.
+  await confirm.getByRole("textbox", { name: /Master password/ }).fill(user.password);
+  await confirm.getByRole("button", { name: "Approve" }).click();
+  await expect(confirm).toBeHidden();
+  await expect.poll(() => approver.answers().length, { timeout: 30_000 }).toBe(1);
+  const sent = approver.answers()[0].postDataJSON();
+  expect(sent.requestApproved).toBe(true);
+  expect(sent.key).toMatch(/^4\./);
+  await page.waitForURL(/#\/vault/, { timeout: 30_000 });
+  await expect(page).toHaveTitle(/^Items/);
+
+  // The master password was checked in the approving browser: no call it
+  // made carried either password.
+  for (const call of approver.calls) {
+    const body = call.postData() ?? "";
+    expect(body).not.toContain(wrong);
+    expect(body).not.toContain(user.password);
+    expect(body).not.toContain(encodeURIComponent(user.password));
+    expect(call.url()).not.toContain(wrong);
+  }
+  await approver.context.close();
+});
+
+test("Cancel at the master password sends nothing, and Deny asks for nothing", async ({ page, browser }, testInfo) => {
+  test.setTimeout(240_000);
+  const user = webUserFor("device-web-cancel", testInfo.repeatEachIndex);
+  await signUp(page, user);
+  const approver = await approvingBrowser(browser, user);
+  const phrase = await askToSignInWithDevice(page, user);
+
+  const dialog = await openRequest(approver.page, phrase);
+  await dialog.getByRole("button", { name: "Confirm access" }).click();
+  const confirm = approver.page.getByTestId("keykeeper-confirm-approval");
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: "Cancel" }).click();
+  await expect(confirm).toBeHidden();
+  // The request is still open here, and nothing went.
+  await expect(dialog.getByText(phrase, { exact: true })).toBeVisible();
+  expect(approver.answers()).toEqual([]);
+
+  // Deny: no master password, and a denial with no key.
+  await dialog.getByRole("button", { name: "Deny access" }).click();
+  await expect.poll(() => approver.answers().length, { timeout: 30_000 }).toBe(1);
+  await expect(confirm).toHaveCount(0);
+  const sent = approver.answers()[0].postDataJSON();
+  expect(sent.requestApproved).toBe(false);
+  // Signed out still, on the asking browser.
+  await expect(page).toHaveURL(/#\/login-with-device/);
+  await approver.context.close();
 });
