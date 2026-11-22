@@ -226,3 +226,34 @@ export async function switchOff(control: Locator) {
   }
   await expect(control).not.toBeChecked();
 }
+
+/** The Activity's words for someone's device letting `email` into `where` on its own. */
+export const automaticConfirm = (who: string, email: string, where: string) =>
+  `${who} confirmed ${email} in ${where} automatically, without comparing fingerprints`;
+
+/**
+ * Who let `email` into `client` with no click, as the MSP console's Activity
+ * on `page` says. That's whichever owner's or admin's device runs its
+ * background work first (DESIGN.md, "Joining"), so any of `could`: each
+ * such entry must name one of them, and say nobody compared fingerprints.
+ */
+export async function automaticConfirmers(
+  page: Page,
+  email: string,
+  client: string,
+  could: string[],
+): Promise<string[]> {
+  const entries = page
+    .getByTestId("msp-activity")
+    .locator("li")
+    .filter({ hasText: `confirmed ${email} in ${client}` });
+  await expect(entries.first()).toBeVisible();
+  const confirmers: string[] = [];
+  for (const entry of await entries.all()) {
+    const line = (await entry.locator("div").first().textContent())!.trim();
+    const who = could.find((person) => line === automaticConfirm(person, email, client));
+    expect(who, `who let ${email} into ${client}: "${line}"`).toBeDefined();
+    confirmers.push(who!);
+  }
+  return confirmers;
+}
