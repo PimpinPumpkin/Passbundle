@@ -9,7 +9,15 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { fingerprintPhrase } from "./support/fingerprint";
-import { acceptRole, chooseRole, reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
+import {
+  acceptRole,
+  automaticConfirm,
+  automaticConfirmers,
+  chooseRole,
+  reloadVault,
+  signUpWithAuthenticator,
+  webUserFor,
+} from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string) => page.getByText(text, { exact: true });
@@ -78,14 +86,17 @@ test("a client's owner sees that the MSP added someone to their organization, an
   await admin.goto("/#/msp");
   await expect(toast(admin, "Confirmed 1 member")).toBeVisible();
 
-  // The MSP adds a technician, and the console lets them in on its own,
-  // which its Activity says.
+  // The MSP adds a technician, and they're let in on their own, which its
+  // Activity says: by the console as it opens, or by the client's own
+  // owner's web vault if its background work gets there first (DESIGN.md,
+  // "Joining"). Either is right, so this doesn't pick one.
   await addStaff(admin, tech, techUser.email, "Woodgrove IT");
   await admin.goto("/#/vault");
   await admin.goto("/#/msp");
-  await expect(admin.getByTestId("msp-activity")).toContainText(
-    `${adminUser.email} confirmed ${techUser.email} in Alpine Dental automatically, without comparing fingerprints`,
-  );
+  const confirmers = await automaticConfirmers(admin, techUser.email, "Alpine Dental", [
+    adminUser.email,
+    ownerUser.email,
+  ]);
 
   // The client's own owner sees it on their Members page, under the MSP.
   await reloadVault(owner);
@@ -95,9 +106,9 @@ test("a client's owner sees that the MSP added someone to their organization, an
   await expect(seen).toContainText(
     `${adminUser.email} added ${techUser.email} to your organization as an admin`,
   );
-  await expect(seen).toContainText(
-    `${adminUser.email} confirmed ${techUser.email} in your organization automatically, without comparing fingerprints`,
-  );
+  for (const who of confirmers) {
+    await expect(seen).toContainText(automaticConfirm(who, techUser.email, "your organization"));
+  }
   await expect(seen).toContainText(`${adminUser.email} set up your organization as a client of Woodgrove IT`);
   // Nothing of the MSP's own that isn't about this organization.
   await expect(seen).not.toContainText("invited");
