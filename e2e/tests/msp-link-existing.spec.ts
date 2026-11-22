@@ -4,14 +4,22 @@
 // organization's owner enters it on its Members page, reads what it means,
 // joins, and confirms the MSP's admin with the fingerprint phrase shown,
 // which is the one the admin's own account settings show; nothing confirms
-// anyone on its own before that; and the MSP's console then lists the client
-// and, once its admin confirms the client by name, lets the rest of its
-// staff in as in any client. All accounts are real, made through the UI,
-// since the phrases come from real keys.
+// anyone on its own before that; and the MSP's console then lists the client.
+// Once its admin confirms the client by name, the rest of its staff are let
+// in as in any client, by whichever owner's device gets there first (the
+// admin's console or the owner's own web vault), and both sides' Activity
+// name that person. All accounts are real, made through the UI, since the
+// phrases come from real keys.
 import { expect, test, type Page } from "@playwright/test";
 
 import { fingerprintPhrase } from "./support/fingerprint";
-import { reloadVault, signUpWithAuthenticator, webUserFor } from "./support/web";
+import {
+  automaticConfirm,
+  automaticConfirmers,
+  reloadVault,
+  signUpWithAuthenticator,
+  webUserFor,
+} from "./support/web";
 
 /** A toast message. Toasts here have no ARIA role, so find them by text. */
 const toast = (page: Page, text: string | RegExp) => page.getByText(text, { exact: typeof text === "string" });
@@ -142,22 +150,43 @@ test("the owner of an organization that already uses PassBundle joins it to an M
   );
   await expect(admin.getByTestId("msp-link-code-open")).toHaveCount(0);
 
-  // The admin confirms the client by name; from then on the console lets
-  // the rest of the staff in, as in any client.
+  // The admin confirms the client by name; from then on the rest of the
+  // staff are let in as in any client (DESIGN.md, "Joining"), by the
+  // background work of whichever owner's device gets there first: the
+  // admin's console, or the owner's web vault, still open on the Members
+  // page. Either is right, so this doesn't pick one.
   await row.getByTestId("msp-client-confirm").click();
   await admin.getByRole("dialog").getByRole("button", { name: "Confirm client" }).click();
   await expect(toast(admin, "Confirmed Alpine Dental")).toBeVisible();
   await expect(admin.getByTestId("msp-link-joined-Alpine Dental")).toContainText(
     "your staff get in as in any client.",
   );
+  // Opening the console lets in anyone still waiting before it lists its Activity.
   await admin.goto("/#/vault");
   await admin.goto("/#/msp");
-  await expect(admin.getByTestId("msp-activity")).toContainText(
-    `${adminUser.email} confirmed ${techUser.email} in Alpine Dental automatically, without comparing fingerprints`,
+  // The owner confirmed the admin by hand, after comparing.
+  const adminConfirmed = admin
+    .getByTestId("msp-activity")
+    .locator("li")
+    .filter({ hasText: `confirmed ${adminUser.email} in Alpine Dental` });
+  await expect(adminConfirmed.locator("div").first()).toHaveText(
+    `${ownerUser.email} confirmed ${adminUser.email} in Alpine Dental`,
   );
+  // The technician was let in automatically, without comparing, by the admin
+  // or the owner: whoever it was is named.
+  const confirmers = await automaticConfirmers(admin, techUser.email, "Alpine Dental", [
+    adminUser.email,
+    ownerUser.email,
+  ]);
+  // The owner sees the same under the MSP on their Members page, and the
+  // technician no longer waits.
   await owner.goto("/#/vault");
   await owner.goto(membersUrl);
   await expect(memberRow(owner, techUser.email).getByText("Needs confirmation")).toHaveCount(0);
+  const seen = banner.getByTestId("client-msp-activity");
+  for (const who of confirmers) {
+    await expect(seen).toContainText(automaticConfirm(who, techUser.email, "your organization"));
+  }
 
   await adminContext.close();
   await techContext.close();
