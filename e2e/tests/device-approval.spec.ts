@@ -21,6 +21,7 @@ import { type Browser, expect, type Request, test, type Page } from "@playwright
 
 import { ageSignInRequests } from "./api/support";
 import { core, coreTool, serverCertificate } from "./support/core";
+import { fingerprintPhrase } from "./support/fingerprint";
 import { signUp, webUserFor, type WebUser } from "./support/web";
 
 const needsCore = () =>
@@ -42,7 +43,7 @@ async function askToSignInWithDevice(page: Page, user: WebUser): Promise<string>
   await page.getByRole("button", { name: "Sign in with a device" }).click();
   await page.waitForURL(/#\/login-with-device/);
   const phrase = page.locator("code");
-  await expect(phrase).toHaveText(/^[a-z]+(-[a-z]+){4}$/);
+  await expect(phrase).toHaveText(fingerprintPhrase);
   return (await phrase.textContent())!.trim();
 }
 

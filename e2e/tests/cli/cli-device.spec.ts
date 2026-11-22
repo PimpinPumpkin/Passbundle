@@ -14,6 +14,7 @@ import { expect, type Page, test } from "@playwright/test";
 
 import { brand, port } from "../../paths.mjs";
 import { serverCertificate } from "../support/core";
+import { fingerprintPhraseSource } from "../support/fingerprint";
 import { apiKey, realAccount, type RealAccount, realPersonalLogin } from "../support/vault-crypto";
 
 const cliBin = process.env.KK_CLI;
@@ -99,7 +100,7 @@ test("the web vault approves the tool's sign-in, and the tool signs in and lists
 
   // Then asks with --device: the phrase comes first, on stderr.
   const asking = start(["login", ana.email, "--device", "--raw"]);
-  await expect.poll(() => asking.out.stderr, { timeout: 60_000 }).toMatch(/^Fingerprint phrase: [a-z]+(-[a-z]+){4}\n/);
+  await expect.poll(() => asking.out.stderr, { timeout: 60_000 }).toMatch(new RegExp(`^Fingerprint phrase: ${fingerprintPhraseSource}\n`));
   const phrase = /^Fingerprint phrase: (\S+)/.exec(asking.out.stderr)![1];
   expect(asking.out.stderr).toContain("approve this sign-in only if that device shows this same phrase");
   expect(asking.out.stdout).toBe("");
