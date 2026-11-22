@@ -106,13 +106,25 @@ test("the owner of an organization that already uses PassBundle joins it to an M
   const adding = join.getByTestId("client-msp-join-adding");
   await expect(adding).toContainText(`${adminUser.name} (${adminUser.email}), as an owner`);
   await expect(adding).toContainText(`${techUser.name} (${techUser.email}), as an admin`);
+  // An owner here confirms one of the MSP's admins after comparing phrases;
+  // the rest of its staff then get in without anyone here comparing.
   await expect(join).toContainText(
-    "None of them can open its items until an owner here confirms each of them on this page, after comparing their fingerprint phrase with what they read you.",
+    "None of them can open its items until they're confirmed. First an owner here confirms one of Woodgrove IT's admins, on this page, after comparing their fingerprint phrase with what they read you.",
   );
+  await expect(join).toContainText(
+    "Once that admin confirms Alpine Dental in their MSP console, the rest of Woodgrove IT's people, and anyone it adds later, are let in automatically, without anyone here comparing their phrases, as long as Alpine Dental lets people in when they accept an invitation (Settings, Joining and security). Each one is listed under What Woodgrove IT did here, on this page.",
+  );
+  await expect(join).not.toContainText("confirms each of them");
   await expect(join).toContainText("Alpine Dental keeps its members, items, collections, policies, and plan.");
   await expect(join).toContainText("You can remove Woodgrove IT at any time, on this page.");
   await join.getByRole("button", { name: "Join Woodgrove IT" }).click();
-  await expect(toast(owner, /Woodgrove IT now manages Alpine Dental\./)).toBeVisible();
+  // The notice asks for the admin, not everyone added.
+  await expect(
+    toast(
+      owner,
+      `Woodgrove IT now manages Alpine Dental. Confirm ${adminUser.name} (${adminUser.email}) below once you've compared their phrase.`,
+    ),
+  ).toBeVisible();
 
   // The MSP's people wait, each with their phrase and what to compare. The
   // owner's own web vault doesn't let them in on its own, page open or not.
